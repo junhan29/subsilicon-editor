@@ -5,6 +5,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync, statSync, copyFileS
 const isDev = !app.isPackaged
 const isMac = process.platform === 'darwin'
 const isWin = process.platform === 'win32'
+const isLinux = process.platform === 'linux'
 
 let mainWindow: BrowserWindow | null = null
 let splashWindow: BrowserWindow | null = null
@@ -54,11 +55,12 @@ function createSplashWindow(): void {
     width: 500,
     height: 380,
     frame: false,
-    transparent: true,
+    transparent: !isLinux,
     resizable: false,
     center: true,
     alwaysOnTop: true,
     skipTaskbar: true,
+    backgroundColor: isLinux ? '#1a1410' : undefined,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -252,7 +254,7 @@ async function createMainWindow(): Promise<void> {
     height: windowState.height || 800,
     x: windowState.x,
     y: windowState.y,
-    frame: false,
+    frame: isLinux ? true : false,
     transparent: false,
     show: false,
     icon: nativeImage.createFromPath(resolve(__dirname, '../build/icon.png')),
@@ -265,6 +267,7 @@ async function createMainWindow(): Promise<void> {
     backgroundColor: '#1a1410',
     vibrancy: isMac ? 'dark' : undefined,
     visualEffectState: isMac ? 'followWindow' : undefined,
+    titleBarStyle: isMac ? 'hiddenInset' : undefined,
   })
 
   mainWindow.setMenuBarVisibility(false)
@@ -508,7 +511,7 @@ function setupMenu(): void {
 function setupTray(): void {
   const iconPath = resolve(__dirname, '../build/icon.png')
   const icon = nativeImage.createFromPath(iconPath)
-    .resize({ width: 16, height: 16 })
+    .resize({ width: isLinux ? 22 : 16, height: isLinux ? 22 : 16 })
 
   tray = new Tray(icon)
   tray.setToolTip(APP_NAME)

@@ -23,7 +23,12 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "electron:dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
-    "electron:build": "vite build && electron-builder"
+    "electron:build": "vite build && node desktop/build.cjs && electron-builder",
+    "electron:build:win": "vite build && node desktop/build.cjs && electron-builder --win",
+    "electron:build:mac": "vite build && node desktop/build.cjs && electron-builder --mac",
+    "electron:build:linux": "vite build && node desktop/build.cjs && electron-builder --linux",
+    "electron:build:all": "vite build && node desktop/build.cjs && electron-builder -mw",
+    "electron:pack": "vite build && node desktop/build.cjs && electron-builder --dir"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "1.1.17",
@@ -58,6 +63,7 @@
     "concurrently": "8.2.2",
     "electron": "43.0.0",
     "electron-builder": "26.15.3",
+    "esbuild": "^0.28.1",
     "eslint": "9.0.0",
     "eslint-plugin-react-hooks": "5.1.0",
     "postcss": "8.4.49",
@@ -78,29 +84,182 @@
     },
     "files": [
       "dist/**/*",
-      "desktop/**/*",
+      "desktop/main.js",
+      "desktop/preload.js",
+      "desktop/build.cjs",
       "package.json",
-      "!node_modules/**/*"
+      "build/**/*",
+      "!node_modules/**/*",
+      "!desktop/*.ts",
+      "!desktop/*.cjs"
     ],
     "asar": true,
+    "artifactName": "${productName}-${version}-${platform}-${arch}.${ext}",
+    "electronDownload": {
+      "mirror": "https://npmmirror.com/mirrors/electron/"
+    },
+    "extraMetadata": {
+      "main": "desktop/main.js"
+    },
     "win": {
-      "target": "nsis",
-      "icon": "build/icon.ico"
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "artifactName": "${productName}-${version}-windows-${arch}.${ext}",
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "SubSilicon Editor",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
+      "installerSidebar": "build/installerSidebar.bmp",
+      "language": "2052"
     },
     "mac": {
       "target": [
-        "dmg",
-        "zip"
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
       ],
       "icon": "build/icon.icns",
-      "category": "public.app-category.productivity"
+      "artifactName": "${productName}-${version}-macos-${arch}.${ext}",
+      "category": "public.app-category.productivity",
+      "type": "distribution",
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist"
+    },
+    "dmg": {
+      "title": "${productName} ${version}",
+      "icon": "build/icon.icns",
+      "background": "build/dmg-background.tiff",
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
     },
     "linux": {
       "target": [
-        "AppImage",
-        "deb"
+        {
+          "target": "AppImage",
+          "arch": ["x64", "arm64"]
+        },
+        {
+          "target": "deb",
+          "arch": ["x64", "arm64"]
+        },
+        {
+          "target": "rpm",
+          "arch": ["x64", "arm64"]
+        },
+        {
+          "target": "tar.gz",
+          "arch": ["x64", "arm64"]
+        }
       ],
-      "icon": "build/icon.png"
-    }
+      "icon": "build/icon.png",
+      "artifactName": "${productName}-${version}-linux-${arch}.${ext}",
+      "category": "Office",
+      "maintainer": "SubSilicon Team <contact@subsilicon.cn>",
+      "vendor": "SubSilicon",
+      "description": "Zero-code visual interactive narrative editor"
+    },
+    "deb": {
+      "packageCategory": "editors",
+      "priority": "optional",
+      "depends": [
+        "libgtk-3-0",
+        "libnotify4",
+        "libnss3",
+        "libxss1",
+        "libxtst6",
+        "xdg-utils",
+        "libatspi2.0-0",
+        "libuuid1",
+        "libsecret-1-0"
+      ],
+      "recommends": [
+        "pulseaudio | libasound2"
+      ],
+      "fpm": [
+        "--deb-compression",
+        "xz"
+      ]
+    },
+    "rpm": {
+      "packageCategory": "Editors",
+      "depends": [
+        "gtk3",
+        "libnotify",
+        "nss",
+        "libXScrnSaver",
+        "libXtst",
+        "xdg-utils",
+        "at-spi2-core",
+        "libuuid",
+        "libsecret"
+      ],
+      "fpm": [
+        "--rpm-compression",
+        "xz"
+      ]
+    },
+    "appImage": {
+      "category": "Office",
+      "license": "LICENSE"
+    },
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "https://subsilicon.cn/updates/"
+      }
+    ]
   }
 }

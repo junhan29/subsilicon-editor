@@ -1,7 +1,7 @@
 node_modules/
 dist/
-build/
 release/
+.electron/
 .next/
 .env
 .env.local
@@ -13,3 +13,5 @@ credentials/
 .credentials
 *.pem
 *.key
+desktop/main.js
+desktop/preload.js
