@@ -13,7 +13,15 @@ import {
 } from 'lucide-react'
 import type { StoryGraph } from '@editor/types/editor'
 import { getAccount, isLoggedIn } from '@editor/lib/local-account-store'
-import { SUBMIT_CONFIG } from '@editor/lib/submit-config'
+import {
+  listProviders,
+  getActiveProvider,
+  setActiveProvider,
+  addProvider,
+  removeProvider,
+  subscribe,
+  type SubmitProvider,
+} from '@editor/lib/submit-providers'
 import { exportPreviewHTML } from '@editor/lib/export-preview-html'
 import { showToast } from './toast'
 import { AccountDialog } from './account-dialog'
@@ -52,11 +60,23 @@ export function DirectoryUploadDialog({
   const [submitted, setSubmitted] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [showAccountDialog, setShowAccountDialog] = useState(false)
+  const [providers, setProviders] = useState<SubmitProvider[]>(() => listProviders())
+  const [activeProvider, setActiveProviderState] = useState<SubmitProvider>(() => getActiveProvider())
+  const [showAddProvider, setShowAddProvider] = useState(false)
+  const [newProvider, setNewProvider] = useState({ name: '', apiUrl: '', authToken: '', description: '' })
   const fileInputRef = useRef<HTMLInputElement>(null)
   const screenshotsInputRef = useRef<HTMLInputElement>(null)
 
   const account = getAccount()
   const loggedIn = isLoggedIn()
+
+  useEffect(() => {
+    const unsub = subscribe(() => {
+      setProviders(listProviders())
+      setActiveProviderState(getActiveProvider())
+    })
+    return unsub
+  }, [])
 
   useEffect(() => {
     if (open) {
@@ -204,10 +224,10 @@ export function DirectoryUploadDialog({
       formData.append('previewHtml', previewBlob, 'preview.html')
       if (workId) formData.append('workId', workId)
 
-      const res = await fetch(SUBMIT_CONFIG.apiUrl, {
+      const res = await fetch(activeProvider.apiUrl, {
         method: 'POST',
         headers: {
-          'X-Submit-Token': SUBMIT_CONFIG.submitToken,
+          [activeProvider.authHeader || 'X-Submit-Token']: activeProvider.authToken || '',
         },
         body: formData,
       })
@@ -218,7 +238,7 @@ export function DirectoryUploadDialog({
       }
 
       setSubmitted(true)
-      showToast('success', '上传成功，审核通过后将在 SubSilicon 作品墙展示')
+      showToast('success', `上传成功，审核通过后将在 ${activeProvider.name} 展示`)
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       showToast('error', `提交失败：${msg}`)
@@ -243,7 +263,7 @@ export function DirectoryUploadDialog({
               <Upload className="w-5 h-5 text-amber-400" />
             </div>
             <div>
-              <h3 className="font-semibold text-sm text-slate-100">上传到 SubSilicon 作品墙</h3>
+              <h3 className="font-semibold text-sm text-slate-100">上传作品到展示墙</h3>
               <p className="text-[10px] text-slate-400">展示你的作品给更多读者</p>
             </div>
           </div>
@@ -267,7 +287,7 @@ export function DirectoryUploadDialog({
                     请先注册/登录账号
                   </div>
                   <p className="text-[12px] text-blue-300/80 leading-relaxed">
-                    首次使用请先注册账号，已有账号请登录。登录后即可上传作品到 SubSilicon 作品墙，每账号限 2 个作品名额。
+                    首次使用请先注册账号，已有账号请登录。登录后即可上传作品到所选展示墙。
                   </p>
                   <div className="flex gap-2 mt-2">
                     <button
@@ -289,12 +309,122 @@ export function DirectoryUploadDialog({
                 <div className="space-y-1">
                   <div className="text-sm font-medium text-emerald-200">提交成功</div>
                   <p className="text-[12px] text-emerald-300/80 leading-relaxed">
-                    审核通过后将在 SubSilicon 作品墙展示，请耐心等待。
+                    审核通过后将在 {activeProvider.name} 展示，请耐心等待。
                   </p>
                 </div>
               </div>
             </div>
           )}
+
+          {/* 提交目标选择：支持任意实现了公共提交协议的作品墙 */}
+          <div className="mb-5 p-4 rounded-xl border border-slate-700 bg-slate-800/40">
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs font-medium text-slate-300">提交到</label>
+              <button
+                type="button"
+                onClick={() => setShowAddProvider(s => !s)}
+                className="text-[11px] text-amber-400 hover:text-amber-300 flex items-center gap-1"
+              >
+                <Plus className="w-3 h-3" />
+                添加展示墙
+              </button>
+            </div>
+            <select
+              value={activeProvider.id}
+              onChange={(e) => setActiveProvider(e.target.value)}
+              disabled={submitting}
+              className="w-full px-2.5 py-1.5 text-sm bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:border-amber-500/60"
+            >
+              {providers.filter(p => p.enabled).map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+            {activeProvider.description && (
+              <p className="mt-1.5 text-[11px] text-slate-400 leading-relaxed">{activeProvider.description}</p>
+            )}
+
+            {showAddProvider && (
+              <div className="mt-3 pt-3 border-t border-slate-700 space-y-2">
+                <input
+                  type="text"
+                  value={newProvider.name}
+                  onChange={(e) => setNewProvider(s => ({ ...s, name: e.target.value }))}
+                  placeholder="展示墙名称（如：我的个人站）"
+                  className="w-full px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-amber-500/60"
+                />
+                <input
+                  type="url"
+                  value={newProvider.apiUrl}
+                  onChange={(e) => setNewProvider(s => ({ ...s, apiUrl: e.target.value }))}
+                  placeholder="提交端点 URL（https://...）"
+                  className="w-full px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-amber-500/60"
+                />
+                <input
+                  type="text"
+                  value={newProvider.authToken}
+                  onChange={(e) => setNewProvider(s => ({ ...s, authToken: e.target.value }))}
+                  placeholder="提交令牌（可选）"
+                  className="w-full px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-amber-500/60"
+                />
+                <input
+                  type="text"
+                  value={newProvider.description}
+                  onChange={(e) => setNewProvider(s => ({ ...s, description: e.target.value }))}
+                  placeholder="简短描述（可选）"
+                  className="w-full px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-amber-500/60"
+                />
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!newProvider.name.trim() || !newProvider.apiUrl.trim()) {
+                        showToast('error', '请填写名称和端点 URL')
+                        return
+                      }
+                      try {
+                        addProvider({
+                          name: newProvider.name.trim(),
+                          apiUrl: newProvider.apiUrl.trim(),
+                          authToken: newProvider.authToken.trim() || undefined,
+                          description: newProvider.description.trim() || undefined,
+                          enabled: true,
+                        })
+                        setNewProvider({ name: '', apiUrl: '', authToken: '', description: '' })
+                        setShowAddProvider(false)
+                        showToast('success', '已添加展示墙')
+                      } catch (err) {
+                        showToast('error', err instanceof Error ? err.message : '添加失败')
+                      }
+                    }}
+                    className="px-2.5 py-1 text-[11px] rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-900 font-medium"
+                  >
+                    保存
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddProvider(false)}
+                    className="px-2.5 py-1 text-[11px] rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200"
+                  >
+                    取消
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {!activeProvider.builtin && (
+              <button
+                type="button"
+                onClick={() => {
+                  removeProvider(activeProvider.id)
+                  showToast('info', '已移除该展示墙')
+                }}
+                disabled={submitting}
+                className="mt-2 text-[11px] text-red-400 hover:text-red-300"
+              >
+                移除此展示墙
+              </button>
+            )}
+          </div>
 
           <div className={`space-y-4 ${!loggedIn ? 'opacity-50 pointer-events-none' : ''}`}>
             <div>

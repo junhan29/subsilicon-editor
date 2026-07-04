@@ -1,14 +1,4 @@
-/**
- * condition-builder.ts 单元测试
- *
- * 由于项目未安装 vitest，本测试为纯函数验证脚本：
- *   - 导出 runTests() 函数
- *   - 内部使用自定义 describe/it + 手动断言
- *   - 可通过 `npx tsx condition-builder.test.ts` 直接执行
- *
- * 注意：condition-builder.tokenizeSimple 使用 /[a-zA-Z_]/ 匹配标识符，
- * 不支持中文变量名。测试用例统一使用英文变量名。
- */
+/** condition-builder 单元测试 */
 import {
   buildExpression,
   parseExpression,
@@ -20,10 +10,6 @@ import type {
   ConditionClause,
   StoryVariable,
 } from '@editor/types/editor'
-
-// ============================================
-// 简易测试工具
-// ============================================
 
 let passed = 0
 let failed = 0
@@ -59,10 +45,6 @@ function assertEqual<T>(actual: T, expected: T, message: string): void {
     throw new Error(`${message}\n     expected: ${e}\n     actual:   ${a}`)
   }
 }
-
-// ============================================
-// 测试数据构造
-// ============================================
 
 function makeClause(
   overrides: Partial<ConditionClause> & { variable: string }
@@ -102,10 +84,6 @@ const stringVars: StoryVariable[] = [
 const boolVars: StoryVariable[] = [
   { name: 'flag', type: 'boolean', initialValue: false },
 ]
-
-// ============================================
-// 测试用例
-// ============================================
 
 export function runTests(): void {
   passed = 0

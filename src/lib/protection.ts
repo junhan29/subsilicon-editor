@@ -1,13 +1,11 @@
 /**
  * 前端防护模块
- * 
+ *
  * 包含：域名绑定检测、代码水印、防右键、F12 检测
  * 目的：增加盗用成本，不是绝对防止
  */
 
-// === 合法域名白名单 ===
-// 注意：subsilicon.cn 为 SubSilicon 官方域名，作为默认白名单项保留。
-// 如果你想将编辑器部署到自己的域名，请在此数组中添加你的域名，或删除不需要的条目。
+// 合法域名白名单。subsilicon.cn 为官方域名；如需部署到自有域名，请在此添加。
 const ALLOWED_DOMAINS = [
   'localhost',
   '127.0.0.1',
@@ -20,18 +18,16 @@ const ALLOWED_DOMAINS = [
   '*.aiforce.cloud',
 ]
 
-// === 代码水印（用于追踪盗用来源） ===
+// 代码水印（用于追踪盗用来源）
 const BUILD_ID = 'ss-2026-07-02'
 const BUILD_TIME = '20260702'
 const WATERMARK = `__SUBSILICON_PROTECT__|${BUILD_ID}|${BUILD_TIME}`
 
 /**
- * 域名绑定检测（可选的保护措施）
+ * 域名绑定检测
  *
- * 说明：这是一项可选的保护措施，用于在编辑器被部署到非授权域名时给出警告。
- * 如果你不希望启用此检测，可以直接删除 checkDomainBinding 的调用，
- * 或者将 ALLOWED_DOMAINS 数组修改为你自己的域名。
- * 如果当前域名不在白名单中，会在控制台输出警告并延迟跳转到官方地址。
+ * 当前域名不在白名单中时，会在控制台输出警告并延迟跳转到官方地址。
+ * 不需要此检测可直接删除调用，或修改 ALLOWED_DOMAINS。
  */
 export function checkDomainBinding(): boolean {
   if (typeof window === 'undefined') return true
@@ -103,8 +99,7 @@ export function injectWatermark() {
 }
 
 /**
- * 防右键和选择
- * 注意：这只能增加门槛，无法完全防止
+ * 防右键和选择（仅增加门槛，无法完全防止）
  */
 export function setupAntiCopy() {
   if (typeof window === 'undefined') return
@@ -169,10 +164,7 @@ export function setupAntiCopy() {
 }
 
 /**
- * F12 / 开发者工具检测
- * 检测方式：通过 debugger 时间差
- * 注意：会触发开发者工具暂停，可能影响开发体验
- * 仅在生产环境启用
+ * F12 / 开发者工具检测（基于 debugger 时间差，仅生产环境启用）
  */
 let devToolsCheckInterval: ReturnType<typeof setInterval> | null = null
 let devToolsWarningShown = false

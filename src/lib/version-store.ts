@@ -1,8 +1,8 @@
 import { createSnapshot, type StoryGraphSnapshot } from '@editor/lib/history-store'
 
-// ============================================
+// ---
 // 版本快照类型定义
-// ============================================
+// ---
 
 export interface VersionSnapshot {
   id: string
@@ -42,16 +42,16 @@ export interface VersionDiff {
   }
 }
 
-// ============================================
+// ---
 // localStorage 配置
-// ============================================
+// ---
 
 export const VERSION_STORAGE_KEY = 'subsilicon-versions'
 const MAX_VERSIONS = 30
 
-// ============================================
+// ---
 // 内部工具：从快照节点中提取可读信息
-// ============================================
+// ---
 
 interface SnapshotNode {
   id: string
@@ -193,9 +193,9 @@ function valuesEqual(a: unknown, b: unknown): boolean {
   }
 }
 
-// ============================================
+// ---
 // localStorage 读写
-// ============================================
+// ---
 
 function isBrowser(): boolean {
   return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined'
@@ -280,10 +280,10 @@ export function restoreVersion(id: string): VersionSnapshot | null {
   }
 }
 
-// ============================================
+// ---
 // 版本对比逻辑
 // v1 = 旧版本（before），v2 = 新版本（after）
-// ============================================
+// ---
 
 export function compareVersions(
   v1: VersionSnapshot,

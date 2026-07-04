@@ -1,11 +1,4 @@
-/**
- * outline-parser.ts 单元测试
- *
- * 由于项目未安装 vitest，本测试为纯函数验证脚本：
- *   - 导出 runTests() 函数
- *   - 内部使用自定义 describe/it + 手动断言
- *   - 可通过 `npx tsx outline-parser.test.ts` 直接执行
- */
+/** outline-parser 单元测试 */
 import {
   parseOutline,
   generateNodesFromOutline,
@@ -16,10 +9,6 @@ import type {
   StoryNode,
   StoryEdge,
 } from '@editor/types/editor'
-
-// ============================================
-// 简易测试工具
-// ============================================
 
 let passed = 0
 let failed = 0
@@ -56,10 +45,6 @@ function assertEqual<T>(actual: T, expected: T, message: string): void {
   }
 }
 
-// ============================================
-// 测试数据构造
-// ============================================
-
 function makeDialogueNode(id: string, text: string): StoryNode {
   return {
     id,
@@ -94,10 +79,6 @@ function makeEdge(
     sourceHandle,
   }
 }
-
-// ============================================
-// 测试用例
-// ============================================
 
 export function runTests(): void {
   passed = 0

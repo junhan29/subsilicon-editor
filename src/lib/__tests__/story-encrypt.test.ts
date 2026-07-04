@@ -1,13 +1,4 @@
-/**
- * story-encrypt.ts 单元测试
- *
- * 由于项目未安装 vitest，本测试为纯函数验证脚本：
- *   - 导出 runTests() 函数
- *   - 内部使用自定义 describe/it + 手动断言
- *   - 可通过 `npx tsx story-encrypt.test.ts` 直接执行
- *
- * 注意：本测试涉及 crypto.subtle 异步操作，runTests 为 async 函数。
- */
+/** story-encrypt 单元测试 */
 import {
   generateEncryptionKey,
   encryptWithAES,
@@ -18,10 +9,6 @@ import {
   decodeKeyInfo,
   AES_ENC_PREFIX,
 } from '../story-encrypt'
-
-// ============================================
-// 简易测试工具
-// ============================================
 
 let passed = 0
 let failed = 0
@@ -72,10 +59,6 @@ function assertEqual<T>(actual: T, expected: T, message: string): void {
     throw new Error(`${message}\n     expected: ${e}\n     actual:   ${a}`)
   }
 }
-
-// ============================================
-// 测试用例
-// ============================================
 
 export async function runTests(): Promise<void> {
   passed = 0

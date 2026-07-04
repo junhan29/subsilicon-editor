@@ -2152,9 +2152,9 @@ const GroupToolbar = memo(function GroupToolbar({ group, onToggleCollapse, onRen
   )
 })
 
-// ============================================
+// ---
 // 节点右键菜单
-// ============================================
+// ---
 
 interface NodeContextMenuProps {
   x: number
@@ -2213,9 +2213,9 @@ const NodeContextMenu = memo(function NodeContextMenu({
   )
 })
 
-// ============================================
+// ---
 // 添加批注弹窗
-// ============================================
+// ---
 
 interface AnnotationDialogProps {
   nodeId: string

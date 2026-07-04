@@ -1,15 +1,4 @@
-/**
- * expression-parser.ts 单元测试
- *
- * 由于项目未安装 vitest，本测试为纯函数验证脚本：
- *   - 导出 runTests() 函数
- *   - 内部使用自定义 describe/it + 手动断言
- *   - 可通过 `npx tsx expression-parser.test.ts` 直接执行
- *
- * 注意：源码 tokenize 将 ( ) 标记为 OPERATOR 类型，但 parsePrimary
- * 在括号/函数调用分支调用 eat('LPAREN')，会抛错。这是源码的已知
- * 限制，本测试不假装该功能可用。
- */
+/** expression-parser 单元测试 */
 import {
   ExpressionParser,
   createDefaultContext,
@@ -17,10 +6,6 @@ import {
   extractVariables,
 } from '../expression-parser'
 import type { EvaluationContext } from '../expression-parser'
-
-// ============================================
-// 简易测试工具
-// ============================================
 
 let passed = 0
 let failed = 0
@@ -60,10 +45,6 @@ function assertEqual<T>(actual: T, expected: T, message: string): void {
 function ctx(variables: Record<string, unknown> = {}): EvaluationContext {
   return createDefaultContext(variables)
 }
-
-// ============================================
-// 测试用例
-// ============================================
 
 export function runTests(): void {
   passed = 0

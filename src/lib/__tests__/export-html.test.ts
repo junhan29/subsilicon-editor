@@ -1,14 +1,4 @@
-/**
- * export-html.ts 单元测试
- *
- * 由于项目未安装 vitest，本测试为纯函数验证脚本：
- *   - 导出 runTests() 函数
- *   - 内部使用自定义 describe/it + 手动断言
- *   - 可通过 `npx tsx export-html.test.ts` 直接执行
- *
- * 注意：exportToHTML 为 async 函数（涉及 crypto.subtle），runTests 为 async。
- * 测试使用的 StoryGraph 不含 blob: URL，避免触发 IndexedDB/fetch 依赖。
- */
+/** export-html 单元测试 */
 import {
   exportToHTML,
   encryptPaidContent,
@@ -16,10 +6,6 @@ import {
 } from '../export-html'
 import type { StoryGraph, StoryNode } from '@editor/types/editor'
 import type { MonetizationConfig } from '../work-monetization'
-
-// ============================================
-// 简易测试工具
-// ============================================
 
 let passed = 0
 let failed = 0
@@ -70,10 +56,6 @@ function assertEqual<T>(actual: T, expected: T, message: string): void {
     throw new Error(`${message}\n     expected: ${e}\n     actual:   ${a}`)
   }
 }
-
-// ============================================
-// 测试数据构造
-// ============================================
 
 function makeNode(
   id: string,
@@ -143,10 +125,6 @@ function decodeEncValue(value: string): string {
   const encoded = value.slice(prefix.length)
   return decodeURIComponent(escape(atob(encoded)))
 }
-
-// ============================================
-// 测试用例
-// ============================================
 
 export async function runTests(): Promise<void> {
   passed = 0

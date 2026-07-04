@@ -1,13 +1,13 @@
 'use client'
 
-// ============================================
+// ---
 // 批注面板（右侧面板 Tab 内容）
 // - 顶部过滤：全部 / 未解决 / TODO / 警告
 // - 列表按节点分组
 // - 每条批注：类型图标、作者、时间、文本
 // - 操作：回复、标记已解决、删除
 // - memo 化优化性能
-// ============================================
+// ---
 
 import { memo, useMemo, useState, useCallback } from 'react'
 import { Plus, Trash2, CheckCircle2, RotateCcw, CornerDownRight, MessageSquare, Send } from 'lucide-react'
@@ -15,9 +15,9 @@ import type { NodeAnnotation, AnnotationType, StoryNode } from '@editor/types/ed
 import { ANNOTATION_TYPE_META } from '@editor/types/editor'
 import { AnnotationTypeIcon } from './annotation-marker'
 
-// ============================================
+// ---
 // 过滤类型
-// ============================================
+// ---
 
 type FilterType = 'all' | 'unresolved' | 'todo' | 'warning'
 
@@ -28,9 +28,9 @@ const FILTER_OPTIONS: { value: FilterType; label: string }[] = [
   { value: 'warning', label: '警告' },
 ]
 
-// ============================================
+// ---
 // 工具函数
-// ============================================
+// ---
 
 function formatRelativeTime(ts: number): string {
   const diff = Date.now() - ts
@@ -68,9 +68,9 @@ function getNodeLabel(node: StoryNode | undefined, fallbackId: string): string {
   return snippet ? `${typeLabel} · ${snippet}${snippet.length >= 18 ? '…' : ''}` : `${typeLabel} · ${fallbackId.slice(0, 8)}`
 }
 
-// ============================================
+// ---
 // 单条批注项
-// ============================================
+// ---
 
 interface AnnotationItemProps {
   annotation: NodeAnnotation
@@ -198,9 +198,9 @@ const AnnotationItem = memo(function AnnotationItem({
   )
 })
 
-// ============================================
+// ---
 // 添加批注表单
-// ============================================
+// ---
 
 interface AddAnnotationFormProps {
   nodeId: string
@@ -297,9 +297,9 @@ const AddAnnotationForm = memo(function AddAnnotationForm({
   )
 })
 
-// ============================================
+// ---
 // 批注面板主体
-// ============================================
+// ---
 
 export interface AnnotationPanelProps {
   annotations: NodeAnnotation[]
@@ -513,9 +513,9 @@ function AnnotationPanelImpl({
   )
 }
 
-// ============================================
+// ---
 // memo 比较函数
-// ============================================
+// ---
 
 function areAnnotationPanelPropsEqual(
   prev: AnnotationPanelProps,

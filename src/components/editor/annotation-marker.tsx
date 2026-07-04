@@ -1,21 +1,21 @@
 'use client'
 
-// ============================================
+// ---
 // 节点批注标记组件
 // - 作为节点装饰层渲染在右上角
 // - 不同类型用不同颜色：comment=蓝、todo=黄、warning=红、idea=紫
 // - 已解决用灰色
 // - 通过 Context 获取每个节点的批注数据，避免修改节点 data
-// ============================================
+// ---
 
 import { createContext, useContext, memo } from 'react'
 import { MessageSquare, CheckCircle2, AlertTriangle, Lightbulb, ListTodo } from 'lucide-react'
 import type { NodeAnnotation, AnnotationType } from '@editor/types/editor'
 import { ANNOTATION_TYPE_META } from '@editor/types/editor'
 
-// ============================================
+// ---
 // Context：节点 -> 批注列表
-// ============================================
+// ---
 
 export interface AnnotationMarkerContextValue {
   /** nodeId -> annotations */
@@ -38,9 +38,9 @@ export function useAnnotationMarkerContext(): AnnotationMarkerContextValue {
   return useContext(AnnotationMarkerContext)
 }
 
-// ============================================
+// ---
 // 节点级摘要
-// ============================================
+// ---
 
 export interface NodeAnnotationSummary {
   total: number
@@ -74,9 +74,9 @@ function pickPrimaryType(types: Set<AnnotationType>): AnnotationType {
   return 'comment'
 }
 
-// ============================================
+// ---
 // Marker 组件
-// ============================================
+// ---
 
 interface AnnotationMarkerProps {
   nodeId: string
@@ -135,10 +135,10 @@ function AnnotationMarkerComponent({ nodeId }: AnnotationMarkerProps) {
 
 export const AnnotationMarker = memo(AnnotationMarkerComponent)
 
-// ============================================
+// ---
 // HOC：为节点组件包裹批注标记
 // 节点容器需要是 relative 定位（已是）
-// ============================================
+// ---
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function withAnnotationMarker<T extends React.ComponentType<any>>(Wrapped: T): T {

@@ -1,15 +1,4 @@
-/**
- * local-account-store.ts 单元测试
- *
- * 由于项目未安装 vitest，本测试为纯函数验证脚本：
- *   - 导出 runTests() 函数
- *   - 内部使用自定义 describe/it + 手动断言
- *   - 可通过 `npx tsx local-account-store.test.ts` 直接执行
- *
- * 注意：local-account-store 依赖 IndexedDB（Node 中不存在），
- * 本测试通过在 globalThis 上设置最小化 IndexedDB mock 来模拟。
- * runTests 为 async 函数。
- */
+/** local-account-store 单元测试 */
 import { webcrypto } from 'node:crypto'
 import {
   register,
@@ -24,10 +13,6 @@ import {
 if (typeof globalThis.crypto === 'undefined') {
   ;(globalThis as any).crypto = webcrypto
 }
-
-// ============================================
-// 简易测试工具
-// ============================================
 
 let passed = 0
 let failed = 0
@@ -79,9 +64,9 @@ function assertEqual<T>(actual: T, expected: T, message: string): void {
   }
 }
 
-// ============================================
+// ---
 // IndexedDB Mock
-// ============================================
+// ---
 
 class MockIDBRequest {
   result: any = undefined
@@ -201,9 +186,9 @@ class MockIndexedDB {
   }
 }
 
-// ============================================
+// ---
 // 环境设置
-// ============================================
+// ---
 
 const mockIndexedDB = new MockIndexedDB()
 const originalIndexedDB = (globalThis as any).indexedDB
@@ -218,10 +203,6 @@ function setupMockDB(): void {
 function teardownMockDB(): void {
   ;(globalThis as any).indexedDB = originalIndexedDB
 }
-
-// ============================================
-// 测试用例
-// ============================================
 
 export async function runTests(): Promise<void> {
   passed = 0

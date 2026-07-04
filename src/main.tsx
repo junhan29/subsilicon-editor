@@ -29,7 +29,6 @@ const emptyGraph: StoryGraph = {
 
 function handleSave(graph: StoryGraph): void {
   console.log('[Editor] Save story:', graph.title)
-  // TODO: 通过 Electron IPC 持久化到本地文件
 }
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

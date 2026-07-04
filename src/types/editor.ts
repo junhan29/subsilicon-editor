@@ -1,8 +1,8 @@
 // SubSilicon 互动漫剧编辑器类型定义
 
-// ============================================
+// ---
 // 节点类型 - 重新定义为分镜式
-// ============================================
+// ---
 
 export type ComicNodeType =
   | 'dialogue'     // 对话
@@ -16,9 +16,9 @@ export type ComicNodeType =
   | 'jump'         // 跳转
   | 'random'       // 随机
 
-// ============================================
+// ---
 // 场景系统
-// ============================================
+// ---
 
 export type PuzzleLayerType =
   | 'background'
@@ -76,9 +76,9 @@ export interface ComicScene {
   puzzleData?: PuzzleScene
 }
 
-// ============================================
+// ---
 // 角色系统
-// ============================================
+// ---
 
 export type CharacterGender = 'male' | 'female' | 'other' | 'unknown'
 
@@ -105,9 +105,9 @@ export interface ComicCharacter {
   voiceUrl?: string       // 角色语音
 }
 
-// ============================================
+// ---
 // 对话节点数据
-// ============================================
+// ---
 
 export interface DialogueData {
   characterId: string    // 说话角色ID
@@ -129,9 +129,9 @@ export interface DialogueData {
   emotion?: string
 }
 
-// ============================================
+// ---
 // 旁白节点数据
-// ============================================
+// ---
 
 export interface NarrationData {
   text: string
@@ -141,9 +141,9 @@ export interface NarrationData {
   backgroundColor?: string  // 可选背景色覆盖
 }
 
-// ============================================
+// ---
 // 分支选择节点
-// ============================================
+// ---
 
 export interface ChoiceOption {
   id: string
@@ -169,9 +169,9 @@ export interface ChoiceData {
   defaultNext?: string   // 无条件时的默认下一节点
 }
 
-// ============================================
+// ---
 // 转场节点
-// ============================================
+// ---
 
 export type TransitionType = 
   | 'none'              // 无转场
@@ -190,9 +190,9 @@ export interface TransitionData {
   duration?: number      // 转场时长（毫秒）
 }
 
-// ============================================
+// ---
 // 结局节点
-// ============================================
+// ---
 
 export interface EndingData {
   title: string
@@ -202,9 +202,9 @@ export interface EndingData {
   endingType: 'good' | 'bad' | 'neutral' | 'secret'
 }
 
-// ============================================
+// ---
 // CG过场动画节点
-// ============================================
+// ---
 
 export type CgMediaType = 'image' | 'video'
 
@@ -223,18 +223,18 @@ export interface CgData {
   letterbox?: boolean         // 是否显示黑边（电影感）
 }
 
-// ============================================
+// ---
 // 场景节点数据
-// ============================================
+// ---
 
 export interface SceneData {
   sceneId: string        // 关联场景ID
   transition?: TransitionData
 }
 
-// ============================================
+// ---
 // 节点数据联合类型
-// ============================================
+// ---
 
 export type ComicNodeData =
   | SceneData
@@ -245,9 +245,9 @@ export type ComicNodeData =
   | EndingData
   | CgData
 
-// ============================================
+// ---
 // 分镜节点
-// ============================================
+// ---
 
 export interface ComicNode {
   id: string
@@ -256,9 +256,9 @@ export interface ComicNode {
   data: ComicNodeData
 }
 
-// ============================================
+// ---
 // 分镜连线
-// ============================================
+// ---
 
 export interface ComicEdge {
   id: string
@@ -270,9 +270,9 @@ export interface ComicEdge {
   transition?: TransitionType
 }
 
-// ============================================
+// ---
 // 变量系统
-// ============================================
+// ---
 
 export interface ComicVariable {
   id: string
@@ -296,9 +296,9 @@ export interface ConditionGroup {
   clauses: ConditionClause[]
 }
 
-// ============================================
+// ---
 // 音效系统
-// ============================================
+// ---
 
 export interface ComicAudio {
   id: string
@@ -309,9 +309,9 @@ export interface ComicAudio {
   volume?: number
 }
 
-// ============================================
+// ---
 // 故事工程
-// ============================================
+// ---
 
 export interface ComicSettings {
   title: string
@@ -355,9 +355,9 @@ export interface ComicGraph {
   groups: NodeGroup[]            // 节点分组
 }
 
-// ============================================
+// ---
 // 模板定义
-// ============================================
+// ---
 
 export type ComicTemplateId = 'romance' | 'adventure' | 'mystery' | 'custom'
 
@@ -421,9 +421,9 @@ export const COMIC_TEMPLATES: ComicTemplate[] = [
   },
 ]
 
-// ============================================
+// ---
 // 兼容旧版类型（用于迁移）
-// ============================================
+// ---
 
 export type TemplateId = ComicTemplateId
 
@@ -509,9 +509,9 @@ export interface StoryGraph {
   monetization?: import('@editor/lib/work-monetization').MonetizationConfig
 }
 
-// ============================================
+// ---
 // 节点批注系统（类 Figma 评论）
-// ============================================
+// ---
 
 export type AnnotationType = 'comment' | 'todo' | 'warning' | 'idea'
 

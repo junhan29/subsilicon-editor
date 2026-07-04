@@ -104,9 +104,9 @@ export function EmptyCanvasGuide({ onQuickAdd, onStartTour }: EmptyCanvasGuidePr
   )
 }
 
-// ============================================
+// ---
 // 渐进式引导卡片
-// ============================================
+// ---
 
 interface GuideCardProps {
   step: number
@@ -246,9 +246,9 @@ function GuideCard({ step, total, guide, onNext, onSkip, isLast }: GuideCardProp
   )
 }
 
-// ============================================
+// ---
 // 快速添加面板（引导结束后显示）
-// ============================================
+// ---
 
 interface QuickAddPanelProps {
   onQuickAdd: (type: string) => void

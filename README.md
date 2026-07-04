@@ -349,5 +349,53 @@ editor/
 ### Contributing
 Issues and PRs are welcome. Please read [CONTRIBUTING.md](./CONTRIBUTING.md).
 
+### Work Wall Submit Protocol
+
+The editor supports submitting works to **any showcase service** that implements the public protocol below. The default built-in provider is the SubSilicon official work wall; you can add custom providers in the upload dialog (`+ 添加展示墙`).
+
+#### Request
+
+```
+POST {provider.apiUrl}
+Headers:
+  {provider.authHeader}: {provider.authToken}   # default header name: X-Submit-Token
+Body (multipart/form-data):
+  creatorEmail      string         creator email
+  creatorName       string         creator display name
+  creatorBio        string   opt   creator bio
+  title             string         work title
+  summary           string         one-line summary
+  tags              string         JSON string array, e.g. ["scifi","romance"]
+  coverImage        File     opt   cover image (16:9 recommended, ≤2MB)
+  screenshot-N      File     opt   screenshots (N from 0, ≤6 images)
+  contactInfo       string   opt   contact (e.g. WeChat ID)
+  externalLink      string   opt   external link (e.g. afdian, mianbaoduo)
+  previewHtml       File           preview HTML (text/html)
+  workId            string   opt   work ID (for updating existing work)
+```
+
+#### Response
+
+```
+2xx          success
+4xx / 5xx    failure, body should be { "message": string }
+```
+
+#### Register a custom provider programmatically
+
+```ts
+import { addProvider, setActiveProvider } from '@editor/lib/submit-providers'
+
+addProvider({
+  name: 'My Showcase',
+  apiUrl: 'https://my-showcase.example.com/api/submit',
+  authHeader: 'X-Submit-Token',  // optional, default X-Submit-Token
+  authToken: 'my-secret-token',
+  description: 'Personal showcase site',
+  enabled: true,
+})
+setActiveProvider('custom.<timestamp>')
+```
+
 ### License
 MIT License — Free to use, modify, distribute, and commercialize.

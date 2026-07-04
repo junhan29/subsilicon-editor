@@ -1,11 +1,4 @@
-/**
- * history-store.ts 单元测试
- *
- * 由于项目未安装 vitest，本测试为纯函数验证脚本：
- *   - 导出 runTests() 函数
- *   - 内部使用自定义 describe/it + 手动断言
- *   - 可通过 `npx tsx history-store.test.ts` 直接执行
- */
+/** history-store 单元测试 */
 import {
   HistoryStore,
   createHistoryStore,
@@ -15,10 +8,6 @@ import type {
   StoryGraphSnapshot,
   HistoryState,
 } from '../history-store'
-
-// ============================================
-// 简易测试工具
-// ============================================
 
 let passed = 0
 let failed = 0
@@ -55,10 +44,6 @@ function assertEqual<T>(actual: T, expected: T, message: string): void {
   }
 }
 
-// ============================================
-// 测试数据构造
-// ============================================
-
 function makeSnapshot(id: number | string): StoryGraphSnapshot {
   return {
     nodes: [{ id: String(id) }],
@@ -70,10 +55,6 @@ function makeSnapshot(id: number | string): StoryGraphSnapshot {
     groups: [],
   }
 }
-
-// ============================================
-// 测试用例
-// ============================================
 
 export function runTests(): void {
   passed = 0
