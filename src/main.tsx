@@ -62,24 +62,33 @@ function handleSave(graph: StoryGraph): void {
 
 function App() {
   useEffect(() => {
+    const IGNORED_ERRORS = [
+      'ResizeObserver loop completed with undelivered notifications',
+      'ResizeObserver loop limit exceeded',
+    ]
+
+    const isIgnoredError = (msg: string) => {
+      return IGNORED_ERRORS.some((ignored) => msg.includes(ignored))
+    }
+
     const handleWindowError = (event: ErrorEvent) => {
       const msg = event.error?.message || event.message || '未知错误'
+      if (isIgnoredError(msg)) return
       console.error('Global error:', event.error || event.message)
       logError('error', msg, event.error?.stack)
-      showToast('error', `发生错误: ${msg}`)
+      showToast('error', '发生了意外错误，请刷新页面重试')
     }
 
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-      console.error('Unhandled promise rejection:', event.reason)
       const message = event.reason?.message || String(event.reason) || '未知错误'
-      const stack = event.reason?.stack
-      logError('unhandledrejection', message, stack)
-      showToast('error', '发生了意外错误')
+      if (isIgnoredError(message)) return
+      console.error('Unhandled promise rejection:', event.reason)
+      logError('error', message, event.reason?.stack)
+      showToast('error', '发生了意外错误，请刷新页面重试')
     }
 
     window.addEventListener('error', handleWindowError)
     window.addEventListener('unhandledrejection', handleUnhandledRejection)
-
     return () => {
       window.removeEventListener('error', handleWindowError)
       window.removeEventListener('unhandledrejection', handleUnhandledRejection)

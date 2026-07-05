@@ -1352,7 +1352,6 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
   const alignmentEnabled = nodes.length <= 200
 
   const handleNodesChange = useCallback((changes: any[]) => {
-    try {
     const filteredChanges = changes.filter((change: any) => {
       if (change.type === 'position' && change.id?.startsWith('group-')) {
         return false
@@ -1381,27 +1380,16 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
       }
       return result
     })
-    } catch (e) {
-      console.error('handleNodesChange error:', e)
-    }
   }, [setNodes])
 
   const handleNodeDrag = useCallback((event: MouseEvent | TouchEvent, node: Node, nodes: Node[]) => {
-    try {
-      alignmentLinesRef.current?.handleNodeDrag(event, node, nodes)
-      handleGroupNodeDrag(event, node, nodes)
-    } catch (e) {
-      console.error('handleNodeDrag error:', e)
-    }
+    alignmentLinesRef.current?.handleNodeDrag(event, node, nodes)
+    handleGroupNodeDrag(event, node, nodes)
   }, [handleGroupNodeDrag])
 
   const handleNodeDragStop = useCallback(() => {
-    try {
-      alignmentLinesRef.current?.handleNodeDragStop()
-      throttledPushHistory('UPDATE_GROUP', '移动分组')
-    } catch (e) {
-      console.error('handleNodeDragStop error:', e)
-    }
+    alignmentLinesRef.current?.handleNodeDragStop()
+    throttledPushHistory('UPDATE_GROUP', '移动分组')
   }, [throttledPushHistory])
 
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -1490,16 +1478,12 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
   }, [])
 
   const handleSelectionChange = useCallback(({ nodes: selNodes, edges: selEdges }: { nodes: Node[]; edges: Edge[] }) => {
-    try {
-      if (selNodes && selNodes.length > 0) {
-        setSelectedNodeIds(selNodes.map((n) => n.id))
-        setSelectedEdgeId(null)
-      } else if (selEdges && selEdges.length > 0) {
-        setSelectedEdgeId(selEdges[0].id)
-        setSelectedNodeIds([])
-      }
-    } catch (e) {
-      console.error('handleSelectionChange error:', e)
+    if (selNodes.length > 0) {
+      setSelectedNodeIds(selNodes.map((n) => n.id))
+      setSelectedEdgeId(null)
+    } else if (selEdges.length > 0) {
+      setSelectedEdgeId(selEdges[0].id)
+      setSelectedNodeIds([])
     }
   }, [])
 
