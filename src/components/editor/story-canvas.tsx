@@ -471,7 +471,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
     return () => window.removeEventListener('subsilicon-node-search-open', handleOpenSearch)
   }, [])
 
-  const nodeTypeLabels: Record<string, string> = {
+  const nodeTypeLabels: Record<string, string> = useMemo(() => ({
     dialogue: '对话',
     narration: '旁白',
     choice: '选择',
@@ -482,7 +482,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
     cg: 'CG过场',
     jump: '跳转',
     random: '随机',
-  }
+  }), [])
 
   const createNodeData = (type: string) => {
     switch (type) {
@@ -556,7 +556,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
 
     window.addEventListener('subsilicon-node-drop', handleDrop)
     return () => window.removeEventListener('subsilicon-node-drop', handleDrop)
-  }, [setNodes, pushHistory])
+  }, [setNodes, pushHistory, nodeTypeLabels])
 
   const onConnect = useCallback(
     (connection: Connection) => {
@@ -1352,6 +1352,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
   const alignmentEnabled = nodes.length <= 200
 
   const handleNodesChange = useCallback((changes: any[]) => {
+    try {
     const filteredChanges = changes.filter((change: any) => {
       if (change.type === 'position' && change.id?.startsWith('group-')) {
         return false
@@ -1380,16 +1381,27 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
       }
       return result
     })
+    } catch (e) {
+      console.error('handleNodesChange error:', e)
+    }
   }, [setNodes])
 
   const handleNodeDrag = useCallback((event: MouseEvent | TouchEvent, node: Node, nodes: Node[]) => {
-    alignmentLinesRef.current?.handleNodeDrag(event, node, nodes)
-    handleGroupNodeDrag(event, node, nodes)
+    try {
+      alignmentLinesRef.current?.handleNodeDrag(event, node, nodes)
+      handleGroupNodeDrag(event, node, nodes)
+    } catch (e) {
+      console.error('handleNodeDrag error:', e)
+    }
   }, [handleGroupNodeDrag])
 
   const handleNodeDragStop = useCallback(() => {
-    alignmentLinesRef.current?.handleNodeDragStop()
-    throttledPushHistory('UPDATE_GROUP', '移动分组')
+    try {
+      alignmentLinesRef.current?.handleNodeDragStop()
+      throttledPushHistory('UPDATE_GROUP', '移动分组')
+    } catch (e) {
+      console.error('handleNodeDragStop error:', e)
+    }
   }, [throttledPushHistory])
 
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -1478,12 +1490,16 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
   }, [])
 
   const handleSelectionChange = useCallback(({ nodes: selNodes, edges: selEdges }: { nodes: Node[]; edges: Edge[] }) => {
-    if (selNodes.length > 0) {
-      setSelectedNodeIds(selNodes.map((n) => n.id))
-      setSelectedEdgeId(null)
-    } else if (selEdges.length > 0) {
-      setSelectedEdgeId(selEdges[0].id)
-      setSelectedNodeIds([])
+    try {
+      if (selNodes && selNodes.length > 0) {
+        setSelectedNodeIds(selNodes.map((n) => n.id))
+        setSelectedEdgeId(null)
+      } else if (selEdges && selEdges.length > 0) {
+        setSelectedEdgeId(selEdges[0].id)
+        setSelectedNodeIds([])
+      }
+    } catch (e) {
+      console.error('handleSelectionChange error:', e)
     }
   }, [])
 

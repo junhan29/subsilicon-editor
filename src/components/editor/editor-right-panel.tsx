@@ -718,12 +718,14 @@ function EditorRightPanel({
           </TabsContent>
           
           <TabsContent value="monetization" className="flex-1 overflow-y-auto p-4 m-0">
-            <MonetizationSettingsPanel
-              graph={graph!}
-              config={monetization ?? null}
-              onChange={onMonetizationChange!}
-              workId={workId}
-            />
+            {graph && onMonetizationChange && (
+              <MonetizationSettingsPanel
+                graph={graph}
+                config={monetization ?? null}
+                onChange={onMonetizationChange}
+                workId={workId}
+              />
+            )}
           </TabsContent>
           
           <TabsContent value="ai" className="flex-1 overflow-y-auto p-4 m-0">

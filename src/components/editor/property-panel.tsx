@@ -464,6 +464,7 @@ function arePropertyPanelPropsEqual(
   if (prevProps.selectedEdge?.id !== nextProps.selectedEdge?.id) return false
   if (prevProps.editCharId !== nextProps.editCharId) return false
   if (prevProps.annotations !== nextProps.annotations) return false
+  if (prevProps.selectedNode?.type !== nextProps.selectedNode?.type) return false
   return true
 }
 

@@ -35,6 +35,12 @@ function LivePreview({
   const [sceneTransition, setSceneTransition] = useState(false)
   const [characterEntering, setCharacterEntering] = useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
+  const mountedRef = useRef(true)
+
+  useEffect(() => {
+    mountedRef.current = true
+    return () => { mountedRef.current = false }
+  }, [])
 
   const dialogueNodes = useMemo(() => {
     return nodes.filter((n) => n.type === 'dialogue' || n.type === 'choice' || n.type === 'narration' || n.type === 'ending' || n.type === 'cg')
@@ -155,7 +161,7 @@ function LivePreview({
     if (currentIndex > 0) {
       setCurrentIndex(currentIndex - 1)
       setCharacterEntering(true)
-      setTimeout(() => setCharacterEntering(false), 500)
+      setTimeout(() => { if (mountedRef.current) setCharacterEntering(false) }, 500)
     }
   }, [currentIndex])
 
@@ -163,7 +169,7 @@ function LivePreview({
     if (currentIndex < dialogueNodes.length - 1) {
       setCurrentIndex(currentIndex + 1)
       setCharacterEntering(true)
-      setTimeout(() => setCharacterEntering(false), 500)
+      setTimeout(() => { if (mountedRef.current) setCharacterEntering(false) }, 500)
       if (onNodeSelect && dialogueNodes[currentIndex + 1]) {
         onNodeSelect(dialogueNodes[currentIndex + 1].id)
       }
@@ -509,7 +515,7 @@ function LivePreview({
                 const val = parseInt(e.target.value)
                 setCurrentIndex(val)
                 setCharacterEntering(true)
-                setTimeout(() => setCharacterEntering(false), 500)
+                setTimeout(() => { if (mountedRef.current) setCharacterEntering(false) }, 500)
               }}
               className="w-full h-1 accent-pink-500 cursor-pointer"
             />

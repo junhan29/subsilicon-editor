@@ -63,9 +63,10 @@ function handleSave(graph: StoryGraph): void {
 function App() {
   useEffect(() => {
     const handleWindowError = (event: ErrorEvent) => {
+      const msg = event.error?.message || event.message || '未知错误'
       console.error('Global error:', event.error || event.message)
-      logError('error', event.message, event.error?.stack)
-      showToast('error', '发生了意外错误，请刷新页面重试')
+      logError('error', msg, event.error?.stack)
+      showToast('error', `发生错误: ${msg}`)
     }
 
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {

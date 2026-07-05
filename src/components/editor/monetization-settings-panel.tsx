@@ -5,7 +5,7 @@ import {
   Lock, Unlock, CreditCard, QrCode, Link2, DollarSign, Shield, AlertTriangle,
   CheckCircle2, Info, Upload, X, Plus, Trash2, ChevronDown, ChevronUp,
   Globe, MessageCircle, Wallet, TrendingUp, BarChart3, AlertCircle,
-  FileText, Sparkles, Star
+  FileText, Sparkles, Star, Cookie
 } from 'lucide-react'
 import { Button } from '@editor/components/ui/button'
 import type { StoryGraph, StoryNode } from '@editor/types/editor'
@@ -170,6 +170,7 @@ export function MonetizationSettingsPanel({
         setPaidNodes(allEndingNodes)
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled])
   
   // 加载合规状态和收入记录
@@ -840,7 +841,7 @@ export function MonetizationSettingsPanel({
       }`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Bread className="w-4 h-4 text-orange-500" />
+            <Cookie className="w-4 h-4 text-orange-500" />
             <p className="text-sm font-medium">面包多</p>
             <span className="px-1.5 py-0.5 bg-orange-500/20 text-orange-500 text-xs rounded">
               推荐·买断制
