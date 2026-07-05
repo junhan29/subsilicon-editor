@@ -189,5 +189,8 @@ export function createHistoryStore<T extends StoryGraphSnapshot>(
 }
 
 export function createSnapshot<T extends StoryGraphSnapshot>(state: T): T {
+  if (typeof structuredClone !== 'undefined') {
+    return structuredClone(state)
+  }
   return JSON.parse(JSON.stringify(state))
 }

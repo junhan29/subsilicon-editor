@@ -24,6 +24,7 @@ import {
   Sparkles,
   User,
   Library,
+  AlignLeft,
 } from 'lucide-react'
 import { Button } from '@editor/components/ui/button'
 import { Input } from '@editor/components/ui/input'
@@ -47,6 +48,12 @@ const NODE_TYPES: SidebarNodeType[] = [
     label: '对话',
     icon: <MessageCircle className="w-5 h-5 text-primary" />,
     description: '角色台词与对话',
+  },
+  {
+    type: 'narration',
+    label: '旁白',
+    icon: <AlignLeft className="w-5 h-5 text-slate-500" />,
+    description: '叙述与环境描写',
   },
   {
     type: 'choice',

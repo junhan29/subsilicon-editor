@@ -112,7 +112,7 @@ export function WelcomeModal({
             </div>
             <h2 className="text-xl font-bold text-slate-50 tracking-tight">SubSilicon Editor</h2>
             <p className="text-xs text-amber-300/80 mt-1 font-medium tracking-wide">
-              AI NPC 群像互动叙事编辑器
+              零代码可视化互动叙事编辑器
             </p>
           </div>
           <button
@@ -229,12 +229,7 @@ export function WelcomeModal({
             </Button>
           </div>
 
-          {/* 在线版提示 */}
-          <div className="mt-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
-            <p className="text-xs text-amber-300/90 text-center">
-              💡 在线版提示：作品仅保存在浏览器内存中，请及时导出保存到本地文件
-            </p>
-          </div>
+
         </div>
 
         {/* 底部提示 */}

@@ -29,6 +29,7 @@ import { ConditionNode } from './nodes/condition-node'
 import { CgNode } from './nodes/cg-node'
 import { JumpNode } from './nodes/jump-node'
 import { RandomNode } from './nodes/random-node'
+import { NarrationNode } from './nodes/narration-node'
 import { GroupNode } from './nodes/group-node'
 import { EditorSidebar } from './editor-sidebar'
 import { EditorRightPanel } from './editor-right-panel'
@@ -75,6 +76,7 @@ import { startSession, endSession, recordAction, estimateWordCount } from '@edit
 // 用 HOC 为所有节点类型包裹批注标记
 const nodeTypes = {
   dialogue: withAnnotationMarker(DialogueNode),
+  narration: withAnnotationMarker(NarrationNode),
   choice: withAnnotationMarker(ChoiceNode),
   unlock: withAnnotationMarker(UnlockNode),
   ending: withAnnotationMarker(EndingNode),
@@ -471,6 +473,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
 
   const nodeTypeLabels: Record<string, string> = {
     dialogue: '对话',
+    narration: '旁白',
     choice: '选择',
     gather: '汇聚',
     condition: '条件',
@@ -485,6 +488,8 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
     switch (type) {
       case 'dialogue':
         return { characterId: '', text: '', emotion: '', spritePosition: 'center', enterAnimation: 'fade-in', textAnimation: 'typewriter' }
+      case 'narration':
+        return { text: '', fontSize: 16, fontColor: '#ffffff', textAnimation: 'typewriter', backgroundColor: '' }
       case 'choice':
         return { options: [{ id: 'opt-a', text: '选项A' }, { id: 'opt-b', text: '选项B' }], prompt: '你的选择是？' }
       case 'ending':

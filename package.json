@@ -11,7 +11,7 @@
     "react"
   ],
   "type": "module",
-  "main": "desktop/main.js",
+  "main": "desktop/main.cjs",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -22,7 +22,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "electron:dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "electron:dev": "node desktop/build.cjs && concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
     "electron:build": "vite build && node desktop/build.cjs && electron-builder",
     "electron:build:win": "vite build && node desktop/build.cjs && electron-builder --win",
     "electron:build:mac": "vite build && node desktop/build.cjs && electron-builder --mac",
@@ -84,14 +84,13 @@
     },
     "files": [
       "dist/**/*",
-      "desktop/main.js",
-      "desktop/preload.js",
-      "desktop/build.cjs",
+      "desktop/main.cjs",
+      "desktop/preload.cjs",
       "package.json",
       "build/**/*",
       "!node_modules/**/*",
       "!desktop/*.ts",
-      "!desktop/*.cjs"
+      "!desktop/build.cjs"
     ],
     "asar": true,
     "artifactName": "${productName}-${version}-${platform}-${arch}.${ext}",
@@ -99,7 +98,7 @@
       "mirror": "https://npmmirror.com/mirrors/electron/"
     },
     "extraMetadata": {
-      "main": "desktop/main.js"
+      "main": "desktop/main.cjs"
     },
     "win": {
       "target": [
@@ -147,14 +146,12 @@
         {
           "target": "dmg",
           "arch": [
-            "x64",
             "arm64"
           ]
         },
         {
           "target": "zip",
           "arch": [
-            "x64",
             "arm64"
           ]
         }
@@ -171,7 +168,6 @@
     "dmg": {
       "title": "${productName} ${version}",
       "icon": "build/icon.icns",
-      "background": "build/dmg-background.tiff",
       "contents": [
         {
           "x": 130,
