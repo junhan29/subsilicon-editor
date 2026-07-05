@@ -1,4 +1,4 @@
-export type AudioChannelType = 'bgm' | 'bgs' | 'se'
+export type AudioChannelType = 'bgm' | 'bgs' | 'se' | 'voice'
 
 export interface AudioChannelState {
   audio: HTMLAudioElement | null
@@ -20,6 +20,7 @@ export interface AudioManagerConfig {
   bgmVolume?: number
   bgsVolume?: number
   seVolume?: number
+  voiceVolume?: number
   globalVolume?: number
 }
 
@@ -55,6 +56,15 @@ export class AudioManager {
         audio: null,
         currentUrl: null,
         volume: config.seVolume ?? 0.5,
+        isPlaying: false,
+        loop: false,
+        fadeTimer: null,
+        cleanup: null,
+      },
+      voice: {
+        audio: null,
+        currentUrl: null,
+        volume: config.voiceVolume ?? 0.8,
         isPlaying: false,
         loop: false,
         fadeTimer: null,
@@ -283,7 +293,7 @@ export class AudioManager {
   }
 
   stopAll(fadeTime?: number): void {
-    const channels = ['bgm', 'bgs', 'se'] as const
+    const channels = ['bgm', 'bgs', 'se', 'voice'] as const
 
     if (fadeTime) {
       const promises = channels.map((ch) => {

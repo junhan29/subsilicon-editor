@@ -239,6 +239,87 @@ export function DialoguePanel({ node, characters, variables, assets, scenes, onU
             ))}
           </div>
         )}
+        <div className="space-y-1">
+          <div className="flex justify-between text-[10px] text-muted-foreground">
+            <span>BGM 音量</span>
+            <span>{Math.round(((data as any).bgmVolume ?? 0.3) * 100)}%</span>
+          </div>
+          <input type="range" min="0" max="1" step="0.05"
+            value={(data as any).bgmVolume ?? 0.3}
+            onChange={(e) => onUpdateNode(id, { ...data, bgmVolume: Number(e.target.value) })}
+            className="w-full accent-purple-500" />
+        </div>
+      </div>
+
+      {/* 环境音 BGS */}
+      <div className="space-y-2 pt-2 border-t border-border/40">
+        <Label className="text-xs">环境音 (BGS)</Label>
+        <div className="flex items-center gap-2">
+          <Input
+            value={(data as any).bgs || ''}
+            onChange={(e) => onUpdateNode(id, { ...data, bgs: e.target.value })}
+            placeholder="BGS URL"
+            className="text-sm flex-1"
+          />
+          {(data as any).bgs && (
+            <button onClick={() => onUpdateNode(id, { ...data, bgs: '' })}
+              className="text-xs text-red-400 hover:text-red-600 px-2">清除</button>
+          )}
+        </div>
+        <div className="space-y-1">
+          <div className="flex justify-between text-[10px] text-muted-foreground">
+            <span>音量</span>
+            <span>{Math.round(((data as any).bgsVolume ?? 0.2) * 100)}%</span>
+          </div>
+          <input type="range" min="0" max="1" step="0.05"
+            value={(data as any).bgsVolume ?? 0.2}
+            onChange={(e) => onUpdateNode(id, { ...data, bgsVolume: Number(e.target.value) })}
+            className="w-full accent-blue-500" />
+        </div>
+      </div>
+
+      {/* 音效 SE */}
+      <div className="space-y-2 pt-2 border-t border-border/40">
+        <Label className="text-xs">音效 (SE)</Label>
+        <div className="flex items-center gap-2">
+          <Input
+            value={(data as any).seUrl || ''}
+            onChange={(e) => onUpdateNode(id, { ...data, seUrl: e.target.value })}
+            placeholder="SE URL"
+            className="text-sm flex-1"
+          />
+          {(data as any).seUrl && (
+            <button onClick={() => onUpdateNode(id, { ...data, seUrl: '' })}
+              className="text-xs text-red-400 hover:text-red-600 px-2">清除</button>
+          )}
+        </div>
+        <div className="space-y-1">
+          <div className="flex justify-between text-[10px] text-muted-foreground">
+            <span>音量</span>
+            <span>{Math.round(((data as any).seVolume ?? 0.5) * 100)}%</span>
+          </div>
+          <input type="range" min="0" max="1" step="0.05"
+            value={(data as any).seVolume ?? 0.5}
+            onChange={(e) => onUpdateNode(id, { ...data, seVolume: Number(e.target.value) })}
+            className="w-full accent-green-500" />
+        </div>
+      </div>
+
+      {/* 语音 Voice */}
+      <div className="space-y-2 pt-2 border-t border-border/40">
+        <Label className="text-xs">语音 (Voice)</Label>
+        <div className="flex items-center gap-2">
+          <Input
+            value={(data as any).voiceUrl || ''}
+            onChange={(e) => onUpdateNode(id, { ...data, voiceUrl: e.target.value })}
+            placeholder="Voice URL"
+            className="text-sm flex-1"
+          />
+          {(data as any).voiceUrl && (
+            <button onClick={() => onUpdateNode(id, { ...data, voiceUrl: '' })}
+              className="text-xs text-red-400 hover:text-red-600 px-2">清除</button>
+          )}
+        </div>
       </div>
 
       {/* 预览 UI 定制 */}

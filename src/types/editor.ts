@@ -139,6 +139,8 @@ export interface NarrationData {
   fontColor?: string
   textAnimation?: 'none' | 'typewriter' | 'fade' | 'slide-up'
   backgroundColor?: string  // 可选背景色覆盖
+  bgm?: string
+  bgmVolume?: number
 }
 
 // ---
@@ -200,6 +202,8 @@ export interface EndingData {
   text?: string
   coverImage?: string
   endingType: 'good' | 'bad' | 'neutral' | 'secret'
+  bgm?: string
+  bgmVolume?: number
 }
 
 // ---
@@ -219,8 +223,13 @@ export interface CgData {
   transitionOut?: TransitionType  // 出场转场
   transitionDuration?: number     // 转场时长（毫秒）
   bgm?: string                // 背景音乐URL
+  bgmVolume?: number          // BGM音量（0-1）
   soundEffect?: string        // 音效URL
   letterbox?: boolean         // 是否显示黑边（电影感）
+  displayMode?: 'contain' | 'cover' | 'fill' | 'custom'  // 显示模式
+  customWidth?: number    // 自定义宽度百分比 (10-100)
+  customHeight?: number   // 自定义高度百分比 (10-100)
+  objectPosition?: string // CSS object-position 值，如 'center top'
 }
 
 // ---

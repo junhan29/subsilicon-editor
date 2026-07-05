@@ -259,6 +259,69 @@ export function CGPanel({ node, onOpenAssets, onUpdateNode }: BasePanelProps) {
         </div>
       </div>
 
+      {/* 显示比例控制 */}
+      <div className="space-y-2 pt-2 border-t border-border/40">
+        <Label className="text-xs">显示比例</Label>
+        <div className="grid grid-cols-4 gap-1">
+          {[
+            { value: 'contain', label: '完整' },
+            { value: 'cover', label: '铺满' },
+            { value: 'fill', label: '拉伸' },
+            { value: 'custom', label: '自定义' },
+          ].map((m) => (
+            <button
+              key={m.value}
+              onClick={() => onUpdateNode(id, { ...data, displayMode: m.value })}
+              className={`py-1.5 px-2 rounded-md text-[10px] font-medium transition-all ${
+                ((data as any).displayMode || 'contain') === m.value ? 'bg-purple-500 text-white' : 'bg-muted hover:bg-muted/80'
+              }`}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
+        {((data as any).displayMode === 'custom') && (
+          <>
+            <div className="space-y-1">
+              <div className="flex justify-between text-[10px] text-muted-foreground">
+                <span>宽度</span>
+                <span>{(data as any).customWidth || 100}%</span>
+              </div>
+              <input type="range" min="10" max="100" step="5"
+                value={(data as any).customWidth || 100}
+                onChange={(e) => onUpdateNode(id, { ...data, customWidth: Number(e.target.value) })}
+                className="w-full accent-purple-500" />
+            </div>
+            <div className="space-y-1">
+              <div className="flex justify-between text-[10px] text-muted-foreground">
+                <span>高度</span>
+                <span>{(data as any).customHeight || 100}%</span>
+              </div>
+              <input type="range" min="10" max="100" step="5"
+                value={(data as any).customHeight || 100}
+                onChange={(e) => onUpdateNode(id, { ...data, customHeight: Number(e.target.value) })}
+                className="w-full accent-purple-500" />
+            </div>
+          </>
+        )}
+        <div className="space-y-1">
+          <Label className="text-[10px] text-muted-foreground">图片位置</Label>
+          <select
+            className="w-full h-8 rounded-md border border-input bg-background px-2 text-xs"
+            value={(data as any).objectPosition || 'center'}
+            onChange={(e) => onUpdateNode(id, { ...data, objectPosition: e.target.value })}
+          >
+            <option value="center">居中</option>
+            <option value="top">顶部</option>
+            <option value="bottom">底部</option>
+            <option value="left">左侧</option>
+            <option value="right">右侧</option>
+            <option value="center top">中上</option>
+            <option value="center bottom">中下</option>
+          </select>
+        </div>
+      </div>
+
       <div className="space-y-2 pt-2 border-t border-border/40">
         <Label className="text-xs">入场转场</Label>
         <select
@@ -296,6 +359,49 @@ export function CGPanel({ node, onOpenAssets, onUpdateNode }: BasePanelProps) {
           onChange={(e) => onUpdateNode(id, { ...data, transitionDuration: Number(e.target.value) })}
           className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
         />
+      </div>
+
+      {/* 音频控制 */}
+      <div className="space-y-2 pt-2 border-t border-border/40">
+        <Label className="text-xs">背景音乐 (BGM)</Label>
+        <div className="flex items-center gap-2">
+          <Input
+            value={(data as any).bgm || ''}
+            onChange={(e) => onUpdateNode(id, { ...data, bgm: e.target.value })}
+            placeholder="BGM URL"
+            className="text-sm flex-1"
+          />
+          {(data as any).bgm && (
+            <button onClick={() => onUpdateNode(id, { ...data, bgm: '' })}
+              className="text-xs text-red-400 hover:text-red-600 px-2">清除</button>
+          )}
+        </div>
+        <div className="space-y-1">
+          <div className="flex justify-between text-[10px] text-muted-foreground">
+            <span>音量</span>
+            <span>{Math.round(((data as any).bgmVolume ?? 0.3) * 100)}%</span>
+          </div>
+          <input type="range" min="0" max="1" step="0.05"
+            value={(data as any).bgmVolume ?? 0.3}
+            onChange={(e) => onUpdateNode(id, { ...data, bgmVolume: Number(e.target.value) })}
+            className="w-full accent-purple-500" />
+        </div>
+      </div>
+
+      <div className="space-y-2 pt-2 border-t border-border/40">
+        <Label className="text-xs">音效 (SE)</Label>
+        <div className="flex items-center gap-2">
+          <Input
+            value={(data as any).soundEffect || ''}
+            onChange={(e) => onUpdateNode(id, { ...data, soundEffect: e.target.value })}
+            placeholder="音效 URL"
+            className="text-sm flex-1"
+          />
+          {(data as any).soundEffect && (
+            <button onClick={() => onUpdateNode(id, { ...data, soundEffect: '' })}
+              className="text-xs text-red-400 hover:text-red-600 px-2">清除</button>
+          )}
+        </div>
       </div>
     </>
   )
