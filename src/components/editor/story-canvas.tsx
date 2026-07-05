@@ -73,7 +73,7 @@ import { matchShortcut } from '@editor/lib/shortcut-manager'
 import { toggleTheme, getCurrentTheme, initTheme, type Theme, subscribeTheme } from '@editor/lib/theme-manager'
 import { startSession, endSession, recordAction, estimateWordCount } from '@editor/lib/writing-stats'
 
-// 用 HOC 为所有节点类型包裹批注标记
+// 为所有节点类型包裹批注标记
 const nodeTypes = {
   dialogue: withAnnotationMarker(DialogueNode),
   narration: withAnnotationMarker(NarrationNode),
@@ -139,7 +139,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
   const [isDraggingOver, setIsDraggingOver] = useState(false)
   const [showNodeSearch, setShowNodeSearch] = useState(false)
   const [showExportDialog, setShowExportDialog] = useState(false)
-  // === 账号与名录上传状态 ===
+  // 账号与名录上传状态
   const [showDirectoryUpload, setShowDirectoryUpload] = useState(false)
   const [showAccountDialog, setShowAccountDialog] = useState(false)
   const [loginState, setLoginState] = useState(0) // 用于刷新登录状态
@@ -147,15 +147,15 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
   const [rightPanelTab, setRightPanelTab] = useState('properties')
   const [outlineText, setOutlineText] = useState('')
   const [versions, setVersions] = useState<VersionSnapshot[]>([])
-  // === 节点批注系统 ===
+  // 节点批注系统
   const [annotations, setAnnotations] = useState<NodeAnnotation[]>(initialGraph?.annotations || [])
   const [monetization, setMonetization] = useState<MonetizationConfig | null>(initialGraph?.monetization || null)
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; nodeId: string } | null>(null)
   const [annotationDialog, setAnnotationDialog] = useState<{ nodeId: string } | null>(null)
-  // === 视图切换状态 ===
+  // 视图切换状态
   const [sidebarVisible, setSidebarVisible] = useState(true)
   const [rightPanelVisible, setRightPanelVisible] = useState(true)
-  // === 主题状态（订阅变化以触发重渲染） ===
+  // 主题状态（订阅变化以触发重渲染）
   const [currentTheme, setCurrentTheme] = useState<Theme>('dark')
   const annotationAuthor = useMemo(() => getAnnotationAuthor(), [])
   const { screenToFlowPosition, fitView, getNodes, zoomIn, zoomOut } = useReactFlow()
@@ -191,7 +191,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
 
     const unsubscribe = historyStoreRef.current.subscribe(setHistoryState)
     return () => {
-      // 取消订阅避免内存泄漏（P0-1）
+      // 取消订阅避免内存泄漏
       unsubscribe()
     }
   }, [initialGraph])
@@ -201,7 +201,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
     setVersions(loadVersions())
   }, [])
 
-  // === 主题初始化与订阅 ===
+  // 主题初始化与订阅
   useEffect(() => {
     const initial = initTheme()
     setCurrentTheme(initial)
@@ -209,7 +209,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
     return unsub
   }, [])
 
-  // === 创作时间统计：开始/结束会话
+  // 创作时间统计：开始/结束会话
   useEffect(() => {
     const wid = workId || 'default'
     startSession(wid)
@@ -239,7 +239,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
     showToast('info', `已切换到${next === 'dark' ? '深色' : '浅色'}主题`)
   }, [])
 
-  // === 批注：从 localStorage 加载（按 workId 隔离） ===
+  // 批注：从 localStorage 加载（按 workId 隔离）
   // 工作区切换或首次加载时重新读取
   useEffect(() => {
     const wid = workId || 'default'
@@ -287,7 +287,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
     }
   }, [contextMenu])
 
-  // === 账号登录状态刷新 ===
+  // 账号登录状态刷新
   // 当登录/登出后触发重渲染
   useEffect(() => {
     const handleLoginChange = () => {
@@ -320,7 +320,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
     [annotationsMap, selectedNodeIds]
   )
 
-  // === 批注 CRUD 回调 ===
+  // 批注增删改查回调
   const handleAddAnnotation = useCallback((input: { nodeId: string; type: AnnotationType; text: string; author: string }) => {
     const wid = workId || 'default'
     const updated = storeAddAnnotation(wid, input)
@@ -353,7 +353,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
     showToast('info', '批注已删除')
   }, [workId])
 
-  // 使用 ref 持有最新 state，避免 pushHistory 频繁重建（P0-4）
+  // 使用 ref 持有最新状态，避免频繁重建
   const latestRef = useRef({ nodes, edges, characters, scenes: scenesRef.current, audioTracks: audioRef.current, variables, groups })
   latestRef.current = { nodes, edges, characters, scenes: scenesRef.current, audioTracks: audioRef.current, variables, groups }
 
@@ -391,7 +391,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
     pendingHistoryActionRef.current = null
   }, [nodes, edges, buildSnapshot, workId])
 
-  // 拖拽过程中节流记录 history（避免每次 onNodesChange 都推入历史栈）
+  // 拖拽过程中节流记录历史
   const lastPushTimeRef = useRef(0)
   const throttledPushHistory = useCallback((type: HistoryActionType, description: string) => {
     const now = Date.now()
@@ -448,7 +448,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
     monetization: monetization ?? undefined,
   }), [title, templateId, characters, variables, nodes, edges, tags, groups, annotations, monetization])
 
-  // 通知外部 graph 变化（节流 200ms 避免拖拽时高频触发，P0-4）
+  // 通知外部数据变化（节流 200ms 避免拖拽时高频触发）
   const graphChangeTimerRef = useRef<number | null>(null)
   useEffect(() => {
     if (graphChangeTimerRef.current) {
@@ -464,7 +464,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
     }
   }, [graph, onGraphChange])
 
-  // Ctrl+F 打开 NodeSearch
+  // Ctrl+F 打开节点搜索
   useEffect(() => {
     const handleOpenSearch = () => setShowNodeSearch(true)
     window.addEventListener('subsilicon-node-search-open', handleOpenSearch)
@@ -586,8 +586,6 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
       showToast('info', `已删除 ${deletedCount} 个节点`)
     }
   }, [selectedNodeIds, nodes, setNodes, setEdges, pushHistory])
-
-  // ==================== 分组功能 ====================
 
   const createGroupFromSelection = useCallback(() => {
     if (selectedNodeIds.length < 2) {
@@ -915,7 +913,6 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
     return result
   }, [nodes, edges, groups])
 
-  // Delete / Backspace 键删除选中节点，Ctrl+Z 撤销，Ctrl+Y 重做
   const nodesRef = useRef(nodes)
   nodesRef.current = nodes
   const lastDeleteTimeRef = useRef(0)
@@ -935,7 +932,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
         return
       }
 
-      // === 画布类：撤销 / 重做 / 缩放 / 适应视图 ===
+      // 画布类：撤销 / 重做 / 缩放 / 适应视图
       if (matchShortcut(e, 'undo')) {
         e.preventDefault()
         undo()
@@ -966,7 +963,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
         return
       }
 
-      // === 编辑类：复制 / 粘贴 / 克隆 / 创建分组 ===
+      // 编辑类：复制 / 粘贴 / 克隆 / 创建分组
       if (matchShortcut(e, 'copy')) {
         e.preventDefault()
         copySelectedNodes()
@@ -993,7 +990,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
         return
       }
 
-      // === 节点类：取消选中 / 删除 ===
+      // 节点类：取消选中 / 删除
       if (matchShortcut(e, 'deselectAll')) {
         if (selectedNodeIds.length > 0 || selectedEdgeId) {
           e.preventDefault()
@@ -1014,7 +1011,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
         return
       }
 
-      // === 视图类：切换侧边栏 / 右侧栏 / 主题 ===
+      // 视图类：切换侧边栏 / 右侧栏 / 主题
       if (matchShortcut(e, 'toggleSidebar')) {
         e.preventDefault()
         setSidebarVisible((v) => !v)
@@ -1033,7 +1030,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
         return
       }
 
-      // === 节点类：快速添加节点 ===
+      // 节点类：快速添加节点
       if (matchShortcut(e, 'addDialogue')) {
         e.preventDefault()
         addNodeAtCenter('dialogue')
@@ -1088,7 +1085,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
         return
       }
 
-      // === 节点位置微调（方向键） ===
+      // 节点位置微调（方向键）
       if (selectedNodeIds.length > 0) {
         const step = e.shiftKey ? 20 : 5
         let dx = 0
@@ -1461,7 +1458,6 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
     setSelectedNodeIds([])
   }, [])
 
-  // === 节点右键菜单：弹出「添加批注」选项 ===
   const handleNodeContextMenu = useCallback((event: React.MouseEvent, node: Node) => {
     if (node.type === 'group') return
     event.preventDefault()
@@ -1594,7 +1590,6 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
           onNodeContextMenu={handleNodeContextMenu}
           selectionOnDrag={perfConfig.selectNodesOnDrag}
           multiSelectionKeyCode={['Shift']}
-          // === 性能优化 ===
           defaultViewport={{ x: 0, y: 0, zoom: 1 }}
           minZoom={0.15}
           maxZoom={2.5}
@@ -1608,7 +1603,6 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
           elevateNodesOnSelect={perfConfig.elevateNodesOnSelect}
           deleteKeyCode={null}
           className={isEmpty ? 'opacity-0' : ''}
-          // === 额外性能优化 ===
           onlyRenderVisibleElements={true}
           panOnScroll={true}
           zoomOnScroll={true}
@@ -2157,10 +2151,6 @@ const GroupToolbar = memo(function GroupToolbar({ group, onToggleCollapse, onRen
   )
 })
 
-// ---
-// 节点右键菜单
-// ---
-
 interface NodeContextMenuProps {
   x: number
   y: number
@@ -2217,10 +2207,6 @@ const NodeContextMenu = memo(function NodeContextMenu({
     </div>
   )
 })
-
-// ---
-// 添加批注弹窗
-// ---
 
 interface AnnotationDialogProps {
   nodeId: string

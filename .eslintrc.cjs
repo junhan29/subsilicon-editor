@@ -28,12 +28,9 @@ module.exports = {
     'plugin:react-hooks/recommended',
   ],
   rules: {
-    // 不允许 any 类型
     '@typescript-eslint/no-explicit-any': 'warn',
-    // 未使用变量
     '@typescript-eslint/no-unused-vars': 'warn',
     'no-unused-vars': 'off',
-    // 排序导入（简单规则）
     'sort-imports': [
       'warn',
       {

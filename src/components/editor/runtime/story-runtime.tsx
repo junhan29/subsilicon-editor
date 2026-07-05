@@ -3,7 +3,6 @@
 import { useState, useCallback } from 'react'
 import { Button } from '@editor/components/ui/button'
 import { Card, CardContent } from '@editor/components/ui/card'
-import { Lock, QrCode } from 'lucide-react'
 import type { StoryGraph, StoryNode, StoryEdge } from '@editor/types/editor'
 
 interface StoryRuntimeProps {

@@ -35,7 +35,6 @@ const PANEL_MAP: Record<string, React.ComponentType<any>> = {
   random: RandomPanel,
 }
 
-// ------ 角色管理相关常量（保留在主文件）------
 const CHAR_COLORS = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#e67e22', '#34495e']
 
 const STORY_TAGS = ['古风', '玄幻', '悬疑', '恋爱', '现代', '科幻', '恐怖', '校园', '都市', '穿越']

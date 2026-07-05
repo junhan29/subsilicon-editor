@@ -5,18 +5,10 @@ import type { Node } from '@xyflow/react'
 import { matchShortcut } from '@editor/lib/shortcut-manager'
 import type { HistoryActionType } from '@editor/lib/history-store'
 
-/**
- * 快捷键 Hook 的配置项
- *
- * 包含快捷键处理所需的所有操作函数和状态。
- * 调用方需确保传入的函数引用在依赖变化时更新。
- */
 export interface UseShortcutsOptions {
-  // === 当前选中状态 ===
   selectedNodeIds: string[]
   selectedEdgeId: string | null
 
-  // === 画布操作 ===
   undo: () => void
   redo: () => void
   zoomIn: (options?: { duration?: number }) => void
@@ -27,50 +19,33 @@ export interface UseShortcutsOptions {
     nodes?: { id: string }[]
   }) => void
 
-  // === 编辑操作 ===
   copySelectedNodes: () => void
   pasteNodes: () => void
   duplicateSelectedNodes: () => void
   createGroupFromSelection: () => void
   deleteSelectedNodes: () => void
 
-  // === 节点操作 ===
   addNodeAtCenter: (type: string) => void
 
-  // === 视图切换 ===
   handleToggleTheme: () => void
   setSidebarVisible: React.Dispatch<React.SetStateAction<boolean>>
   setRightPanelVisible: React.Dispatch<React.SetStateAction<boolean>>
 
-  // === 节点位置微调 ===
   setNodes: (updater: (nodes: Node[]) => Node[]) => void
   throttledPushHistory: (
     type: HistoryActionType,
     description: string
   ) => void
 
-  // === 选中状态设置 ===
   setSelectedNodeIds: React.Dispatch<React.SetStateAction<string[]>>
   setSelectedEdgeId: React.Dispatch<React.SetStateAction<string | null>>
 }
 
-/**
- * 快捷键 Hook 的返回值
- */
 export interface UseShortcutsReturn {
-  /** 手动注册快捷键监听器（默认已在 mount 时注册） */
   register: () => void
-  /** 手动注销快捷键监听器 */
   unregister: () => void
 }
 
-/**
- * 键盘快捷键管理 Hook
- *
- * 提取自 story-canvas.tsx 中的 keydown 事件处理逻辑。
- * 在 mount 时自动注册全局 keydown 监听器，unmount 时自动注销。
- * 同时返回 register / unregister 方法供外部按需控制。
- */
 export function useShortcuts(options: UseShortcutsOptions): UseShortcutsReturn {
   const handlerRef = useRef<((e: KeyboardEvent) => void) | null>(null)
   const lastDeleteTimeRef = useRef(0)
@@ -88,9 +63,7 @@ export function useShortcuts(options: UseShortcutsOptions): UseShortcutsReturn {
     registeredRef.current = false
   }, [])
 
-  // 重建 handler 并注册
   useEffect(() => {
-    // 注销旧 handler
     if (handlerRef.current && registeredRef.current) {
       window.removeEventListener('keydown', handlerRef.current)
       registeredRef.current = false
@@ -131,7 +104,6 @@ export function useShortcuts(options: UseShortcutsOptions): UseShortcutsReturn {
         setSelectedEdgeId,
       } = options
 
-      // === 画布类：撤销 / 重做 / 缩放 / 适应视图 ===
       if (matchShortcut(e, 'undo')) {
         e.preventDefault()
         undo()
@@ -162,7 +134,6 @@ export function useShortcuts(options: UseShortcutsOptions): UseShortcutsReturn {
         return
       }
 
-      // === 编辑类：复制 / 粘贴 / 克隆 / 创建分组 ===
       if (matchShortcut(e, 'copy')) {
         e.preventDefault()
         copySelectedNodes()
@@ -189,7 +160,6 @@ export function useShortcuts(options: UseShortcutsOptions): UseShortcutsReturn {
         return
       }
 
-      // === 节点类：取消选中 / 删除 ===
       if (matchShortcut(e, 'deselectAll')) {
         if (selectedNodeIds.length > 0 || selectedEdgeId) {
           e.preventDefault()
@@ -210,7 +180,6 @@ export function useShortcuts(options: UseShortcutsOptions): UseShortcutsReturn {
         return
       }
 
-      // === 视图类：切换侧边栏 / 右侧栏 / 主题 ===
       if (matchShortcut(e, 'toggleSidebar')) {
         e.preventDefault()
         setSidebarVisible((v) => !v)
@@ -229,7 +198,6 @@ export function useShortcuts(options: UseShortcutsOptions): UseShortcutsReturn {
         return
       }
 
-      // === 节点类：快速添加节点 ===
       if (matchShortcut(e, 'addDialogue')) {
         e.preventDefault()
         addNodeAtCenter('dialogue')
@@ -284,7 +252,6 @@ export function useShortcuts(options: UseShortcutsOptions): UseShortcutsReturn {
         return
       }
 
-      // === 节点位置微调（方向键） ===
       if (selectedNodeIds.length > 0) {
         const step = e.shiftKey ? 20 : 5
         let dx = 0
@@ -327,7 +294,6 @@ export function useShortcuts(options: UseShortcutsOptions): UseShortcutsReturn {
 
     handlerRef.current = handleKeyDown
 
-    // 自动注册
     window.addEventListener('keydown', handleKeyDown)
     registeredRef.current = true
 

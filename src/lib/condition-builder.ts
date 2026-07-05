@@ -1,8 +1,5 @@
 import type { ConditionGroup, ConditionClause, StoryVariable } from '@editor/types/editor'
-
-function generateId(): string {
-  return Math.random().toString(36).slice(2, 11)
-}
+import { generateId } from './utils'
 
 function escapeStringValue(value: string): string {
   return value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")

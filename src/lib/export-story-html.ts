@@ -1,13 +1,3 @@
-/**
- * 可执行故事 HTML 导出
- *
- * 生成带 DRM 保护的 .story.html 文件：
- * - AES-256-GCM 加密故事数据
- * - 嵌入付款 UI（微信/支付宝收款码）
- * - 模式 A（手动）：付款后联系创作者获取激活码
- * - 模式 B（半自动）：付款后粘贴订单号自动解锁
- */
-
 import type { StoryGraph } from '@editor/types/editor'
 import { embedAssets } from '@editor/lib/export-html'
 import { encryptStoryData, AES_ENC_PREFIX } from '@editor/lib/story-encrypt'
@@ -161,7 +151,6 @@ function buildStoryHTML(encryptedData: string, config: StoryExportConfig): strin
       var currentNodeId = null;
       var decodedData = null;
 
-      // ============ 进度保存 ============
       function saveProgress(nodeId) {
         try {
           localStorage.setItem(C.storageKey + '_progress', JSON.stringify({ nodeId: nodeId, time: Date.now() }));
@@ -175,7 +164,6 @@ function buildStoryHTML(encryptedData: string, config: StoryExportConfig): strin
         } catch(e) { return null; }
       }
 
-      // ============ 已解锁状态 ============
       function isUnlocked() {
         try { return localStorage.getItem(C.storageKey + '_unlocked') === '1'; }
         catch(e) { return false; }
@@ -189,7 +177,6 @@ function buildStoryHTML(encryptedData: string, config: StoryExportConfig): strin
         } catch(e) {}
       }
 
-      // ============ AES 解密（浏览器 Web Crypto API） ============
       async function decryptData(keyBase64, ivBase64) {
         var encData = C.encryptedData;
         var prefix = '${AES_ENC_PREFIX}';
@@ -205,14 +192,12 @@ function buildStoryHTML(encryptedData: string, config: StoryExportConfig): strin
         return new TextDecoder().decode(decrypted);
       }
 
-      // ============ SHA-256 工具 ============
       async function sha256(text) {
         var data = new TextEncoder().encode(text);
         var hash = await crypto.subtle.digest('SHA-256', data);
         return Array.from(new Uint8Array(hash)).map(function(b) { return b.toString(16).padStart(2,'0'); }).join('');
       }
 
-      // ============ 启动逻辑 ============
       async function init() {
         if (isUnlocked()) {
           try {
@@ -229,7 +214,6 @@ function buildStoryHTML(encryptedData: string, config: StoryExportConfig): strin
         showPaywall();
       }
 
-      // ============ 付费锁屏 UI ============
       function showPaywall() {
         var mode = C.unlockMode;
         var price = C.price;
@@ -400,7 +384,6 @@ function buildStoryHTML(encryptedData: string, config: StoryExportConfig): strin
 
       window.__SUBSILICON__ = 'ss-2026-07-03';
 
-      // ============ 故事渲染 ============
       function startStory() {
         if (!graph || !graph.nodes) { app.innerHTML = '<div class="node"><p class="node-text">故事数据加载失败</p></div>'; return; }
 
@@ -561,16 +544,16 @@ export async function exportToStoryHTML(
 ): Promise<StoryExportResult> {
   const workId = config.workId || generateWorkId()
 
-  // 1. 素材内嵌
+  // 素材内嵌
   const processedGraph = await embedAssets(graph)
 
-  // 2. 序列化故事数据
+  // 序列化故事数据
   const graphJSON = JSON.stringify(processedGraph)
 
-  // 3. AES-256-GCM 加密
+  // AES-256-GCM 加密
   const { encryptedData, keyBase64, ivBase64 } = await encryptStoryData(graphJSON)
 
-  // 4. 构建 HTML
+  // 构建 HTML
   const html = buildStoryHTML(encryptedData, { ...config, workId })
 
   return { html, keyBase64, ivBase64, workId }

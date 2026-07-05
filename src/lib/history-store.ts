@@ -95,7 +95,7 @@ export class HistoryStore<T extends StoryGraphSnapshot = StoryGraphSnapshot> {
       return
     }
 
-    // 使用深拷贝避免历史栈被回写污染（P1-7）
+    // 使用深拷贝避免历史栈被回写污染
     const action: HistoryAction<T> = {
       type,
       timestamp: Date.now(),

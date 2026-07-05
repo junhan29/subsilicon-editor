@@ -49,7 +49,7 @@ export class TransitionManager {
   initialize(container: HTMLElement): void {
     this.container = container
 
-    // 保存原始 position 用于还原（P1-2）
+    // 保存原始 position 用于还原
     this.originalPosition = container.style.position
 
     this.overlay = document.createElement('div')
@@ -75,7 +75,7 @@ export class TransitionManager {
       return
     }
 
-    // 排队实现（P1-3）：所有 transition 串行执行
+    // 排队实现：所有 transition 串行执行
     const next = this.transitionQueue.then(async () => {
       this.isTransitioning = true
       from()
@@ -366,7 +366,7 @@ export class TransitionManager {
     if (this.overlay && this.overlay.parentNode) {
       this.overlay.parentNode.removeChild(this.overlay)
     }
-    // 还原容器原始 position（P1-2）
+    // 还原容器原始 position
     if (this.container) {
       this.container.style.position = this.originalPosition ?? ''
     }

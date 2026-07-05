@@ -1,9 +1,3 @@
-/**
- * AI 服务模块
- * 
- * 为下载版编辑器提供 AI 功能，用户自备 API 密钥
- */
-
 import type { AiConfig, AiProviderConfig } from '@editor/components/editor/ai-settings-panel'
 
 export interface AiPolishResult {
@@ -22,7 +16,6 @@ export interface AiGenerateResult {
   result: string
 }
 
-// 获取当前配置
 export function getAiConfig(): AiConfig | null {
   try {
     const saved = localStorage.getItem('subsilicon_ai_config')
@@ -32,7 +25,6 @@ export function getAiConfig(): AiConfig | null {
   }
 }
 
-// 获取启用的服务商
 export function getActiveProvider(config?: AiConfig): AiProviderConfig | null {
   if (!config) config = getAiConfig() || undefined
   if (!config?.enabled) return null
@@ -43,7 +35,6 @@ export function getActiveProvider(config?: AiConfig): AiProviderConfig | null {
   return provider
 }
 
-// 检查 AI 是否可用
 export function isAiAvailable(): boolean {
   const config = getAiConfig()
   if (!config?.enabled) return false
@@ -99,7 +90,6 @@ export async function polishText(
   }
 }
 
-// 调用 AI 排版
 export async function layoutText(
   text: string,
   layoutType: 'dialogue' | 'narrative' | 'mixed' = 'dialogue',
@@ -145,7 +135,6 @@ export async function layoutText(
   }
 }
 
-// 调用 AI 续写
 export async function continueText(
   text: string,
   style: 'general' | 'vivid' | 'concise' | 'literary' = 'general',
@@ -193,7 +182,6 @@ export async function continueText(
   }
 }
 
-// 调用 AI 生成角色描述
 export async function generateCharacter(
   name: string,
   personality: string,
@@ -234,7 +222,6 @@ export async function generateCharacter(
   }
 }
 
-// 调用 AI 生成场景描述
 export async function generateScene(
   location: string,
   atmosphere: string,

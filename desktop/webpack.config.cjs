@@ -2,7 +2,6 @@ const path = require('path')
 const webpack = require('webpack')
 
 module.exports = [
-  // 主进程配置
   {
     entry: './desktop/main.ts',
     target: 'electron-main',
@@ -27,7 +26,6 @@ module.exports = [
       electron: 'commonjs electron',
     },
   },
-  // Preload 配置
   {
     entry: './desktop/preload.ts',
     target: 'electron-preload',

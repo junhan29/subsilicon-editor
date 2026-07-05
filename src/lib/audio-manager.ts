@@ -99,7 +99,7 @@ export class AudioManager {
     const targetVolume = (options.volume ?? ch.volume) * this.globalVolume * (this.masterMute ? 0 : 1)
     audio.volume = channel === 'bgm' || channel === 'bgs' ? 0 : targetVolume
 
-    // 显式保存监听器引用，便于清理（P1-1）
+    // 显式保存监听器引用，便于清理
     const onEnded = () => {
       if (!audio.loop) {
         ch.isPlaying = false

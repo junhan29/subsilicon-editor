@@ -197,7 +197,6 @@ function createSplashWindow(): void {
         <button class="retry-btn" onclick="window.__retryApp()">重试</button>
       </div>
       <script>
-        // 进度条动画
         setTimeout(function() {
           document.getElementById('progress-bar').style.width = '70%';
         }, 100);
@@ -205,7 +204,6 @@ function createSplashWindow(): void {
           document.getElementById('progress-bar').style.width = '90%';
           document.getElementById('loading-text').textContent = '即将启动...';
         }, 5000);
-        // 超时显示错误
         setTimeout(function() {
           var bar = document.getElementById('progress-bar');
           if (bar.style.width !== '100%') {
@@ -235,7 +233,6 @@ function showSplashError(message: string): void {
     document.getElementById('error-text').textContent = '启动引擎失败，请尝试重新安装或查看帮助文档。';
     window.__retryApp = function() { window.location.href = 'app://retry'; };
   `)
-  // 拦截 splash 内的重试跳转，触发整体重启
   splashWindow.webContents.on('will-navigate', (e, url) => {
     if (url.startsWith('app://retry')) {
       e.preventDefault()
@@ -271,8 +268,6 @@ async function createMainWindow(): Promise<void> {
   })
 
   mainWindow.setMenuBarVisibility(false)
-  // setTitleBarOverlay 仅在 Electron 30+ 且 frame:false + titleBarStyle: 'hidden' 时可用
-  // 低版本 Electron 调用会抛出 TypeError，导致整个 createMainWindow 崩溃
   if (typeof mainWindow.setTitleBarOverlay === 'function') {
     try {
       mainWindow.setTitleBarOverlay({
@@ -287,18 +282,15 @@ async function createMainWindow(): Promise<void> {
 
   try {
     if (isDev) {
-      // 开发模式：加载 Vite Dev Server（默认端口 5173，无需 /editor 后缀）
       const devUrl = process.env.ELECTRON_START_URL || 'http://localhost:5173'
       console.log(`[Main] Loading dev URL: ${devUrl}`)
       mainWindow.loadURL(devUrl)
     } else {
-      // 生产模式：加载 Vite 构建产物 dist/index.html
       const prodFile = resolve(__dirname, '../dist/index.html')
       console.log(`[Main] Loading production file: ${prodFile}`)
       mainWindow.loadFile(prodFile)
     }
 
-    // ready-to-show 超时兜底：从 loadURL 开始计时
     readyTimeout = setTimeout(() => {
       if (!mainShown && mainWindow && !mainWindow.isDestroyed()) {
         console.warn('[Main] ready-to-show 超时，强制显示主窗口')
@@ -323,13 +315,11 @@ async function createMainWindow(): Promise<void> {
       mainWindow?.focus()
     })
 
-    // 加载失败兜底：避免 ready-to-show 永远不触发导致卡死
     let retryCount = 0
     mainWindow.webContents.on('did-fail-load', (_e, errorCode, errorDescription, validatedURL) => {
       console.error(`[Main] did-fail-load: code=${errorCode} desc=${errorDescription} url=${validatedURL}`)
       if (!mainShown && retryCount < 3) {
         retryCount++
-        // 加载失败时延迟 1.5s 再试（Vite dev server 可能还在初始化）
         setTimeout(() => {
           if (mainWindow && !mainWindow.isDestroyed() && !mainShown) {
             console.log(`[Main] 重试加载 (第 ${retryCount} 次)`)
@@ -341,7 +331,6 @@ async function createMainWindow(): Promise<void> {
           }
         }, 1500)
       } else if (!mainShown && retryCount >= 3) {
-        // 多次重试仍失败，在主窗口显示错误页
         if (mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(`
             <html><body style="font-family:-apple-system,sans-serif;background:#1a1410;color:#fca5a5;padding:40px;text-align:center;">
@@ -369,7 +358,6 @@ async function createMainWindow(): Promise<void> {
     if (splashWindow) {
       showSplashError(errMsg)
     } else if (mainWindow && !mainWindow.isDestroyed()) {
-      // splash 已关闭时，在主窗口显示错误页
       mainWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(`
         <html><body style="font-family:-apple-system,sans-serif;background:#1a1410;color:#fca5a5;padding:40px;text-align:center;">
         <h2>编辑器启动失败</h2>
@@ -692,10 +680,6 @@ function setupIPC(): void {
     return { success: true, version: app.getVersion() }
   })
 
-  ipcMain.handle('app:getEdition', async () => {
-    return { success: true, edition: 'opensource' }
-  })
-
   ipcMain.on('window:minimize', () => {
     mainWindow?.minimize()
   })
@@ -717,7 +701,6 @@ function setupIPC(): void {
   })
 }
 
-// 禁用 GPU 沙箱，避免在某些 macOS 环境下 GPU 进程崩溃
 app.commandLine.appendSwitch('no-sandbox')
 app.commandLine.appendSwitch('disable-gpu-sandbox')
 app.commandLine.appendSwitch('disable-software-rasterizer')

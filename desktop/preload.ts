@@ -42,9 +42,6 @@ contextBridge.exposeInMainWorld('__electronAPI', {
   getVersion: (): Promise<{ success: boolean; version?: string }> =>
     ipcRenderer.invoke('app:getVersion'),
 
-  getEdition: (): Promise<{ success: boolean; edition?: string }> =>
-    ipcRenderer.invoke('app:getEdition'),
-
   minimizeWindow: (): void =>
     ipcRenderer.send('window:minimize'),
 
@@ -150,7 +147,6 @@ declare global {
       copyToProject: (sourcePath: string, fileName: string) => Promise<{ success: boolean; path?: string; error?: string }>
       getRecentFiles: () => Promise<{ success: boolean; files?: string[] }>
       getVersion: () => Promise<{ success: boolean; version?: string }>
-      getEdition: () => Promise<{ success: boolean; edition?: string }>
       minimizeWindow: () => void
       maximizeWindow: () => void
       closeWindow: () => void

@@ -110,6 +110,9 @@ const config = {
         sans: ['Noto Sans SC', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
         serif: ['Noto Serif SC', 'serif'],
       },
+      spacing: {
+        '4.5': '1.125rem',
+      },
     },
   },
   plugins: [tailwindcssAnimate, typography],

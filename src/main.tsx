@@ -57,7 +57,6 @@ const emptyGraph: StoryGraph = {
 }
 
 function handleSave(graph: StoryGraph): void {
-  console.log('[Editor] Save story:', graph.title)
 }
 
 function App() {

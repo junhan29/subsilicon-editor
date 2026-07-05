@@ -10,8 +10,6 @@ import { exportToZIP } from '@editor/lib/export-zip'
 import { exportToScript } from '@editor/lib/export-script'
 import { exportToEPUB } from '@editor/lib/export-epub'
 import { exportToStoryHTML, type StoryExportConfig, type UnlockMode } from '@editor/lib/export-story-html'
-import { injectTrialWatermark } from '@editor/lib/trial-watermark'
-import { getCurrentEdition, hasFeature } from '@editor/lib/editor-versions'
 import { READER_THEME_PRESETS, themeToCSS, type ReaderTheme } from '@editor/lib/theme-presets'
 import { I18nExportPanel } from './i18n-export-panel'
 import { SUBMIT_CONFIG } from '@editor/lib/submit-config'
@@ -50,7 +48,6 @@ function sanitizeFilename(name: string): string {
   return name.replace(/[\\/:*?"<>|]/g, '_').trim() || '未命名故事'
 }
 
-// 触发浏览器下载
 function triggerDownload(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
@@ -60,14 +57,11 @@ function triggerDownload(blob: Blob, filename: string): void {
   document.body.appendChild(a)
   a.click()
   document.body.removeChild(a)
-  // 释放 URL，给浏览器一点时间发起下载
   setTimeout(() => URL.revokeObjectURL(url), 2000)
 }
 
-// 将主题 CSS 注入到 HTML 字符串中
 function applyThemeToHTML(html: string, theme: ReaderTheme): string {
   const css = themeToCSS(theme)
-  // 在第一个 </style> 之前注入主题覆盖样式
   return html.replace('</style>', `${css}\n  </style>`)
 }
 
@@ -84,7 +78,6 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
   const titleId = 'export-dialog-title'
   const descId = 'export-dialog-description'
 
-  // DRM 可执行故事设置
   const [drmEnabled, setDrmEnabled] = useState(false)
   const [drmPrice, setDrmPrice] = useState<number>(9.9)
   const [drmFreePreview, setDrmFreePreview] = useState<number>(3)
@@ -119,13 +112,9 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
 
   const selectedTheme = READER_THEME_PRESETS.find((t) => t.id === themeId) || READER_THEME_PRESETS[0]
 
-  // 主题在剧本文本和翻译表格式下不适用
   const themeApplicable = format !== 'script' && format !== 'i18n' && format !== 'story_exec'
-  // 资源选项仅在 ZIP / EPUB 下有意义
   const assetsApplicable = format === 'zip' || format === 'epub'
-  // 翻译表格式使用独立面板，不需要底部导出按钮
   const isI18nFormat = format === 'i18n'
-  // 可执行故事格式
   const isStoryExecFormat = format === 'story_exec'
 
   const handleExport = useCallback(async () => {
@@ -138,7 +127,6 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
       let blob: Blob | null = null
       let filename = ''
 
-      // 模拟分阶段进度反馈
       await new Promise((r) => setTimeout(r, 60))
       setProgress(30)
 
@@ -149,12 +137,9 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
             html = applyThemeToHTML(html, selectedTheme)
           }
           if (includeDebug) {
-            // 在 HTML 末尾注入调试信息（在 </body> 之前）
             const debugInfo = `\n<!-- 调试信息\n节点数: ${graph.nodes?.length || 0}\n连线数: ${graph.edges?.length || 0}\n角色数: ${graph.characters?.length || 0}\n导出时间: ${new Date().toISOString()}\n主题: ${selectedTheme.name}\n图片质量: ${imageQuality}\n付费解锁: ${monetization?.enabled ? '已开启' : '未开启'}\n-->\n`
             html = html.replace('</body>', `${debugInfo}</body>`)
           }
-          // 桌面版导出直接返回完整内容（无水印）
-          html = injectTrialWatermark(html)
           blob = new Blob([html], { type: 'text/html;charset=utf-8' })
           filename = `${safeTitle}.html`
           break
@@ -189,7 +174,6 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
           const result = await exportToStoryHTML(graph, storyConfig)
           setProgress(70)
 
-          // 如果开启了付费，上传密钥到服务器
           if (drmEnabled && result.keyBase64) {
             try {
               await fetch(SUBMIT_CONFIG.storyUnlockUrl, {
@@ -223,7 +207,6 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
         triggerDownload(blob, filename)
         setProgress(100)
         showToast('success', `已导出为 ${filename}`)
-        // 稍作停留让用户看到完成状态，再关闭弹窗
         setTimeout(() => {
           setExporting(false)
           setProgress(0)
@@ -252,7 +235,6 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
         aria-describedby={descId}
         className="w-full max-w-2xl max-h-[90vh] bg-background rounded-2xl shadow-2xl overflow-hidden flex flex-col"
       >
-        {/* 头部 */}
         <div className="flex items-center justify-between px-5 py-4 border-b shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -272,9 +254,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
           </button>
         </div>
 
-        {/* 主体 */}
         <div className="overflow-y-auto px-5 py-4 space-y-5">
-          {/* 1. 格式选择 */}
           <section>
             <div className="flex items-center gap-2 mb-2.5">
               <FileCode className="w-3.5 h-3.5 text-muted-foreground" />
@@ -324,7 +304,6 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
             <I18nExportPanel graph={graph} onImport={onImportTranslation} />
           ) : isStoryExecFormat ? (
             <>
-          {/* 可执行故事 DRM 设置 */}
           <section>
             <div className="flex items-center gap-2 mb-2.5">
               <Lock className="w-3.5 h-3.5 text-muted-foreground" />
@@ -333,7 +312,6 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
               </h4>
             </div>
             <div className="space-y-3">
-              {/* 启用付费 */}
               <label className="flex items-center gap-2.5 p-2.5 rounded-lg border border-border hover:bg-muted/40 transition-colors cursor-pointer">
                 <input
                   type="checkbox"
@@ -351,7 +329,6 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
 
               {drmEnabled && (
                 <>
-                  {/* 价格 */}
                   <div className="p-2.5 rounded-lg border border-border">
                     <div className="text-sm mb-2">作品价格</div>
                     <div className="flex items-center gap-2">
@@ -369,7 +346,6 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                     </div>
                   </div>
 
-                  {/* 免费试读 */}
                   <div className="p-2.5 rounded-lg border border-border">
                     <div className="text-sm mb-2">免费试读节点数</div>
                     <div className="flex items-center gap-2">
@@ -387,7 +363,6 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                     </div>
                   </div>
 
-                  {/* 解锁模式 */}
                   <div className="p-2.5 rounded-lg border border-border">
                     <div className="text-sm mb-2">解锁方式</div>
                     <div className="grid grid-cols-2 gap-2">
@@ -422,7 +397,6 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                     </div>
                   </div>
 
-                  {/* 收款二维码 */}
                   <div className="p-2.5 rounded-lg border border-border">
                     <div className="text-sm mb-2">收款二维码（可选）</div>
                     <div className="text-[11px] text-muted-foreground mb-2">
@@ -453,7 +427,6 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                     </div>
                   </div>
 
-                  {/* 联系方式 */}
                   <div className="p-2.5 rounded-lg border border-border">
                     <div className="text-sm mb-2">联系方式（可选）</div>
                     <input
@@ -474,7 +447,6 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
             </>
           ) : (
             <>
-          {/* 2. 主题选择 */}
           <section className={themeApplicable ? '' : 'opacity-40 pointer-events-none'}>
             <div className="flex items-center gap-2 mb-2.5">
               <ImageIcon className="w-3.5 h-3.5 text-muted-foreground" />
@@ -499,7 +471,6 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                     }`}
                     title={theme.name}
                   >
-                    {/* 预览块 */}
                     <div
                       className="h-14 px-2 py-1.5 flex flex-col justify-between"
                       style={{ backgroundColor: theme.backgroundColor, color: theme.textColor }}
@@ -542,7 +513,6 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
             </div>
           </section>
 
-          {/* 3. 导出选项 */}
           <section>
             <div className="flex items-center gap-2 mb-2.5">
               <Settings2 className="w-3.5 h-3.5 text-muted-foreground" />
@@ -551,7 +521,6 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
               </h4>
             </div>
             <div className="space-y-2.5">
-              {/* 包含资源文件 */}
               <label
                 className={`flex items-center gap-2.5 p-2.5 rounded-lg border border-border hover:bg-muted/40 transition-colors cursor-pointer ${
                   !assetsApplicable ? 'opacity-40 pointer-events-none' : ''
@@ -572,7 +541,6 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                 </div>
               </label>
 
-              {/* 压缩图片质量 */}
               <div
                 className={`p-2.5 rounded-lg border border-border ${
                   !assetsApplicable ? 'opacity-40 pointer-events-none' : ''
@@ -608,7 +576,6 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                 </div>
               </div>
 
-              {/* 包含调试信息 */}
               <label className="flex items-center gap-2.5 p-2.5 rounded-lg border border-border hover:bg-muted/40 transition-colors cursor-pointer">
                 <input
                   type="checkbox"
@@ -629,7 +596,6 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
           )}
         </div>
 
-        {/* 底部：进度 + 按钮 */}
         <div className="px-5 py-3.5 border-t bg-muted/20 shrink-0">
           {exporting && (
             <div className="mb-3">

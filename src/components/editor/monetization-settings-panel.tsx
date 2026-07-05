@@ -8,6 +8,7 @@ import {
   FileText, Sparkles, Star, Cookie
 } from 'lucide-react'
 import { Button } from '@editor/components/ui/button'
+import { Toggle } from '@editor/components/ui/toggle'
 import type { StoryGraph, StoryNode } from '@editor/types/editor'
 import type {
   MonetizationConfig, PaymentMethod, PaymentGranularity,
@@ -134,7 +135,6 @@ export function MonetizationSettingsPanel({
   const [seedKeyGenerated, setSeedKeyGenerated] = useState(false)
   const [showSeedKey, setShowSeedKey] = useState(false)
   
-  // UI 状态
   const [expandedSection, setExpandedSection] = useState<string>('basic')
   const [qrCodePreview, setQrCodePreview] = useState<string>('')
   const [nodeFilter, setNodeFilter] = useState<string>('')
@@ -768,18 +768,11 @@ export function MonetizationSettingsPanel({
             </span>
             <span className="text-xs text-muted-foreground">抽成 6%</span>
           </div>
-          <button
-            onClick={() => setAfdianEnabled(!afdianEnabled)}
-            className={`w-10 h-5 rounded-full transition-colors ${
-              afdianEnabled ? 'bg-amber-500' : 'bg-muted'
-            }`}
-            role="switch"
-            aria-checked={afdianEnabled}
-          >
-            <div className={`w-4 h-4 rounded-full bg-white transition-transform ${
-              afdianEnabled ? 'translate-x-5' : 'translate-x-0.5'
-            }`} />
-          </button>
+          <Toggle
+            checked={afdianEnabled}
+            onChange={setAfdianEnabled}
+            color="bg-amber-500"
+          />
         </div>
         
         {afdianEnabled && (
@@ -848,18 +841,11 @@ export function MonetizationSettingsPanel({
             </span>
             <span className="text-xs text-muted-foreground">抽成 3%</span>
           </div>
-          <button
-            onClick={() => setMianbaoduoEnabled(!mianbaoduoEnabled)}
-            className={`w-10 h-5 rounded-full transition-colors ${
-              mianbaoduoEnabled ? 'bg-orange-500' : 'bg-muted'
-            }`}
-            role="switch"
-            aria-checked={mianbaoduoEnabled}
-          >
-            <div className={`w-4 h-4 rounded-full bg-white transition-transform ${
-              mianbaoduoEnabled ? 'translate-x-5' : 'translate-x-0.5'
-            }`} />
-          </button>
+          <Toggle
+            checked={mianbaoduoEnabled}
+            onChange={setMianbaoduoEnabled}
+            color="bg-orange-500"
+          />
         </div>
         
         {mianbaoduoEnabled && (
@@ -917,22 +903,12 @@ export function MonetizationSettingsPanel({
                 <MessageCircle className="w-4 h-4 text-green-500" />
                 <span className="text-xs font-medium">微信收款</span>
               </div>
-              <button
-                onClick={() => setManualWechatEnabled(!manualWechatEnabled)}
-                className={`w-9 h-4.5 rounded-full transition-colors ${
-                  manualWechatEnabled ? 'bg-green-500' : 'bg-muted'
-                }`}
-                style={{ height: '18px', width: '36px' }}
-                role="switch"
-                aria-checked={manualWechatEnabled}
-              >
-                <div 
-                  className="w-3.5 h-3.5 rounded-full bg-white transition-transform"
-                  style={{
-                    transform: manualWechatEnabled ? 'translateX(18px)' : 'translateX(2px)'
-                  }}
-                />
-              </button>
+              <Toggle
+                checked={manualWechatEnabled}
+                onChange={setManualWechatEnabled}
+                color="bg-green-500"
+                size="sm"
+              />
             </div>
             
             {manualWechatEnabled && (
@@ -985,24 +961,12 @@ export function MonetizationSettingsPanel({
                 <CreditCard className="w-4 h-4 text-blue-500" />
                 <span className="text-xs font-medium">支付宝收款</span>
               </div>
-              <button
-                onClick={() => setManualAlipayEnabled(!manualAlipayEnabled)}
-                className="w-9 h-4.5 rounded-full transition-colors bg-muted"
-                style={{ 
-                  height: '18px', 
-                  width: '36px',
-                  backgroundColor: manualAlipayEnabled ? '#3b82f6' : undefined
-                }}
-                role="switch"
-                aria-checked={manualAlipayEnabled}
-              >
-                <div 
-                  className="w-3.5 h-3.5 rounded-full bg-white transition-transform"
-                  style={{
-                    transform: manualAlipayEnabled ? 'translateX(18px)' : 'translateX(2px)'
-                  }}
-                />
-              </button>
+              <Toggle
+                checked={manualAlipayEnabled}
+                onChange={setManualAlipayEnabled}
+                color="bg-blue-500"
+                size="sm"
+              />
             </div>
             
             {manualAlipayEnabled && (
@@ -1279,18 +1243,11 @@ export function MonetizationSettingsPanel({
             <p className="text-xs text-muted-foreground">让读者付费解锁部分内容</p>
           </div>
         </div>
-        <button
-          onClick={() => setEnabled(!enabled)}
-          className={`w-12 h-6 rounded-full transition-colors ${
-            enabled ? 'bg-primary' : 'bg-muted'
-          }`}
-          role="switch"
-          aria-checked={enabled}
-        >
-          <div className={`w-5 h-5 rounded-full bg-white transition-transform ${
-            enabled ? 'translate-x-6' : 'translate-x-0.5'
-          }`} />
-        </button>
+        <Toggle
+          checked={enabled}
+          onChange={setEnabled}
+          color="bg-primary"
+        />
       </div>
 
       {enabled && (

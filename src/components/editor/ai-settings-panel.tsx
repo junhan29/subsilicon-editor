@@ -6,6 +6,7 @@ import {
   ExternalLink, Copy, AlertCircle, Loader2, Key, Globe
 } from 'lucide-react'
 import { Button } from '@editor/components/ui/button'
+import { Toggle } from '@editor/components/ui/toggle'
 import { showToast } from './toast'
 
 interface AiSettingsPanelProps {
@@ -272,18 +273,11 @@ export function AiSettingsPanel({ enabled: initialEnabled, onChange }: AiSetting
             <p className="text-xs text-muted-foreground">润色、排版、续写等 AI 功能</p>
           </div>
         </div>
-        <button
-          onClick={() => setEnabled(!enabled)}
-          className={`w-12 h-6 rounded-full transition-colors ${
-            enabled ? 'bg-amber-500' : 'bg-muted'
-          }`}
-          role="switch"
-          aria-checked={enabled}
-        >
-          <div className={`w-5 h-5 rounded-full bg-white transition-transform ${
-            enabled ? 'translate-x-6' : 'translate-x-0.5'
-          }`} />
-        </button>
+        <Toggle
+          checked={enabled}
+          onChange={setEnabled}
+          color="bg-amber-500"
+        />
       </div>
 
       {enabled && (
@@ -486,16 +480,11 @@ export function AiSettingsPanel({ enabled: initialEnabled, onChange }: AiSetting
               <div className="p-4 space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-sm">启用自动润色</span>
-                  <button
-                    onClick={() => setAutoPolish(!autoPolish)}
-                    className={`w-10 h-5 rounded-full transition-colors ${
-                      autoPolish ? 'bg-primary' : 'bg-muted'
-                    }`}
-                  >
-                    <div className={`w-4 h-4 rounded-full bg-white transition-transform ${
-                      autoPolish ? 'translate-x-5' : 'translate-x-0.5'
-                    }`} />
-                  </button>
+                  <Toggle
+                    checked={autoPolish}
+                    onChange={setAutoPolish}
+                    color="bg-primary"
+                  />
                 </div>
 
                 {autoPolish && (

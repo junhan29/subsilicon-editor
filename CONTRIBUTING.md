@@ -1,7 +1,5 @@
 # 贡献指南
 
-感谢你有兴趣为 SubSilicon Editor 做贡献！本文档将帮助你了解项目架构、如何搭建开发环境、以及代码规范。
-
 ## 目录
 
 - [项目架构概述](#项目架构概述)
@@ -9,30 +7,15 @@
 - [如何贡献](#如何贡献)
 - [代码规范](#代码规范)
 - [提交信息规范](#提交信息规范)
-- [行为准则](#行为准则)
 
 ---
 
 ## 项目架构概述
 
-### 整体架构
+SubSilicon Editor 采用 React + Electron 的双进程架构：
 
-SubSilicon Editor 采用 **React + Electron** 的双进程架构：
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                     Electron 应用                        │
-├─────────────────────────────────────────────────────────┤
-│  主进程 (main process)    │   渲染进程 (renderer)        │
-│  desktop/main.ts          │   React + TypeScript         │
-│                           │                              │
-│  - 窗口管理               │   - 编辑器 UI                │
-│  - 系统交互               │   - 节点画布 (React Flow)    │
-│  - 文件系统               │   - 故事运行时               │
-│  - 原生 API               │   - 状态管理                 │
-│                           │   - 本地存储 (IndexedDB)     │
-└─────────────────────────────────────────────────────────┘
-```
+- **主进程**（`desktop/main.ts`）：窗口管理、系统交互、文件系统、原生 API
+- **渲染进程**（React + TypeScript）：编辑器 UI、节点画布（React Flow）、故事运行时、状态管理、本地存储（IndexedDB）
 
 ### 核心模块
 
@@ -67,11 +50,7 @@ SubSilicon Editor 采用 **React + Electron** 的双进程架构：
 #### 4. 本地数据库
 - **位置**：`src/lib/local-db/`
 - **技术**：IndexedDB (Dexie.js)
-- **存储内容**：
-  - 作品数据
-  - 资源文件
-  - 版本快照
-  - 账户信息
+- **存储内容**：作品数据、资源文件、版本快照、账户信息
 
 #### 5. 导出系统
 - **位置**：`src/lib/export-*.ts`
@@ -81,16 +60,6 @@ SubSilicon Editor 采用 **React + Electron** 的双进程架构：
 - **位置**：`src/lib/work-monetization.ts`
 - **技术**：HMAC-SHA256 本地验证
 - **特点**：无需服务器，创作者直接收款
-
-### 数据流
-
-```
-用户操作 → 组件 → Store → 本地数据库 (IndexedDB)
-                ↓
-            历史记录栈
-                ↓
-         撤销/重做支持
-```
 
 ---
 
@@ -105,48 +74,50 @@ SubSilicon Editor 采用 **React + Electron** 的双进程架构：
 | Git | 最新版 | 版本控制 |
 | 操作系统 | macOS / Windows / Linux | 跨平台支持 |
 
-### 步骤一：克隆仓库
+### 克隆仓库
 
 ```bash
 git clone <repository-url>
 cd editor
 ```
 
-### 步骤二：安装依赖
+### 安装依赖
 
 ```bash
 npm install
 ```
 
-> **注意**：首次安装可能需要较长时间，因为 Electron 二进制文件较大。
+首次安装可能需要较长时间，因为 Electron 二进制文件较大。如果 Electron 下载超时，可设置镜像源：
 
-### 步骤三：启动开发模式
+```bash
+npm config set electron_mirror https://npmmirror.com/mirrors/electron/
+```
 
-#### 方式 A：Web 模式开发（推荐用于 UI 开发）
+### 启动开发模式
+
+#### Web 模式开发（推荐用于 UI 开发）
 
 ```bash
 npm run dev
 ```
 
-访问 `http://localhost:5173` 即可在浏览器中使用编辑器。
+访问 `http://localhost:5173` 即可在浏览器中使用编辑器。Web 模式下，部分 Electron 专属功能（如文件系统访问）可能不可用。
 
-> **提示**：Web 模式下，部分 Electron 专属功能（如文件系统访问）可能不可用。
-
-#### 方式 B：Electron 桌面端开发（完整功能）
+#### Electron 桌面端开发（完整功能）
 
 需要两个终端：
 
-**终端 1**：启动 Vite 开发服务器
+终端 1：启动 Vite 开发服务器
 ```bash
 npm run dev
 ```
 
-**终端 2**：启动 Electron
+终端 2：启动 Electron
 ```bash
 npm run electron:dev
 ```
 
-### 步骤四：运行测试
+### 运行测试
 
 ```bash
 # 运行所有测试
@@ -159,7 +130,7 @@ npm test -- --watch
 npm test -- --coverage
 ```
 
-### 步骤五：代码检查
+### 代码检查
 
 ```bash
 # TypeScript 类型检查
@@ -171,20 +142,6 @@ npm run lint
 # Prettier 格式化检查
 npm run format:check
 ```
-
-### 常见问题
-
-#### Q: npm install 失败，Electron 下载超时
-A: 设置 Electron 镜像源：
-```bash
-npm config set electron_mirror https://npmmirror.com/mirrors/electron/
-```
-
-#### Q: 启动后白屏
-A: 检查 Vite 开发服务器是否正常启动，确保终端 1 正在运行。
-
-#### Q: IndexedDB 相关错误
-A: 尝试清除浏览器数据或使用无痕模式重新打开。
 
 ---
 
@@ -284,7 +241,6 @@ A: 尝试清除浏览器数据或使用无痕模式重新打开。
 - 导出的类型放在 `src/types/` 目录下
 
 ```typescript
-// ✅ 推荐
 interface User {
   id: string
   name: string
@@ -292,9 +248,6 @@ interface User {
 }
 
 type Status = 'idle' | 'loading' | 'success' | 'error'
-
-// ❌ 避免
-let data: any
 ```
 
 #### React 组件
@@ -305,7 +258,6 @@ let data: any
 - 组件名使用 PascalCase
 
 ```tsx
-// ✅ 推荐
 interface ButtonProps {
   children: React.ReactNode
   onClick?: () => void
@@ -338,7 +290,6 @@ export function Button({ children, onClick, variant = 'primary' }: ButtonProps) 
 5. 样式导入
 
 ```tsx
-// ✅ 推荐
 import { useState, useEffect } from 'react'
 import { useReactFlow } from '@xyflow/react'
 import { Button } from '@editor/components/ui/button'
@@ -354,7 +305,6 @@ import './custom-edge.css'
 - 避免使用内联样式
 
 ```tsx
-// ✅ 推荐
 import { cn } from '@editor/lib/utils'
 
 <div className={cn(
@@ -428,37 +378,3 @@ handlers with proper delay to distinguish between scroll and tap.
 
 Fixes #456
 ```
-
----
-
-## 行为准则
-
-### 我们的承诺
-
-为了营造开放和友好的环境，我们承诺让每个人都能在无骚扰的环境中参与项目。
-
-### 我们的标准
-
-**积极的行为包括：**
-- 使用友好和包容的语言
-- 尊重不同的观点和经验
-- 优雅地接受建设性批评
-- 关注对社区最有利的事情
-- 对其他社区成员表示同理心
-
-**不可接受的行为包括：**
-- 使用性化的语言或图像，以及不受欢迎的性骚扰
-- 恶意评论、侮辱/贬损性评论和人身或政治攻击
-- 公开或私下骚扰
-- 未经明确许可发布他人的私人信息，如物理地址或电子邮件地址
-- 在专业环境中可能被合理视为不当的其他行为
-
-### 我们的责任
-
-项目维护者有责任阐明可接受行为的标准，并应对任何不可接受的行为采取适当和公平的纠正措施。
-
----
-
-如有任何疑问，欢迎在 GitHub Discussions 中提问，或通过 Issue 与我们联系。
-
-再次感谢你的贡献！🎉

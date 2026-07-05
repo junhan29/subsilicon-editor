@@ -12,8 +12,6 @@
 
 SubSilicon Editor 是一个基于 React + Electron 的**开源可视化互动叙事编辑器**。创作者无需编写代码，通过拖拽节点即可创作分支叙事作品，并支持付费解锁、导出分发等完整功能。
 
-**核心理念**：让创作者专注于故事本身，而不是技术实现。
-
 ### 产品截图
 
 > 📸 暂无官方截图，欢迎贡献你的使用截图！
@@ -24,13 +22,7 @@ SubSilicon Editor 是一个基于 React + Electron 的**开源可视化互动叙
 ![故事预览](docs/screenshots/story-preview.png)
 -->
 
-### 三条核心承诺
-
-1. **零抽成** — 我们不经手你的任何收入，创作者直接收款
-2. **版权归创作者** — 作品 100% 属于创作者，平台不主张任何权利
-3. **允许自主分发** — 导出独立文件，你想怎么发就怎么发
-
-### ✨ 功能亮点
+### 功能亮点
 
 #### 🎨 可视化编辑
 - 基于 React Flow 的节点画布，拖拽连线
@@ -115,10 +107,9 @@ SubSilicon Editor 是一个基于 React + Electron 的**开源可视化互动叙
 - 资源库管理
 - 引导式新手教程（Tour）
 - 国际化导出
-- 试验水印
 - 无障碍支持
 
-### 🚀 快速开始
+### 快速开始
 
 #### 环境要求
 - Node.js 18+
@@ -271,8 +262,6 @@ MIT License — 你可以自由使用、修改、分发、商用。
 
 SubSilicon Editor is an **open-source visual interactive narrative editor** built with React + Electron. Creators can craft branching narrative works by dragging and dropping nodes — no coding required. It supports paid unlocks, export, and distribution.
 
-**Core Philosophy**: Let creators focus on the story itself, not the technical implementation.
-
 ### Screenshots
 
 > 📸 No official screenshots yet. Contributions welcome!
@@ -283,13 +272,7 @@ SubSilicon Editor is an **open-source visual interactive narrative editor** buil
 ![Story Preview](docs/screenshots/story-preview.png)
 -->
 
-### Three Core Promises
-
-1. **Zero Commission** — We never touch your revenue; creators get paid directly
-2. **Creator-Owned Copyright** — 100% of the work belongs to the creator
-3. **Self-Distribution Allowed** — Export standalone files, distribute however you like
-
-### ✨ Features
+### Features
 
 #### 🎨 Visual Editing
 - React Flow-based canvas with drag-and-drop connections
@@ -374,10 +357,9 @@ Local compliance reminders based on 2026 policies:
 - Asset library management
 - Guided onboarding tour
 - i18n export
-- Trial watermark
 - Accessibility support
 
-### 🚀 Quick Start
+### Quick Start
 
 #### Requirements
 - Node.js 18+

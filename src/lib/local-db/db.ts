@@ -1,8 +1,6 @@
-// 数据库名和结构
 const DB_NAME = 'subsilicon-editor'
 const DB_VERSION = 1
 
-// 三张表
 const STORES = {
   works: { keyPath: 'id' },           // 作品完整数据（StoryGraph JSON + 元数据）
   assets: { keyPath: 'hash' },        // 媒体资源二进制数据（blob）

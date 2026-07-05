@@ -1,3 +1,5 @@
+import { generateId } from './utils'
+
 export interface LocalAccount {
   id: string
   email: string
@@ -27,10 +29,6 @@ function openDB(): Promise<IDBDatabase> {
     request.onsuccess = () => resolve(request.result)
     request.onerror = () => reject(request.error)
   })
-}
-
-function generateId(): string {
-  return 'acc_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8)
 }
 
 async function sha256(message: string): Promise<string> {
@@ -82,7 +80,7 @@ export async function register(
     const passwordHash = await sha256(password)
     const now = Date.now()
     const account: LocalAccount = {
-      id: generateId(),
+      id: generateId('acc'),
       email: trimmedEmail,
       displayName: trimmedDisplayName,
       passwordHash,

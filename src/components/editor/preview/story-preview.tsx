@@ -54,7 +54,6 @@ const ENDING_TYPE_CONFIG: Record<string, { icon: React.ReactNode; label: string;
 
 
 
-// 使用 lib/expression-parser 统一表达式求值（P1-5）
 const evaluateExpression = (
   expr: string,
   variables: Record<string, string | number | boolean>
@@ -292,7 +291,7 @@ export function StoryPreview({ graph, open, onClose }: StoryPreviewProps) {
       }
     }
 
-    // 批量效果（P1-6）
+    // 批量效果
     if (Array.isArray(option.effects)) {
       option.effects.forEach(applyEffect)
     }
@@ -375,7 +374,7 @@ export function StoryPreview({ graph, open, onClose }: StoryPreviewProps) {
         }
       }
     } else if (node.type === 'jump') {
-      // 跳转节点：直接跳到 targetNodeId，可选表达式门控
+      // 跳转节点：直接跳到目标节点，可选表达式门控
       const expr = data?.expression
       const canJump = expr ? evaluateExpression(String(expr), state.variables) : true
       if (canJump && data?.targetNodeId) {
@@ -387,7 +386,7 @@ export function StoryPreview({ graph, open, onClose }: StoryPreviewProps) {
         if (edge) nextNodeId = edge.target
       }
     } else {
-      // dialogue / narration / cg / gather 及其它：跟随第一条出边
+      // 对话 / 旁白 / CG / 汇聚及其它：跟随第一条出边
       const edge = graph.edges.find((e) => e.source === node.id)
       if (edge) nextNodeId = edge.target
     }
@@ -764,7 +763,7 @@ export function StoryPreview({ graph, open, onClose }: StoryPreviewProps) {
       const scene = graph.scenes.find((s: any) => s.id === data.sceneId)
       if (scene?.backgroundImage) return scene.backgroundImage
     }
-    // Fallback: 使用第一个场景的背景图
+    // 兜底：使用第一个场景的背景图
     if (graph.scenes && graph.scenes.length > 0 && graph.scenes[0].backgroundImage) {
       return graph.scenes[0].backgroundImage
     }
