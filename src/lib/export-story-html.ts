@@ -4,17 +4,25 @@ import { encryptStoryData, AES_ENC_PREFIX } from '@editor/lib/story-encrypt'
 import { generateWorkId } from '@editor/lib/work-monetization'
 import { SUBMIT_CONFIG } from '@editor/lib/submit-config'
 
-export type UnlockMode = 'manual' | 'semi_auto'
+export type UnlockMode = 'manual' | 'semi_auto' | 'webhook'
 
 export interface StoryExportConfig {
   unlockMode: UnlockMode
   price: number
   freePreview: number
+  currency?: string           // 新增：货币代码，默认 'CNY'
   wechatQRCode?: string
   alipayQRCode?: string
   contactInfo?: string
   workId?: string
   creatorEmail?: string
+  // Webhook 自动解锁相关
+  webhookUrl?: string         // 创作者 webhook 端点（用于请求解锁码）
+  webhookProvider?: 'stripe' | 'paypal' | 'patreon' | 'kofi' | 'custom'
+  stripeCheckoutUrl?: string  // Stripe 结账链接
+  paypalLink?: string         // PayPal 付款链接
+  patreonLink?: string        // Patreon 赞助链接
+  kofiLink?: string           // Ko-fi 赞助链接
 }
 
 export interface StoryExportResult {
@@ -113,6 +121,14 @@ function buildStoryHTML(encryptedData: string, config: StoryExportConfig): strin
     .pw-btn-primary:disabled { background: #475569; color: #94a3b8; cursor: not-allowed; }
     .pw-btn-secondary { background: #334155; color: #e2e8f0; }
     .pw-btn-secondary:hover { background: #475569; }
+    .pw-btn-stripe { background: #635bff; color: white; }
+    .pw-btn-stripe:hover { background: #7b75ff; }
+    .pw-btn-paypal { background: #003087; color: white; }
+    .pw-btn-paypal:hover { background: #0044aa; }
+    .pw-btn-patreon { background: #ff424d; color: white; }
+    .pw-btn-patreon:hover { background: #ff5a63; }
+    .pw-btn-kofi { background: #ff5e5b; color: white; }
+    .pw-btn-kofi:hover { background: #ff7774; }
     .pw-msg { font-size: 13px; margin-top: 8px; padding: 10px; border-radius: 8px; display: none; }
     .pw-msg.success { display: block; background: #16653440; color: #4ade80; border: 1px solid #16653460; }
     .pw-msg.error { display: block; background: #7f1d1d40; color: #fca5a5; border: 1px solid #7f1d1d60; }
@@ -131,10 +147,18 @@ function buildStoryHTML(encryptedData: string, config: StoryExportConfig): strin
       workId: '${config.workId}',
       unlockMode: '${config.unlockMode}',
       price: ${config.price},
+      currency: ${config.currency ? JSON.stringify(config.currency) : "'CNY'"},
       freePreview: ${config.freePreview},
       wechatQRCode: ${config.wechatQRCode ? JSON.stringify(config.wechatQRCode) : 'null'},
       alipayQRCode: ${config.alipayQRCode ? JSON.stringify(config.alipayQRCode) : 'null'},
       contactInfo: ${config.contactInfo ? JSON.stringify(config.contactInfo) : 'null'},
+      creatorEmail: ${config.creatorEmail ? JSON.stringify(config.creatorEmail) : 'null'},
+      webhookUrl: ${config.webhookUrl ? JSON.stringify(config.webhookUrl) : 'null'},
+      webhookProvider: ${config.webhookProvider ? JSON.stringify(config.webhookProvider) : 'null'},
+      stripeCheckoutUrl: ${config.stripeCheckoutUrl ? JSON.stringify(config.stripeCheckoutUrl) : 'null'},
+      paypalLink: ${config.paypalLink ? JSON.stringify(config.paypalLink) : 'null'},
+      patreonLink: ${config.patreonLink ? JSON.stringify(config.patreonLink) : 'null'},
+      kofiLink: ${config.kofiLink ? JSON.stringify(config.kofiLink) : 'null'},
       encryptedData: ${JSON.stringify(encryptedData)},
       apiUrl: '${UNLOCK_API_URL}',
       storageKey: '${STORY_STORAGE_KEY_PREFIX}${config.workId}',
@@ -225,41 +249,76 @@ function buildStoryHTML(encryptedData: string, config: StoryExportConfig): strin
         html += '<div class="pw-subtitle">' + (C.freePreview > 0 ? '前 ' + C.freePreview + ' 页可免费试读，之后的精彩内容需要支持创作者' : '需要支持创作者后解锁完整故事') + '</div>';
 
         if (price > 0) {
-          html += '<div class="pw-price">¥' + price + '<span class="pw-price-unit"> 元</span></div>';
+          var currencySymbol = (C.currency === 'USD') ? '$' : '¥';
+          html += '<div class="pw-price">' + currencySymbol + price + '<span class="pw-price-unit"> ' + (C.currency === 'USD' ? 'USD' : '元') + '</span></div>';
 
-          if (hasQR) {
+          if (mode === 'webhook') {
+            // 海外渠道付款按钮
             html += '<div class="pw-divider"></div>';
-            html += '<div class="pw-section-title">扫码支付 · 钱直接到创作者账户</div>';
-            html += '<div class="pw-qr-container">';
-            if (C.wechatQRCode) {
-              html += '<div class="pw-qr-item"><img src="' + C.wechatQRCode + '" alt="微信收款码"><div class="pw-qr-label">微信支付</div></div>';
+            html += '<div class="pw-section-title">选择付款方式 · 钱直接到创作者账户</div>';
+            html += '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;">';
+            if (C.stripeCheckoutUrl) {
+              html += '<a href="' + C.stripeCheckoutUrl + '" target="_blank" class="pw-btn pw-btn-stripe" style="text-decoration:none;display:inline-block;text-align:center;">Stripe 付款</a>';
             }
-            if (C.alipayQRCode) {
-              html += '<div class="pw-qr-item"><img src="' + C.alipayQRCode + '" alt="支付宝收款码"><div class="pw-qr-label">支付宝</div></div>';
+            if (C.paypalLink) {
+              html += '<a href="' + C.paypalLink + '" target="_blank" class="pw-btn pw-btn-paypal" style="text-decoration:none;display:inline-block;text-align:center;">PayPal 付款</a>';
+            }
+            if (C.patreonLink) {
+              html += '<a href="' + C.patreonLink + '" target="_blank" class="pw-btn pw-btn-patreon" style="text-decoration:none;display:inline-block;text-align:center;">Patreon 赞助</a>';
+            }
+            if (C.kofiLink) {
+              html += '<a href="' + C.kofiLink + '" target="_blank" class="pw-btn pw-btn-kofi" style="text-decoration:none;display:inline-block;text-align:center;">Ko-fi 赞助</a>';
             }
             html += '</div>';
-          }
 
-          if (C.contactInfo) {
-            html += '<div class="pw-footnote">如有问题，联系创作者：' + C.contactInfo + '</div>';
-          }
+            // 解锁码请求
+            html += '<div class="pw-divider"></div>';
+            html += '<div class="pw-section-title">付款后 · 获取解锁码</div>';
+            html += '<input type="email" class="pw-input" id="webhook-email-input" placeholder="输入你的邮箱，解锁码将发送至此">';
+            html += '<button class="pw-btn pw-btn-primary" id="webhook-unlock-btn" onclick="doWebhookUnlock()">发送解锁码到邮箱</button>';
+            html += '<div class="pw-msg" id="webhook-msg"></div>';
 
-          html += '<div class="pw-divider"></div>';
-
-          if (mode === 'semi_auto') {
-            html += '<div class="pw-section-title">付款后 · 粘贴交易单号自动解锁</div>';
-            html += '<input type="text" class="pw-input" id="order-input" placeholder="从微信/支付宝账单复制完整的交易单号" autocomplete="off">';
-            html += '<p class="pw-footnote" style="margin-top:-4px;margin-bottom:8px;">微信单号以 420000 开头 · 在微信支付 → 账单详情中可找到</p>';
-            html += '<button class="pw-btn pw-btn-primary" id="unlock-btn" onclick="doUnlock()">解锁完整故事</button>';
-            html += '<div class="pw-msg" id="unlock-msg"></div>';
+            // 解锁码输入区域（初始隐藏）
+            html += '<div id="webhook-code-section" style="display:none;margin-top:16px;">';
+            html += '<input type="text" class="pw-input" id="webhook-code-input" placeholder="输入收到的解锁码">';
+            html += '<button class="pw-btn pw-btn-secondary" onclick="doWebhookCodeUnlock()">解锁</button>';
+            html += '<div class="pw-msg" id="webhook-code-msg"></div>';
+            html += '</div>';
           } else {
-            html += '<div class="pw-section-title">付款后 · 联系创作者获取激活码</div>';
-            if (C.contactInfo) {
-              html += '<p style="color:#94a3b8;font-size:13px;margin-bottom:12px;">将支付截图发给创作者：' + C.contactInfo + '</p>';
+            if (hasQR) {
+              html += '<div class="pw-divider"></div>';
+              html += '<div class="pw-section-title">扫码支付 · 钱直接到创作者账户</div>';
+              html += '<div class="pw-qr-container">';
+              if (C.wechatQRCode) {
+                html += '<div class="pw-qr-item"><img src="' + C.wechatQRCode + '" alt="微信收款码"><div class="pw-qr-label">微信支付</div></div>';
+              }
+              if (C.alipayQRCode) {
+                html += '<div class="pw-qr-item"><img src="' + C.alipayQRCode + '" alt="支付宝收款码"><div class="pw-qr-label">支付宝</div></div>';
+              }
+              html += '</div>';
             }
-            html += '<input type="text" class="pw-input" id="activation-input" placeholder="粘贴创作者给你的激活码">';
-            html += '<button class="pw-btn pw-btn-primary" onclick="doManualUnlock()">输入激活码解锁</button>';
-            html += '<div class="pw-msg" id="manual-msg"></div>';
+
+            if (C.contactInfo) {
+              html += '<div class="pw-footnote">如有问题，联系创作者：' + C.contactInfo + '</div>';
+            }
+
+            html += '<div class="pw-divider"></div>';
+
+            if (mode === 'semi_auto') {
+              html += '<div class="pw-section-title">付款后 · 粘贴交易单号自动解锁</div>';
+              html += '<input type="text" class="pw-input" id="order-input" placeholder="从微信/支付宝账单复制完整的交易单号" autocomplete="off">';
+              html += '<p class="pw-footnote" style="margin-top:-4px;margin-bottom:8px;">微信单号以 420000 开头 · 在微信支付 → 账单详情中可找到</p>';
+              html += '<button class="pw-btn pw-btn-primary" id="unlock-btn" onclick="doUnlock()">解锁完整故事</button>';
+              html += '<div class="pw-msg" id="unlock-msg"></div>';
+            } else {
+              html += '<div class="pw-section-title">付款后 · 联系创作者获取激活码</div>';
+              if (C.contactInfo) {
+                html += '<p style="color:#94a3b8;font-size:13px;margin-bottom:12px;">将支付截图发给创作者：' + C.contactInfo + '</p>';
+              }
+              html += '<input type="text" class="pw-input" id="activation-input" placeholder="粘贴创作者给你的激活码">';
+              html += '<button class="pw-btn pw-btn-primary" onclick="doManualUnlock()">输入激活码解锁</button>';
+              html += '<div class="pw-msg" id="manual-msg"></div>';
+            }
           }
         } else {
           html += '<div class="pw-btn pw-btn-primary" onclick="doUnlock()" style="margin-top:20px;">免费阅读</div>';
@@ -368,6 +427,99 @@ function buildStoryHTML(encryptedData: string, config: StoryExportConfig): strin
           } else {
             msg.className = 'pw-msg error';
             msg.textContent = result.error || '激活码无效';
+          }
+        } catch(e) {
+          msg.className = 'pw-msg error';
+          msg.textContent = '网络错误';
+        }
+      };
+
+      window.doWebhookUnlock = async function() {
+        var emailInput = document.getElementById('webhook-email-input');
+        var msg = document.getElementById('webhook-msg');
+        var btn = document.getElementById('webhook-unlock-btn');
+        var email = (emailInput || {}).value.trim();
+
+        if (!email || !email.includes('@')) {
+          msg.className = 'pw-msg error';
+          msg.textContent = '请输入有效的邮箱地址';
+          return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = '发送中...';
+        msg.className = 'pw-msg info';
+        msg.textContent = '正在发送解锁码，请稍候...';
+
+        try {
+          var resp = await fetch(C.webhookUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'request_unlock',
+              workId: C.workId,
+              email: email,
+              deviceFingerprint: await sha256(navigator.userAgent + screen.width + 'x' + screen.height),
+            }),
+          });
+
+          var result = await resp.json();
+          if (result.success) {
+            msg.className = 'pw-msg success';
+            msg.textContent = '解锁码已发送到 ' + email + '，请查收邮件后输入解锁码';
+            document.getElementById('webhook-code-section').style.display = 'block';
+          } else {
+            msg.className = 'pw-msg error';
+            msg.textContent = result.error || '发送失败，请稍后重试';
+            btn.disabled = false;
+            btn.textContent = '发送解锁码';
+          }
+        } catch(e) {
+          msg.className = 'pw-msg error';
+          msg.textContent = '网络错误，请检查网络连接';
+          btn.disabled = false;
+          btn.textContent = '发送解锁码';
+        }
+      };
+
+      window.doWebhookCodeUnlock = async function() {
+        var input = document.getElementById('webhook-code-input');
+        var msg = document.getElementById('webhook-code-msg');
+        var code = (input || {}).value.trim();
+
+        if (!code) {
+          msg.className = 'pw-msg error';
+          msg.textContent = '请输入解锁码';
+          return;
+        }
+
+        msg.className = 'pw-msg info';
+        msg.textContent = '验证中...';
+
+        try {
+          var fingerprint = await sha256(navigator.userAgent + screen.width + 'x' + screen.height);
+          var resp = await fetch(C.apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'unlock',
+              workId: C.workId,
+              orderNo: code,
+              deviceFingerprint: fingerprint,
+            }),
+          });
+
+          var result = await resp.json();
+          if (result.success) {
+            setUnlocked(result.keyBase64, result.ivBase64);
+            decodedData = await decryptData(result.keyBase64, result.ivBase64);
+            graph = JSON.parse(decodedData);
+            msg.className = 'pw-msg success';
+            msg.textContent = '解锁成功！';
+            setTimeout(function() { paywall.classList.add('hidden'); startStory(); }, 1200);
+          } else {
+            msg.className = 'pw-msg error';
+            msg.textContent = result.error || '解锁码无效';
           }
         } catch(e) {
           msg.className = 'pw-msg error';

@@ -85,6 +85,13 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
   const [drmWechatQR, setDrmWechatQR] = useState<string>('')
   const [drmAlipayQR, setDrmAlipayQR] = useState<string>('')
   const [drmContact, setDrmContact] = useState<string>('')
+  const [drmWebhookUrl, setDrmWebhookUrl] = useState<string>('')
+  const [drmWebhookProvider, setDrmWebhookProvider] = useState<string>('stripe')
+  const [drmStripeUrl, setDrmStripeUrl] = useState<string>('')
+  const [drmPaypalUrl, setDrmPaypalUrl] = useState<string>('')
+  const [drmPatreonUrl, setDrmPatreonUrl] = useState<string>('')
+  const [drmKofiUrl, setDrmKofiUrl] = useState<string>('')
+  const [drmCurrency, setDrmCurrency] = useState<string>('CNY')
 
   useEffect(() => {
     if (!open) return
@@ -164,10 +171,18 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
           const storyConfig: StoryExportConfig = {
             unlockMode: drmUnlockMode,
             price: drmEnabled ? drmPrice : 0,
+            currency: drmCurrency,
             freePreview: drmFreePreview,
             wechatQRCode: drmWechatQR || undefined,
             alipayQRCode: drmAlipayQR || undefined,
             contactInfo: drmContact || undefined,
+            // Webhook 相关
+            webhookUrl: drmWebhookUrl || undefined,
+            webhookProvider: (drmWebhookProvider as any) || undefined,
+            stripeCheckoutUrl: drmStripeUrl || undefined,
+            paypalLink: drmPaypalUrl || undefined,
+            patreonLink: drmPatreonUrl || undefined,
+            kofiLink: drmKofiUrl || undefined,
           }
 
           setProgress(50)
@@ -221,7 +236,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
       const msg = err instanceof Error ? err.message : String(err)
       showToast('error', `导出失败：${msg}`)
     }
-  }, [exporting, format, graph, themeApplicable, selectedTheme, includeDebug, imageQuality, onClose, drmEnabled, drmPrice, drmFreePreview, drmUnlockMode, drmWechatQR, drmAlipayQR, drmContact])
+  }, [exporting, format, graph, themeApplicable, selectedTheme, includeDebug, imageQuality, onClose, drmEnabled, drmPrice, drmFreePreview, drmUnlockMode, drmWechatQR, drmAlipayQR, drmContact, drmWebhookUrl, drmWebhookProvider, drmStripeUrl, drmPaypalUrl, drmPatreonUrl, drmKofiUrl, drmCurrency])
 
   if (!open) return null
 
@@ -365,7 +380,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
 
                   <div className="p-2.5 rounded-lg border border-border">
                     <div className="text-sm mb-2">解锁方式</div>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-3 gap-2">
                       <button
                         type="button"
                         onClick={() => setDrmUnlockMode('semi_auto')}
@@ -377,7 +392,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                       >
                         <div className="font-medium">半自动解锁</div>
                         <div className="text-[10px] text-muted-foreground mt-1">
-                          读者粘贴订单号后自动解锁，无需创作者操作
+                          读者粘贴订单号后自动解锁
                         </div>
                       </button>
                       <button
@@ -391,41 +406,159 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                       >
                         <div className="font-medium">手动激活码</div>
                         <div className="text-[10px] text-muted-foreground mt-1">
-                          读者付款后联系你，你手动生成激活码发给读者
+                          读者付款后联系你获取激活码
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDrmUnlockMode('webhook')}
+                        className={`p-2.5 rounded-lg border text-left text-xs transition-all ${
+                          drmUnlockMode === 'webhook'
+                            ? 'border-primary bg-primary/5 ring-1 ring-primary/30'
+                            : 'border-border hover:bg-muted/40'
+                        }`}
+                      >
+                        <div className="font-medium">Webhook 自动解锁</div>
+                        <div className="text-[10px] text-muted-foreground mt-1">
+                          Stripe/PayPal 等海外渠道自动发放解锁码
                         </div>
                       </button>
                     </div>
                   </div>
 
-                  <div className="p-2.5 rounded-lg border border-border">
-                    <div className="text-sm mb-2">收款二维码（可选）</div>
-                    <div className="text-[11px] text-muted-foreground mb-2">
-                      粘贴你个人微信/支付宝收款码的图片 URL，读者的付款直接到你的账户。
-                      推荐先在编辑器中导入收款码图片作为素材，然后右键复制图片地址。
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="text-[11px] text-muted-foreground block mb-1">微信收款码 URL</label>
-                        <input
-                          type="text"
-                          value={drmWechatQR}
-                          onChange={(e) => setDrmWechatQR(e.target.value)}
-                          placeholder="data:image/png;base64,..."
-                          className="w-full px-2 py-1.5 rounded border border-border bg-background text-xs"
-                        />
+                  {drmUnlockMode !== 'webhook' && (
+                    <div className="p-2.5 rounded-lg border border-border">
+                      <div className="text-sm mb-2">收款二维码（可选）</div>
+                      <div className="text-[11px] text-muted-foreground mb-2">
+                        粘贴你个人微信/支付宝收款码的图片 URL，读者的付款直接到你的账户。
+                        推荐先在编辑器中导入收款码图片作为素材，然后右键复制图片地址。
                       </div>
-                      <div>
-                        <label className="text-[11px] text-muted-foreground block mb-1">支付宝收款码 URL</label>
-                        <input
-                          type="text"
-                          value={drmAlipayQR}
-                          onChange={(e) => setDrmAlipayQR(e.target.value)}
-                          placeholder="data:image/png;base64,..."
-                          className="w-full px-2 py-1.5 rounded border border-border bg-background text-xs"
-                        />
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[11px] text-muted-foreground block mb-1">微信收款码 URL</label>
+                          <input
+                            type="text"
+                            value={drmWechatQR}
+                            onChange={(e) => setDrmWechatQR(e.target.value)}
+                            placeholder="data:image/png;base64,..."
+                            className="w-full px-2 py-1.5 rounded border border-border bg-background text-xs"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] text-muted-foreground block mb-1">支付宝收款码 URL</label>
+                          <input
+                            type="text"
+                            value={drmAlipayQR}
+                            onChange={(e) => setDrmAlipayQR(e.target.value)}
+                            placeholder="data:image/png;base64,..."
+                            className="w-full px-2 py-1.5 rounded border border-border bg-background text-xs"
+                          />
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
+
+                  {drmUnlockMode === 'webhook' && (
+                    <>
+                      <div className="p-2.5 rounded-lg border border-border">
+                        <div className="text-sm mb-2">货币</div>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setDrmCurrency('CNY')}
+                            className={`px-3 py-1.5 rounded text-xs ${drmCurrency === 'CNY' ? 'bg-primary text-white' : 'bg-muted'}`}
+                          >
+                            CNY (人民币)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDrmCurrency('USD')}
+                            className={`px-3 py-1.5 rounded text-xs ${drmCurrency === 'USD' ? 'bg-primary text-white' : 'bg-muted'}`}
+                          >
+                            USD (美元)
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="p-2.5 rounded-lg border border-border">
+                        <div className="text-sm mb-2">付款渠道</div>
+                        <div className="grid grid-cols-5 gap-1.5 mb-3">
+                          {['stripe', 'paypal', 'patreon', 'kofi', 'custom'].map((p) => (
+                            <button
+                              key={p}
+                              type="button"
+                              onClick={() => setDrmWebhookProvider(p)}
+                              className={`py-1.5 px-2 rounded text-[10px] font-medium transition-all ${
+                                drmWebhookProvider === p ? 'bg-primary text-white' : 'bg-muted hover:bg-muted/80'
+                              }`}
+                            >
+                              {p === 'stripe' ? 'Stripe' : p === 'paypal' ? 'PayPal' : p === 'patreon' ? 'Patreon' : p === 'kofi' ? 'Ko-fi' : '自定义'}
+                            </button>
+                          ))}
+                        </div>
+
+                        <div className="space-y-2">
+                          <div>
+                            <label className="text-[11px] text-muted-foreground block mb-1">Webhook 端点 URL</label>
+                            <input
+                              type="text"
+                              value={drmWebhookUrl}
+                              onChange={(e) => setDrmWebhookUrl(e.target.value)}
+                              placeholder="https://your-server.com/api/unlock"
+                              className="w-full px-2 py-1.5 rounded border border-border bg-background text-xs"
+                            />
+                            <div className="text-[10px] text-muted-foreground mt-1">
+                              读者付款后，系统将向此地址 POST 请求以获取解锁码
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="text-[11px] text-muted-foreground block mb-1">Stripe 结账链接</label>
+                            <input
+                              type="text"
+                              value={drmStripeUrl}
+                              onChange={(e) => setDrmStripeUrl(e.target.value)}
+                              placeholder="https://buy.stripe.com/..."
+                              className="w-full px-2 py-1.5 rounded border border-border bg-background text-xs"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-[11px] text-muted-foreground block mb-1">PayPal 付款链接</label>
+                            <input
+                              type="text"
+                              value={drmPaypalUrl}
+                              onChange={(e) => setDrmPaypalUrl(e.target.value)}
+                              placeholder="https://paypal.me/..."
+                              className="w-full px-2 py-1.5 rounded border border-border bg-background text-xs"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-[11px] text-muted-foreground block mb-1">Patreon 赞助链接</label>
+                            <input
+                              type="text"
+                              value={drmPatreonUrl}
+                              onChange={(e) => setDrmPatreonUrl(e.target.value)}
+                              placeholder="https://patreon.com/..."
+                              className="w-full px-2 py-1.5 rounded border border-border bg-background text-xs"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-[11px] text-muted-foreground block mb-1">Ko-fi 赞助链接</label>
+                            <input
+                              type="text"
+                              value={drmKofiUrl}
+                              onChange={(e) => setDrmKofiUrl(e.target.value)}
+                              placeholder="https://ko-fi.com/..."
+                              className="w-full px-2 py-1.5 rounded border border-border bg-background text-xs"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
 
                   <div className="p-2.5 rounded-lg border border-border">
                     <div className="text-sm mb-2">联系方式（可选）</div>

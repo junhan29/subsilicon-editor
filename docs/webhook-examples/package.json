@@ -1,0 +1,13 @@
+{
+  "name": "subsilicon-webhook-examples",
+  "version": "1.0.0",
+  "description": "Webhook examples for SubSilicon Editor auto-unlock",
+  "scripts": {
+    "stripe": "node stripe-server.js",
+    "paypal": "node paypal-server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.0",
+    "stripe": "^15.0.0"
+  }
+}
