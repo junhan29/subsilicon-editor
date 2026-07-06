@@ -110,7 +110,7 @@ export function MonetizationSettingsPanel({
     config?.multiChannel?.manualChannels?.find(c => c.type === 'alipay')?.contact ?? ''
   )
   
-  const [primaryChannel, setPrimaryChannel] = useState<'manual' | 'afdian' | 'mianbaoduo'>(
+  const [primaryChannel, setPrimaryChannel] = useState<'manual' | 'afdian' | 'mianbaoduo' | 'patreon' | 'ko-fi'>(
     config?.multiChannel?.primaryChannel ?? 'afdian'
   )
   
@@ -220,7 +220,7 @@ export function MonetizationSettingsPanel({
   // 上传多渠道收款码
   const handleUploadMultiQRCode = useCallback((
     e: React.ChangeEvent<HTMLInputElement>,
-    channel: 'wechat' | 'alipay'
+    channel: 'wechat' | 'alipay' | 'stripe' | 'paypal'
   ) => {
     const file = e.target.files?.[0]
     if (!file) return

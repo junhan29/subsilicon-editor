@@ -76,14 +76,14 @@ npm test
 
 ### 多渠道收款
 
-- 个人收款码：微信、支付宝
-- 第三方平台：爱发电、面包多
+- 国内：微信、支付宝、爱发电、面包多
+- 海外：Stripe、PayPal、Ko-fi、Patreon
 - HMAC-SHA256 本地验证，无需服务器
 - 付费粒度：整本 / 章节 / 单节点
 
 ### AI 辅助创作
 
-支持 OpenAI、Anthropic、文心一言、通义千问、混元等服务商（用户自备 API 密钥）：
+支持 OpenAI、Anthropic、DeepSeek、Google Gemini 等服务商（用户自备 API 密钥）：
 
 - AI 润色（通用/生动/简洁/文学）
 - AI 排版（对话/叙事/混合）

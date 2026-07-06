@@ -35,13 +35,14 @@ function makeMonetizationConfig(
 }
 
 describe('常量 THIRD_PARTY_PLATFORMS 第三方平台', () => {
-  it('包含 afdian/mianbaoduo/zsxq/custom 四个平台', () => {
+  it('包含 afdian/mianbaoduo/patreon/ko-fi/custom 五个平台', () => {
     const keys = Object.keys(THIRD_PARTY_PLATFORMS)
     expect(keys.includes('afdian')).toBe(true)
     expect(keys.includes('mianbaoduo')).toBe(true)
-    expect(keys.includes('zsxq')).toBe(true)
+    expect(keys.includes('patreon')).toBe(true)
+    expect(keys.includes('ko-fi')).toBe(true)
     expect(keys.includes('custom')).toBe(true)
-    expect(keys.length).toEqual(4)
+    expect(keys.length).toEqual(5)
   })
 
   it('每个平台包含 name/url/fee 字段', () => {

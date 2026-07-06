@@ -2,12 +2,12 @@ import type { StoryGraph } from '@editor/types/editor'
 
 export type PaymentMethod = 'wechat_manual' | 'third_party' | 'both' | 'multi'
 
-export type ThirdPartyPlatform = 'afdian' | 'mianbaoduo' | 'zsxq' | 'custom'
+export type ThirdPartyPlatform = 'afdian' | 'mianbaoduo' | 'patreon' | 'ko-fi' | 'custom'
 
-export type ManualChannelType = 'wechat' | 'alipay'
+export type ManualChannelType = 'wechat' | 'alipay' | 'stripe' | 'paypal'
 
 export interface ThirdPartyChannel {
-  platform: 'afdian' | 'mianbaoduo' | 'custom'
+  platform: 'afdian' | 'mianbaoduo' | 'patreon' | 'ko-fi' | 'custom'
   link: string
   creatorName?: string
   planType?: 'subscription' | 'onetime'
@@ -15,7 +15,7 @@ export interface ThirdPartyChannel {
 }
 
 export interface ManualPaymentChannel {
-  type: 'wechat' | 'alipay'
+  type: 'wechat' | 'alipay' | 'stripe' | 'paypal'
   qrCode: string
   contact?: string
   label?: string
@@ -24,7 +24,7 @@ export interface ManualPaymentChannel {
 export interface MultiChannelConfig {
   manualChannels: ManualPaymentChannel[]
   thirdPartyChannels: ThirdPartyChannel[]
-  primaryChannel: 'manual' | 'afdian' | 'mianbaoduo'
+  primaryChannel: 'manual' | 'afdian' | 'mianbaoduo' | 'patreon' | 'ko-fi'
 }
 
 export type PaymentGranularity = 'whole' | 'chapter' | 'node'
@@ -101,7 +101,7 @@ export interface IncomeRecord {
   workId: string
   workTitle: string
   amount: number
-  channel: 'wechat' | 'alipay' | 'afdian' | 'mianbaoduo' | 'other'
+  channel: 'wechat' | 'alipay' | 'stripe' | 'paypal' | 'afdian' | 'mianbaoduo' | 'patreon' | 'ko-fi' | 'other'
   date: number
   note?: string
 }
@@ -159,7 +159,8 @@ export const SEED_KEY_STORAGE_KEY = 'subsilicon_seed_keys'
 export const THIRD_PARTY_PLATFORMS: Record<ThirdPartyPlatform, { name: string; url: string; fee: string }> = {
   afdian: { name: '爱发电', url: 'https://afdian.net', fee: '6%' },
   mianbaoduo: { name: '面包多', url: 'https://mianbaoduo.com', fee: '5%' },
-  zsxq: { name: '知识星球', url: 'https://zsxq.com', fee: '5%' },
+  patreon: { name: 'Patreon', url: 'https://patreon.com', fee: '8%' },
+  'ko-fi': { name: 'Ko-fi', url: 'https://ko-fi.com', fee: '0%' },
   custom: { name: '其他平台', url: '', fee: '自定义' },
 }
 

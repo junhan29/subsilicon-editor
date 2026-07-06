@@ -25,7 +25,7 @@ export interface AiConfig {
 export interface AiProviderConfig {
   id: string
   name: string
-  provider: 'openai' | 'anthropic' | 'baidu' | 'aliyun' | 'tencent' | 'custom'
+  provider: 'openai' | 'anthropic' | 'deepseek' | 'google' | 'custom'
   apiKey: string
   apiUrl?: string
   model: string
@@ -71,49 +71,32 @@ const PROVIDER_INFO: Record<string, {
       '粘贴到下方输入框'
     ]
   },
-  baidu: {
-    name: '百度智能云',
-    website: 'https://console.bce.baidu.com/qianfan',
-    apiUrl: 'https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat',
-    defaultModel: 'ernie-4.0-turbo',
-    price: '0.04元/千token',
-    features: ['文心一言4.0', '中文优化', '多模态'],
+  deepseek: {
+    name: 'DeepSeek',
+    website: 'https://platform.deepseek.com',
+    apiUrl: 'https://api.deepseek.com/v1',
+    defaultModel: 'deepseek-chat',
+    price: '¥1/百万token',
+    features: ['DeepSeek-V3', 'DeepSeek-R1', '中文优化', '高性价比'],
     setupGuide: [
-      '访问 https://console.bce.baidu.com/qianfan 注册账号',
-      '完成实名认证',
-      '创建应用并获取 API Key 和 Secret Key',
-      '在下方输入 API Key',
-      '注意：百度需要同时配置 API Key 和 Secret Key'
-    ]
-  },
-  aliyun: {
-    name: '阿里云',
-    website: 'https://dashscope.console.aliyun.com',
-    apiUrl: 'https://dashscope.aliyuncs.com/api/v1',
-    defaultModel: 'qwen-plus',
-    price: '0.015元/千token',
-    features: ['通义千问', '多模态', '中文优化'],
-    setupGuide: [
-      '访问 https://dashscope.console.aliyun.com 注册账号',
-      '完成实名认证',
-      '进入 API Key 管理页面',
-      '点击创建 API Key',
+      '访问 https://platform.deepseek.com 注册账号',
+      '登录后进入 API Keys 页面',
+      '点击创建新密钥',
       '复制密钥并粘贴到下方'
     ]
   },
-  tencent: {
-    name: '腾讯云',
-    website: 'https://console.cloud.tencent.com/cam/capi',
-    apiUrl: 'https://tencent.api.com/v1',
-    defaultModel: 'hunyuan-pro',
-    price: '0.012元/千token',
-    features: ['混元大模型', '中文优化', '企业级'],
+  google: {
+    name: 'Google AI',
+    website: 'https://aistudio.google.com',
+    apiUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
+    defaultModel: 'gemini-2.0-flash',
+    price: '$0.10/百万token',
+    features: ['Gemini 2.0 Flash', 'Gemini 2.5 Pro', '多模态', '长上下文'],
     setupGuide: [
-      '访问 https://console.cloud.tencent.com 注册账号',
-      '完成实名认证',
-      '进入 CAM 密钥管理页面',
-      '创建 SecretId 和 SecretKey',
-      '在下方输入 SecretKey'
+      '访问 https://aistudio.google.com 注册账号',
+      '登录后点击 Get API Key',
+      '创建或选择一个 Google Cloud 项目',
+      '复制 API 密钥并粘贴到下方'
     ]
   },
   custom: {
@@ -136,7 +119,7 @@ const PROVIDER_INFO: Record<string, {
 export function AiSettingsPanel({ enabled: initialEnabled, onChange }: AiSettingsPanelProps) {
   const [enabled, setEnabled] = useState(initialEnabled ?? false)
   const [expandedSection, setExpandedSection] = useState('providers')
-  const [selectedProvider, setSelectedProvider] = useState<string>('baidu')
+  const [selectedProvider, setSelectedProvider] = useState<string>('deepseek')
   const [apiKey, setApiKey] = useState('')
   const [apiUrl, setApiUrl] = useState('')
   const [model, setModel] = useState('')
