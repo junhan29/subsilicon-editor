@@ -15,5 +15,3 @@ credentials/
 *.key
 desktop/main.js
 desktop/preload.js
-desktop/main.cjs
-desktop/preload.cjs
