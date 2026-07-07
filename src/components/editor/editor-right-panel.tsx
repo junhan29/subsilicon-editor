@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect, memo } from 'react'
 import { shallowEqual } from '@editor/lib/utils'
 import { Settings, Users, Image, Music, ChevronDown, ChevronUp, X, Plus, Edit3, Layers, BarChart3, Trash2, ShieldCheck, GitBranch, MessageSquare, Activity, Lock, Sparkles, Wand2 } from 'lucide-react'
 import { Button } from '@editor/components/ui/button'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@editor/components/ui/tabs'
+import { Tabs } from '@editor/components/ui/tabs'
 import { LivePreview } from './live-preview'
 import { PropertyPanel } from './property-panel'
 import { PuzzleEditor } from './puzzle/puzzle-editor'
@@ -234,7 +234,7 @@ function EditorRightPanel({
       )}
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Tabs key={tabGroup} value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
+        <div className="flex flex-col h-full">
           <div className="flex items-center gap-1 px-2 py-1.5 bg-slate-900 border-b border-slate-800">
             <button
               onClick={() => { setTabGroup('edit'); setActiveTab('properties') }}
@@ -253,65 +253,97 @@ function EditorRightPanel({
               管理
             </button>
           </div>
-          <TabsList className="w-full justify-start rounded-none border-b border-slate-800 bg-slate-900 p-0 h-10 flex-wrap">
+          <div className="w-full flex flex-wrap border-b border-slate-800 bg-slate-900">
             {tabGroup === 'edit' && (
               <>
-                <TabsTrigger
-                  value="properties"
-                  className="data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-none text-slate-400 h-10 rounded-none px-4 text-xs"
+                <button
+                  onClick={() => setActiveTab('properties')}
+                  className={`flex items-center px-4 py-2.5 text-xs transition-colors ${
+                    activeTab === 'properties'
+                      ? 'bg-slate-800 text-white'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                  }`}
                 >
                   <Settings className="w-3.5 h-3.5 mr-1.5" />
                   属性
-                </TabsTrigger>
-                <TabsTrigger
-                  value="characters"
-                  className="data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-none text-slate-400 h-10 rounded-none px-4 text-xs"
+                </button>
+                <button
+                  onClick={() => setActiveTab('characters')}
+                  className={`flex items-center px-4 py-2.5 text-xs transition-colors ${
+                    activeTab === 'characters'
+                      ? 'bg-slate-800 text-white'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                  }`}
                 >
                   <Users className="w-3.5 h-3.5 mr-1.5" />
                   角色
-                </TabsTrigger>
-                <TabsTrigger
-                  value="scenes"
-                  className="data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-none text-slate-400 h-10 rounded-none px-4 text-xs"
+                </button>
+                <button
+                  onClick={() => setActiveTab('scenes')}
+                  className={`flex items-center px-4 py-2.5 text-xs transition-colors ${
+                    activeTab === 'scenes'
+                      ? 'bg-slate-800 text-white'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                  }`}
                 >
                   <Image className="w-3.5 h-3.5 mr-1.5" />
                   场景
-                </TabsTrigger>
-                <TabsTrigger
-                  value="audio"
-                  className="data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-none text-slate-400 h-10 rounded-none px-4 text-xs"
+                </button>
+                <button
+                  onClick={() => setActiveTab('audio')}
+                  className={`flex items-center px-4 py-2.5 text-xs transition-colors ${
+                    activeTab === 'audio'
+                      ? 'bg-slate-800 text-white'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                  }`}
                 >
                   <Music className="w-3.5 h-3.5 mr-1.5" />
                   音频
-                </TabsTrigger>
-                <TabsTrigger
-                  value="variables"
-                  className="data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-none text-slate-400 h-10 rounded-none px-4 text-xs"
+                </button>
+                <button
+                  onClick={() => setActiveTab('variables')}
+                  className={`flex items-center px-4 py-2.5 text-xs transition-colors ${
+                    activeTab === 'variables'
+                      ? 'bg-slate-800 text-white'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                  }`}
                 >
                   <BarChart3 className="w-3.5 h-3.5 mr-1.5" />
                   变量
-                </TabsTrigger>
+                </button>
               </>
             )}
             {tabGroup === 'manage' && (
               <>
-                <TabsTrigger
-                  value="quality"
-                  className="data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-none text-slate-400 h-10 rounded-none px-4 text-xs"
+                <button
+                  onClick={() => setActiveTab('quality')}
+                  className={`flex items-center px-4 py-2.5 text-xs transition-colors ${
+                    activeTab === 'quality'
+                      ? 'bg-slate-800 text-white'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                  }`}
                 >
                   <ShieldCheck className="w-3.5 h-3.5 mr-1.5" />
                   质量
-                </TabsTrigger>
-                <TabsTrigger
-                  value="versions"
-                  className="data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-none text-slate-400 h-10 rounded-none px-4 text-xs"
+                </button>
+                <button
+                  onClick={() => setActiveTab('versions')}
+                  className={`flex items-center px-4 py-2.5 text-xs transition-colors ${
+                    activeTab === 'versions'
+                      ? 'bg-slate-800 text-white'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                  }`}
                 >
                   <GitBranch className="w-3.5 h-3.5 mr-1.5" />
                   版本
-                </TabsTrigger>
-                <TabsTrigger
-                  value="annotations"
-                  className="data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-none text-slate-400 h-10 rounded-none px-4 text-xs relative"
+                </button>
+                <button
+                  onClick={() => setActiveTab('annotations')}
+                  className={`flex items-center px-4 py-2.5 text-xs transition-colors relative ${
+                    activeTab === 'annotations'
+                      ? 'bg-slate-800 text-white'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                  }`}
                 >
                   <MessageSquare className="w-3.5 h-3.5 mr-1.5" />
                   批注
@@ -320,54 +352,78 @@ function EditorRightPanel({
                       {annotations.length}
                     </span>
                   )}
-                </TabsTrigger>
-                <TabsTrigger
-                  value="stats"
-                  className="data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-none text-slate-400 h-10 rounded-none px-4 text-xs"
+                </button>
+                <button
+                  onClick={() => setActiveTab('stats')}
+                  className={`flex items-center px-4 py-2.5 text-xs transition-colors ${
+                    activeTab === 'stats'
+                      ? 'bg-slate-800 text-white'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                  }`}
                 >
                   <Activity className="w-3.5 h-3.5 mr-1.5" />
                   统计
-                </TabsTrigger>
-                <TabsTrigger
-                  value="monetization"
-                  className="data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-none text-slate-400 h-10 rounded-none px-4 text-xs"
+                </button>
+                <button
+                  onClick={() => setActiveTab('monetization')}
+                  className={`flex items-center px-4 py-2.5 text-xs transition-colors ${
+                    activeTab === 'monetization'
+                      ? 'bg-slate-800 text-white'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                  }`}
                 >
                   <Lock className="w-3.5 h-3.5 mr-1.5" />
                   付费
-                </TabsTrigger>
-                <TabsTrigger
-                  value="ai"
-                  className="data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-none text-slate-400 h-10 rounded-none px-4 text-xs"
+                </button>
+                <button
+                  onClick={() => setActiveTab('ai')}
+                  className={`flex items-center px-4 py-2.5 text-xs transition-colors ${
+                    activeTab === 'ai'
+                      ? 'bg-slate-800 text-white'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                  }`}
                 >
                   <Sparkles className="w-3.5 h-3.5 mr-1.5" />
                   AI设置
-                </TabsTrigger>
-                <TabsTrigger
-                  value="ai-story"
-                  className="data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-none text-slate-400 h-10 rounded-none px-4 text-xs"
+                </button>
+                <button
+                  onClick={() => setActiveTab('ai-story')}
+                  className={`flex items-center px-4 py-2.5 text-xs transition-colors ${
+                    activeTab === 'ai-story'
+                      ? 'bg-slate-800 text-white'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                  }`}
                 >
                   <Wand2 className="w-3.5 h-3.5 mr-1.5" />
                   AI创作
-                </TabsTrigger>
-                <TabsTrigger
-                  value="analytics"
-                  className="data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-none text-slate-400 h-10 rounded-none px-4 text-xs"
+                </button>
+                <button
+                  onClick={() => setActiveTab('analytics')}
+                  className={`flex items-center px-4 py-2.5 text-xs transition-colors ${
+                    activeTab === 'analytics'
+                      ? 'bg-slate-800 text-white'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                  }`}
                 >
                   <BarChart3 className="w-3.5 h-3.5 mr-1.5" />
                   分析
-                </TabsTrigger>
-                <TabsTrigger
-                  value="plugins"
-                  className="data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-none text-slate-400 h-10 rounded-none px-4 text-xs"
+                </button>
+                <button
+                  onClick={() => setActiveTab('plugins')}
+                  className={`flex items-center px-4 py-2.5 text-xs transition-colors ${
+                    activeTab === 'plugins'
+                      ? 'bg-slate-800 text-white'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                  }`}
                 >
                   <Layers className="w-3.5 h-3.5 mr-1.5" />
                   插件
-                </TabsTrigger>
+                </button>
               </>
             )}
-          </TabsList>
+          </div>
 
-          <TabsContent value="properties" className="flex-1 overflow-y-auto p-0 m-0">
+          {activeTab === 'properties' && <div className="flex-1 overflow-y-auto p-0">
             <PropertyPanel
               selectedNode={selectedNode}
               selectedEdge={selectedEdge}
@@ -393,9 +449,9 @@ function EditorRightPanel({
               onAddAnnotation={(nodeId) => onOpenAnnotationDialog?.(nodeId)}
               onViewAnnotations={() => setActiveTab('annotations')}
             />
-          </TabsContent>
+          </div>}
 
-          <TabsContent value="characters" className="flex-1 overflow-y-auto p-0 m-0">
+          {activeTab === 'characters' && <div className="flex-1 overflow-y-auto p-0 m-0">
             <div className="p-4 space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-white">角色管理</h3>
@@ -500,9 +556,9 @@ function EditorRightPanel({
                 )}
               </div>
             </div>
-          </TabsContent>
+          </div>}
 
-          <TabsContent value="scenes" className="flex-1 overflow-y-auto p-0 m-0">
+          {activeTab === 'scenes' && <div className="flex-1 overflow-y-auto p-0 m-0">
             <div className="p-4 space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-white">场景库</h3>
@@ -594,9 +650,9 @@ function EditorRightPanel({
                 )}
               </div>
             </div>
-          </TabsContent>
+          </div>}
 
-          <TabsContent value="audio" className="flex-1 overflow-y-auto p-0 m-0">
+          {activeTab === 'audio' && <div className="flex-1 overflow-y-auto p-0 m-0">
             <div className="p-4 space-y-4">
               <h3 className="text-sm font-semibold text-white">音频库</h3>
 
@@ -676,16 +732,16 @@ function EditorRightPanel({
                 ))}
               </div>
             </div>
-          </TabsContent>
+          </div>}
 
-          <TabsContent value="variables" className="flex-1 overflow-y-auto p-0 m-0">
+          {activeTab === 'variables' && <div className="flex-1 overflow-y-auto p-0 m-0">
             <VariablePanel
               variables={variables}
               onUpdateVariables={onUpdateVariables}
             />
-          </TabsContent>
+          </div>}
 
-          <TabsContent value="quality" className="flex-1 overflow-hidden p-0 m-0">
+          {activeTab === 'quality' && <div className="flex-1 overflow-hidden p-0 m-0">
             <QualityPanel
               nodes={nodes}
               edges={edges}
@@ -693,9 +749,9 @@ function EditorRightPanel({
               onNodeClick={(id) => onNodeSelect?.(id)}
               onEdgeClick={(id) => onEdgeSelect?.(id)}
             />
-          </TabsContent>
+          </div>}
 
-          <TabsContent value="versions" className="flex-1 overflow-y-auto p-0 m-0">
+          {activeTab === 'properties' && <div className="flex-1 overflow-y-auto p-0">
             <VersionPanel
               versions={versions}
               currentGraph={currentGraph || { nodes, edges, characters, scenes, audios, variables: variables || [], groups: [] }}
@@ -703,9 +759,9 @@ function EditorRightPanel({
               onRestoreVersion={onRestoreVersion || (() => {})}
               onDeleteVersion={onDeleteVersion || (() => {})}
             />
-          </TabsContent>
+          </div>}
 
-          <TabsContent value="annotations" className="flex-1 overflow-hidden p-0 m-0">
+          {activeTab === 'annotations' && <div className="flex-1 overflow-hidden p-0 m-0">
             <AnnotationPanel
               annotations={annotations}
               nodes={nodes}
@@ -717,9 +773,9 @@ function EditorRightPanel({
               onDeleteAnnotation={onDeleteAnnotation}
               onNodeSelect={onNodeSelect}
             />
-          </TabsContent>
+          </div>}
 
-          <TabsContent value="stats" className="flex-1 overflow-hidden p-0 m-0">
+          {activeTab === 'stats' && <div className="flex-1 overflow-hidden p-0 m-0">
             <MemoizedWritingStatsPanel
               workId={workId}
               nodeCount={nodes.length}
@@ -743,9 +799,9 @@ function EditorRightPanel({
                 return acc + count
               }, 0)}
             />
-          </TabsContent>
+          </div>}
           
-          <TabsContent value="monetization" className="flex-1 overflow-y-auto p-4 m-0">
+          {activeTab === 'monetization' && <div className="flex-1 overflow-y-auto p-4 m-0">
             {graph && onMonetizationChange && (
               <MonetizationSettingsPanel
                 graph={graph}
@@ -754,31 +810,31 @@ function EditorRightPanel({
                 workId={workId}
               />
             )}
-          </TabsContent>
+          </div>}
           
-          <TabsContent value="ai" className="flex-1 overflow-y-auto p-4 m-0">
+          {activeTab === 'ai' && <div className="flex-1 overflow-y-auto p-4 m-0">
             <AiSettingsPanel
               onChange={(config) => {
                 localStorage.setItem('subsilicon_ai_config', JSON.stringify(config))
               }}
             />
-          </TabsContent>
+          </div>}
           
-          <TabsContent value="ai-story" className="flex-1 overflow-hidden p-0 m-0">
+          {activeTab === 'ai-story' && <div className="flex-1 overflow-hidden p-0 m-0">
             <AiStoryPanel
               onApplyStory={onApplyStory || (() => {})}
               onAddCharacters={onAddCharacters || (() => {})}
             />
-          </TabsContent>
+          </div>}
 
-          <TabsContent value="analytics" className="flex-1 overflow-hidden p-0 m-0">
+          {activeTab === 'analytics' && <div className="flex-1 overflow-hidden p-0 m-0">
             <AnalyticsPanel />
-          </TabsContent>
+          </div>}
 
-          <TabsContent value="plugins" className="flex-1 overflow-hidden p-0 m-0">
+          {activeTab === 'plugins' && <div className="flex-1 overflow-hidden p-0 m-0">
             <PluginManagerPanel />
-          </TabsContent>
-        </Tabs>
+          </div>}
+        </div>
       </div>
 
       {showPuzzleEditor && editingScene && (
