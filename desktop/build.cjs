@@ -1,22 +1,20 @@
-const esbuild = require('esbuild')
+const fs = require('fs')
 const path = require('path')
 
 const isDev = process.env.NODE_ENV === 'development'
 
-const buildOptions = {
-  entryPoints: ['desktop/main.cjs', 'desktop/preload.cjs'],
-  outdir: 'desktop',
-  platform: 'node',
-  target: 'node20',
-  bundle: false,
-  minify: !isDev,
-  sourcemap: isDev,
-  packages: 'external',
+// Desktop files are already CommonJS, just copy them
+const files = ['main.cjs', 'preload.cjs']
+
+for (const file of files) {
+  const src = path.join(__dirname, file)
+  const dest = path.join(__dirname, 'dist', file)
+  
+  if (fs.existsSync(src)) {
+    fs.mkdirSync(path.dirname(dest), { recursive: true })
+    fs.copyFileSync(src, dest)
+    console.log(`Copied ${file}`)
+  }
 }
 
-esbuild.build(buildOptions).then(() => {
-  console.log('Electron main process built successfully')
-}).catch((error) => {
-  console.error('Electron build failed:', error)
-  process.exit(1)
-})
+console.log('Electron main process files ready')
