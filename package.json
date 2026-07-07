@@ -124,22 +124,13 @@
         {
           "target": "nsis",
           "arch": [
-            "x64",
-            "arm64"
-          ]
-        },
-        {
-          "target": "portable",
-          "arch": [
-            "x64",
-            "arm64"
+            "x64"
           ]
         },
         {
           "target": "zip",
           "arch": [
-            "x64",
-            "arm64"
+            "x64"
           ]
         }
       ],
@@ -198,29 +189,19 @@
         {
           "target": "AppImage",
           "arch": [
-            "x64",
-            "arm64"
+            "x64"
           ]
         },
         {
           "target": "deb",
           "arch": [
-            "x64",
-            "arm64"
-          ]
-        },
-        {
-          "target": "rpm",
-          "arch": [
-            "x64",
-            "arm64"
+            "x64"
           ]
         },
         {
           "target": "tar.gz",
           "arch": [
-            "x64",
-            "arm64"
+            "x64"
           ]
         }
       ],
