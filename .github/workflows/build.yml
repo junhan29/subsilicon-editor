@@ -91,7 +91,7 @@ jobs:
       - name: Create GitHub Release
         uses: ncipollo/release-action@v1
         with:
-          artifacts: 'release/*.dmg;release/*.zip;release/*.exe;release/*.AppImage;release/*.deb;release/*.rpm;release/*.tar.gz'
+          artifacts: "release/*"
           token: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
