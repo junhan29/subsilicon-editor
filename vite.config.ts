@@ -14,7 +14,6 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: false,
     chunkSizeWarningLimit: 1000,
-    minify: 'terser',
     cssCodeSplit: true,
     rollupOptions: {
       input: {
@@ -32,7 +31,6 @@ export default defineConfig({
       },
     },
     target: 'es2020',
-    polyfillModulePreload: false,
     assetsInlineLimit: 4096,
     brotliSize: true,
   },
