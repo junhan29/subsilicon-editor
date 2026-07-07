@@ -48,11 +48,26 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: npm run electron:build:linux
 
+      - name: List release files
+        if: matrix.os != 'windows-latest'
+        run: ls -la release/
+
+      - name: List release files (Windows)
+        if: matrix.os == 'windows-latest'
+        run: dir release\
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.os }}-build
-          path: release/*.{dmg,zip,exe,msi,AppImage,deb,rpm,tgz}
+          path: |
+            release/*.dmg
+            release/*.zip
+            release/*.exe
+            release/*.AppImage
+            release/*.deb
+            release/*.rpm
+            release/*.tar.gz
           if-no-files-found: warn
 
   release:
@@ -76,7 +91,7 @@ jobs:
       - name: Create GitHub Release
         uses: ncipollo/release-action@v1
         with:
-          artifacts: '**/*.{dmg,zip,exe,msi,AppImage,deb,rpm,tgz}'
+          artifacts: 'release/*.dmg;release/*.zip;release/*.exe;release/*.AppImage;release/*.deb;release/*.rpm;release/*.tar.gz'
           token: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
