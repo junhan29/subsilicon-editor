@@ -52,7 +52,6 @@
     "zustand": "5.0.14"
   },
   "devDependencies": {
-    "@tailwindcss/typography": "0.5.20",
     "@types/react": "19.0.0",
     "@types/react-dom": "19.0.0",
     "@types/uuid": "10.0.0",
@@ -86,16 +85,37 @@
       "dist/**/*",
       "desktop/main.cjs",
       "desktop/preload.cjs",
-      "package.json",
-      "build/**/*",
-      "!node_modules/**/*",
-      "!desktop/*.ts",
-      "!desktop/build.cjs"
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "build/",
+        "to": "build",
+        "filter": [
+          "icon.icns",
+          "icon.ico",
+          "icon.png"
+        ]
+      }
     ],
     "asar": true,
+    "compression": "maximum",
     "artifactName": "${productName}-${version}-${platform}-${arch}.${ext}",
     "electronDownload": {
       "mirror": "https://npmmirror.com/mirrors/electron/"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "SubSilicon Editor",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
+      "installerSidebar": "build/installerSidebar.bmp",
+      "language": "2052"
     },
     "extraMetadata": {
       "main": "desktop/main.cjs"
@@ -128,23 +148,16 @@
       "artifactName": "${productName}-${version}-windows-${arch}.${ext}",
       "signAndEditExecutable": false
     },
-    "nsis": {
-      "oneClick": false,
-      "perMachine": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "shortcutName": "SubSilicon Editor",
-      "installerIcon": "build/icon.ico",
-      "uninstallerIcon": "build/icon.ico",
-      "installerHeaderIcon": "build/icon.ico",
-      "installerSidebar": "build/installerSidebar.bmp",
-      "language": "2052"
-    },
     "mac": {
       "target": [
         {
           "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
           "arch": [
             "arm64"
           ]
@@ -157,7 +170,11 @@
       "hardenedRuntime": false,
       "gatekeeperAssess": false,
       "entitlements": "build/entitlements.mac.plist",
-      "entitlementsInherit": "build/entitlements.mac.plist"
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "darkModeSupport": true,
+      "extendInfo": {
+        "NSRequiresAquaSystemAppearance": false
+      }
     },
     "dmg": {
       "title": "${productName} ${version}",
@@ -179,19 +196,31 @@
       "target": [
         {
           "target": "AppImage",
-          "arch": ["x64", "arm64"]
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         },
         {
           "target": "deb",
-          "arch": ["x64", "arm64"]
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         },
         {
           "target": "rpm",
-          "arch": ["x64", "arm64"]
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         },
         {
           "target": "tar.gz",
-          "arch": ["x64", "arm64"]
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         }
       ],
       "icon": "build/icon.png",

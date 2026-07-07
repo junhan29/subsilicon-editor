@@ -7,6 +7,20 @@ import { Label } from '@editor/components/ui/label'
 import { Textarea } from '@editor/components/ui/textarea'
 import { X, Plus, Trash2, Users, ArrowRight, ChevronDown, ChevronRight, Copy, Check, Layers, MessageSquare } from 'lucide-react'
 import type { StoryNode, StoryCharacter, StoryEdge, StoryVariable, CharacterGender, NodeAnnotation } from '@editor/types/editor'
+import {
+  NODE_TYPE_LABELS,
+  CHAR_COLORS,
+  STORY_TAGS,
+  PERSONALITY_TRAITS,
+  APPEARANCE_TAGS,
+  SPEECH_TONES,
+  SPEECH_RHYTHMS,
+  SPEECH_VOCABULARY,
+  SKILL_TAGS,
+  HABIT_TAGS,
+  FEAR_TAGS,
+  CHARACTER_CUSTOM_TAGS,
+} from '@editor/constants'
 
 // 引入拆分的面板组件
 import { DialoguePanel } from './panels/dialogue-panel'
@@ -19,7 +33,6 @@ import { ConditionPanel } from './panels/condition-panel'
 import { GatherPanel } from './panels/gather-panel'
 import { JumpPanel } from './panels/jump-panel'
 import { RandomPanel } from './panels/random-panel'
-import { NODE_TYPE_LABELS } from './panels/shared-props'
 
 // 面板映射表
 const PANEL_MAP: Record<string, React.ComponentType<any>> = {
@@ -34,49 +47,6 @@ const PANEL_MAP: Record<string, React.ComponentType<any>> = {
   jump: JumpPanel,
   random: RandomPanel,
 }
-
-const CHAR_COLORS = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#e67e22', '#34495e']
-
-const STORY_TAGS = ['古风', '玄幻', '悬疑', '恋爱', '现代', '科幻', '恐怖', '校园', '都市', '穿越']
-
-const PERSONALITY_TRAITS = [
-  '勇敢', '冷静', '热血', '高傲', '温柔', '腹黑', '傲娇', '天然呆',
-  '正义', '邪恶', '乐观', '悲观', '开朗', '内向', '活泼', '稳重'
-]
-
-const APPEARANCE_TAGS = [
-  '长发', '短发', '卷发', '大眼', '小眼', '高挑', '娇小', '肌肉',
-  '眼镜', '帽子', '纹身', '伤疤', '马尾', '双马尾', '麻花辫'
-]
-
-const SPEECH_TONES = [
-  '热血激昂', '冷淡简洁', '软萌可爱', '成熟稳重', '痞气十足',
-  '文绉绉', '网络用语', '地方口音', '娃娃音', '御姐音'
-]
-
-const SPEECH_RHYTHMS = ['快节奏', '慢条斯理', '跳跃', '顿挫', '流畅']
-
-const SPEECH_VOCABULARY = ['直接', '委婉', '正式', '口语化', '文艺', '网络']
-
-const SKILL_TAGS = [
-  '格斗', '射击', '魔法', '烹饪', '黑客', '驾驶', '医术', '演技',
-  '管理', '谈判', '潜行', '跑酷', '乐器', '舞蹈', '绘画'
-]
-
-const HABIT_TAGS = [
-  '吃零食', '喝咖啡', '熬夜', '早起', '健身', '阅读', '发呆', '自言自语',
-  '整理东西', '迟到'
-]
-
-const FEAR_TAGS = [
-  '黑暗', '打雷', '虫子', '高处', '深海', '孤独', '失败', '背叛',
-  '鬼魂', '蛇', '蜘蛛', '密闭空间', '公开演讲'
-]
-
-const CHARACTER_CUSTOM_TAGS = [
-  '学生', '老师', '警察', '医生', '商人', '运动员', '艺术家', '程序员',
-  '热血', '御姐', '萝莉', '正太', '大叔', '女神', '男神', '萌新'
-]
 
 // 角色预设
 const CHARACTER_PRESETS: Array<{

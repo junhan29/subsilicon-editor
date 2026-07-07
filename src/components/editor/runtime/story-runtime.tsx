@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { Button } from '@editor/components/ui/button'
 import { Card, CardContent } from '@editor/components/ui/card'
 import type { StoryGraph, StoryNode, StoryEdge } from '@editor/types/editor'
+import { startSession, recordAction, endSession } from '@editor/lib/analytics-store'
 
 interface StoryRuntimeProps {
   storyGraph: StoryGraph
@@ -20,8 +21,38 @@ export function StoryRuntime({ storyGraph, workId }: StoryRuntimeProps) {
 
   const [showQr, setShowQr] = useState(false)
   const [unlockedNodes, setUnlockedNodes] = useState<Set<string>>(new Set())
+  const [sessionStarted, setSessionStarted] = useState(false)
 
   const currentNode = storyGraph.nodes.find((n) => n.id === currentNodeId) as StoryNode | undefined
+
+  useEffect(() => {
+    if (!sessionStarted) {
+      startSession(workId)
+      setSessionStarted(true)
+    }
+    
+    return () => {
+      endSession()
+    }
+  }, [workId, sessionStarted])
+
+  useEffect(() => {
+    if (currentNodeId && sessionStarted) {
+      recordAction({
+        type: 'nodeEnter',
+        nodeId: currentNodeId,
+        nodeType: currentNode?.type,
+      })
+      
+      if (currentNode?.type === 'ending') {
+        recordAction({
+          type: 'ending',
+          nodeId: currentNodeId,
+          endingType: (currentNode.data as any)?.type || 'neutral',
+        })
+      }
+    }
+  }, [currentNodeId, currentNode, sessionStarted])
 
   const getNextNodeId = useCallback(
     (nodeId: string, optionIndex?: number): string | undefined => {
@@ -36,6 +67,16 @@ export function StoryRuntime({ storyGraph, workId }: StoryRuntimeProps) {
   )
 
   const handleChoice = (optionIndex: number) => {
+    const options = ((currentNode?.data as any)?.options || [])
+    const option = options[optionIndex]
+    
+    recordAction({
+      type: 'choice',
+      nodeId: currentNodeId,
+      choiceOptionId: option?.id || `option-${optionIndex}`,
+      choiceOptionText: option?.text || `选项 ${optionIndex + 1}`,
+    })
+    
     const nextId = getNextNodeId(currentNodeId, optionIndex)
     if (nextId) setCurrentNodeId(nextId)
   }

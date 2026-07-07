@@ -3,33 +3,31 @@
 import { useState, useEffect } from 'react'
 import {
   Sparkles, Settings, ChevronDown, ChevronUp, CheckCircle2,
-  ExternalLink, Copy, AlertCircle, Loader2, Key, Globe
+  ExternalLink, Copy, AlertCircle, Loader2, Key, Globe, FileText,
+  Download, Trash2, Cpu, Check, WifiOff, Package, Zap, HardDrive
 } from 'lucide-react'
 import { Button } from '@editor/components/ui/button'
 import { Toggle } from '@editor/components/ui/toggle'
+import { Badge } from '@editor/components/ui/badge'
 import { showToast } from './toast'
+import { AiOutlinePanel } from './ai-outline-panel'
+import type { AiConfig, AiProviderConfig } from '@editor/types/ai'
+import {
+  isOllamaRunning,
+  listInstalledModels,
+  downloadModel,
+  deleteModel,
+  useModel,
+  getCurrentModel,
+  RECOMMENDED_MODELS,
+  formatFileSize,
+  type ModelDownloadStatus,
+  type LocalModelInfo,
+} from '@editor/lib/local-model-manager'
 
 interface AiSettingsPanelProps {
   enabled?: boolean
   onChange: (config: AiConfig) => void
-}
-
-export interface AiConfig {
-  enabled: boolean
-  providers: AiProviderConfig[]
-  defaultProvider: string
-  autoPolish: boolean
-  autoPolishStyle: 'general' | 'vivid' | 'concise' | 'literary'
-}
-
-export interface AiProviderConfig {
-  id: string
-  name: string
-  provider: 'openai' | 'anthropic' | 'deepseek' | 'google' | 'custom'
-  apiKey: string
-  apiUrl?: string
-  model: string
-  enabled: boolean
 }
 
 const PROVIDER_INFO: Record<string, {
@@ -129,6 +127,11 @@ export function AiSettingsPanel({ enabled: initialEnabled, onChange }: AiSetting
   const [providers, setProviders] = useState<AiProviderConfig[]>([])
   const [autoPolish, setAutoPolish] = useState(false)
   const [autoPolishStyle, setAutoPolishStyle] = useState<'general' | 'vivid' | 'concise' | 'literary'>('general')
+  const [ollamaRunning, setOllamaRunning] = useState(false)
+  const [installedModels, setInstalledModels] = useState<LocalModelInfo[]>([])
+  const [downloadingModel, setDownloadingModel] = useState<string | null>(null)
+  const [downloadStatus, setDownloadStatus] = useState<ModelDownloadStatus | null>(null)
+  const [currentModel, setCurrentModel] = useState(getCurrentModel())
 
   useEffect(() => {
     const saved = localStorage.getItem('subsilicon_ai_config')
@@ -150,6 +153,79 @@ export function AiSettingsPanel({ enabled: initialEnabled, onChange }: AiSetting
       setModel(info.defaultModel)
     }
   }, [selectedProvider])
+
+  useEffect(() => {
+    checkOllamaStatus()
+    const interval = setInterval(checkOllamaStatus, 5000)
+    return () => clearInterval(interval)
+  }, [])
+
+  useEffect(() => {
+    if (ollamaRunning) {
+      loadInstalledModels()
+    }
+  }, [ollamaRunning])
+
+  const checkOllamaStatus = async () => {
+    const running = await isOllamaRunning()
+    setOllamaRunning(running)
+  }
+
+  const loadInstalledModels = async () => {
+    const models = await listInstalledModels()
+    const installed: LocalModelInfo[] = []
+    
+    for (const model of models) {
+      const match = RECOMMENDED_MODELS.find(m => m.name === model.name)
+      if (match) {
+        installed.push({
+          ...match,
+          size: model.size / (1024 * 1024 * 1024),
+          sizeFormatted: formatFileSize(model.size),
+        })
+      }
+    }
+    
+    setInstalledModels(installed)
+  }
+
+  const handleDownloadModel = async (modelName: string) => {
+    setDownloadingModel(modelName)
+    
+    try {
+      await downloadModel(modelName, (status) => {
+        setDownloadStatus(status)
+      })
+      showToast('success', `${modelName} 下载完成`)
+      await loadInstalledModels()
+    } catch (error) {
+      showToast('error', `下载失败: ${(error as Error).message}`)
+    } finally {
+      setDownloadingModel(null)
+      setDownloadStatus(null)
+    }
+  }
+
+  const handleDeleteModel = async (modelName: string) => {
+    if (!confirm(`确定要删除模型 ${modelName} 吗？此操作不可恢复。`)) return
+    
+    try {
+      await deleteModel(modelName)
+      showToast('success', `${modelName} 已删除`)
+      await loadInstalledModels()
+      if (currentModel === modelName) {
+        setCurrentModel('')
+      }
+    } catch (error) {
+      showToast('error', `删除失败: ${(error as Error).message}`)
+    }
+  }
+
+  const handleSelectModel = async (modelName: string) => {
+    await useModel(modelName)
+    setCurrentModel(modelName)
+    showToast('success', `已切换到 ${modelName}`)
+  }
 
   const handleSave = () => {
     const newConfig: AiConfig = {
@@ -496,6 +572,207 @@ export function AiSettingsPanel({ enabled: initialEnabled, onChange }: AiSetting
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+          </div>
+
+          {/* AI 大纲生成 */}
+          <div className="border border-border rounded-xl overflow-hidden">
+            <button
+              onClick={() => setExpandedSection(expandedSection === 'outline' ? '' : 'outline')}
+              className="flex items-center justify-between w-full p-4 bg-muted/20 hover:bg-muted/30 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                <span className="font-medium">剧情大纲生成</span>
+              </div>
+              {expandedSection === 'outline' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+
+            {expandedSection === 'outline' && (
+              <div className="p-4">
+                <AiOutlinePanel />
+              </div>
+            )}
+          </div>
+
+          {/* 本地模型管理 */}
+          <div className="border border-border rounded-xl overflow-hidden">
+            <button
+              onClick={() => setExpandedSection(expandedSection === 'local' ? '' : 'local')}
+              className="flex items-center justify-between w-full p-4 bg-muted/20 hover:bg-muted/30 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <Cpu className="w-4 h-4" />
+                <span className="font-medium">离线模型（本地运行）</span>
+              </div>
+              {expandedSection === 'local' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+
+            {expandedSection === 'local' && (
+              <div className="p-4 space-y-4">
+                {/* Ollama 状态检测 */}
+                <div className={`p-3 rounded-lg ${
+                  ollamaRunning ? 'bg-green-500/10 border border-green-500/20' : 'bg-amber-500/10 border border-amber-500/20'
+                }`}>
+                  <div className="flex items-center gap-2">
+                    {ollamaRunning ? (
+                      <>
+                        <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                        <span className="text-sm font-medium text-green-600">Ollama 运行中</span>
+                      </>
+                    ) : (
+                      <>
+                        <WifiOff className="w-4 h-4 text-amber-500" />
+                        <span className="text-sm font-medium text-amber-600">Ollama 未运行</span>
+                      </>
+                    )}
+                  </div>
+                  {!ollamaRunning && (
+                    <div className="mt-2 text-xs text-muted-foreground space-y-1">
+                      <p>需要安装 Ollama 才能使用离线模型：</p>
+                      <ol className="list-disc list-inside">
+                        <li>访问 <a href="https://ollama.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">ollama.com</a> 下载安装</li>
+                        <li>安装后自动启动，或运行 `ollama serve`</li>
+                        <li>重新打开编辑器后刷新此页面</li>
+                      </ol>
+                    </div>
+                  )}
+                </div>
+
+                {ollamaRunning && (
+                  <>
+                    {/* 当前选中模型 */}
+                    <div className="p-3 bg-muted/30 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Zap className="w-4 h-4 text-amber-500" />
+                          <span className="text-sm">当前使用模型</span>
+                        </div>
+                        <span className="text-sm font-medium">
+                          {currentModel || '未选择'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* 推荐模型 */}
+                    <div>
+                      <p className="text-sm font-medium mb-3 flex items-center gap-2">
+                        <Package className="w-4 h-4" />
+                        推荐模型
+                      </p>
+                      <div className="space-y-2">
+                        {RECOMMENDED_MODELS.map((model) => {
+                          const isInstalled = installedModels.some(m => m.name === model.name)
+                          const isDownloading = downloadingModel === model.name
+                          const isSelected = currentModel === model.name
+
+                          return (
+                            <div
+                              key={model.name}
+                              className={`p-3 rounded-lg border transition-colors ${
+                                isSelected
+                                  ? 'border-amber-500 bg-amber-500/10'
+                                  : 'border-border hover:border-amber-500/30'
+                              }`}
+                            >
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <p className="font-medium text-sm">{model.displayName}</p>
+                                    {model.recommended && (
+                                      <Badge variant="secondary" className="text-[10px]">推荐</Badge>
+                                    )}
+                                    {isSelected && (
+                                      <Check className="w-3.5 h-3.5 text-amber-500" />
+                                    )}
+                                  </div>
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    {model.description}
+                                  </p>
+                                  <div className="flex items-center gap-3 mt-2">
+                                    <span className="text-xs flex items-center gap-1">
+                                      <HardDrive className="w-3 h-3" />
+                                      {model.sizeFormatted}
+                                    </span>
+                                    <span className="text-xs">{model.parameters}</span>
+                                    <span className="text-xs text-muted-foreground">{model.provider}</span>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2 ml-2">
+                                  {isDownloading && (
+                                    <Button size="sm" variant="outline" disabled>
+                                      <Loader2 className="w-3 h-3 animate-spin" />
+                                    </Button>
+                                  )}
+                                  {!isDownloading && isInstalled && !isSelected && (
+                                    <Button size="sm" variant="outline" onClick={() => handleSelectModel(model.name)}>
+                                      使用
+                                    </Button>
+                                  )}
+                                  {!isDownloading && !isInstalled && (
+                                    <Button size="sm" variant="outline" onClick={() => handleDownloadModel(model.name)}>
+                                      <Download className="w-3 h-3 mr-1" />
+                                      下载
+                                    </Button>
+                                  )}
+                                  {isInstalled && (
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => handleDeleteModel(model.name)}
+                                      className="text-red-400 hover:text-red-500"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+
+                              {isDownloading && downloadStatus && (
+                                <div className="mt-3">
+                                  <div className="flex items-center justify-between text-xs mb-1">
+                                    <span>下载进度</span>
+                                    <span>{downloadStatus.progress.toFixed(1)}%</span>
+                                  </div>
+                                  <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+                                    <div
+                                      className="h-full bg-amber-500 rounded-full transition-all"
+                                      style={{ width: `${downloadStatus.progress}%` }}
+                                    />
+                                  </div>
+                                  <div className="flex items-center justify-between text-xs text-muted-foreground mt-1">
+                                    <span>{formatFileSize(downloadStatus.downloadedBytes)} / {formatFileSize(downloadStatus.totalBytes)}</span>
+                                    <span>预计剩余 {downloadStatus.eta}</span>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+
+                    {/* 已安装模型统计 */}
+                    <div className="p-3 bg-muted/30 rounded-lg">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">已安装模型</span>
+                        <span className="font-medium">{installedModels.length} 个</span>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* 离线模型说明 */}
+                <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                  <p className="text-xs font-medium text-blue-500 mb-2">离线模型说明</p>
+                  <ul className="text-xs text-muted-foreground space-y-1">
+                    <li>• 离线模型运行在本地，数据不会上传到服务器</li>
+                    <li>• 首次使用需要下载模型文件（3-13 GB）</li>
+                    <li>• 模型越大效果越好，但需要更多内存和磁盘空间</li>
+                    <li>• 建议选择 4-8 GB 的模型平衡性能和效果</li>
+                  </ul>
+                </div>
               </div>
             )}
           </div>

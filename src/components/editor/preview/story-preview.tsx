@@ -8,6 +8,7 @@ import { AudioManager, createAudioManager } from '@editor/lib/audio-manager'
 import { SaveManager, formatSaveDate, loadSaveSlots, saveSaveSlots, createSaveSlot } from '@editor/lib/save-manager'
 import { TransitionManager, createTransitionManager, TRANSITION_TYPES, type TransitionType } from '@editor/lib/transition-manager'
 import { ExpressionParser, createDefaultContext } from '@editor/lib/expression-parser'
+import { useReaderAnalytics } from '@editor/hooks/use-reader-analytics'
 
 interface StoryPreviewProps {
   graph: StoryGraph
@@ -117,6 +118,11 @@ export function StoryPreview({ graph, open, onClose }: StoryPreviewProps) {
   const contentRef = useRef<HTMLDivElement>(null)
 
   const graphId = graph.title || 'default'
+
+  const { onNodeEnter, onChoice: onAnalyticsChoice, onStoryEnd } = useReaderAnalytics({
+    storyId: graphId,
+    enabled: open,
+  })
 
   useEffect(() => {
     audioManager.current = createAudioManager()
@@ -251,10 +257,14 @@ export function StoryPreview({ graph, open, onClose }: StoryPreviewProps) {
     })
     setIsEnded(false)
 
+    if (startNode) {
+      onNodeEnter(startNode.id, startNode.type)
+    }
+
     ;(['bgm', 'bgs', 'se', 'voice'] as const).forEach(channel => {
       stopAudio(channel)
     })
-  }, [findStartNode, graph.variables, stopAudio])
+  }, [findStartNode, graph.variables, stopAudio, onNodeEnter])
 
   const handleChoice = useCallback((optionId: string) => {
     const data = currentNode?.data as any
@@ -309,6 +319,9 @@ export function StoryPreview({ graph, open, onClose }: StoryPreviewProps) {
       (e) => e.source === state.currentNodeId && e.sourceHandle === optionId
     )
     if (edge) {
+      const choiceIndex = options.findIndex((o: any) => o.id === optionId)
+      onAnalyticsChoice(state.currentNodeId!, choiceIndex, option.text)
+
       setState((s) => ({
         ...s,
         currentNodeId: edge.target,
@@ -319,8 +332,9 @@ export function StoryPreview({ graph, open, onClose }: StoryPreviewProps) {
           [edge.target]: (s.visitCounts[edge.target] || 0) + 1,
         },
       }))
+      onNodeEnter(edge.target, graph.nodes.find(n => n.id === edge.target)?.type)
     }
-  }, [currentNode, graph.edges, state.currentNodeId, state.variables, playAudio])
+  }, [currentNode, graph.edges, graph.nodes, state.currentNodeId, state.variables, playAudio, onAnalyticsChoice, onNodeEnter])
 
   const continueStory = useCallback(() => {
     if (!state.currentNodeId) return
@@ -402,8 +416,9 @@ export function StoryPreview({ graph, open, onClose }: StoryPreviewProps) {
           [target]: (s.visitCounts[target] || 0) + 1,
         },
       }))
+      onNodeEnter(target, graph.nodes.find(n => n.id === target)?.type)
     }
-  }, [graph.edges, graph.nodes, state.currentNodeId, state.variables])
+  }, [graph.edges, graph.nodes, state.currentNodeId, state.variables, onNodeEnter])
 
   // 用于快捷键的派生状态（需要在 useEffect 之前定义）
   const isChoiceNode = currentNode?.type === 'choice'
@@ -450,11 +465,12 @@ export function StoryPreview({ graph, open, onClose }: StoryPreviewProps) {
 
   useEffect(() => {
     if (!open) {
+      onStoryEnd()
       ;(['bgm', 'bgs', 'se', 'voice'] as const).forEach(channel => {
         stopAudio(channel)
       })
     }
-  }, [open, stopAudio])
+  }, [open, stopAudio, onStoryEnd])
 
   useEffect(() => {
     if (!open || !state.currentNodeId || state.history.length === 0) return

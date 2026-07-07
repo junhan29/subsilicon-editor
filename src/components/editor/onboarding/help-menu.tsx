@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
-import { HelpCircle, X, Play, Keyboard, BookOpen, MessageCircle, Lightbulb } from 'lucide-react'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { HelpCircle, X, Play, Keyboard, BookOpen, MessageCircle, Lightbulb, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react'
 import { Button } from '@editor/components/ui/button'
+import { showToast } from '../toast'
 
 interface HelpMenuProps {
   onStartTour: () => void
@@ -11,6 +12,9 @@ interface HelpMenuProps {
 
 export function HelpMenu({ onStartTour, onShowShortcuts }: HelpMenuProps) {
   const [open, setOpen] = useState(false)
+  const [updateChecking, setUpdateChecking] = useState(false)
+  const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'available' | 'not-available' | 'error'>('idle')
+  const [updateVersion, setUpdateVersion] = useState('')
   const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -22,6 +26,43 @@ export function HelpMenu({ onStartTour, onShowShortcuts }: HelpMenuProps) {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.__electronAPI) {
+      window.__electronAPI.onUpdateChecking(() => {
+        setUpdateStatus('checking')
+      })
+      window.__electronAPI.onUpdateAvailable((info) => {
+        setUpdateStatus('available')
+        setUpdateVersion(info.version)
+        showToast('info', `发现新版本 ${info.version}`)
+      })
+      window.__electronAPI.onUpdateNotAvailable(() => {
+        setUpdateStatus('not-available')
+      })
+      window.__electronAPI.onUpdateError((message) => {
+        setUpdateStatus('error')
+        showToast('error', `更新检查失败: ${message}`)
+      })
+      window.__electronAPI.onUpdateDownloaded(() => {
+        showToast('success', '更新已下载，即将重启安装')
+      })
+    }
+  }, [])
+
+  const handleCheckUpdates = useCallback(() => {
+    if (updateChecking) return
+    setUpdateChecking(true)
+    setUpdateStatus('checking')
+    
+    if (typeof window !== 'undefined' && window.__electronAPI) {
+      window.__electronAPI.checkForUpdates()
+    }
+    
+    setTimeout(() => {
+      setUpdateChecking(false)
+    }, 5000)
+  }, [updateChecking])
 
   const handleStartTour = () => {
     setOpen(false)
@@ -36,6 +77,13 @@ export function HelpMenu({ onStartTour, onShowShortcuts }: HelpMenuProps) {
   const menuItems = [
     { icon: <Play className="w-4 h-4" />, label: '重新播放引导', desc: '1 分钟快速上手', onClick: handleStartTour, shortcut: 'Shift + ?' },
     { icon: <Keyboard className="w-4 h-4" />, label: '键盘快捷键', desc: '查看所有快捷键', onClick: handleShowShortcuts, shortcut: '?' },
+    { 
+      icon: updateChecking ? <RefreshCw className="w-4 h-4 animate-spin" /> : updateStatus === 'available' ? <AlertCircle className="w-4 h-4 text-green-400" /> : updateStatus === 'not-available' ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <RefreshCw className="w-4 h-4" />, 
+      label: '检查更新', 
+      desc: updateChecking ? '检查中...' : updateStatus === 'available' ? `新版本 ${updateVersion}` : updateStatus === 'not-available' ? '已是最新版本' : '手动检查更新', 
+      onClick: handleCheckUpdates, 
+      disabled: updateChecking,
+    },
   ]
 
   const tips = [
@@ -81,18 +129,25 @@ export function HelpMenu({ onStartTour, onShowShortcuts }: HelpMenuProps) {
               <button
                 key={i}
                 onClick={item.onClick}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted/50 transition-colors text-left"
+                disabled={item.disabled}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-left ${
+                  item.disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-muted/50'
+                }`}
               >
-                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                  item.disabled ? 'bg-muted' : 'bg-primary/10'
+                }`} style={{ color: item.disabled ? undefined : undefined }}>
                   {item.icon}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium">{item.label}</p>
                   <p className="text-[10px] text-muted-foreground">{item.desc}</p>
                 </div>
-                <kbd className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-mono shrink-0">
-                  {item.shortcut}
-                </kbd>
+                {item.shortcut && (
+                  <kbd className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-mono shrink-0">
+                    {item.shortcut}
+                  </kbd>
+                )}
               </button>
             ))}
           </div>

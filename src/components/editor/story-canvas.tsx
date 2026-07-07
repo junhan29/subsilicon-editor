@@ -1771,6 +1771,21 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
           onMonetizationChange={setMonetization}
           graph={graph}
           workId={workId}
+          onApplyStory={(newNodes, newEdges, newChars, newTitle) => {
+            setNodes(newNodes)
+            setEdges(newEdges)
+            setCharacters(newChars)
+            setTitle(newTitle)
+            setSelectedNodeIds(newNodes.map((n) => n.id))
+            pushHistory('BATCH', `应用 AI 生成故事「${newTitle}」`)
+            showToast('success', `故事「${newTitle}」已应用到画布`)
+            setTimeout(() => {
+              fitView({ padding: 0.3, duration: 500 })
+            }, 100)
+          }}
+          onAddCharacters={(newChars) => {
+            newChars.forEach((char) => addCharacter(char))
+          }}
         />
       )}
 

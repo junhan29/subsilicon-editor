@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, memo } from 'react'
 import { shallowEqual } from '@editor/lib/utils'
-import { Settings, Users, Image, Music, ChevronDown, ChevronUp, X, Plus, Edit3, Layers, BarChart3, Trash2, ShieldCheck, GitBranch, MessageSquare, Activity, Lock, Sparkles } from 'lucide-react'
+import { Settings, Users, Image, Music, ChevronDown, ChevronUp, X, Plus, Edit3, Layers, BarChart3, Trash2, ShieldCheck, GitBranch, MessageSquare, Activity, Lock, Sparkles, Wand2 } from 'lucide-react'
 import { Button } from '@editor/components/ui/button'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@editor/components/ui/tabs'
 import { LivePreview } from './live-preview'
@@ -15,6 +15,9 @@ import { AnnotationPanel } from './annotation-panel'
 import { MemoizedWritingStatsPanel } from './writing-stats-panel'
 import { MonetizationSettingsPanel } from './monetization-settings-panel'
 import { AiSettingsPanel } from './ai-settings-panel'
+import { AiStoryPanel } from './ai-story-panel'
+import { AnalyticsPanel } from './analytics-panel'
+import { PluginManagerPanel } from './plugin-manager-panel'
 import { generateDefaultAvatar } from '@editor/lib/avatar-utils'
 import type { StoryNode, StoryCharacter, StoryEdge, StoryVariable, ComicScene, ComicAudio, NodeAnnotation, AnnotationType, StoryGraph } from '@editor/types/editor'
 import type { StoryGraphSnapshot } from '@editor/lib/history-store'
@@ -52,6 +55,8 @@ interface EditorRightPanelProps {
   onEdgeSelect?: (edgeId: string) => void
   onScenesChange?: (scenes: ComicScene[]) => void
   onAudiosChange?: (audios: ComicAudio[]) => void
+  onApplyStory?: (nodes: StoryNode[], edges: StoryEdge[], characters: StoryCharacter[], title: string) => void
+  onAddCharacters?: (characters: StoryCharacter[]) => void
   versions?: VersionSnapshot[]
   currentGraph?: StoryGraphSnapshot
   onSaveVersion?: (name: string, description: string) => void
@@ -99,6 +104,8 @@ function EditorRightPanel({
   onEdgeSelect,
   onScenesChange,
   onAudiosChange,
+  onApplyStory,
+  onAddCharacters,
   versions = [],
   currentGraph,
   onSaveVersion,
@@ -333,7 +340,28 @@ function EditorRightPanel({
                   className="data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-none text-slate-400 h-10 rounded-none px-4 text-xs"
                 >
                   <Sparkles className="w-3.5 h-3.5 mr-1.5" />
-                  AI
+                  AI设置
+                </TabsTrigger>
+                <TabsTrigger
+                  value="ai-story"
+                  className="data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-none text-slate-400 h-10 rounded-none px-4 text-xs"
+                >
+                  <Wand2 className="w-3.5 h-3.5 mr-1.5" />
+                  AI创作
+                </TabsTrigger>
+                <TabsTrigger
+                  value="analytics"
+                  className="data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-none text-slate-400 h-10 rounded-none px-4 text-xs"
+                >
+                  <BarChart3 className="w-3.5 h-3.5 mr-1.5" />
+                  分析
+                </TabsTrigger>
+                <TabsTrigger
+                  value="plugins"
+                  className="data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-none text-slate-400 h-10 rounded-none px-4 text-xs"
+                >
+                  <Layers className="w-3.5 h-3.5 mr-1.5" />
+                  插件
                 </TabsTrigger>
               </>
             )}
@@ -734,6 +762,24 @@ function EditorRightPanel({
                 localStorage.setItem('subsilicon_ai_config', JSON.stringify(config))
               }}
             />
+          </TabsContent>
+          
+          <TabsContent value="ai-story" className="flex-1 overflow-hidden p-0 m-0">
+            <AiStoryPanel
+              onApplyStory={onApplyStory || (() => {})}
+              onAddCharacters={onAddCharacters || (() => {})}
+            />
+          </TabsContent>
+
+          <TabsContent value="analytics" className="flex-1 overflow-hidden p-0 m-0">
+            <AnalyticsPanel
+              storyId={workId}
+              nodeCount={nodes.length}
+            />
+          </TabsContent>
+
+          <TabsContent value="plugins" className="flex-1 overflow-hidden p-0 m-0">
+            <PluginManagerPanel />
           </TabsContent>
         </Tabs>
       </div>
