@@ -392,9 +392,9 @@ function EditorSidebar({
                     key={tpl.id}
                     draggable
                     onDragStart={(e) => onTemplateDragStart(e, tpl)}
-                    onDoubleClick={() => handleTemplateDoubleClick(tpl)}
-                    className="flex items-center gap-2 p-2 rounded-lg border border-blue-200/50 bg-blue-50/30 hover:bg-blue-100/50 hover:border-blue-300/70 cursor-grab group transition-all"
-                    title={tpl.description}
+                    onClick={() => handleTemplateDoubleClick(tpl)}
+                    className="flex items-center gap-2 p-2 rounded-lg border border-blue-200/50 bg-blue-50/30 hover:bg-blue-100/50 hover:border-blue-300/70 cursor-pointer group transition-all"
+                    title={`${tpl.description}（点击插入）`}
                   >
                     <div className="w-7 h-7 rounded-md bg-blue-100 flex items-center justify-center shrink-0 group-hover:bg-blue-200 transition-colors">
                       <Layers className="w-3.5 h-3.5 text-blue-600" />
@@ -430,9 +430,9 @@ function EditorSidebar({
                     key={tpl.id}
                     draggable={editingId !== tpl.id}
                     onDragStart={(e) => onTemplateDragStart(e, tpl)}
-                    onDoubleClick={() => handleTemplateDoubleClick(tpl)}
-                    className="flex items-center gap-2 p-2 rounded-lg border border-border/60 bg-background hover:bg-accent/50 hover:border-border cursor-grab group transition-all relative"
-                    title={tpl.description}
+                    onClick={() => handleTemplateDoubleClick(tpl)}
+                    className="flex items-center gap-2 p-2 rounded-lg border border-border/60 bg-background hover:bg-accent/50 hover:border-border cursor-pointer group transition-all relative"
+                    title={`${tpl.description}（点击插入）`}
                   >
                     <div className="w-7 h-7 rounded-md bg-muted flex items-center justify-center shrink-0 group-hover:bg-accent transition-colors">
                       <Layers className="w-3.5 h-3.5 text-muted-foreground" />

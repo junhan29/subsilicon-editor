@@ -234,7 +234,7 @@ function EditorRightPanel({
       )}
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
+        <Tabs key={tabGroup} value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
           <div className="flex items-center gap-1 px-2 py-1.5 bg-slate-900 border-b border-slate-800">
             <button
               onClick={() => { setTabGroup('edit'); setActiveTab('properties') }}
@@ -772,10 +772,7 @@ function EditorRightPanel({
           </TabsContent>
 
           <TabsContent value="analytics" className="flex-1 overflow-hidden p-0 m-0">
-            <AnalyticsPanel
-              storyId={workId}
-              nodeCount={nodes.length}
-            />
+            <AnalyticsPanel />
           </TabsContent>
 
           <TabsContent value="plugins" className="flex-1 overflow-hidden p-0 m-0">

@@ -64,7 +64,7 @@ export function PluginManagerPanel() {
 
   const loadPlugins = useCallback(() => {
     setLoading(true)
-    const result = getAvailablePlugins(activeCategory)
+    const result = getAvailablePlugins(activeCategory ?? undefined)
     setPlugins(result)
     setLoading(false)
   }, [activeCategory])

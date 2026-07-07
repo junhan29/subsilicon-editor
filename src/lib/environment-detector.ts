@@ -63,11 +63,11 @@ export function getElectronVersion(): string | undefined {
 
 export function getAppVersion(): string | undefined {
   if (isElectron()) {
-    return window.__electronAPI?.getVersion?.()
+    return (window as any).__electronAPI?.getVersion?.()
   }
   try {
     const meta = document.querySelector('meta[name="app-version"]')
-    return meta?.getAttribute('content')
+    return meta?.getAttribute('content') ?? undefined
   } catch {
     return undefined
   }
@@ -85,7 +85,7 @@ export function getFeatureSupport(): FeatureSupport {
   return {
     fileSystem: isElectron(),
     autoUpdate: isElectron(),
-    localAI: isElectron() || window.__ollamaAPI !== undefined,
+    localAI: isElectron() || (window as any).__ollamaAPI !== undefined,
     nativeDialogs: isElectron(),
     performanceMonitor: isElectron(),
   }

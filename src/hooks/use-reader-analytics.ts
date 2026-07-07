@@ -1,12 +1,10 @@
 import { useEffect, useRef, useCallback } from 'react'
 import {
-  analyticsStore,
   startSession,
   endSession,
-  recordNodeVisit,
-  recordChoice,
-  type AnalyticsSession,
-} from '@editor/lib/analytics'
+  recordAction,
+  type ReaderSession,
+} from '@editor/lib/analytics-store'
 
 interface UseReaderAnalyticsOptions {
   storyId: string
@@ -18,77 +16,85 @@ export function useReaderAnalytics({ storyId, enabled = true }: UseReaderAnalyti
   const lastNodeIdRef = useRef<string | null>(null)
   const lastNodeEnterTimeRef = useRef<number>(0)
 
-  const ensureSession = useCallback(async () => {
+  const ensureSession = useCallback(() => {
     if (!enabled || sessionIdRef.current) return
 
-    const session = await startSession(storyId)
+    const session = startSession(storyId)
     sessionIdRef.current = session.id
   }, [storyId, enabled])
 
   const onNodeEnter = useCallback(
-    async (nodeId: string, nodeType?: string) => {
+    (nodeId: string, nodeType?: string) => {
       if (!enabled) return
 
-      await ensureSession()
+      ensureSession()
 
       if (lastNodeIdRef.current && lastNodeIdRef.current !== nodeId) {
         const dwellTime = Date.now() - lastNodeEnterTimeRef.current
         if (dwellTime > 0) {
-          await recordNodeVisit(storyId, lastNodeIdRef.current, {
+          recordAction({
+            type: 'nodeLeave',
+            nodeId: lastNodeIdRef.current,
             nodeType,
-            dwellTime,
-            sessionId: sessionIdRef.current || undefined,
+            duration: dwellTime,
           })
         }
       }
 
+      recordAction({
+        type: 'nodeEnter',
+        nodeId,
+        nodeType,
+      })
+
       lastNodeIdRef.current = nodeId
       lastNodeEnterTimeRef.current = Date.now()
     },
-    [storyId, enabled, ensureSession]
+    [enabled, ensureSession]
   )
 
   const onChoice = useCallback(
-    async (nodeId: string, choiceIndex: number, choiceText: string) => {
+    (nodeId: string, choiceIndex: number, choiceText: string) => {
       if (!enabled) return
 
-      await ensureSession()
+      ensureSession()
 
-      await recordChoice(storyId, nodeId, choiceIndex, choiceText, {
-        sessionId: sessionIdRef.current || undefined,
+      recordAction({
+        type: 'choice',
+        nodeId,
+        choiceOptionId: String(choiceIndex),
+        choiceOptionText: choiceText,
       })
     },
-    [storyId, enabled, ensureSession]
+    [enabled, ensureSession]
   )
 
-  const onStoryEnd = useCallback(async () => {
+  const onStoryEnd = useCallback(() => {
     if (!enabled) return
 
     if (lastNodeIdRef.current) {
       const dwellTime = Date.now() - lastNodeEnterTimeRef.current
       if (dwellTime > 0) {
-        await recordNodeVisit(storyId, lastNodeIdRef.current, {
-          dwellTime,
-          sessionId: sessionIdRef.current || undefined,
+        recordAction({
+          type: 'nodeLeave',
+          nodeId: lastNodeIdRef.current,
+          duration: dwellTime,
         })
       }
     }
 
-    if (sessionIdRef.current) {
-      await endSession(sessionIdRef.current)
-      sessionIdRef.current = null
-    }
-
+    endSession()
+    sessionIdRef.current = null
     lastNodeIdRef.current = null
     lastNodeEnterTimeRef.current = 0
-  }, [storyId, enabled])
+  }, [enabled])
 
   useEffect(() => {
     ensureSession()
 
     return () => {
       if (sessionIdRef.current) {
-        endSession(sessionIdRef.current).catch(() => {})
+        endSession()
       }
     }
   }, [ensureSession])

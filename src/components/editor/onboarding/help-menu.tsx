@@ -28,23 +28,24 @@ export function HelpMenu({ onStartTour, onShowShortcuts }: HelpMenuProps) {
   }, [])
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.__electronAPI) {
-      window.__electronAPI.onUpdateChecking(() => {
+    const api = (window as any).__electronAPI
+    if (typeof window !== 'undefined' && api) {
+      api.onUpdateChecking(() => {
         setUpdateStatus('checking')
       })
-      window.__electronAPI.onUpdateAvailable((info) => {
+      api.onUpdateAvailable((info: { version: string }) => {
         setUpdateStatus('available')
         setUpdateVersion(info.version)
         showToast('info', `发现新版本 ${info.version}`)
       })
-      window.__electronAPI.onUpdateNotAvailable(() => {
+      api.onUpdateNotAvailable(() => {
         setUpdateStatus('not-available')
       })
-      window.__electronAPI.onUpdateError((message) => {
+      api.onUpdateError((message: string) => {
         setUpdateStatus('error')
         showToast('error', `更新检查失败: ${message}`)
       })
-      window.__electronAPI.onUpdateDownloaded(() => {
+      api.onUpdateDownloaded(() => {
         showToast('success', '更新已下载，即将重启安装')
       })
     }
@@ -55,8 +56,8 @@ export function HelpMenu({ onStartTour, onShowShortcuts }: HelpMenuProps) {
     setUpdateChecking(true)
     setUpdateStatus('checking')
     
-    if (typeof window !== 'undefined' && window.__electronAPI) {
-      window.__electronAPI.checkForUpdates()
+    if (typeof window !== 'undefined' && (window as any).__electronAPI) {
+      (window as any).__electronAPI.checkForUpdates()
     }
     
     setTimeout(() => {

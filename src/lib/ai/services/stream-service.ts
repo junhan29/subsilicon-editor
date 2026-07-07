@@ -195,9 +195,9 @@ export async function streamGenerateCharacterDetail(
     config
   )
 
-  pipeStream(await fullText, callbacks)
-
   const rawResult = await fullText
+  callbacks?.onChunk?.(rawResult)
+  callbacks?.onDone?.(rawResult)
 
   try {
     const jsonStr = rawResult.replace(/```json/g, '').replace(/```/g, '').trim()
@@ -235,9 +235,9 @@ export async function streamGenerateDialogue(
     config
   )
 
-  pipeStream(await fullText, callbacks)
-
   const rawResult = await fullText
+  callbacks?.onChunk?.(rawResult)
+  callbacks?.onDone?.(rawResult)
 
   try {
     const jsonStr = rawResult.replace(/```json/g, '').replace(/```/g, '').trim()
@@ -290,9 +290,9 @@ export async function streamGenerateSceneDescription(
     config
   )
 
-  pipeStream(await fullText, callbacks)
-
   const rawResult = await fullText
+  callbacks?.onChunk?.(rawResult)
+  callbacks?.onDone?.(rawResult)
 
   try {
     const jsonStr = rawResult.replace(/```json/g, '').replace(/```/g, '').trim()

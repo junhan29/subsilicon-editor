@@ -147,7 +147,7 @@ export function installPlugin(pluginId: string): boolean {
     settings: {},
   }
 
-  pluginManager.register(plugin)
+  pluginManager.register(manifest, {})
   saveInstalledPluginIds([...installed, pluginId])
   return true
 }

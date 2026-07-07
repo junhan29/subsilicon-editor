@@ -113,8 +113,8 @@ export function convertAiStoryToGraph(story: AiFullStoryResult): StoryConversion
         currentX += nodeWidth + hGap
         const branchHeight = (maxScenesInBranch - 1) * (nodeHeight + vGap)
         
-        scene.choices.forEach((choice, choiceIdx) => {
-          let branchY = currentY + (choiceIdx * branchHeight) / Math.max(scene.choices.length - 1, 1)
+        scene.choices?.forEach((choice, choiceIdx) => {
+          let branchY = currentY + (choiceIdx * branchHeight) / Math.max(scene.choices!.length - 1, 1)
           const targetIdx = story.scenes.findIndex((s) => s.id === choice.nextSceneId)
           
           if (targetIdx >= 0) {

@@ -61,12 +61,13 @@ export function SelectValue({ placeholder }: { placeholder?: string }) {
 }
 
 export function SelectContent({ onClose, children }: {
-  onClose: () => void
+  onClose?: () => void
   children: React.ReactNode
 }) {
   React.useEffect(() => {
+    if (!onClose) return
     const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Node
+      const target = event.target as Element
       if (!target.closest('[data-select-content]')) {
         onClose()
       }

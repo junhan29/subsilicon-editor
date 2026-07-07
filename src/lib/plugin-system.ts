@@ -138,7 +138,7 @@ export interface PluginHook<T = unknown> {
   callback: (data: T) => void | Promise<void>
 }
 
-const hooks: Map<string, PluginHook[]> = new Map()
+const hooks: Map<string, PluginHook<any>[]> = new Map()
 
 export function registerHook<T>(hookId: string, callback: PluginHook<T>['callback']): () => void {
   if (!hooks.has(hookId)) {
