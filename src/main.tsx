@@ -1,8 +1,10 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import ReactDOM from 'react-dom/client'
 import { StoryCanvas } from './components/editor/story-canvas'
 import { ErrorBoundary } from './components/error-boundary'
 import { showToast } from './components/editor/toast'
+import { EditorTour, isTourCompleted } from './components/editor/onboarding/editor-tour'
+import { DEFAULT_TOUR_STEPS } from './components/editor/onboarding/tour-steps'
 import type { StoryGraph } from './types/editor'
 import './index.css'
 
@@ -60,6 +62,18 @@ function handleSave(graph: StoryGraph): void {
 }
 
 function App() {
+  const [showTour, setShowTour] = useState(false)
+
+  useEffect(() => {
+    const completed = isTourCompleted()
+    if (!completed) {
+      const timer = setTimeout(() => {
+        setShowTour(true)
+      }, 500)
+      return () => clearTimeout(timer)
+    }
+  }, [])
+
   useEffect(() => {
     const IGNORED_ERRORS = [
       'ResizeObserver loop completed with undelivered notifications',
@@ -95,11 +109,18 @@ function App() {
   }, [])
 
   return (
-    <ErrorBoundary onReset={() => window.location.reload()}>
+    <>
       <ErrorBoundary onReset={() => window.location.reload()}>
-        <StoryCanvas initialGraph={emptyGraph} onSave={handleSave} />
+        <ErrorBoundary onReset={() => window.location.reload()}>
+          <StoryCanvas initialGraph={emptyGraph} onSave={handleSave} />
+        </ErrorBoundary>
       </ErrorBoundary>
-    </ErrorBoundary>
+      <EditorTour
+        active={showTour}
+        steps={DEFAULT_TOUR_STEPS}
+        onClose={() => setShowTour(false)}
+      />
+    </>
   )
 }
 

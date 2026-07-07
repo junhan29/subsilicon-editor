@@ -750,7 +750,7 @@ function EditorRightPanel({
             />
           </div>}
 
-          {activeTab === 'properties' && <div className="flex-1 overflow-y-auto p-0">
+          {activeTab === 'versions' && <div className="flex-1 overflow-y-auto p-0">
             <VersionPanel
               versions={versions}
               currentGraph={currentGraph || { nodes, edges, characters, scenes, audios, variables: variables || [], groups: [] }}
