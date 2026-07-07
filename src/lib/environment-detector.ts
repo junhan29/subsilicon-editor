@@ -61,9 +61,10 @@ export function getElectronVersion(): string | undefined {
   return environment.electronVersion
 }
 
-export function getAppVersion(): string | undefined {
+export async function getAppVersion(): Promise<string | undefined> {
   if (isElectron()) {
-    return (window as any).__electronAPI?.getVersion?.()
+    const result = await window.__electronAPI?.getVersion?.()
+    return result?.success ? result.version : undefined
   }
   try {
     const meta = document.querySelector('meta[name="app-version"]')
@@ -85,7 +86,7 @@ export function getFeatureSupport(): FeatureSupport {
   return {
     fileSystem: isElectron(),
     autoUpdate: isElectron(),
-    localAI: isElectron() || (window as any).__ollamaAPI !== undefined,
+    localAI: isElectron(),
     nativeDialogs: isElectron(),
     performanceMonitor: isElectron(),
   }

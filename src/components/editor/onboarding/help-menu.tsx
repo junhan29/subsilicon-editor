@@ -28,12 +28,12 @@ export function HelpMenu({ onStartTour, onShowShortcuts }: HelpMenuProps) {
   }, [])
 
   useEffect(() => {
-    const api = (window as any).__electronAPI
+    const api = window.__electronAPI
     if (typeof window !== 'undefined' && api) {
       api.onUpdateChecking(() => {
         setUpdateStatus('checking')
       })
-      api.onUpdateAvailable((info: { version: string }) => {
+      api.onUpdateAvailable((info) => {
         setUpdateStatus('available')
         setUpdateVersion(info.version)
         showToast('info', `发现新版本 ${info.version}`)
@@ -41,7 +41,7 @@ export function HelpMenu({ onStartTour, onShowShortcuts }: HelpMenuProps) {
       api.onUpdateNotAvailable(() => {
         setUpdateStatus('not-available')
       })
-      api.onUpdateError((message: string) => {
+      api.onUpdateError((message) => {
         setUpdateStatus('error')
         showToast('error', `更新检查失败: ${message}`)
       })
@@ -56,8 +56,8 @@ export function HelpMenu({ onStartTour, onShowShortcuts }: HelpMenuProps) {
     setUpdateChecking(true)
     setUpdateStatus('checking')
     
-    if (typeof window !== 'undefined' && (window as any).__electronAPI) {
-      (window as any).__electronAPI.checkForUpdates()
+    if (typeof window !== 'undefined' && window.__electronAPI) {
+      window.__electronAPI.checkForUpdates()
     }
     
     setTimeout(() => {
