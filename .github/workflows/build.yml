@@ -6,6 +6,10 @@ on:
       - 'v*'
   workflow_dispatch:
 
+permissions:
+  contents: write
+  packages: write
+
 jobs:
   build:
     runs-on: ${{ matrix.os }}
@@ -62,6 +66,12 @@ jobs:
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+          path: release
+
+      - name: List downloaded files
+        run: ls -la release/
 
       - name: Create GitHub Release
         uses: ncipollo/release-action@v1
