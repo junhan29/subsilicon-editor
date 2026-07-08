@@ -14,14 +14,14 @@ function ChoiceNodeComponent({ data, selected, id: nodeId }: any) {
 
   return (
     <div
-      className={`min-w-[200px] max-w-[280px] rounded-lg border-2 bg-amber-50 dark:bg-amber-950/30 shadow-sm transition-all relative overflow-hidden hover:shadow-md hover:border-slate-600 ${
+      className={`min-w-[200px] max-w-[280px] rounded-lg border-2 bg-amber-50 dark:bg-amber-950/30 shadow-sm transition-all relative hover:shadow-md hover:border-slate-600 ${
         selected
           ? 'border-amber-400 ring-2 ring-amber-400/50 shadow-lg shadow-amber-500/20 dark:border-amber-400'
           : 'border-amber-200 dark:border-amber-800'
       }`}
     >
       {/* 左侧琥珀色类型标识条 */}
-      <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-500 dark:bg-amber-400 z-10" />
+      <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-500 dark:bg-amber-400 z-10 rounded-l-md" />
 
       {/* 上方连接点 */}
       <Handle

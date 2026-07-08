@@ -15,14 +15,14 @@ function UnlockNodeComponent({ data, selected }: any) {
 
   return (
     <div
-      className={`min-w-[200px] max-w-[280px] rounded-lg border-2 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 shadow-sm transition-all relative overflow-hidden hover:shadow-md hover:border-slate-600 ${
+      className={`min-w-[200px] max-w-[280px] rounded-lg border-2 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 shadow-sm transition-all relative hover:shadow-md hover:border-slate-600 ${
         selected
           ? 'border-orange-400 ring-2 ring-orange-400/50 shadow-lg shadow-orange-500/20 dark:border-orange-400'
           : 'border-orange-200 dark:border-orange-800'
       }`}
     >
       {/* 左侧橙色类型标识条 */}
-      <div className="absolute left-0 top-0 bottom-0 w-1 bg-orange-500 dark:bg-orange-400 z-10" />
+      <div className="absolute left-0 top-0 bottom-0 w-1 bg-orange-500 dark:bg-orange-400 z-10 rounded-l-md" />
 
       <Handle
         type="target"

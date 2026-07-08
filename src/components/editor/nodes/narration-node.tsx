@@ -10,13 +10,13 @@ function NarrationNodeComponent({ data, selected }: any) {
 
   return (
     <div
-      className={`min-w-[200px] max-w-[280px] rounded-lg border-2 bg-card shadow-sm transition-all relative overflow-hidden hover:shadow-md hover:border-slate-600 dark:bg-slate-900/80 ${
+      className={`min-w-[200px] max-w-[280px] rounded-lg border-2 bg-card shadow-sm transition-all relative hover:shadow-md hover:border-slate-600 dark:bg-slate-900/80 ${
         selected
           ? 'border-amber-400 ring-2 ring-amber-400/50 shadow-lg shadow-amber-500/20'
           : 'border-slate-300 dark:border-slate-700'
       }`}
     >
-      <div className="absolute left-0 top-0 bottom-0 w-1 bg-slate-500 dark:bg-slate-400 z-10" />
+      <div className="absolute left-0 top-0 bottom-0 w-1 bg-slate-500 dark:bg-slate-400 z-10 rounded-l-md" />
 
       <Handle
         type="target"

@@ -16,7 +16,7 @@ import {
   type Node,
   type Edge as RFEdge,
 } from '@xyflow/react'
-import { Undo2, Redo2, Trash2, X, Copy, ShieldCheck, Layers, ChevronDown, ChevronRight, Pencil, Download, MessageSquare, Lock, Crown, Upload } from 'lucide-react'
+import { Undo2, Redo2, Trash2, X, Copy, ShieldCheck, Layers, ChevronDown, ChevronRight, Pencil, Download, MessageSquare, Lock, Crown, Upload, Play } from 'lucide-react'
 import clsx from 'clsx'
 import CustomEdge from './custom-edge'
 import '@xyflow/react/dist/style.css'
@@ -47,7 +47,8 @@ import {
 import { getPerformanceMode, PERFORMANCE_CONFIG } from '@editor/lib/performance-mode'
 import { NodeSearch } from './node-search'
 import { ExportDialog } from './export-dialog'
-import { DirectoryUploadDialog } from './directory-upload-dialog'
+import { CreatorCenterDialog } from './creator-center-dialog'
+import { StoryPreview } from './preview/story-preview'
 import { AlignmentLines } from './alignment-lines'
 import type { AlignmentGuide } from '@editor/lib/alignment-guides'
 import type { StoryNode, StoryEdge, StoryCharacter, StoryGraph, ComicScene, ComicAudio, NodeGroup, NodeTemplate, CharacterSprite, NodeAnnotation, AnnotationType } from '@editor/types/editor'
@@ -57,7 +58,7 @@ import { parseOutline, generateNodesFromOutline, generateOutlineFromNodes } from
 import type { LibraryAsset } from '@editor/lib/asset-library'
 import { getCurrentEdition, isDesktop } from '@editor/lib/editor-versions'
 import { getAccount, isLoggedIn } from '@editor/lib/local-account-store'
-import { AccountDialog } from './account-dialog'
+import { isLoggedIn as isCreatorLoggedIn, getCurrentAccount as getCreatorAccount, ensureCreatorServiceInit } from '@editor/lib/creator-service'
 import {
   loadAnnotations,
   saveAnnotations,
@@ -139,10 +140,12 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
   const [isDraggingOver, setIsDraggingOver] = useState(false)
   const [showNodeSearch, setShowNodeSearch] = useState(false)
   const [showExportDialog, setShowExportDialog] = useState(false)
-  // 账号与名录上传状态
-  const [showDirectoryUpload, setShowDirectoryUpload] = useState(false)
-  const [showAccountDialog, setShowAccountDialog] = useState(false)
+  // 创作者中心状态
+  const [showCreatorCenter, setShowCreatorCenter] = useState(false)
+  const [creatorCenterTab, setCreatorCenterTab] = useState<'account' | 'platforms' | 'publish' | 'records'>('account')
   const [loginState, setLoginState] = useState(0) // 用于刷新登录状态
+  // 预览状态
+  const [showPreview, setShowPreview] = useState(false)
   const [historyState, setHistoryState] = useState({ canUndo: false, canRedo: false })
   const [rightPanelTab, setRightPanelTab] = useState('properties')
   const [outlineText, setOutlineText] = useState('')
@@ -295,6 +298,13 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
     }
     window.addEventListener('app:login-change', handleLoginChange)
     return () => window.removeEventListener('app:login-change', handleLoginChange)
+  }, [])
+
+  // 创作者中心初始化（从 localStorage 恢复登录态）
+  useEffect(() => {
+    ensureCreatorServiceInit().then(() => {
+      setLoginState(n => n + 1)
+    })
   }, [])
 
   // 批注 Map（nodeId -> annotations）供 marker Context 使用
@@ -1665,6 +1675,35 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
           />
         )}
 
+        {/* 创作者中心入口（空画布时右上角单独显示） */}
+        {isEmpty && (
+          <div className="absolute top-4 right-4 flex items-center gap-1 bg-card/90 backdrop-blur border rounded-lg px-2 py-1 shadow-sm z-10">
+            {isCreatorLoggedIn() && getCreatorAccount() ? (
+              <span className="flex items-center gap-1.5 px-2 py-1 text-xs text-emerald-400" title={getCreatorAccount()!.email}>
+                <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                <span className="font-medium">{getCreatorAccount()!.displayName}</span>
+              </span>
+            ) : (
+              <button
+                onClick={() => { setCreatorCenterTab('account'); setShowCreatorCenter(true) }}
+                className="flex items-center gap-1.5 px-2 py-1 rounded transition-colors hover:bg-muted text-muted-foreground hover:text-foreground text-xs"
+                title="创作者中心 - 登录/注册账号"
+              >
+                登录
+              </button>
+            )}
+            <span className="w-px h-4 bg-border" />
+            <button
+              onClick={() => { setCreatorCenterTab('publish'); setShowCreatorCenter(true) }}
+              className="flex items-center gap-1.5 px-2 py-1 rounded transition-colors hover:bg-amber-500/10 text-foreground hover:text-amber-400"
+              title="创作者中心 - 管理平台、发布作品"
+            >
+              <Upload className="w-4 h-4" />
+              <span className="text-xs font-medium">创作者中心</span>
+            </button>
+          </div>
+        )}
+
         {/* 拖拽提示遮罩 */}
         {isDraggingOver && (
           <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-20">
@@ -1691,11 +1730,12 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
             canRedo={historyState.canRedo}
             onUndo={undo}
             onRedo={redo}
+            onPreview={() => setShowPreview(true)}
             onExport={() => setShowExportDialog(true)}
-            onDirectoryUpload={() => setShowDirectoryUpload(true)}
-            loggedIn={isLoggedIn()}
-            account={getAccount()}
-            onOpenAccount={() => setShowAccountDialog(true)}
+            onDirectoryUpload={() => { setCreatorCenterTab('publish'); setShowCreatorCenter(true) }}
+            loggedIn={isCreatorLoggedIn()}
+            account={getCreatorAccount()}
+            onOpenAccount={() => { setCreatorCenterTab('account'); setShowCreatorCenter(true) }}
           />
         )}
 
@@ -1809,21 +1849,21 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
         monetization={monetization}
       />
 
-      {/* 账号对话框 */}
-      <AccountDialog
-        open={showAccountDialog}
-        onClose={() => setShowAccountDialog(false)}
-        onSuccess={() => {
-          setLoginState(n => n + 1)
-        }}
+      {/* 预览对话框 */}
+      <StoryPreview
+        graph={graph}
+        open={showPreview}
+        onClose={() => setShowPreview(false)}
       />
 
-      {/* 名录上传对话框 */}
-      <DirectoryUploadDialog
-        open={showDirectoryUpload}
+      {/* 创作者中心 */}
+      <CreatorCenterDialog
+        open={showCreatorCenter}
+        onClose={() => setShowCreatorCenter(false)}
         graph={graph}
         workId={workId}
-        onClose={() => setShowDirectoryUpload(false)}
+        initialTab={creatorCenterTab}
+        onLoginStateChange={() => setLoginState(n => n + 1)}
       />
     </div>
   )
@@ -1880,6 +1920,7 @@ interface UndoRedoButtonsProps {
   canRedo: boolean
   onUndo: () => void
   onRedo: () => void
+  onPreview?: () => void
   onExport?: () => void
   onDirectoryUpload?: () => void
   loggedIn?: boolean
@@ -1887,26 +1928,40 @@ interface UndoRedoButtonsProps {
   onOpenAccount?: () => void
 }
 
-const UndoRedoButtons = memo(function UndoRedoButtons({ canUndo, canRedo, onUndo, onRedo, onExport, onDirectoryUpload, loggedIn, account, onOpenAccount }: UndoRedoButtonsProps) {
+const UndoRedoButtons = memo(function UndoRedoButtons({ canUndo, canRedo, onUndo, onRedo, onPreview, onExport, onDirectoryUpload, loggedIn, account, onOpenAccount }: UndoRedoButtonsProps) {
   return (
     <div className="absolute top-4 right-4 flex items-center gap-1 bg-card/90 backdrop-blur border rounded-lg px-2 py-1 shadow-sm z-10">
-      {/* 桌面版：账号登录状态 */}
-      {isDesktop() && (
+      {/* 账号登录状态 */}
+      {onOpenAccount && (
         <>
           {loggedIn && account ? (
             <span className="flex items-center gap-1.5 px-2 py-1 text-xs text-emerald-400" title={account.email}>
               <span className="w-2 h-2 rounded-full bg-emerald-400" />
               <span className="font-medium">{account.displayName}</span>
             </span>
-          ) : onOpenAccount ? (
+          ) : (
             <button
               onClick={onOpenAccount}
               className="flex items-center gap-1.5 px-2 py-1 rounded transition-colors hover:bg-muted text-muted-foreground hover:text-foreground text-xs"
-              title="登录账号以上传作品到 SubSilicon 作品墙"
+              title="创作者中心 - 登录/注册账号"
             >
               登录
             </button>
-          ) : null}
+          )}
+          <span className="w-px h-4 bg-border" />
+        </>
+      )}
+      {/* 预览按钮 */}
+      {onPreview && (
+        <>
+          <button
+            onClick={onPreview}
+            className="flex items-center gap-1.5 px-2 py-1 rounded transition-colors hover:bg-emerald-500/10 text-foreground hover:text-emerald-400"
+            title="预览作品 (Ctrl+P)"
+          >
+            <Play className="w-4 h-4" />
+            <span className="text-xs font-medium">预览</span>
+          </button>
           <span className="w-px h-4 bg-border" />
         </>
       )}
@@ -1923,16 +1978,16 @@ const UndoRedoButtons = memo(function UndoRedoButtons({ canUndo, canRedo, onUndo
           <span className="w-px h-4 bg-border" />
         </>
       )}
-      {/* 桌面版：作品墙上传按钮 */}
-      {isDesktop() && onDirectoryUpload && (
+      {/* 作品墙上传按钮 */}
+      {onDirectoryUpload && (
         <>
           <button
             onClick={onDirectoryUpload}
             className="flex items-center gap-1.5 px-2 py-1 rounded transition-colors hover:bg-amber-500/10 text-foreground hover:text-amber-400"
-            title="上传到 SubSilicon 作品墙"
+            title="创作者中心 - 管理平台、发布作品"
           >
             <Upload className="w-4 h-4" />
-            <span className="text-xs font-medium">上传到作品墙</span>
+            <span className="text-xs font-medium">创作者中心</span>
           </button>
           <span className="w-px h-4 bg-border" />
         </>
