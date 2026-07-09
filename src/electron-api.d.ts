@@ -26,6 +26,8 @@ declare global {
       maximizeWindow: () => void
       closeWindow: () => void
       checkForUpdates: () => void
+      downloadUpdate: () => void
+      installUpdate: () => void
       onUpdateChecking: (callback: () => void) => () => void
       onUpdateAvailable: (callback: (info: { version: string }) => void) => () => void
       onUpdateNotAvailable: (callback: () => void) => () => void

@@ -43,6 +43,7 @@
     "@xyflow/react": "12.11.1",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
+    "electron-updater": "^6.8.9",
     "jszip": "3.10.1",
     "lucide-react": "0.462.0",
     "react": "19.0.0",
@@ -259,7 +260,7 @@
     "publish": [
       {
         "provider": "generic",
-        "url": "https://subsilicon.cn/updates/"
+        "url": "https://subsilicon.cn/api/updates"
       }
     ]
   }

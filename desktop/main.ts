@@ -1,4 +1,5 @@
-import { app, BrowserWindow, ipcMain, dialog, Menu, Tray, nativeImage, autoUpdater } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog, Menu, Tray, nativeImage } from 'electron'
+import { autoUpdater } from 'electron-updater'
 import { join, resolve } from 'path'
 import { readFileSync, writeFileSync, existsSync, mkdirSync, statSync, copyFileSync } from 'fs'
 
@@ -536,17 +537,27 @@ function setupTray(): void {
 function setupAutoUpdate(): void {
   if (isDev) return
 
-  const server = 'https://subsilicon.cn/updates'
-  const feed = `${server}/update/${process.platform}/${app.getVersion()}`
+  // electron-updater 配置：从服务器 API 获取更新元数据
+  autoUpdater.setFeedURL({
+    provider: 'generic',
+    url: 'https://subsilicon.cn/api/updates',
+    channel: 'latest',
+  })
 
-  autoUpdater.setFeedURL({ url: feed })
+  // 不自动下载，让用户决定
+  autoUpdater.autoDownload = false
+  autoUpdater.autoInstallOnAppQuit = true
 
   autoUpdater.on('checking-for-update', () => {
     mainWindow?.webContents.send('update:checking')
   })
 
   autoUpdater.on('update-available', (info) => {
-    mainWindow?.webContents.send('update:available', info)
+    mainWindow?.webContents.send('update:available', {
+      version: info.version,
+      releaseDate: info.releaseDate,
+      releaseNotes: info.releaseNotes,
+    })
   })
 
   autoUpdater.on('update-not-available', () => {
@@ -558,16 +569,23 @@ function setupAutoUpdate(): void {
   })
 
   autoUpdater.on('download-progress', (progress) => {
-    mainWindow?.webContents.send('update:progress', progress)
+    mainWindow?.webContents.send('update:progress', {
+      percent: progress.percent,
+      transferred: progress.transferred,
+      total: progress.total,
+      bytesPerSecond: progress.bytesPerSecond,
+    })
   })
 
   autoUpdater.on('update-downloaded', () => {
     mainWindow?.webContents.send('update:downloaded')
-    autoUpdater.quitAndInstall()
   })
 
+  // 启动后 5 秒自动检查更新
   setTimeout(() => {
-    autoUpdater.checkForUpdates()
+    autoUpdater.checkForUpdates().catch(err => {
+      console.error('[AutoUpdater] 检查更新失败:', err)
+    })
   }, 5000)
 }
 
@@ -697,7 +715,20 @@ function setupIPC(): void {
   })
 
   ipcMain.on('update:check', () => {
-    autoUpdater.checkForUpdates()
+    autoUpdater.checkForUpdates().catch(err => {
+      console.error('[AutoUpdater] 检查更新失败:', err)
+    })
+  })
+
+  ipcMain.on('update:download', () => {
+    autoUpdater.downloadUpdate().catch(err => {
+      console.error('[AutoUpdater] 下载更新失败:', err)
+      mainWindow?.webContents.send('update:error', err.message)
+    })
+  })
+
+  ipcMain.on('update:install', () => {
+    autoUpdater.quitAndInstall(false, true)
   })
 }
 

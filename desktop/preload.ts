@@ -54,6 +54,12 @@ contextBridge.exposeInMainWorld('__electronAPI', {
   checkForUpdates: (): void =>
     ipcRenderer.send('update:check'),
 
+  downloadUpdate: (): void =>
+    ipcRenderer.send('update:download'),
+
+  installUpdate: (): void =>
+    ipcRenderer.send('update:install'),
+
   onUpdateChecking: (callback: () => void): () => void => {
     ipcRenderer.on('update:checking', callback)
     return () => ipcRenderer.removeListener('update:checking', callback)
@@ -151,6 +157,8 @@ declare global {
       maximizeWindow: () => void
       closeWindow: () => void
       checkForUpdates: () => void
+      downloadUpdate: () => void
+      installUpdate: () => void
       onUpdateChecking: (callback: () => void) => () => void
       onUpdateAvailable: (callback: (info: { version: string }) => void) => () => void
       onUpdateNotAvailable: (callback: () => void) => () => void
