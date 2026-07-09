@@ -260,7 +260,7 @@
     "publish": [
       {
         "provider": "generic",
-        "url": "https://subsilicon.cn/api/updates"
+        "url": "https://subsilicon.cn/releases"
       }
     ]
   }

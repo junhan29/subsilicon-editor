@@ -112,6 +112,26 @@ jobs:
             - 读者行为分析
             - 多平台支持
 
+      - name: Sync releases to Tencent Server
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          RELEASE_DIR="/var/www/subsilicon/releases/v${VERSION}"
+
+          mkdir -p ~/.ssh
+          echo "$SERVER_SSH_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          echo "📤 同步安装包到服务器: $RELEASE_DIR"
+          ssh "$SERVER_USER@$SERVER_HOST" "mkdir -p $RELEASE_DIR && chown -R www-data:www-data /var/www/subsilicon/releases"
+          scp release/* "$SERVER_USER@$SERVER_HOST:$RELEASE_DIR/"
+          ssh "$SERVER_USER@$SERVER_HOST" "ls -la $RELEASE_DIR/"
+          echo "✅ 同步完成"
+
       - name: Purge old artifacts
         uses: geekyeggo/delete-artifact@v5
         with:
