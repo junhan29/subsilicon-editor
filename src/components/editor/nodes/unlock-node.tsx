@@ -27,7 +27,7 @@ function UnlockNodeComponent({ data, selected }: any) {
       <Handle
         type="target"
         position={Position.Top}
-        className="!w-4 !h-4 !bg-card !border-2 !border-orange-500 !-top-2 !transition-all hover:!scale-125 hover:!shadow-lg hover:!shadow-orange-500/30 dark:!bg-slate-900 dark:!border-orange-400"
+        className="!w-4 !h-4 !rounded-full !z-20 !bg-card !border-2 !border-orange-500 !-top-2 !transition-all hover:!scale-125 hover:!shadow-lg hover:!shadow-orange-500/30 dark:!bg-slate-900 dark:!border-orange-400"
       />
 
       <div className="pl-3.5 pr-3 pt-3 pb-3">
@@ -86,7 +86,7 @@ function UnlockNodeComponent({ data, selected }: any) {
       <Handle
         type="source"
         position={Position.Bottom}
-        className="!w-4 !h-4 !bg-orange-500 !border-2 !border-card !-bottom-2 !transition-all hover:!scale-125 hover:!shadow-lg hover:!shadow-orange-500/30 dark:!bg-orange-400 dark:!border-slate-900"
+        className="!w-4 !h-4 !rounded-full !z-20 !bg-orange-500 !border-2 !border-card !-bottom-2 !transition-all hover:!scale-125 hover:!shadow-lg hover:!shadow-orange-500/30 dark:!bg-orange-400 dark:!border-slate-900"
       />
     </div>
   )

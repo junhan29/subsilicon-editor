@@ -27,7 +27,7 @@ function ChoiceNodeComponent({ data, selected, id: nodeId }: any) {
       <Handle
         type="target"
         position={Position.Top}
-        className="!w-4 !h-4 !bg-card !border-2 !border-amber-500 !-top-2 !transition-all hover:!scale-125 hover:!shadow-lg hover:!shadow-amber-500/30 dark:!bg-slate-900 dark:!border-amber-400"
+        className="!w-4 !h-4 !rounded-full !z-20 !bg-card !border-2 !border-amber-500 !-top-2 !transition-all hover:!scale-125 hover:!shadow-lg hover:!shadow-amber-500/30 dark:!bg-slate-900 dark:!border-amber-400"
       />
 
       <div className="pl-3.5 pr-3 pt-3 pb-3">
@@ -93,7 +93,7 @@ function ChoiceNodeComponent({ data, selected, id: nodeId }: any) {
             type="source"
             position={Position.Bottom}
             id={opt.id || `opt-${i}`}
-            className="!w-4 !h-4 !bg-amber-500 !border-2 !border-card !-bottom-2 !transition-all hover:!scale-125 hover:!shadow-lg hover:!shadow-amber-500/30 dark:!bg-amber-400 dark:!border-slate-900"
+            className="!w-4 !h-4 !rounded-full !z-20 !bg-amber-500 !border-2 !border-card !-bottom-2 !transition-all hover:!scale-125 hover:!shadow-lg hover:!shadow-amber-500/30 dark:!bg-amber-400 dark:!border-slate-900"
             style={{ left: `${((i + 0.5) / options.length) * 100}%` }}
           />
         ))
@@ -103,7 +103,7 @@ function ChoiceNodeComponent({ data, selected, id: nodeId }: any) {
           type="source"
           position={Position.Bottom}
           id="out"
-          className="!w-4 !h-4 !bg-amber-500 !border-2 !border-card !-bottom-2 !transition-all hover:!scale-125 hover:!shadow-lg hover:!shadow-amber-500/30 dark:!bg-amber-400 dark:!border-slate-900"
+          className="!w-4 !h-4 !rounded-full !z-20 !bg-amber-500 !border-2 !border-card !-bottom-2 !transition-all hover:!scale-125 hover:!shadow-lg hover:!shadow-amber-500/30 dark:!bg-amber-400 dark:!border-slate-900"
         />
       )}
     </div>

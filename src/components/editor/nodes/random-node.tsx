@@ -67,7 +67,7 @@ function RandomNodeComponent({ data, selected }: NodeProps) {
       <Handle
         type="target"
         position={Position.Top}
-        className="!w-4 !h-4 !bg-white !border-2 !border-cyan-400 !-top-2 !transition-all hover:!scale-125 hover:!shadow-lg hover:!shadow-cyan-400/30"
+        className="!w-4 !h-4 !rounded-full !z-20 !bg-white !border-2 !border-cyan-400 !-top-2 !transition-all hover:!scale-125 hover:!shadow-lg hover:!shadow-cyan-400/30"
       />
 
       <div className="flex items-center gap-2 mb-3">
@@ -134,7 +134,7 @@ function RandomNodeComponent({ data, selected }: NodeProps) {
       <Handle
         type="source"
         position={Position.Bottom}
-        className="!w-4 !h-4 !bg-cyan-400 !border-2 !border-white !-bottom-2 !transition-all hover:!scale-125 hover:!shadow-lg hover:!shadow-cyan-400/30"
+        className="!w-4 !h-4 !rounded-full !z-20 !bg-cyan-400 !border-2 !border-white !-bottom-2 !transition-all hover:!scale-125 hover:!shadow-lg hover:!shadow-cyan-400/30"
       />
     </div>
   )

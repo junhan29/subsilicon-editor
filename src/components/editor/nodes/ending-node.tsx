@@ -65,7 +65,7 @@ function EndingNodeComponent({ data, selected }: any) {
       <Handle
         type="target"
         position={Position.Top}
-        className="!w-4 !h-4 !bg-card !border-2 !border-green-500 !-top-2 !transition-all hover:!scale-125 hover:!shadow-lg hover:!shadow-green-500/30 dark:!bg-slate-900 dark:!border-green-400"
+        className="!w-4 !h-4 !rounded-full !z-20 !bg-card !border-2 !border-green-500 !-top-2 !transition-all hover:!scale-125 hover:!shadow-lg hover:!shadow-green-500/30 dark:!bg-slate-900 dark:!border-green-400"
       />
 
       <div className="pl-3.5 pr-3 pt-3 pb-3">

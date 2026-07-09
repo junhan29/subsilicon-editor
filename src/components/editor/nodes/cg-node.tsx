@@ -22,7 +22,7 @@ function CgNodeComponent({ data, selected }: any) {
       <Handle
         type="target"
         position={Position.Top}
-        className="!w-4 !h-4 !bg-card !border-2 !border-purple-500 !-top-2 !transition-all hover:!scale-125 hover:!shadow-lg hover:!shadow-purple-500/30 dark:!bg-card dark:!border-purple-400"
+        className="!w-4 !h-4 !rounded-full !z-20 !bg-card !border-2 !border-purple-500 !-top-2 !transition-all hover:!scale-125 hover:!shadow-lg hover:!shadow-purple-500/30 dark:!bg-card dark:!border-purple-400"
       />
 
       {hasMedia ? (
@@ -108,7 +108,7 @@ function CgNodeComponent({ data, selected }: any) {
       <Handle
         type="source"
         position={Position.Bottom}
-        className="!w-4 !h-4 !bg-purple-500 !border-2 !border-card !-bottom-2 !transition-all hover:!scale-125 hover:!shadow-lg hover:!shadow-purple-500/30 dark:!bg-purple-400 dark:!border-card"
+        className="!w-4 !h-4 !rounded-full !z-20 !bg-purple-500 !border-2 !border-card !-bottom-2 !transition-all hover:!scale-125 hover:!shadow-lg hover:!shadow-purple-500/30 dark:!bg-purple-400 dark:!border-card"
       />
     </div>
   )

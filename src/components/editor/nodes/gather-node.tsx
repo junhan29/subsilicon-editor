@@ -22,7 +22,7 @@ function GatherNodeComponent({ data, selected }: NodeProps) {
       <Handle
         type="target"
         position={Position.Top}
-        className="!w-4 !h-4 !bg-card !border-2 !border-slate-400 dark:!border-slate-500 !-top-2 !transition-all hover:!scale-125 hover:!shadow-lg hover:!shadow-slate-400/30 dark:!bg-card"
+        className="!w-4 !h-4 !rounded-full !z-20 !bg-card !border-2 !border-slate-400 dark:!border-slate-500 !-top-2 !transition-all hover:!scale-125 hover:!shadow-lg hover:!shadow-slate-400/30 dark:!bg-card"
       />
 
       <div className="flex items-center justify-center gap-1.5">
@@ -37,7 +37,7 @@ function GatherNodeComponent({ data, selected }: NodeProps) {
       <Handle
         type="source"
         position={Position.Bottom}
-        className="!w-4 !h-4 !bg-slate-400 dark:!bg-slate-500 !border-2 !border-card !-bottom-2 !transition-all hover:!scale-125 hover:!shadow-lg hover:!shadow-slate-400/30 dark:!border-card"
+        className="!w-4 !h-4 !rounded-full !z-20 !bg-slate-400 dark:!bg-slate-500 !border-2 !border-card !-bottom-2 !transition-all hover:!scale-125 hover:!shadow-lg hover:!shadow-slate-400/30 dark:!border-card"
       />
     </div>
   )

@@ -20,7 +20,7 @@ function ConditionNodeComponent({ data, selected }: any) {
       <Handle
         type="target"
         position={Position.Top}
-        className="!w-4 !h-4 !bg-card !border-2 !border-purple-500 !-top-2 !transition-all hover:!scale-125 hover:!shadow-lg hover:!shadow-purple-500/30 dark:!bg-card dark:!border-purple-400"
+        className="!w-4 !h-4 !rounded-full !z-20 !bg-card !border-2 !border-purple-500 !-top-2 !transition-all hover:!scale-125 hover:!shadow-lg hover:!shadow-purple-500/30 dark:!bg-card dark:!border-purple-400"
       />
 
       <div className="flex items-center gap-2 mb-2.5">
@@ -43,7 +43,7 @@ function ConditionNodeComponent({ data, selected }: any) {
             type="source"
             position={Position.Bottom}
             id="true"
-            className="!w-4 !h-4 !bg-green-500 !border-2 !border-card !-bottom-2 !transition-all hover:!scale-125 hover:!shadow-lg hover:!shadow-green-500/30 dark:!bg-green-400 dark:!border-card"
+            className="!w-4 !h-4 !rounded-full !z-20 !bg-green-500 !border-2 !border-card !-bottom-2 !transition-all hover:!scale-125 hover:!shadow-lg hover:!shadow-green-500/30 dark:!bg-green-400 dark:!border-card"
             style={{ left: '25%' }}
           />
         </div>
@@ -55,7 +55,7 @@ function ConditionNodeComponent({ data, selected }: any) {
             type="source"
             position={Position.Bottom}
             id="false"
-            className="!w-4 !h-4 !bg-red-500 !border-2 !border-card !-bottom-2 !transition-all hover:!scale-125 hover:!shadow-lg hover:!shadow-red-500/30 dark:!bg-red-400 dark:!border-card"
+            className="!w-4 !h-4 !rounded-full !z-20 !bg-red-500 !border-2 !border-card !-bottom-2 !transition-all hover:!scale-125 hover:!shadow-lg hover:!shadow-red-500/30 dark:!bg-red-400 dark:!border-card"
             style={{ left: '75%' }}
           />
         </div>
