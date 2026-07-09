@@ -24,6 +24,7 @@ import {
   Clock,
   Eye,
   EyeOff,
+  Sparkles,
 } from 'lucide-react'
 import type { StoryGraph } from '@editor/types/editor'
 import type {
@@ -118,6 +119,14 @@ export function CreatorCenterDialog({
   onLoginStateChange,
 }: CreatorCenterDialogProps) {
   const [tab, setTab] = useState<Tab>('account')
+
+  const [guideDismissed, setGuideDismissed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('subsilicon_creator_center_guide_dismissed') === 'true'
+    } catch {
+      return false
+    }
+  })
 
   const [account, setAccount] = useState<Omit<CreatorAccount, 'passwordHash'> | null>(getCurrentAccount())
   const [accountTab, setAccountTab] = useState<AccountTab>('login')
@@ -569,12 +578,12 @@ export function CreatorCenterDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6"
+      className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px]"
       onClick={(e) => {
         if (e.target === e.currentTarget && !busy) onClose()
       }}
     >
-      <div className="w-full max-w-6xl max-h-[92vh] bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+      <div className="absolute inset-y-0 right-0 w-full max-w-6xl max-h-screen bg-slate-900 border-l border-slate-700 shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-right duration-300">
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-700 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-amber-500/15 flex items-center justify-center">
@@ -596,6 +605,32 @@ export function CreatorCenterDialog({
         </div>
 
         <div className="flex flex-1 min-h-0">
+          {!guideDismissed && (
+            <div className="absolute top-[57px] right-3 z-10 w-[min(92%,480px)] rounded-xl border border-amber-500/30 bg-amber-500/10 backdrop-blur p-3 shadow-lg">
+              <div className="flex items-start gap-2.5">
+                <Sparkles className="w-4 h-4 text-amber-300 shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0 text-xs text-amber-100/90 leading-relaxed">
+                  <div className="font-semibold text-amber-200 mb-1">创作者中心使用流程</div>
+                  <ol className="space-y-0.5 list-decimal list-inside text-[11px] text-amber-100/80">
+                    <li><b>账号管理</b>：注册或登录本地账号（数据存储在本机 IndexedDB）</li>
+                    <li><b>平台管理</b>：添加发布平台（如 SubSilicon 作品墙），填写独立账号</li>
+                    <li><b>发布作品</b>：填写标题/简介/标签/封面，提交至所选平台</li>
+                    <li><b>发布记录</b>：查看各平台审核状态</li>
+                  </ol>
+                </div>
+                <button
+                  onClick={() => {
+                    setGuideDismissed(true)
+                    try { localStorage.setItem('subsilicon_creator_center_guide_dismissed', 'true') } catch {}
+                  }}
+                  className="w-6 h-6 rounded-full hover:bg-amber-500/20 flex items-center justify-center text-amber-300 shrink-0"
+                  aria-label="关闭引导"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          )}
           <nav className="w-52 shrink-0 border-r border-slate-700 bg-slate-900/60 py-2">
             {TAB_ITEMS.map((item) => {
               const Icon = item.icon

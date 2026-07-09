@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client'
 import { StoryCanvas } from './components/editor/story-canvas'
 import { ErrorBoundary } from './components/error-boundary'
 import { showToast } from './components/editor/toast'
-import { EditorTour, isTourCompleted } from './components/editor/onboarding/editor-tour'
+import { EditorTour, isTourCompleted, markTourCompleted } from './components/editor/onboarding/editor-tour'
 import { DEFAULT_TOUR_STEPS } from './components/editor/onboarding/tour-steps'
 import type { StoryGraph } from './types/editor'
 import './index.css'
@@ -118,7 +118,11 @@ function App() {
       <EditorTour
         active={showTour}
         steps={DEFAULT_TOUR_STEPS}
-        onClose={() => setShowTour(false)}
+        onClose={() => {
+          setShowTour(false)
+          // 任何方式关闭（Esc/X 按钮）都标记为已完成，避免下次打开再次弹出
+          markTourCompleted()
+        }}
       />
     </>
   )

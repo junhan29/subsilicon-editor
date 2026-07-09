@@ -11,10 +11,12 @@ import {
   useEdgesState,
   addEdge,
   useReactFlow,
+  applyNodeChanges,
   type Connection,
   type Edge,
   type Node,
   type Edge as RFEdge,
+  type NodeChange,
 } from '@xyflow/react'
 import { Undo2, Redo2, Trash2, X, Copy, ShieldCheck, Layers, ChevronDown, ChevronRight, Pencil, Download, MessageSquare, Lock, Crown, Upload, Play } from 'lucide-react'
 import clsx from 'clsx'
@@ -1358,35 +1360,23 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
 
   const alignmentEnabled = nodes.length <= 200
 
-  const handleNodesChange = useCallback((changes: any[]) => {
-    const filteredChanges = changes.filter((change: any) => {
-      if (change.type === 'position' && change.id?.startsWith('group-')) {
+  const handleNodesChange = useCallback((changes: NodeChange[]) => {
+    // 过滤掉 group 节点的变化（group 节点有自己的拖拽处理）
+    const filteredChanges = changes.filter((change) => {
+      if ('id' in change && change.id?.startsWith('group-')) {
         return false
       }
-      return !change.id?.startsWith('group-')
+      return true
     })
 
-    setNodes((nds) => {
-      let result = [...nds]
-      for (const change of filteredChanges) {
-        if (change.type === 'position') {
-          result = result.map((node) =>
-            node.id === change.id
-              ? { ...node, position: { ...node.position, ...change.position } }
-              : node
-          )
-        } else if (change.type === 'select') {
-          // 选择状态由我们自己管理
-        } else if (change.type === 'add') {
-          result = [...result, change.item as StoryNode]
-        } else if (change.type === 'remove') {
-          result = result.filter((node) => node.id !== change.id)
-        } else if (change.type === 'replace') {
-          result = change.items as StoryNode[]
-        }
-      }
-      return result
-    })
+    // select 状态由我们自己管理，不传给 React Flow
+    const meaningfulChanges = filteredChanges.filter((c) => c.type !== 'select')
+
+    if (meaningfulChanges.length === 0) return
+
+    // 使用 React Flow 官方的 applyNodeChanges，内部对 position 变化做了优化
+    // 避免 setNodes 内部的 result.map() 重建整个 nodes 数组导致 useMemo 缓存失效
+    setNodes((nds) => applyNodeChanges(meaningfulChanges, nds) as StoryNode[])
   }, [setNodes])
 
   const handleNodeDrag = useCallback((event: MouseEvent | TouchEvent, node: Node, nodes: Node[]) => {
@@ -1612,7 +1602,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
           elevateEdgesOnSelect={perfConfig.elevateEdgesOnSelect}
           elevateNodesOnSelect={perfConfig.elevateNodesOnSelect}
           deleteKeyCode={null}
-          className={isEmpty ? 'opacity-0' : ''}
+          className={isEmpty ? 'opacity-0 pointer-events-none' : ''}
           onlyRenderVisibleElements={true}
           panOnScroll={true}
           zoomOnScroll={true}
