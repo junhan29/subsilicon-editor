@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import {
   MousePointerClick,
   ArrowRight,
@@ -65,25 +65,45 @@ const QUICK_ACTIONS = [
   { type: 'ending', label: '结局', desc: '故事终点', color: 'text-amber-300 border-amber-500/40 hover:border-amber-400 hover:bg-amber-500/10' },
 ]
 
+const EMPTY_GUIDE_COMPLETED_KEY = 'subsilicon_empty_guide_completed'
+
+function isEmptyGuideCompleted(): boolean {
+  try {
+    return localStorage.getItem(EMPTY_GUIDE_COMPLETED_KEY) === 'true'
+  } catch {
+    return false
+  }
+}
+
+function markEmptyGuideCompleted(): void {
+  try {
+    localStorage.setItem(EMPTY_GUIDE_COMPLETED_KEY, 'true')
+  } catch {}
+}
+
 export function EmptyCanvasGuide({ onQuickAdd, onStartTour }: EmptyCanvasGuideProps) {
   // step 为 0/1/2 表示引导中；3 表示已完成或跳过，进入快速添加阶段
-  const [step, setStep] = useState(0)
+  const [step, setStep] = useState(() => {
+    return isEmptyGuideCompleted() ? GUIDE_STEPS.length : 0
+  })
 
   const inGuide = step < GUIDE_STEPS.length
   const current = GUIDE_STEPS[Math.min(step, GUIDE_STEPS.length - 1)]
   const isLastGuideStep = step === GUIDE_STEPS.length - 1
 
-  const handleNext = () => {
+  const handleNext = useCallback(() => {
     if (isLastGuideStep) {
+      markEmptyGuideCompleted()
       setStep(GUIDE_STEPS.length)
     } else {
       setStep((s) => s + 1)
     }
-  }
+  }, [isLastGuideStep])
 
-  const handleSkip = () => {
+  const handleSkip = useCallback(() => {
+    markEmptyGuideCompleted()
     setStep(GUIDE_STEPS.length)
-  }
+  }, [])
 
   return (
     <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">

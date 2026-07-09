@@ -569,12 +569,12 @@ export function CreatorCenterDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6"
       onClick={(e) => {
         if (e.target === e.currentTarget && !busy) onClose()
       }}
     >
-      <div className="w-full max-w-3xl max-h-[90vh] bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+      <div className="w-full max-w-6xl max-h-[92vh] bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-700 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-amber-500/15 flex items-center justify-center">
@@ -596,7 +596,7 @@ export function CreatorCenterDialog({
         </div>
 
         <div className="flex flex-1 min-h-0">
-          <nav className="w-44 shrink-0 border-r border-slate-700 bg-slate-900/60 py-2">
+          <nav className="w-52 shrink-0 border-r border-slate-700 bg-slate-900/60 py-2">
             {TAB_ITEMS.map((item) => {
               const Icon = item.icon
               const active = tab === item.id

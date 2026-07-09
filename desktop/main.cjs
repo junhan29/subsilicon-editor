@@ -1,4 +1,5 @@
 const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron')
+const { autoUpdater } = require('electron-updater')
 const path = require('path')
 const fs = require('fs')
 const { Readable } = require('stream')
@@ -65,6 +66,10 @@ function createWindow() {
 
 app.whenReady().then(() => {
   createWindow()
+  setupAutoUpdate()
+  if (!isDev) {
+    autoUpdater.checkForUpdates().catch(() => {})
+  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -237,11 +242,75 @@ ipcMain.on('closeWindow', () => {
   }
 })
 
+function setupAutoUpdate() {
+  if (isDev) return
+
+  autoUpdater.setFeedURL({
+    provider: 'generic',
+    url: 'https://subsilicon.cn/api/updates',
+    channel: 'latest',
+  })
+
+  autoUpdater.autoDownload = false
+  autoUpdater.autoInstallOnAppQuit = true
+
+  autoUpdater.on('checking-for-update', () => {
+    mainWindow?.webContents.send('update-checking')
+  })
+
+  autoUpdater.on('update-available', (info) => {
+    mainWindow?.webContents.send('update-available', {
+      version: info.version,
+      releaseDate: info.releaseDate,
+      releaseNotes: info.releaseNotes,
+    })
+  })
+
+  autoUpdater.on('update-not-available', () => {
+    mainWindow?.webContents.send('update-not-available')
+  })
+
+  autoUpdater.on('error', (err) => {
+    mainWindow?.webContents.send('update-error', err.message)
+  })
+
+  autoUpdater.on('download-progress', (progress) => {
+    mainWindow?.webContents.send('update-progress', {
+      percent: progress.percent,
+      bytesPerSecond: progress.bytesPerSecond,
+      total: progress.total,
+      transferred: progress.transferred,
+    })
+  })
+
+  autoUpdater.on('update-downloaded', () => {
+    mainWindow?.webContents.send('update-downloaded')
+  })
+}
+
 ipcMain.on('checkForUpdates', () => {
-  mainWindow.webContents.send('update-checking')
-  setTimeout(() => {
-    mainWindow.webContents.send('update-not-available')
-  }, 2000)
+  if (isDev) {
+    mainWindow.webContents.send('update-checking')
+    setTimeout(() => {
+      mainWindow.webContents.send('update-not-available')
+    }, 2000)
+    return
+  }
+  autoUpdater.checkForUpdates().catch(err => {
+    mainWindow?.webContents.send('update-error', err.message)
+  })
+})
+
+ipcMain.on('downloadUpdate', () => {
+  if (isDev) return
+  autoUpdater.downloadUpdate().catch(err => {
+    mainWindow?.webContents.send('update-error', err.message)
+  })
+})
+
+ipcMain.on('installUpdate', () => {
+  if (isDev) return
+  autoUpdater.quitAndInstall(false, true)
 })
 
 ipcMain.on('openExternal', (event, url) => {
