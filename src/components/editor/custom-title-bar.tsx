@@ -111,38 +111,38 @@ export function CustomTitleBar() {
 
   return (
     <div className="h-10 bg-[#0f172a] border-b border-border flex items-center justify-between select-none relative">
-      <div className="flex items-center gap-2 pl-3">
+      <div className="flex items-center gap-2 pl-3" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}>
         <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-amber-500 to-red-500 flex items-center justify-center">
           <span className="text-white text-xs font-bold">S</span>
         </div>
         <span className="text-sm font-medium text-white">SubSilicon Editor</span>
       </div>
 
-      <div className="flex-1 mx-4 flex items-center justify-center">
+      <div className="flex-1 mx-4 flex items-center justify-center" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}>
         <div className="max-w-md flex items-center gap-2 text-xs text-muted-foreground truncate">
           <FolderOpen className="w-3.5 h-3.5 opacity-60" />
           <span className="truncate">{filename}</span>
         </div>
       </div>
 
-      <div className="flex items-center gap-1 pr-1">
+      <div className="flex items-center gap-1 pr-1" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
         <button
           onClick={handleNewFile}
-          className="p-1.5 rounded hover:bg-white/10 transition-colors"
+          className="p-1.5 rounded hover:bg-white/10 transition-colors cursor-pointer"
           title="新建作品 (Ctrl+N)"
         >
           <Plus className="w-4 h-4 text-white/70" />
         </button>
         <button
           onClick={handleOpenFile}
-          className="p-1.5 rounded hover:bg-white/10 transition-colors"
+          className="p-1.5 rounded hover:bg-white/10 transition-colors cursor-pointer"
           title="打开作品 (Ctrl+O)"
         >
           <FolderOpen className="w-4 h-4 text-white/70" />
         </button>
         <button
           onClick={handleSaveFile}
-          className="p-1.5 rounded hover:bg-white/10 transition-colors"
+          className="p-1.5 rounded hover:bg-white/10 transition-colors cursor-pointer"
           title="保存作品 (Ctrl+S)"
         >
           <Save className="w-4 h-4 text-white/70" />
@@ -153,7 +153,7 @@ export function CustomTitleBar() {
         <div className="relative" data-title-bar-menu>
           <button
             onClick={() => setShowMenu(!showMenu)}
-            className="p-1.5 rounded hover:bg-white/10 transition-colors"
+            className="p-1.5 rounded hover:bg-white/10 transition-colors cursor-pointer"
             title="菜单"
           >
             <Menu className="w-4 h-4 text-white/70" />
@@ -217,21 +217,21 @@ export function CustomTitleBar() {
 
         <button
           onClick={handleMinimize}
-          className="p-2 rounded hover:bg-white/10 transition-colors"
+          className="p-2 rounded hover:bg-white/10 transition-colors cursor-pointer"
           title="最小化"
         >
           <Minus className="w-4 h-4 text-white/70" />
         </button>
         <button
           onClick={handleMaximize}
-          className="p-2 rounded hover:bg-white/10 transition-colors"
+          className="p-2 rounded hover:bg-white/10 transition-colors cursor-pointer"
           title={isMaximized ? '还原' : '最大化'}
         >
           <Square className="w-4 h-4 text-white/70" />
         </button>
         <button
           onClick={handleClose}
-          className="p-2 rounded hover:bg-red-500/80 transition-colors"
+          className="p-2 rounded hover:bg-red-500/80 transition-colors cursor-pointer"
           title="关闭"
         >
           <X className="w-4 h-4 text-white/70" />
