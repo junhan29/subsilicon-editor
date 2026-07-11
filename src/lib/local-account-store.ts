@@ -1,5 +1,3 @@
-import { generateId } from './utils'
-
 export interface LocalAccount {
   id: string
   email: string
@@ -9,6 +7,15 @@ export interface LocalAccount {
   createdAt: number
   nameChangeCount: number
   nameLastChangedAt: number
+}
+
+export interface CreatorIdentity {
+  id: string
+  displayName: string
+  publicKey: string
+  privateKey: string
+  registeredAt: number
+  syncedToServer: boolean
 }
 
 let currentAccount: Omit<LocalAccount, 'passwordHash'> | null = null
@@ -29,6 +36,10 @@ function openDB(): Promise<IDBDatabase> {
     request.onsuccess = () => resolve(request.result)
     request.onerror = () => reject(request.error)
   })
+}
+
+function generateId(): string {
+  return 'acc_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8)
 }
 
 async function sha256(message: string): Promise<string> {
@@ -80,7 +91,7 @@ export async function register(
     const passwordHash = await sha256(password)
     const now = Date.now()
     const account: LocalAccount = {
-      id: generateId('acc'),
+      id: generateId(),
       email: trimmedEmail,
       displayName: trimmedDisplayName,
       passwordHash,
@@ -249,4 +260,181 @@ export async function updateDisplayName(
   } catch (err) {
     return { success: false, error: '更新昵称失败：数据库异常' }
   }
+}
+
+// ============================================
+// 创作者身份系统（RSA 密钥对）
+// ============================================
+
+const IDENTITY_STORE = 'creator-identities'
+
+function openIdentityDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, 2)
+    request.onupgradeneeded = () => {
+      const db = request.result
+      if (!db.objectStoreNames.contains(IDENTITY_STORE)) {
+        const store = db.createObjectStore(IDENTITY_STORE, { keyPath: 'id' })
+        store.createIndex('displayName', 'displayName', { unique: false })
+      }
+    }
+    request.onsuccess = () => resolve(request.result)
+    request.onerror = () => reject(request.error)
+  })
+}
+
+async function saveIdentity(identity: CreatorIdentity): Promise<void> {
+  const db = await openIdentityDB()
+  const tx = db.transaction(IDENTITY_STORE, 'readwrite')
+  const store = tx.objectStore(IDENTITY_STORE)
+  await new Promise<void>((resolve, reject) => {
+    const req = store.put(identity)
+    req.onsuccess = () => resolve()
+    req.onerror = () => reject(req.error)
+  })
+  db.close()
+}
+
+async function loadIdentities(): Promise<CreatorIdentity[]> {
+  const db = await openIdentityDB()
+  const tx = db.transaction(IDENTITY_STORE, 'readonly')
+  const store = tx.objectStore(IDENTITY_STORE)
+  const identities = await new Promise<CreatorIdentity[]>((resolve, reject) => {
+    const req = store.getAll()
+    req.onsuccess = () => resolve(req.result || [])
+    req.onerror = () => reject(req.error)
+  })
+  db.close()
+  return identities
+}
+
+async function exportPublicKey(key: CryptoKey): Promise<string> {
+  const exported = await crypto.subtle.exportKey('spki', key)
+  const binary = String.fromCharCode(...new Uint8Array(exported))
+  return `-----BEGIN PUBLIC KEY-----\n${btoa(binary).match(/.{1,64}/g)?.join('\n')}\n-----END PUBLIC KEY-----`
+}
+
+async function exportPrivateKey(key: CryptoKey): Promise<string> {
+  const exported = await crypto.subtle.exportKey('pkcs8', key)
+  const binary = String.fromCharCode(...new Uint8Array(exported))
+  return `-----BEGIN PRIVATE KEY-----\n${btoa(binary).match(/.{1,64}/g)?.join('\n')}\n-----END PRIVATE KEY-----`
+}
+
+async function importPrivateKey(pem: string): Promise<CryptoKey> {
+  const pemHeader = '-----BEGIN PRIVATE KEY-----'
+  const pemFooter = '-----END PRIVATE KEY-----'
+  const pemContents = pem.substring(pemHeader.length, pem.indexOf(pemFooter))
+  const binaryDer = Uint8Array.from(atob(pemContents.replace(/\n/g, '')), c => c.charCodeAt(0))
+  return crypto.subtle.importKey('pkcs8', binaryDer, { name: 'RSA-PSS', hash: 'SHA-256' }, false, ['sign'])
+}
+
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer)
+  let binary = ''
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i])
+  }
+  return btoa(binary)
+}
+
+let currentIdentity: CreatorIdentity | null = null
+
+export async function registerCreatorIdentity(name: string): Promise<CreatorIdentity> {
+  const keyPair = await crypto.subtle.generateKey(
+    { name: 'RSA-PSS', modulusLength: 2048, hash: 'SHA-256' } as any,
+    true,
+    ['sign', 'verify']
+  )
+
+  const publicKey = await exportPublicKey(keyPair.publicKey)
+  const privateKey = await exportPrivateKey(keyPair.privateKey)
+
+  const identity: CreatorIdentity = {
+    id: 'id_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8),
+    displayName: name,
+    publicKey,
+    privateKey,
+    registeredAt: Date.now(),
+    syncedToServer: false,
+  }
+
+  await saveIdentity(identity)
+  currentIdentity = identity
+  return identity
+}
+
+export async function signContent(content: string, privateKeyPem: string): Promise<string> {
+  const privateKey = await importPrivateKey(privateKeyPem)
+  const encoder = new TextEncoder()
+  const signature = await crypto.subtle.sign(
+    { name: 'RSA-PSS', saltLength: 32 },
+    privateKey,
+    encoder.encode(content)
+  )
+  return arrayBufferToBase64(signature)
+}
+
+export function getCurrentIdentity(): CreatorIdentity | null {
+  return currentIdentity
+}
+
+export async function switchIdentity(identityId: string): Promise<CreatorIdentity | null> {
+  const identities = await loadIdentities()
+  const identity = identities.find(i => i.id === identityId) || null
+  currentIdentity = identity
+  return identity
+}
+
+export function logoutIdentity(): void {
+  currentIdentity = null
+}
+
+export async function getAllIdentities(): Promise<CreatorIdentity[]> {
+  return loadIdentities()
+}
+
+export async function exportIdentityToFile(identity: CreatorIdentity): Promise<void> {
+  const blob = new Blob([JSON.stringify({ id: identity.id, displayName: identity.displayName, publicKey: identity.publicKey, privateKey: identity.privateKey }, null, 2)], {
+    type: 'application/vnd.subsilicon.identity+json',
+  })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${identity.displayName}.subsilicon-key`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+export async function importIdentityFromFile(): Promise<CreatorIdentity | null> {
+  return new Promise((resolve) => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = '.subsilicon-key'
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0]
+      if (!file) { resolve(null); return }
+      try {
+        const text = await file.text()
+        const data = JSON.parse(text)
+        if (!data.id || !data.publicKey || !data.privateKey) {
+          resolve(null)
+          return
+        }
+        const identity: CreatorIdentity = {
+          id: data.id,
+          displayName: data.displayName || '已导入身份',
+          publicKey: data.publicKey,
+          privateKey: data.privateKey,
+          registeredAt: data.registeredAt || Date.now(),
+          syncedToServer: true,
+        }
+        await saveIdentity(identity)
+        currentIdentity = identity
+        resolve(identity)
+      } catch {
+        resolve(null)
+      }
+    }
+    input.click()
+  })
 }

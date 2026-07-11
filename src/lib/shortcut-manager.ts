@@ -1,19 +1,31 @@
+// 快捷键定义中心与管理器
+// 所有快捷键的默认绑定、自定义持久化、事件匹配都在此处理。
+
 export interface ShortcutBinding {
+  /** 唯一标识，对应 actionId */
   id: string
+  /** 动作名称（人类可读） */
   action: string
+  /** 描述 */
   description: string
+  /** 默认快捷键组合，多组表示「或」（任一匹配即触发），如 ['Ctrl', 'S'] 或 ['Delete', 'Backspace'] */
   defaultKeys: string[]
+  /** 分类 */
   category: 'general' | 'canvas' | 'node' | 'edit' | 'view' | 'help'
+  /** 图标名（可选，由组件侧映射到 lucide 图标） */
   icon?: string
 }
 
 export interface ShortcutConfig {
+  /** actionId -> 用户自定义的快捷键组合 */
   [actionId: string]: string[]
 }
 
 const STORAGE_KEY = 'subsilicon-shortcuts'
 
+/** 全部默认快捷键绑定 */
 const DEFAULT_BINDINGS: ShortcutBinding[] = [
+  // ===== 通用类 =====
   { id: 'new', action: '新建作品', description: '创建新的空白作品', defaultKeys: ['Ctrl', 'N'], category: 'general', icon: 'Plus' },
   { id: 'open', action: '打开作品', description: '打开本地作品文件', defaultKeys: ['Ctrl', 'O'], category: 'general', icon: 'FolderOpen' },
   { id: 'save', action: '保存作品', description: '保存当前作品到本地', defaultKeys: ['Ctrl', 'S'], category: 'general', icon: 'Save' },
@@ -22,6 +34,7 @@ const DEFAULT_BINDINGS: ShortcutBinding[] = [
   { id: 'replace', action: '查找替换', description: '查找并替换节点内容', defaultKeys: ['Ctrl', 'H'], category: 'general', icon: 'Replace' },
   { id: 'shortcuts', action: '快捷键面板', description: '打开快捷键查看面板', defaultKeys: ['?'], category: 'general', icon: 'Keyboard' },
 
+  // ===== 画布类 =====
   { id: 'zoomIn', action: '放大画布', description: '放大画布视图', defaultKeys: ['Ctrl', '='], category: 'canvas', icon: 'ZoomIn' },
   { id: 'zoomOut', action: '缩小画布', description: '缩小画布视图', defaultKeys: ['Ctrl', '-'], category: 'canvas', icon: 'ZoomOut' },
   { id: 'fitView', action: '适应视图', description: '自动调整画布以显示所有节点', defaultKeys: ['Shift', '1'], category: 'canvas', icon: 'Maximize' },
@@ -30,6 +43,7 @@ const DEFAULT_BINDINGS: ShortcutBinding[] = [
   { id: 'undo', action: '撤销', description: '撤销上一步操作', defaultKeys: ['Ctrl', 'Z'], category: 'canvas', icon: 'Undo' },
   { id: 'redo', action: '重做', description: '重做已撤销的操作', defaultKeys: ['Ctrl', 'Shift', 'Z'], category: 'canvas', icon: 'Redo' },
 
+  // ===== 节点类 =====
   { id: 'addDialogue', action: '添加对话节点', description: '在画布中心添加一个对话节点', defaultKeys: ['D'], category: 'node', icon: 'MessageCircle' },
   { id: 'addChoice', action: '添加选择节点', description: '在画布中心添加一个选择节点', defaultKeys: ['C'], category: 'node', icon: 'GitBranch' },
   { id: 'addEnding', action: '添加结局节点', description: '在画布中心添加一个结局节点', defaultKeys: ['E'], category: 'node', icon: 'Flag' },
@@ -44,12 +58,14 @@ const DEFAULT_BINDINGS: ShortcutBinding[] = [
   { id: 'selectAll', action: '全选', description: '选中画布上的所有节点', defaultKeys: ['Ctrl', 'A'], category: 'node', icon: 'CheckSquare' },
   { id: 'deselectAll', action: '取消选中', description: '取消当前所有选中', defaultKeys: ['Escape'], category: 'node', icon: 'CircleSlash' },
 
+  // ===== 编辑类 =====
   { id: 'copy', action: '复制', description: '复制选中的节点到剪贴板', defaultKeys: ['Ctrl', 'C'], category: 'edit', icon: 'Copy' },
   { id: 'paste', action: '粘贴', description: '粘贴剪贴板中的节点', defaultKeys: ['Ctrl', 'V'], category: 'edit', icon: 'Clipboard' },
   { id: 'duplicate', action: '克隆', description: '克隆当前选中的节点', defaultKeys: ['Ctrl', 'D'], category: 'edit', icon: 'Copy' },
   { id: 'group', action: '创建分组', description: '将选中节点创建为分组', defaultKeys: ['Ctrl', 'G'], category: 'edit', icon: 'Layers' },
   { id: 'ungroup', action: '取消分组', description: '取消当前分组（保留节点）', defaultKeys: ['Ctrl', 'Shift', 'G'], category: 'edit', icon: 'Ungroup' },
 
+  // ===== 视图类 =====
   { id: 'toggleSidebar', action: '切换左侧栏', description: '显示或隐藏左侧节点面板', defaultKeys: ['B'], category: 'view', icon: 'PanelLeft' },
   { id: 'toggleRightPanel', action: '切换右侧栏', description: '显示或隐藏右侧属性面板', defaultKeys: ['P'], category: 'view', icon: 'PanelRight' },
   { id: 'togglePreview', action: '切换预览', description: '打开或关闭预览模式', defaultKeys: ['Ctrl', 'P'], category: 'view', icon: 'Eye' },
@@ -57,10 +73,12 @@ const DEFAULT_BINDINGS: ShortcutBinding[] = [
   { id: 'qualityCheck', action: '质量检测', description: '打开质量检测面板', defaultKeys: ['Q'], category: 'view', icon: 'ShieldCheck' },
   { id: 'toggleTheme', action: '切换主题', description: '在深色与浅色主题之间切换', defaultKeys: ['Ctrl', 'Shift', 'T'], category: 'view', icon: 'Sun' },
 
+  // ===== 帮助类 =====
   { id: 'help', action: '帮助中心', description: '打开帮助中心菜单', defaultKeys: ['F1'], category: 'help', icon: 'HelpCircle' },
   { id: 'tour', action: '重新引导', description: '重新播放新手引导', defaultKeys: ['Shift', '?'], category: 'help', icon: 'Play' },
 ]
 
+/** 分类标签映射 */
 export const SHORTCUT_CATEGORY_LABELS: Record<ShortcutBinding['category'], string> = {
   general: '通用',
   canvas: '画布操作',
@@ -70,6 +88,7 @@ export const SHORTCUT_CATEGORY_LABELS: Record<ShortcutBinding['category'], strin
   help: '引导与帮助',
 }
 
+/** 分类排序顺序 */
 export const SHORTCUT_CATEGORY_ORDER: ShortcutBinding['category'][] = [
   'general',
   'canvas',
@@ -79,10 +98,12 @@ export const SHORTCUT_CATEGORY_ORDER: ShortcutBinding['category'][] = [
   'help',
 ]
 
+/** 返回所有默认绑定（深拷贝避免外部修改） */
 export function getDefaultBindings(): ShortcutBinding[] {
   return DEFAULT_BINDINGS.map((b) => ({ ...b, defaultKeys: [...b.defaultKeys] }))
 }
 
+/** 从 localStorage 加载用户自定义快捷键 */
 export function loadCustomBindings(): ShortcutConfig {
   if (typeof window === 'undefined') return {}
   try {
@@ -102,22 +123,27 @@ export function loadCustomBindings(): ShortcutConfig {
   }
 }
 
+/** 保存用户自定义快捷键到 localStorage */
 export function saveCustomBindings(config: ShortcutConfig): void {
   if (typeof window === 'undefined') return
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(config))
   } catch {
+    // 忽略写入失败（隐私模式 / 存储已满）
   }
 }
 
+/** 重置所有快捷键到默认（清空 localStorage 中的自定义配置） */
 export function resetBindings(): void {
   if (typeof window === 'undefined') return
   try {
     window.localStorage.removeItem(STORAGE_KEY)
   } catch {
+    // 忽略
   }
 }
 
+/** 返回某个 action 当前生效的按键组合（用户自定义优先，回退到默认） */
 export function getActiveKeys(actionId: string): string[] | null {
   const custom = loadCustomBindings()
   if (custom[actionId]) return custom[actionId]
@@ -219,10 +245,12 @@ export function matchShortcut(event: KeyboardEvent, action: string): boolean {
   return activeKeys.some((k) => keysEqual([k], eventKeys))
 }
 
+/** 将按键组合格式化为可读字符串，如 ['Ctrl', 'S'] → 'Ctrl+S' */
 export function formatKeys(keys: string[]): string {
   return keys.join('+')
 }
 
+/** 检测冲突：返回与给定按键组合冲突的其他 actionId 列表 */
 export function detectConflicts(actionId: string, keys: string[]): string[] {
   const conflicts: string[] = []
   const all = getAllActiveBindings()
@@ -256,9 +284,11 @@ export function detectConflicts(actionId: string, keys: string[]): string[] {
 }
 
 export interface ActiveBinding extends ShortcutBinding {
+  /** 当前生效的按键组合（用户自定义或默认） */
   keys: string[]
 }
 
+/** 返回所有快捷键及其当前生效的按键组合 */
 export function getAllActiveBindings(): ActiveBinding[] {
   const custom = loadCustomBindings()
   return getDefaultBindings().map((b) => ({

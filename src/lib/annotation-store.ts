@@ -1,4 +1,13 @@
+// ============================================
+// 节点批注本地存储管理
+// 数据持久化于 localStorage，按 workId 隔离
+// ============================================
+
 import type { NodeAnnotation, AnnotationType, AnnotationReply } from '@editor/types/editor'
+
+// ============================================
+// localStorage 配置
+// ============================================
 
 const STORAGE_KEY_PREFIX = 'subsilicon-annotations-'
 const FALLBACK_WORK_ID = 'default'
@@ -13,6 +22,10 @@ function storageKey(workId: string): string {
   return `${STORAGE_KEY_PREFIX}${workId || FALLBACK_WORK_ID}`
 }
 
+// ============================================
+// 数据校验
+// ============================================
+
 function isAnnotation(value: unknown): value is NodeAnnotation {
   if (!value || typeof value !== 'object') return false
   const v = value as Record<string, unknown>
@@ -26,6 +39,10 @@ function isAnnotation(value: unknown): value is NodeAnnotation {
     typeof v.resolved === 'boolean'
   )
 }
+
+// ============================================
+// 作者信息
+// ============================================
 
 export function getAnnotationAuthor(): string {
   if (!isBrowser()) return DEFAULT_AUTHOR
@@ -43,8 +60,13 @@ export function setAnnotationAuthor(name: string): void {
   try {
     window.localStorage.setItem(AUTHOR_KEY, trimmed)
   } catch {
+    // 忽略写入失败
   }
 }
+
+// ============================================
+// 基础读写
+// ============================================
 
 export function loadAnnotations(workId: string): NodeAnnotation[] {
   if (!isBrowser()) return []
@@ -64,8 +86,13 @@ export function saveAnnotations(workId: string, annotations: NodeAnnotation[]): 
   try {
     window.localStorage.setItem(storageKey(workId), JSON.stringify(annotations))
   } catch {
+    // 配额超限等错误静默忽略
   }
 }
+
+// ============================================
+// CRUD 操作
+// ============================================
 
 function genId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
@@ -112,6 +139,10 @@ export function deleteAnnotation(workId: string, id: string): NodeAnnotation[] {
   return annotations
 }
 
+// ============================================
+// 查询
+// ============================================
+
 export function getAnnotationsByNode(workId: string, nodeId: string): NodeAnnotation[] {
   return loadAnnotations(workId).filter((a) => a.nodeId === nodeId)
 }
@@ -128,6 +159,10 @@ export function getAnnotationsMap(workId: string): Map<string, NodeAnnotation[]>
   }
   return map
 }
+
+// ============================================
+// 回复操作
+// ============================================
 
 export function addReply(
   workId: string,
@@ -150,6 +185,10 @@ export function addReply(
   saveAnnotations(workId, result)
   return result
 }
+
+// ============================================
+// 批量操作
+// ============================================
 
 export function deleteAnnotationsByNode(workId: string, nodeId: string): NodeAnnotation[] {
   const remaining = loadAnnotations(workId).filter((a) => a.nodeId !== nodeId)

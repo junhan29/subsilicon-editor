@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useCallback, useRef, useState, useEffect, memo } from 'react'
+import { createContext, useContext, useCallback, useRef, useState, memo } from 'react'
 
 interface A11yAnnouncerContextType {
   announce: (message: string) => void
@@ -23,17 +23,6 @@ interface A11yAnnouncerProps {
 function A11yAnnouncerComponent({ children }: A11yAnnouncerProps) {
   const [message, setMessage] = useState('')
   const timeoutRef = useRef<number | null>(null)
-  const mountedRef = useRef(true)
-
-  useEffect(() => {
-    mountedRef.current = true
-    return () => {
-      mountedRef.current = false
-      if (timeoutRef.current) {
-        window.clearTimeout(timeoutRef.current)
-      }
-    }
-  }, [])
 
   const announce = useCallback((msg: string) => {
     if (timeoutRef.current) {
@@ -41,9 +30,7 @@ function A11yAnnouncerComponent({ children }: A11yAnnouncerProps) {
     }
     setMessage('')
     timeoutRef.current = window.setTimeout(() => {
-      if (mountedRef.current) {
-        setMessage(msg)
-      }
+      setMessage(msg)
     }, 50)
   }, [])
 

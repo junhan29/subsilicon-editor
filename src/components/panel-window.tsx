@@ -83,38 +83,36 @@ const TAB_CONFIG = {
   manage: [
     { id: 'versions', icon: GitBranch, label: '版本', tip: '保存和恢复历史版本' },
     { id: 'annotations', icon: MessageSquare, label: '批注', badgeKey: 'annotations', tip: '给节点添加备注和待办' },
-    { id: 'data', icon: Activity, label: '数据', tip: '查看创作统计和读者数据' },
+    { id: 'data', icon: Activity, label: '数据', tip: '查看创作统计' },
   ],
 }
 
 /** 数据面板：创作统计 */
 function DataPanel({ workId, nodes }: { workId: string; nodes: StoryNode[] }) {
   return (
-    <div className="flex flex-col h-full overflow-y-auto">
-      <MemoizedWritingStatsPanel
-        workId={workId}
-        nodeCount={nodes.length}
-        wordCount={nodes.reduce((acc, node) => {
-          const data = node.data as Record<string, unknown> | undefined
-          if (!data) return acc
-          let count = 0
-          if (typeof data.text === 'string') count += data.text.length
-          if (typeof data.prompt === 'string') count += data.prompt.length
-          if (typeof data.title === 'string') count += data.title.length
-          if (Array.isArray(data.options)) {
-            for (const opt of data.options) {
-              if (opt && typeof opt === 'object') {
-                const optObj = opt as Record<string, unknown>
-                if (typeof optObj.text === 'string') {
-                  count += optObj.text.length
-                }
+    <MemoizedWritingStatsPanel
+      workId={workId}
+      nodeCount={nodes.length}
+      wordCount={nodes.reduce((acc, node) => {
+        const data = node.data as Record<string, unknown> | undefined
+        if (!data) return acc
+        let count = 0
+        if (typeof data.text === 'string') count += data.text.length
+        if (typeof data.prompt === 'string') count += data.prompt.length
+        if (typeof data.title === 'string') count += data.title.length
+        if (Array.isArray(data.options)) {
+          for (const opt of data.options) {
+            if (opt && typeof opt === 'object') {
+              const optObj = opt as Record<string, unknown>
+              if (typeof optObj.text === 'string') {
+                count += optObj.text.length
               }
             }
           }
-          return acc + count
-        }, 0)}
-      />
-    </div>
+        }
+        return acc + count
+      }, 0)}
+    />
   )
 }
 

@@ -12,47 +12,6 @@ export interface StoryTemplate {
   defaultGraph: Omit<StoryGraph, 'settings'>
 }
 
-function generateTemplateThumbnail(
-  title: string,
-  category: StoryTemplate['category'],
-  icon: string,
-  gradientFrom: string,
-  gradientTo: string,
-  accentColor: string
-): string {
-  const svg = `<?xml version="1.0" encoding="UTF-8"?>
-<svg width="400" height="300" viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:${gradientFrom};stop-opacity:1" />
-      <stop offset="100%" style="stop-color:${gradientTo};stop-opacity:1" />
-    </linearGradient>
-    <filter id="glow">
-      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-      <feMerge>
-        <feMergeNode in="coloredBlur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
-  </defs>
-  <rect width="400" height="300" fill="url(#bgGradient)"/>
-  <circle cx="320" cy="60" r="80" fill="white" opacity="0.08"/>
-  <circle cx="80" cy="240" r="100" fill="white" opacity="0.05"/>
-  <circle cx="350" cy="250" r="50" fill="white" opacity="0.06"/>
-  <g filter="url(#glow)" transform="translate(200, 120)">
-    <text x="0" y="0" text-anchor="middle" dominant-baseline="middle" font-size="72" style="font-family: system-ui, -apple-system, sans-serif;">${icon}</text>
-  </g>
-  <rect x="40" y="200" width="320" height="2" rx="1" fill="white" opacity="0.2"/>
-  <text x="200" y="240" text-anchor="middle" fill="white" font-size="22" font-weight="bold" style="font-family: system-ui, -apple-system, sans-serif;">${title}</text>
-  <text x="200" y="268" text-anchor="middle" fill="white" opacity="0.7" font-size="12" style="font-family: system-ui, -apple-system, sans-serif;">SubSilicon Editor Template</text>
-  <rect x="20" y="20" width="60" height="24" rx="12" fill="${accentColor}" opacity="0.9"/>
-  <text x="50" y="36" text-anchor="middle" fill="white" font-size="11" font-weight="600" style="font-family: system-ui, -apple-system, sans-serif;">
-    ${category === 'beginner' ? '入门' : category === 'romance' ? '恋爱' : category === 'mystery' ? '悬疑' : category === 'horror' ? '恐怖' : '冒险'}
-  </text>
-</svg>`
-  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
-}
-
 function createTemplateCharacter(
   id: string,
   name: string,
@@ -87,7 +46,7 @@ const tutorialTemplate: StoryTemplate = {
   id: 'beginner-tutorial',
   name: '新手教程',
   description: '最小可运行示例：1 个对话 + 1 个选择 + 1 个结局，演示节点与连线的关系。完成它即掌握 SubSilicon Editor 的基本用法。',
-  thumbnail: generateTemplateThumbnail('新手教程', 'beginner', '🎯', '#10B981', '#059669', '#047857'),
+  thumbnail: 'https://picsum.photos/seed/tutorial0/400/300',
   category: 'beginner',
   difficulty: 'easy',
   estimatedTime: '3分钟',
@@ -135,7 +94,7 @@ const tutorialTemplate: StoryTemplate = {
         position: { x: 250, y: 360 },
         data: {
           title: '教程完成',
-          text: '恭喜你完成了新手教程！现在你可以开始创作属于自己的 AI NPC 群像互动叙事了。',
+          text: '恭喜你完成了新手教程！现在你可以开始创作属于自己的互动故事了。',
           endingType: 'good',
         },
       },
@@ -158,7 +117,7 @@ const beginnerTemplate: StoryTemplate = {
   id: 'beginner-choice',
   name: '选择冒险',
   description: '最基础的分支选择故事，适合新手入门。包含起始节点、两个选择分支和两个结局。',
-  thumbnail: generateTemplateThumbnail('选择冒险', 'beginner', '🚀', '#3B82F6', '#1D4ED8', '#1E40AF'),
+  thumbnail: 'https://picsum.photos/seed/template1/400/300',
   category: 'beginner',
   difficulty: 'easy',
   estimatedTime: '10分钟',
@@ -239,7 +198,7 @@ const romanceTemplate: StoryTemplate = {
   id: 'romance-hearts',
   name: '心动瞬间',
   description: '包含角色好感度变量的恋爱故事。玩家的选择会影响与角色的关系走向。',
-  thumbnail: generateTemplateThumbnail('心动瞬间', 'romance', '💕', '#EC4899', '#DB2777', '#BE185D'),
+  thumbnail: 'https://picsum.photos/seed/template2/400/300',
   category: 'romance',
   difficulty: 'medium',
   estimatedTime: '30分钟',
@@ -330,7 +289,7 @@ const mysteryTemplate: StoryTemplate = {
   id: 'mystery-detective',
   name: '迷雾真相',
   description: '收集线索、解开谜题的悬疑推理故事。玩家需要找到关键线索才能揭露真相。',
-  thumbnail: generateTemplateThumbnail('迷雾真相', 'mystery', '🔍', '#6366F1', '#4F46E5', '#4338CA'),
+  thumbnail: 'https://picsum.photos/seed/template3/400/300',
   category: 'mystery',
   difficulty: 'medium',
   estimatedTime: '45分钟',
@@ -421,7 +380,7 @@ const horrorTemplate: StoryTemplate = {
   id: 'horror-night',
   name: '深夜来访',
   description: '营造恐怖氛围的惊悚故事。包含音效、环境变化和紧张的心理描写。',
-  thumbnail: generateTemplateThumbnail('深夜来访', 'horror', '👻', '#1F2937', '#111827', '#0F172A'),
+  thumbnail: 'https://picsum.photos/seed/template4/400/300',
   category: 'horror',
   difficulty: 'medium',
   estimatedTime: '20分钟',
@@ -502,7 +461,7 @@ const adventureTemplate: StoryTemplate = {
   id: 'adventure-quest',
   name: '勇者传说',
   description: '包含CG过场动画的冒险故事。玩家将经历史诗般的冒险旅程。',
-  thumbnail: generateTemplateThumbnail('勇者传说', 'adventure', '⚔️', '#F59E0B', '#D97706', '#B45309'),
+  thumbnail: 'https://picsum.photos/seed/template5/400/300',
   category: 'adventure',
   difficulty: 'hard',
   estimatedTime: '60分钟',

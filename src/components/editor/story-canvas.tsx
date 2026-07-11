@@ -228,7 +228,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
 
   // 同步状态到面板窗口（节流 200ms）
   // 使用 graphRef 跟踪最新 graph，避免在 useEffect 声明后才定义的变量放入依赖数组
-  const graphRef = useRef<StoryGraph | undefined>(undefined)
+  const graphRef = useRef<StoryGraph | undefined>()
   const syncTimerRef = useRef<number | null>(null)
   useEffect(() => {
     if (!panelWindowOpen) return
@@ -1859,6 +1859,8 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
             nodeCount={nodes.length}
             edgeCount={edges.length}
             completionPercent={completionPercent}
+            onOpenCreatorCenter={() => { setCreatorCenterTab('publish'); setShowCreatorCenter(true) }}
+            hasAccount={isCreatorLoggedIn()}
           />
         )}
 
@@ -2010,9 +2012,11 @@ interface StatusBarProps {
   nodeCount: number
   edgeCount: number
   completionPercent: number
+  onOpenCreatorCenter?: () => void
+  hasAccount?: boolean
 }
 
-const StatusBar = memo(function StatusBar({ nodeCount, edgeCount, completionPercent }: StatusBarProps) {
+const StatusBar = memo(function StatusBar({ nodeCount, edgeCount, completionPercent, onOpenCreatorCenter, hasAccount }: StatusBarProps) {
   return (
     <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-card/90 backdrop-blur border rounded-lg px-4 py-1.5 shadow-sm text-xs text-muted-foreground z-10">
       <span>{nodeCount} 个节点</span>
@@ -2030,6 +2034,18 @@ const StatusBar = memo(function StatusBar({ nodeCount, edgeCount, completionPerc
               ? '建议使用"查找节点"功能而非手动拖拽'
               : '性能优化模式'}
           </span>
+        </>
+      )}
+      {onOpenCreatorCenter && (
+        <>
+          <span className="w-px h-3 bg-border" />
+          <button
+            onClick={onOpenCreatorCenter}
+            className="flex items-center gap-1 text-emerald-400 hover:text-emerald-300 transition-colors"
+          >
+            <span className={`w-1.5 h-1.5 rounded-full ${hasAccount ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+            {hasAccount ? '发布作品' : '登录发布'}
+          </button>
         </>
       )}
     </div>

@@ -1,3 +1,4 @@
+// 生成缩略图
 export async function generateThumbnail(
   file: File,
   maxWidth: number = 200
@@ -25,6 +26,7 @@ export async function generateThumbnail(
   })
 }
 
+// 将 Blob 转为 data URL
 function blobToDataURL(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
@@ -34,6 +36,7 @@ function blobToDataURL(blob: Blob): Promise<string> {
   })
 }
 
+// 压缩图片为 WebP
 async function compressToWebP(blob: Blob, quality: number = 0.6): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const img = new Image()
@@ -112,6 +115,7 @@ export async function generateVideoThumbnail(file: File): Promise<string> {
   })
 }
 
+// 获取文件扩展名
 function getExtension(filename: string): string {
   return filename.split('.').pop()?.toLowerCase() || ''
 }
@@ -155,6 +159,7 @@ export async function handleVideoImport(file: File): Promise<{
   throw new Error('文件过大，请下载桌面版编辑器后导入')
 }
 
+// 检测文件类型
 export function detectMediaType(file: File): 'image' | 'video' | 'audio' | 'unknown' {
   if (file.type.startsWith('image/')) return 'image'
   if (file.type.startsWith('video/')) return 'video'
@@ -162,6 +167,7 @@ export function detectMediaType(file: File): 'image' | 'video' | 'audio' | 'unkn
   return 'unknown'
 }
 
+// 验证文件大小
 export function validateFileSize(file: File, type: 'image' | 'video' | 'audio'): { valid: boolean; message?: string } {
   const limits: Record<string, number> = {
     image: 20 * 1024 * 1024,   // 20MB

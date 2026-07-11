@@ -1,3 +1,7 @@
+// 编辑器主题切换管理
+// 切换时给 document.documentElement 添加/移除 'light' class，
+// 同时移除/添加 'dark' class（与 host 应用的 globals.css 配合）。
+
 export type Theme = 'dark' | 'light'
 
 const STORAGE_KEY = 'subsilicon-editor-theme'
@@ -22,11 +26,13 @@ export function setTheme(theme: Theme): void {
   try {
     window.localStorage.setItem(STORAGE_KEY, theme)
   } catch {
+    // 忽略写入失败
   }
   // 通知监听者
   window.dispatchEvent(new CustomEvent('subsilicon-theme-change', { detail: theme }))
 }
 
+/** 切换主题 */
 export function toggleTheme(): Theme {
   const next: Theme = getCurrentTheme() === 'dark' ? 'light' : 'dark'
   setTheme(next)
@@ -40,6 +46,7 @@ export function getStoredTheme(): Theme | null {
     const v = window.localStorage.getItem(STORAGE_KEY)
     if (v === 'dark' || v === 'light') return v
   } catch {
+    // 忽略
   }
   return null
 }

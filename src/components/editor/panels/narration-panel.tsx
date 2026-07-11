@@ -130,33 +130,6 @@ export function NarrationPanel({ node, onUpdateNode }: BasePanelProps) {
         </div>
       </div>
 
-      {/* 音频控制 */}
-      <div className="space-y-2 pt-2 border-t border-border/40">
-        <Label className="text-xs">背景音乐 (BGM)</Label>
-        <div className="flex items-center gap-2">
-          <Input
-            value={(data as any).bgm || ''}
-            onChange={(e) => onUpdateNode(id, { ...data, bgm: e.target.value })}
-            placeholder="BGM URL"
-            className="text-sm flex-1"
-          />
-          {(data as any).bgm && (
-            <button onClick={() => onUpdateNode(id, { ...data, bgm: '' })}
-              className="text-xs text-red-400 hover:text-red-600 px-2">清除</button>
-          )}
-        </div>
-        <div className="space-y-1">
-          <div className="flex justify-between text-[10px] text-muted-foreground">
-            <span>音量</span>
-            <span>{Math.round(((data as any).bgmVolume ?? 0.3) * 100)}%</span>
-          </div>
-          <input type="range" min="0" max="1" step="0.05"
-            value={(data as any).bgmVolume ?? 0.3}
-            onChange={(e) => onUpdateNode(id, { ...data, bgmVolume: Number(e.target.value) })}
-            className="w-full accent-purple-500" />
-        </div>
-      </div>
-
       {/* 预览 UI 定制 */}
       <div className="flex items-center gap-2 pt-1">
         <div className="flex-1 h-px bg-border" />

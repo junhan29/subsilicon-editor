@@ -9,6 +9,7 @@ import {
   Play, Pause, Scissors, SkipBack, SkipForward, Undo2, Redo2,
 } from 'lucide-react'
 
+// ---- 图片编辑器 ----
 interface ImageEditorProps {
   src: string
   onChange: (edited: string) => void
@@ -199,6 +200,7 @@ export function ImageEditor({ src, onChange }: ImageEditorProps) {
   )
 }
 
+// ---- 音频修剪器 ----
 interface AudioTrimmerProps {
   duration: number // 总时长（秒）
   onChange: (start: number, end: number) => void
@@ -259,6 +261,7 @@ export function AudioTrimmer({ duration, onChange }: AudioTrimmerProps) {
   )
 }
 
+// ---- 视频修剪器 ----
 interface VideoTrimmerProps {
   duration: number
   onChange: (start: number, end: number) => void

@@ -24,7 +24,6 @@ import type {
   ComicAudio,
 } from '@editor/types/editor'
 import { GROUP_COLORS } from '@editor/types/editor'
-import { NODE_TYPE_LABELS } from '@editor/constants'
 import { showToast } from '../components/editor/toast'
 import type { HistoryActionType } from '@editor/lib/history-store'
 import {
@@ -32,9 +31,20 @@ import {
   generateOutlineFromNodes,
   parseOutline,
 } from '@editor/lib/outline-parser'
-import { convertOutlineToCanvas, extractCharactersFromOutline } from '@editor/lib/ai-outline-to-canvas'
-import type { AiOutlineResult } from '@editor/lib/ai-service'
 import type { LibraryAsset } from '@editor/lib/asset-library'
+
+/** 节点类型中文标签映射 */
+const NODE_TYPE_LABELS: Record<string, string> = {
+  dialogue: '对话',
+  choice: '选择',
+  gather: '汇聚',
+  condition: '条件',
+  unlock: '付费',
+  ending: '结局',
+  cg: 'CG过场',
+  jump: '跳转',
+  random: '随机',
+}
 
 /** 根据节点类型创建默认节点 data */
 function createNodeData(type: string): Record<string, unknown> {
@@ -150,7 +160,6 @@ export interface UseCanvasStateReturn {
   // === 大纲生成 ===
   handleGenerateNodesFromOutline: (outline: string) => void
   handleGenerateOutlineFromNodes: () => string
-  applyAiOutlineToCanvas: (outline: AiOutlineResult) => void
 
   // === 分组操作 ===
   createGroupFromSelection: () => void
@@ -591,55 +600,6 @@ export function useCanvasState({
     )
   }, [nodes, edges, groups])
 
-  // === AI大纲一键应用到画布 ===
-  const applyAiOutlineToCanvas = useCallback(
-    (outline: AiOutlineResult) => {
-      const allNodes = getNodes()
-      const maxX =
-        allNodes.length > 0
-          ? Math.max(...allNodes.map((n) => n.position.x + (n.width || 280)))
-          : 0
-      const startX = maxX > 0 ? maxX + 200 : 400
-      const startY = 100
-
-      const { nodes: newNodes, edges: newEdges } = convertOutlineToCanvas(outline, {
-        startX,
-        startY,
-      })
-
-      if (newNodes.length === 0) {
-        showToast('info', '大纲中没有可应用的场景')
-        return
-      }
-
-      setNodes((nds) => [...nds, ...newNodes])
-      setEdges((eds) => [...eds, ...newEdges])
-      setSelectedNodeIds(newNodes.map((n) => n.id))
-
-      const extractedChars = extractCharactersFromOutline(outline)
-      if (extractedChars.length > 0) {
-        const existingNames = new Set(characters.map((c) => c.name))
-        const newChars = extractedChars.filter((c) => !existingNames.has(c.name))
-        if (newChars.length > 0) {
-          setCharacters((prev) => [...prev, ...newChars])
-        }
-      }
-
-      const nodeCount = newNodes.length
-      pushHistory('BATCH', `应用 AI 大纲「${outline.title}」(${nodeCount} 个节点)`)
-      showToast('success', `已应用大纲「${outline.title}」，生成 ${nodeCount} 个节点`)
-
-      setTimeout(() => {
-        fitView({
-          nodes: newNodes.map((n) => ({ id: n.id })),
-          padding: 0.3,
-          duration: 500,
-        })
-      }, 100)
-    },
-    [getNodes, setNodes, setEdges, setCharacters, characters, pushHistory, fitView]
-  )
-
   // ==================== 分组功能 ====================
 
   const createGroupFromSelection = useCallback(() => {
@@ -955,7 +915,6 @@ export function useCanvasState({
     insertTemplate,
     handleGenerateNodesFromOutline,
     handleGenerateOutlineFromNodes,
-    applyAiOutlineToCanvas,
     createGroupFromSelection,
     deleteGroup,
     toggleGroupCollapse,

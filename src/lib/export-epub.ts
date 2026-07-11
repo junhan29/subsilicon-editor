@@ -2,12 +2,26 @@ import JSZip from 'jszip'
 import type { StoryGraph, StoryNode, StoryCharacter, ComicScene } from '@editor/types/editor'
 import { topologicalSortNodes } from './export-script'
 
+// EPUB 导出实现
+//
+// EPUB 本质是 ZIP，结构如下：
+//   mimetype                       (不压缩，STORE 模式，必须是第一个文件)
+//   META-INF/container.xml         (容器描述)
+//   OEBPS/content.opf              (清单 + 元数据 + spine)
+//   OEBPS/toc.ncx                  (NCX 导航)
+//   OEBPS/cover.xhtml              (封面页，可选)
+//   OEBPS/chapter-N.xhtml          (内容章节)
+//   OEBPS/cover-image.(jpg|png)   (封面图，可选)
+//
+// 章节切分策略：按场景切换或结局节点切分；首节点构成第一章。
+
 interface Chapter {
   id: string
   title: string
   xhtml: string
 }
 
+// 从 data URL 中解析出二进制和 MIME 类型
 function dataURLToBinary(dataUrl: string): { bytes: Uint8Array; mime: string } | null {
   if (!dataUrl.startsWith('data:')) return null
   const [header, content] = dataUrl.split(',')
@@ -18,6 +32,7 @@ function dataURLToBinary(dataUrl: string): { bytes: Uint8Array; mime: string } |
   return { bytes, mime }
 }
 
+// 转义 XHTML 文本内容
 function escapeXHTML(text: unknown): string {
   if (text == null) return ''
   return String(text)
@@ -28,6 +43,7 @@ function escapeXHTML(text: unknown): string {
     .replace(/'/g, '&apos;')
 }
 
+// 将换行转为 <br/>
 function textToXHTML(text: string): string {
   return escapeXHTML(text)
     .split(/\r?\n/)
@@ -52,6 +68,7 @@ function resolveScene(node: StoryNode, scenes: ComicScene[] | undefined): ComicS
   return null
 }
 
+// 查找角色名
 function findCharacterName(characterId: string | undefined, characters: StoryCharacter[]): string {
   if (!characterId) return '???'
   return characters.find((c) => c.id === characterId)?.name || '???'
@@ -200,6 +217,7 @@ function splitIntoChapters(
   return chapters
 }
 
+// 章节 XHTML 模板
 function buildChapterXHTML(title: string, body: string): string {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -215,6 +233,7 @@ ${body}
 </html>`
 }
 
+// 章节样式表
 function buildStyleCSS(): string {
   return `body { font-family: 'PingFang SC', 'Microsoft YaHei', 'Noto Serif SC', serif; line-height: 1.8; color: #1f2937; background: #fafafa; padding: 1em; }
 h2 { color: #b45309; border-bottom: 2px solid #d4a574; padding-bottom: 0.3em; margin-bottom: 1em; }
@@ -376,9 +395,11 @@ export async function exportToEPUB(graph: StoryGraph): Promise<Blob> {
   const description = graph.description || ''
   const author = 'SubSilicon 创作者'
 
+  // 拓扑排序
   const sortedNodes = topologicalSortNodes(nodes, edges)
   const ctx = { characters, scenes }
 
+  // 切分章节
   const chapters = splitIntoChapters(sortedNodes, ctx)
 
   // 处理封面图（settings.coverImage）
@@ -423,8 +444,10 @@ export async function exportToEPUB(graph: StoryGraph): Promise<Blob> {
   // mimetype 必须是第一个文件，且不压缩
   zip.file('mimetype', 'application/epub+zip', { compression: 'STORE' })
 
+  // META-INF
   zip.file('META-INF/container.xml', buildContainerXML())
 
+  // OEBPS
   const oebps = zip.folder('OEBPS')!
   oebps.file('content.opf', contentOPF)
   oebps.file('toc.ncx', tocNCX)

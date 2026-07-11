@@ -143,7 +143,7 @@ export class AutoSaveManager {
       const parsed = JSON.parse(raw)
       if (!Array.isArray(parsed)) return []
 
-      // schema 校验
+      // schema 校验（P0-5）
       return parsed.filter(validateEditorState)
     } catch {
       return []
@@ -162,6 +162,7 @@ export class AutoSaveManager {
     try {
       localStorage.removeItem(AUTOSAVE_KEY)
     } catch {
+      // ignore
     }
   }
 
@@ -215,6 +216,7 @@ export class EditorRecoveryManager {
       }
       localStorage.setItem(this.storageKey, JSON.stringify(updated))
     } catch {
+      // ignore
     }
   }
 
@@ -246,6 +248,7 @@ export class EditorRecoveryManager {
     try {
       localStorage.removeItem(this.storageKey)
     } catch {
+      // ignore
     }
   }
 

@@ -8,7 +8,7 @@ export async function migrateFromLocalStorage(): Promise<number> {
 
   let migratedCount = 0
 
-  // 迁移作品数据（subsilicon_editor_work_*）
+  // 1. 迁移作品数据（subsilicon_editor_work_*）
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i)
     if (!key || !key.startsWith('subsilicon_editor_work_')) continue
@@ -36,7 +36,7 @@ export async function migrateFromLocalStorage(): Promise<number> {
     }
   }
 
-  // 迁移编辑器设置
+  // 2. 迁移编辑器设置
   const settingsToMigrate = [
     'subsilicon_ai_settings',
     'subsilicon_editor_onboarded',

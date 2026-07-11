@@ -8,7 +8,6 @@ import { AudioManager, createAudioManager } from '@editor/lib/audio-manager'
 import { SaveManager, formatSaveDate, loadSaveSlots, saveSaveSlots, createSaveSlot } from '@editor/lib/save-manager'
 import { TransitionManager, createTransitionManager, TRANSITION_TYPES, type TransitionType } from '@editor/lib/transition-manager'
 import { ExpressionParser, createDefaultContext } from '@editor/lib/expression-parser'
-import { useReaderAnalytics } from '@editor/hooks/use-reader-analytics'
 
 interface StoryPreviewProps {
   graph: StoryGraph
@@ -25,7 +24,6 @@ interface StoryState {
   currentNodeId: string | null
   history: HistoryEntry[]
   variables: Record<string, string | number | boolean>
-  visitCounts: Record<string, number>
 }
 
 interface SaveSlot {
@@ -55,6 +53,7 @@ const ENDING_TYPE_CONFIG: Record<string, { icon: React.ReactNode; label: string;
 
 
 
+// 使用 lib/expression-parser 统一表达式求值（P1-5）
 const evaluateExpression = (
   expr: string,
   variables: Record<string, string | number | boolean>
@@ -101,7 +100,6 @@ export function StoryPreview({ graph, open, onClose }: StoryPreviewProps) {
     currentNodeId: null,
     history: [],
     variables: {},
-    visitCounts: {},
   })
   const [isEnded, setIsEnded] = useState(false)
   const [showVars, setShowVars] = useState(false)
@@ -118,11 +116,6 @@ export function StoryPreview({ graph, open, onClose }: StoryPreviewProps) {
   const contentRef = useRef<HTMLDivElement>(null)
 
   const graphId = graph.title || 'default'
-
-  const { onNodeEnter, onChoice: onAnalyticsChoice, onStoryEnd } = useReaderAnalytics({
-    storyId: graphId,
-    enabled: open,
-  })
 
   useEffect(() => {
     audioManager.current = createAudioManager()
@@ -145,7 +138,7 @@ export function StoryPreview({ graph, open, onClose }: StoryPreviewProps) {
     }
   }, [open, graphId])
 
-  const playAudio = useCallback((channel: 'bgm' | 'bgs' | 'se' | 'voice', url: string, options?: { loop?: boolean; volume?: number }) => {
+  const playAudio = useCallback((channel: 'bgm' | 'bgs' | 'se', url: string, options?: { loop?: boolean; volume?: number }) => {
     audioManager.current?.play(channel, url, {
       loop: options?.loop,
       volume: options?.volume,
@@ -153,19 +146,19 @@ export function StoryPreview({ graph, open, onClose }: StoryPreviewProps) {
     })
   }, [])
 
-  const stopAudio = useCallback((channel: 'bgm' | 'bgs' | 'se' | 'voice') => {
+  const stopAudio = useCallback((channel: 'bgm' | 'bgs' | 'se') => {
     audioManager.current?.stop(channel, channel === 'bgm' || channel === 'bgs' ? 500 : undefined)
   }, [])
 
-  const setChannelVolume = useCallback((channel: 'bgm' | 'bgs' | 'se' | 'voice', volume: number) => {
+  const setChannelVolume = useCallback((channel: 'bgm' | 'bgs' | 'se', volume: number) => {
     audioManager.current?.setChannelVolume(channel, volume)
   }, [])
 
-  const getChannelVolume = useCallback((channel: 'bgm' | 'bgs' | 'se' | 'voice') => {
+  const getChannelVolume = useCallback((channel: 'bgm' | 'bgs' | 'se') => {
     return audioManager.current?.getChannelVolume(channel) ?? 0
   }, [])
 
-  const isChannelPlaying = useCallback((channel: 'bgm' | 'bgs' | 'se' | 'voice') => {
+  const isChannelPlaying = useCallback((channel: 'bgm' | 'bgs' | 'se') => {
     return audioManager.current?.isPlaying(channel) ?? false
   }, [])
 
@@ -196,18 +189,11 @@ export function StoryPreview({ graph, open, onClose }: StoryPreviewProps) {
       currentNodeId: slot.nodeId,
       history: [...slot.history],
       variables: { ...slot.variables },
-      visitCounts: (() => {
-        const counts: Record<string, number> = {}
-        slot.history.forEach((h) => {
-          counts[h.nodeId] = (counts[h.nodeId] || 0) + 1
-        })
-        return counts
-      })(),
     })
     setIsEnded(false)
     setShowSaveMenu(false)
 
-    ;(['bgm', 'bgs', 'se', 'voice'] as const).forEach(channel => {
+    ;(['bgm', 'bgs', 'se'] as const).forEach(channel => {
       stopAudio(channel)
     })
   }, [stopAudio])
@@ -245,26 +231,17 @@ export function StoryPreview({ graph, open, onClose }: StoryPreviewProps) {
     graph.variables.forEach((v) => {
       initialVars[v.name] = v.initialValue
     })
-    const initialVisitCounts: Record<string, number> = {}
-    if (startNode) {
-      initialVisitCounts[startNode.id] = 1
-    }
     setState({
       currentNodeId: startNode?.id || null,
       history: startNode ? [{ nodeId: startNode.id, variables: initialVars }] : [],
       variables: initialVars,
-      visitCounts: initialVisitCounts,
     })
     setIsEnded(false)
 
-    if (startNode) {
-      onNodeEnter(startNode.id, startNode.type)
-    }
-
-    ;(['bgm', 'bgs', 'se', 'voice'] as const).forEach(channel => {
+    ;(['bgm', 'bgs', 'se'] as const).forEach(channel => {
       stopAudio(channel)
     })
-  }, [findStartNode, graph.variables, stopAudio, onNodeEnter])
+  }, [findStartNode, graph.variables, stopAudio])
 
   const handleChoice = useCallback((optionId: string) => {
     const data = currentNode?.data as any
@@ -273,9 +250,8 @@ export function StoryPreview({ graph, open, onClose }: StoryPreviewProps) {
     if (!option) return
 
     let newVariables = { ...state.variables }
-    const applyEffect = (effect: any) => {
-      if (!effect?.variableName) return
-      const { variableName, operation, value } = effect
+    if (option.variableEffect?.variableName) {
+      const { variableName, operation, value } = option.variableEffect
       const currentVal = newVariables[variableName]
 
       if (operation === 'set') {
@@ -292,22 +268,7 @@ export function StoryPreview({ graph, open, onClose }: StoryPreviewProps) {
         } else {
           newVariables[variableName] = value
         }
-      } else if (operation === 'multiply') {
-        if (typeof currentVal === 'number' && typeof value === 'number') {
-          newVariables[variableName] = currentVal * value
-        } else {
-          newVariables[variableName] = value
-        }
       }
-    }
-
-    // 批量效果
-    if (Array.isArray(option.effects)) {
-      option.effects.forEach(applyEffect)
-    }
-    // 兼容旧的单效果字段
-    if (option.variableEffect) {
-      applyEffect(option.variableEffect)
     }
 
     const seUrl = option.seUrl || (currentNode?.data as any)?.seUrl
@@ -319,106 +280,25 @@ export function StoryPreview({ graph, open, onClose }: StoryPreviewProps) {
       (e) => e.source === state.currentNodeId && e.sourceHandle === optionId
     )
     if (edge) {
-      const choiceIndex = options.findIndex((o: any) => o.id === optionId)
-      onAnalyticsChoice(state.currentNodeId!, choiceIndex, option.text)
-
       setState((s) => ({
         ...s,
         currentNodeId: edge.target,
         history: [...s.history, { nodeId: edge.target, variables: newVariables }],
         variables: newVariables,
-        visitCounts: {
-          ...s.visitCounts,
-          [edge.target]: (s.visitCounts[edge.target] || 0) + 1,
-        },
       }))
-      onNodeEnter(edge.target, graph.nodes.find(n => n.id === edge.target)?.type)
     }
-  }, [currentNode, graph.edges, graph.nodes, state.currentNodeId, state.variables, playAudio, onAnalyticsChoice, onNodeEnter])
+  }, [currentNode, graph.edges, state.currentNodeId, state.variables, playAudio])
 
   const continueStory = useCallback(() => {
-    if (!state.currentNodeId) return
-    const node = graph.nodes.find((n) => n.id === state.currentNodeId)
-    if (!node) return
-    const data = node.data as any
-
-    // 结局节点为终止节点，不应继续
-    if (node.type === 'ending') return
-
-    let nextNodeId: string | null = null
-
-    if (node.type === 'condition') {
-      // 条件节点：评估表达式，选择 true/false 分支
-      const expr = data?.expression
-      const result = expr ? evaluateExpression(String(expr), state.variables) : true
-      const handle = result ? 'true' : 'false'
-      const edge = graph.edges.find(
-        (e) => e.source === node.id && e.sourceHandle === handle
-      )
-      if (edge) nextNodeId = edge.target
-    } else if (node.type === 'random') {
-      // 随机节点：按权重选择一个选项
-      const options: Array<{ id?: string; weight?: number; targetId?: string }> = data?.options || []
-      const validOptions = options.filter((o) => o && (o.id || o.targetId))
-      if (validOptions.length > 0) {
-        const totalWeight = validOptions.reduce(
-          (sum, o) => sum + (typeof o.weight === 'number' && o.weight > 0 ? o.weight : 1),
-          0
-        )
-        let roll = Math.random() * totalWeight
-        let chosen = validOptions[0]
-        for (const o of validOptions) {
-          const w = typeof o.weight === 'number' && o.weight > 0 ? o.weight : 1
-          if (roll < w) {
-            chosen = o
-            break
-          }
-          roll -= w
-        }
-        if (chosen.targetId) {
-          // 直接跳转到指定节点
-          if (graph.nodes.some((n) => n.id === chosen.targetId)) {
-            nextNodeId = chosen.targetId
-          }
-        } else if (chosen.id) {
-          const edge = graph.edges.find(
-            (e) => e.source === node.id && e.sourceHandle === chosen.id
-          )
-          if (edge) nextNodeId = edge.target
-        }
-      }
-    } else if (node.type === 'jump') {
-      // 跳转节点：直接跳到目标节点，可选表达式门控
-      const expr = data?.expression
-      const canJump = expr ? evaluateExpression(String(expr), state.variables) : true
-      if (canJump && data?.targetNodeId) {
-        if (graph.nodes.some((n) => n.id === data.targetNodeId)) {
-          nextNodeId = data.targetNodeId
-        }
-      } else if (!data?.targetNodeId) {
-        const edge = graph.edges.find((e) => e.source === node.id)
-        if (edge) nextNodeId = edge.target
-      }
-    } else {
-      // 对话 / 旁白 / CG / 汇聚及其它：跟随第一条出边
-      const edge = graph.edges.find((e) => e.source === node.id)
-      if (edge) nextNodeId = edge.target
-    }
-
-    if (nextNodeId) {
-      const target = nextNodeId
+    const edge = graph.edges.find((e) => e.source === state.currentNodeId)
+    if (edge) {
       setState((s) => ({
         ...s,
-        currentNodeId: target,
-        history: [...s.history, { nodeId: target, variables: s.variables }],
-        visitCounts: {
-          ...s.visitCounts,
-          [target]: (s.visitCounts[target] || 0) + 1,
-        },
+        currentNodeId: edge.target,
+        history: [...s.history, { nodeId: edge.target, variables: s.variables }],
       }))
-      onNodeEnter(target, graph.nodes.find(n => n.id === target)?.type)
     }
-  }, [graph.edges, graph.nodes, state.currentNodeId, state.variables, onNodeEnter])
+  }, [graph.edges, state.currentNodeId])
 
   // 用于快捷键的派生状态（需要在 useEffect 之前定义）
   const isChoiceNode = currentNode?.type === 'choice'
@@ -457,20 +337,15 @@ export function StoryPreview({ graph, open, onClose }: StoryPreviewProps) {
     if (data.seUrl) {
       playAudio('se', data.seUrl, { loop: false, volume: data.seVolume || 0.5 })
     }
-
-    if (data.voiceUrl) {
-      playAudio('voice' as any, data.voiceUrl, { loop: false, volume: 0.8 })
-    }
   }, [currentNode, open, playAudio, stopAudio])
 
   useEffect(() => {
     if (!open) {
-      onStoryEnd()
-      ;(['bgm', 'bgs', 'se', 'voice'] as const).forEach(channel => {
+      ;(['bgm', 'bgs', 'se'] as const).forEach(channel => {
         stopAudio(channel)
       })
     }
-  }, [open, stopAudio, onStoryEnd])
+  }, [open, stopAudio])
 
   useEffect(() => {
     if (!open || !state.currentNodeId || state.history.length === 0) return
@@ -596,20 +471,11 @@ export function StoryPreview({ graph, open, onClose }: StoryPreviewProps) {
           </div>
         )
 
-      case 'choice': {
-        const allOptions: any[] = data.options || []
-        // 过滤掉显示条件不满足的选项
-        const visibleOptions = allOptions.filter((opt) => {
-          if (!opt) return false
-          if (opt.condition && !evaluateExpression(String(opt.condition), state.variables)) {
-            return false
-          }
-          return true
-        })
+      case 'choice':
         return (
           <div className={`space-y-3 ${bgImage ? 'bg-card/95 backdrop-blur-sm rounded-2xl p-6 shadow-xl' : ''}`}>
             <p className="text-sm text-muted-foreground mb-4">请做出选择：</p>
-            {visibleOptions.map((opt: any, i: number) => {
+            {data.options?.map((opt: any, i: number) => {
               const hasConnection = graph.edges.some(
                 (e) => e.source === currentNode.id && e.sourceHandle === opt.id
               )
@@ -631,14 +497,13 @@ export function StoryPreview({ graph, open, onClose }: StoryPreviewProps) {
                 </Button>
               )
             })}
-            {visibleOptions.length === 0 && (
+            {data.options?.length === 0 && (
               <p className="text-sm text-muted-foreground text-center py-4">
                 此节点尚未配置选项
               </p>
             )}
           </div>
         )
-      }
 
       case 'ending':
         const endingConfig = ENDING_TYPE_CONFIG[data.endingType || 'neutral'] || ENDING_TYPE_CONFIG.neutral
@@ -771,15 +636,13 @@ export function StoryPreview({ graph, open, onClose }: StoryPreviewProps) {
   const bgImage = (() => {
     if (!currentNode || currentNode.type === 'cg') return null
     const data = currentNode.data as any
-    // 结局节点：优先使用封面图作为全屏背景
-    if (currentNode.type === 'ending' && data?.coverImage) return data.coverImage
     // 优先级：1. 节点直接设置的背景图 2. 通过 sceneId 查找场景 3. 第一个场景作为默认
     if (data?.backgroundImage) return data.backgroundImage
     if (data?.sceneId && graph.scenes) {
       const scene = graph.scenes.find((s: any) => s.id === data.sceneId)
       if (scene?.backgroundImage) return scene.backgroundImage
     }
-    // 兜底：使用第一个场景的背景图
+    // Fallback: 使用第一个场景的背景图
     if (graph.scenes && graph.scenes.length > 0 && graph.scenes[0].backgroundImage) {
       return graph.scenes[0].backgroundImage
     }

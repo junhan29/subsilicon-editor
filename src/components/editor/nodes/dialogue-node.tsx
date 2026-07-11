@@ -1,15 +1,18 @@
 'use client'
 
-import { memo } from 'react'
+import { memo, useState } from 'react'
 import { Handle, Position } from '@xyflow/react'
-import { MessageCircle, User, Image, Music } from 'lucide-react'
+import { MessageCircle, User, Image, Music, ChevronDown, ChevronUp } from 'lucide-react'
 import { areNodesEqual } from '@editor/lib/utils'
 
 function DialogueNodeComponent({ data, selected }: any) {
+  const [expanded, setExpanded] = useState(false)
   const hasBg = !!data.backgroundImage
   const hasBgm = !!data.bgm
   const hasCharacter = !!data.characterId
   const emotion = data.emotion
+  const text = data.text || ''
+  const isLong = text.length > 80
 
   return (
     <div
@@ -69,11 +72,20 @@ function DialogueNodeComponent({ data, selected }: any) {
           )}
         </div>
 
-        {/* 底部：台词预览（2行截断，灰色小字） */}
+        {/* 底部：台词预览（动态高度，可展开） */}
         <div className="bg-slate-50 dark:bg-slate-800/50 rounded-md px-2 py-1.5">
-          <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">
-            {data.text || '点击编辑台词...'}
+          <p className={`text-xs text-slate-500 dark:text-slate-400 leading-relaxed ${expanded ? '' : 'line-clamp-2'}`}>
+            {text || '点击编辑台词...'}
           </p>
+          {isLong && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setExpanded(!expanded) }}
+              className="flex items-center gap-0.5 mt-0.5 text-[10px] text-violet-500 hover:text-violet-400 transition-colors"
+            >
+              {expanded ? <ChevronUp className="w-2.5 h-2.5" /> : <ChevronDown className="w-2.5 h-2.5" />}
+              {expanded ? '收起' : '展开'}
+            </button>
+          )}
         </div>
 
         {/* 类型标识小图标 */}

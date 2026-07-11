@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { Minus, Square, X, Menu, FolderOpen, Save, Plus, ChevronDown } from 'lucide-react'
-import { isDesktop } from '@editor/lib/editor-versions'
 import { showToast } from './toast'
 
 export function CustomTitleBar() {
@@ -107,8 +106,6 @@ export function CustomTitleBar() {
     document.addEventListener('click', handleClickOutside)
     return () => document.removeEventListener('click', handleClickOutside)
   }, [])
-
-  if (!isDesktop()) return null
 
   const filename = currentPath ? currentPath.split('/').pop() || '未命名作品' : '未命名作品'
 

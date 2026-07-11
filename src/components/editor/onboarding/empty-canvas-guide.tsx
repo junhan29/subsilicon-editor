@@ -82,11 +82,12 @@ function markEmptyGuideCompleted(): void {
 }
 
 export function EmptyCanvasGuide({ onQuickAdd, onStartTour }: EmptyCanvasGuideProps) {
-  // step 为 0/1/2 表示引导中；3 表示已完成或跳过，进入快速添加阶段
+  // step: 0/1/2 表示引导中；3 表示已完成或跳过，进入快速添加阶段
   const [step, setStep] = useState(() => {
     return isEmptyGuideCompleted() ? GUIDE_STEPS.length : 0
   })
 
+  // 阶段：引导卡片 vs 快速添加
   const inGuide = step < GUIDE_STEPS.length
   const current = GUIDE_STEPS[Math.min(step, GUIDE_STEPS.length - 1)]
   const isLastGuideStep = step === GUIDE_STEPS.length - 1
@@ -122,6 +123,10 @@ export function EmptyCanvasGuide({ onQuickAdd, onStartTour }: EmptyCanvasGuidePr
     </div>
   )
 }
+
+// ============================================
+// 渐进式引导卡片
+// ============================================
 
 interface GuideCardProps {
   step: number
@@ -260,6 +265,10 @@ function GuideCard({ step, total, guide, onNext, onSkip, isLast }: GuideCardProp
     </div>
   )
 }
+
+// ============================================
+// 快速添加面板（引导结束后显示）
+// ============================================
 
 interface QuickAddPanelProps {
   onQuickAdd: (type: string) => void
