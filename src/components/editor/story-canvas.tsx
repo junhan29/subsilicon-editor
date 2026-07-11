@@ -228,7 +228,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
 
   // 同步状态到面板窗口（节流 200ms）
   // 使用 graphRef 跟踪最新 graph，避免在 useEffect 声明后才定义的变量放入依赖数组
-  const graphRef = useRef<StoryGraph | undefined>()
+  const graphRef = useRef<StoryGraph | undefined>(undefined)
   const syncTimerRef = useRef<number | null>(null)
   useEffect(() => {
     if (!panelWindowOpen) return
