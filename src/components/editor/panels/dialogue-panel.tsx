@@ -1,15 +1,17 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useCallback } from 'react'
 import { Label } from '@editor/components/ui/label'
 import { Input } from '@editor/components/ui/input'
 import { Textarea } from '@editor/components/ui/textarea'
 import { Button } from '@editor/components/ui/button'
 import { Slider } from '@editor/components/ui/slider'
-import { Image, Music, Palette, Type, Eye, X } from 'lucide-react'
+import { Image, Music, Palette, Type, Eye, X, Sparkles } from 'lucide-react'
 import type { BasePanelProps } from './shared-props'
 import { TEXT_ANIMATION_TYPES, ENTER_ANIMATION_TYPES, SPRITE_POSITION_TYPES, DIALOG_STYLE_TYPES, DIALOG_COLOR_OPTIONS } from './shared-props'
 import { useDebouncedState } from '@editor/lib/use-debounced-state'
+import { polishDialogue, type PolishStyle } from '@editor/lib/ai-service'
+import { showToast } from '../toast'
 
 export function DialoguePanel({ node, characters, variables, assets, scenes, onUpdateNode, onOpenAssets }: BasePanelProps) {
   const { data, id } = node
@@ -29,6 +31,27 @@ export function DialoguePanel({ node, characters, variables, assets, scenes, onU
     300,
     (value) => onUpdateNode(id, { ...data, emotion: value })
   )
+  const [isPolishing, setIsPolishing] = useState(false)
+
+  const handlePolish = useCallback(async (style: PolishStyle) => {
+    if (!text.trim() || !characterId) return
+    setIsPolishing(true)
+    try {
+      const char = characters.find((c) => c.id === characterId)
+      const result = await polishDialogue(text, {
+        name: char?.name || '',
+        personality: char?.personality,
+        speechTone: char?.speech?.tone,
+      }, style)
+      setText(result)
+      onUpdateNode(id, { ...data, text: result })
+      showToast('success', '对话已润色')
+    } catch (error) {
+      showToast('error', (error as Error).message)
+    } finally {
+      setIsPolishing(false)
+    }
+  }, [text, characterId, characters, data, id, onUpdateNode, setText])
 
   return (
     <>
@@ -79,7 +102,15 @@ export function DialoguePanel({ node, characters, variables, assets, scenes, onU
       </div>
 
       <div className="space-y-2">
-        <Label className="text-xs">台词内容</Label>
+        <div className="flex items-center justify-between">
+          <Label className="text-xs">台词内容</Label>
+          <div className="flex items-center gap-1">
+            <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
+              <Sparkles className="w-3 h-3 text-amber-500" />
+              AI 润色
+            </span>
+          </div>
+        </div>
         <Textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
@@ -90,6 +121,18 @@ export function DialoguePanel({ node, characters, variables, assets, scenes, onU
           placeholder="输入角色台词..."
           className="min-h-[100px] resize-none text-sm"
         />
+        <div className="grid grid-cols-4 gap-1">
+          {(['general', 'vivid', 'concise', 'literary'] as PolishStyle[]).map((style) => (
+            <button
+              key={style}
+              onClick={() => handlePolish(style)}
+              disabled={isPolishing || !text.trim() || !characterId}
+              className="py-1 px-1.5 text-[10px] rounded border border-border/60 hover:border-amber-500/50 hover:bg-amber-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isPolishing ? '...' : style === 'general' ? '自然' : style === 'vivid' ? '生动' : style === 'concise' ? '精简' : '文学'}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="space-y-2">

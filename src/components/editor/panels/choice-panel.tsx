@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { Label } from '@editor/components/ui/label'
 import { Input } from '@editor/components/ui/input'
 import { Button } from '@editor/components/ui/button'
@@ -10,6 +10,9 @@ import type { BasePanelProps } from './shared-props'
 export function ChoicePanel({ node, variables, onUpdateNode }: BasePanelProps) {
   const { data, id } = node
   const [newOptionText, setNewOptionText] = useState('')
+  // 本地 state 缓存输入值，避免 IME 组合时 React 将 DOM 值拉回旧 prop
+  const [textCache, setTextCache] = useState<Record<number, string>>({})
+  const [varCache, setVarCache] = useState<Record<number, string>>({})
   const debounceTimerRef = useRef<Map<string, NodeJS.Timeout>>(new Map())
 
   useEffect(() => {
@@ -19,32 +22,52 @@ export function ChoicePanel({ node, variables, onUpdateNode }: BasePanelProps) {
     }
   }, [])
 
+  const flushText = useCallback((index: number, text: string, opt: any) => {
+    const newOptions = [...(data as any).options]
+    newOptions[index] = { ...opt, text }
+    onUpdateNode(id, { ...data, options: newOptions })
+    setTextCache((prev) => {
+      const next = { ...prev }
+      delete next[index]
+      return next
+    })
+  }, [data, id, onUpdateNode])
+
   const debouncedUpdateOptionText = (index: number, opt: any, text: string) => {
+    setTextCache((prev) => ({ ...prev, [index]: text }))
     const key = `text-${index}`
     if (debounceTimerRef.current.has(key)) {
       clearTimeout(debounceTimerRef.current.get(key)!)
     }
     const timer = setTimeout(() => {
-      const newOptions = [...(data as any).options]
-      newOptions[index] = { ...opt, text }
-      onUpdateNode(id, { ...data, options: newOptions })
+      flushText(index, text, opt)
       debounceTimerRef.current.delete(key)
     }, 300)
     debounceTimerRef.current.set(key, timer)
   }
 
-  const debouncedUpdateVariableValue = (index: number, opt: any, value: string | number | boolean) => {
+  const flushVarValue = (index: number, val: string | number | boolean, opt: any) => {
+    const newOptions = [...(data as any).options]
+    newOptions[index] = {
+      ...opt,
+      variableEffect: { ...opt.variableEffect, value: val },
+    }
+    onUpdateNode(id, { ...data, options: newOptions })
+    setVarCache((prev) => {
+      const next = { ...prev }
+      delete next[index]
+      return next
+    })
+  }
+
+  const debouncedUpdateVariableValue = (index: number, val: string | number | boolean, opt: any) => {
+    setVarCache((prev) => ({ ...prev, [index]: String(val) }))
     const key = `var-val-${index}`
     if (debounceTimerRef.current.has(key)) {
       clearTimeout(debounceTimerRef.current.get(key)!)
     }
     const timer = setTimeout(() => {
-      const newOptions = [...(data as any).options]
-      newOptions[index] = {
-        ...opt,
-        variableEffect: { ...opt.variableEffect, value },
-      }
-      onUpdateNode(id, { ...data, options: newOptions })
+      flushVarValue(index, val, opt)
       debounceTimerRef.current.delete(key)
     }, 300)
     debounceTimerRef.current.set(key, timer)
@@ -60,7 +83,7 @@ export function ChoicePanel({ node, variables, onUpdateNode }: BasePanelProps) {
               <div className="flex items-center gap-2">
                 <span className="text-xs text-muted-foreground w-5 shrink-0">{i + 1}</span>
                 <Input
-                  value={opt.text}
+                  value={textCache[i] ?? opt.text}
                   onChange={(e) => debouncedUpdateOptionText(i, opt, e.target.value)}
                   onBlur={() => {
                     const key = `text-${i}`
@@ -68,9 +91,8 @@ export function ChoicePanel({ node, variables, onUpdateNode }: BasePanelProps) {
                       clearTimeout(debounceTimerRef.current.get(key)!)
                       debounceTimerRef.current.delete(key)
                     }
-                    const newOptions = [...(data as any).options]
-                    newOptions[i] = { ...opt, text: opt.text }
-                    onUpdateNode(id, { ...data, options: newOptions })
+                    const currentText = textCache[i] ?? opt.text
+                    flushText(i, currentText, opt)
                   }}
                   className="text-sm h-8 flex-1"
                 />
@@ -142,13 +164,13 @@ export function ChoicePanel({ node, variables, onUpdateNode }: BasePanelProps) {
                         <option value="subtract">-减</option>
                       </select>
                       <Input
-                        value={String(opt.variableEffect.value ?? '')}
+                        value={varCache[i] ?? String(opt.variableEffect.value ?? '')}
                         onChange={(e) => {
                           const v = variables.find((v) => v.name === opt.variableEffect.variableName)
                           let val: string | number | boolean = e.target.value
                           if (v?.type === 'number') val = Number(e.target.value) || 0
                           if (v?.type === 'boolean') val = e.target.value === 'true'
-                          debouncedUpdateVariableValue(i, opt, val)
+                          debouncedUpdateVariableValue(i, val, opt)
                         }}
                         onBlur={() => {
                           const key = `var-val-${i}`
@@ -157,15 +179,11 @@ export function ChoicePanel({ node, variables, onUpdateNode }: BasePanelProps) {
                             debounceTimerRef.current.delete(key)
                           }
                           const v = variables.find((v) => v.name === opt.variableEffect.variableName)
-                          let val: string | number | boolean = opt.variableEffect.value
-                          if (v?.type === 'number') val = Number(opt.variableEffect.value) || 0
-                          if (v?.type === 'boolean') val = opt.variableEffect.value === 'true'
-                          const newOptions = [...(data as any).options]
-                          newOptions[i] = {
-                            ...opt,
-                            variableEffect: { ...opt.variableEffect, value: val },
-                          }
-                          onUpdateNode(id, { ...data, options: newOptions })
+                          const rawVal = varCache[i] ?? String(opt.variableEffect.value ?? '')
+                          let val: string | number | boolean = rawVal
+                          if (v?.type === 'number') val = Number(rawVal) || 0
+                          if (v?.type === 'boolean') val = rawVal === 'true'
+                          flushVarValue(i, val, opt)
                         }}
                         className="h-6 text-[10px] flex-1 min-w-0"
                         placeholder="值"

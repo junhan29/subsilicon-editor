@@ -57,7 +57,7 @@ const DEFAULT_BUILTIN: SubmitProvider[] = [
     name: 'SubSilicon 作品墙',
     apiUrl: 'https://subsilicon.cn/api/creator/preview/submit',
     authHeader: 'X-Submit-Token',
-    authToken: typeof process !== 'undefined' ? process.env.SUBMIT_TOKEN || '' : '',
+    authToken: 'subsilicon-preview-submit-2026',
     enabled: true,
     builtin: true,
     description: 'SubSilicon 官方作品展示墙',

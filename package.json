@@ -1,6 +1,6 @@
 {
   "name": "subsilicon-editor",
-  "version": "1.2.2",
+  "version": "1.3.0",
   "license": "MIT",
   "description": "零代码可视化互动叙事编辑器 | Zero-code visual interactive narrative editor",
   "keywords": [
@@ -26,7 +26,6 @@
     "electron:build": "vite build && node desktop/build.cjs && electron-builder",
     "electron:build:win": "vite build && node desktop/build.cjs && electron-builder --win",
     "electron:build:mac": "vite build && node desktop/build.cjs && electron-builder --mac",
-    "electron:build:linux": "vite build && node desktop/build.cjs && electron-builder --linux",
     "electron:build:all": "vite build && node desktop/build.cjs && electron-builder -mw",
     "electron:pack": "vite build && node desktop/build.cjs && electron-builder --dir"
   },
@@ -184,78 +183,6 @@
           "path": "/Applications"
         }
       ]
-    },
-    "linux": {
-      "target": [
-        {
-          "target": "AppImage",
-          "arch": [
-            "x64"
-          ]
-        },
-        {
-          "target": "deb",
-          "arch": [
-            "x64"
-          ]
-        },
-        {
-          "target": "tar.gz",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-      "icon": "build/icon.png",
-      "artifactName": "${productName}-${version}-linux-${arch}.${ext}",
-      "category": "Office",
-      "maintainer": "SubSilicon Team <contact@subsilicon.cn>",
-      "vendor": "SubSilicon",
-      "description": "Zero-code visual interactive narrative editor"
-    },
-    "deb": {
-      "packageCategory": "editors",
-      "priority": "optional",
-      "depends": [
-        "libgtk-3-0",
-        "libnotify4",
-        "libnss3",
-        "libxss1",
-        "libxtst6",
-        "xdg-utils",
-        "libatspi2.0-0",
-        "libuuid1",
-        "libsecret-1-0"
-      ],
-      "recommends": [
-        "pulseaudio | libasound2"
-      ],
-      "fpm": [
-        "--deb-compression",
-        "xz"
-      ]
-    },
-    "rpm": {
-      "packageCategory": "Editors",
-      "depends": [
-        "gtk3",
-        "libnotify",
-        "nss",
-        "libXScrnSaver",
-        "libXtst",
-        "xdg-utils",
-        "at-spi2-core",
-        "libuuid",
-        "libsecret"
-      ],
-      "fpm": [
-        "--rpm-compression",
-        "xz"
-      ]
-    },
-    "appImage": {
-      "category": "Office",
-      "license": "LICENSE"
     },
     "publish": [
       {

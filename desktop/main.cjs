@@ -9,6 +9,7 @@ const isMac = process.platform === 'darwin'
 const isWin = process.platform === 'win32'
 
 let mainWindow = null
+let panelWindow = null
 
 function createWindow() {
   const windowOptions = {
@@ -68,7 +69,10 @@ app.whenReady().then(() => {
   createWindow()
   setupAutoUpdate()
   if (!isDev) {
-    autoUpdater.checkForUpdates().catch(() => {})
+    console.log('[auto-update] app ready, current version:', app.getVersion())
+    autoUpdater.checkForUpdates().catch(err => {
+      console.error('[auto-update] startup check failed:', err.message)
+    })
   }
 
   app.on('activate', () => {
@@ -91,10 +95,13 @@ app.on('before-quit', () => {
 })
 
 ipcMain.handle('readFile', async (event, filePath) => {
+  console.log('[main] readFile called:', filePath)
   try {
     const data = fs.readFileSync(filePath)
+    console.log('[main] readFile success, size:', data.length)
     return { success: true, data: Array.from(data) }
   } catch (error) {
+    console.error('[main] readFile error:', error.message)
     return { success: false, error: error.message }
   }
 })
@@ -216,6 +223,51 @@ ipcMain.handle('getRecentFiles', async () => {
   }
 })
 
+ipcMain.handle('addRecentFile', async (event, filePath) => {
+  try {
+    const recentFilesPath = path.join(app.getPath('userData'), 'recent-files.json')
+    let files = []
+    if (fs.existsSync(recentFilesPath)) {
+      files = JSON.parse(fs.readFileSync(recentFilesPath, 'utf-8')) || []
+    }
+    files = files.filter(f => f !== filePath)
+    files.unshift(filePath)
+    files = files.slice(0, 10)
+    fs.writeFileSync(recentFilesPath, JSON.stringify(files, null, 2))
+    return { success: true, files }
+  } catch (error) {
+    return { success: false, error: error.message }
+  }
+})
+
+ipcMain.handle('removeRecentFile', async (event, filePath) => {
+  try {
+    const recentFilesPath = path.join(app.getPath('userData'), 'recent-files.json')
+    let files = []
+    if (fs.existsSync(recentFilesPath)) {
+      files = JSON.parse(fs.readFileSync(recentFilesPath, 'utf-8')) || []
+    }
+    files = files.filter(f => f !== filePath)
+    fs.writeFileSync(recentFilesPath, JSON.stringify(files, null, 2))
+    return { success: true, files }
+  } catch (error) {
+    return { success: false, error: error.message }
+  }
+})
+
+ipcMain.handle('getDefaultProjectsDir', async () => {
+  try {
+    const documentsDir = app.getPath('documents')
+    const projectsDir = path.join(documentsDir, 'SubSilicon Projects')
+    if (!fs.existsSync(projectsDir)) {
+      fs.mkdirSync(projectsDir, { recursive: true })
+    }
+    return { success: true, path: projectsDir }
+  } catch (error) {
+    return { success: false, error: error.message }
+  }
+})
+
 ipcMain.handle('getVersion', async () => {
   return { success: true, version: app.getVersion() }
 })
@@ -247,7 +299,7 @@ function setupAutoUpdate() {
 
   autoUpdater.setFeedURL({
     provider: 'generic',
-    url: 'https://subsilicon.cn/api/updates',
+    url: 'https://subsilicon.cn/releases/',
     channel: 'latest',
   })
 
@@ -255,10 +307,12 @@ function setupAutoUpdate() {
   autoUpdater.autoInstallOnAppQuit = true
 
   autoUpdater.on('checking-for-update', () => {
+    console.log('[auto-update] checking for update...')
     mainWindow?.webContents.send('update-checking')
   })
 
   autoUpdater.on('update-available', (info) => {
+    console.log('[auto-update] update available:', info.version)
     mainWindow?.webContents.send('update-available', {
       version: info.version,
       releaseDate: info.releaseDate,
@@ -267,10 +321,12 @@ function setupAutoUpdate() {
   })
 
   autoUpdater.on('update-not-available', () => {
+    console.log('[auto-update] no update available')
     mainWindow?.webContents.send('update-not-available')
   })
 
   autoUpdater.on('error', (err) => {
+    console.error('[auto-update] error:', err.message)
     mainWindow?.webContents.send('update-error', err.message)
   })
 
@@ -296,13 +352,20 @@ ipcMain.on('checkForUpdates', () => {
     }, 2000)
     return
   }
+  console.log('[auto-update] manual check triggered')
   autoUpdater.checkForUpdates().catch(err => {
+    console.error('[auto-update] check failed:', err.message)
     mainWindow?.webContents.send('update-error', err.message)
   })
 })
 
 ipcMain.on('downloadUpdate', () => {
   if (isDev) return
+  // macOS 无代码签名，electron-updater 无法自动安装，直接打开下载页
+  if (isMac) {
+    shell.openExternal('https://subsilicon.cn/download')
+    return
+  }
   autoUpdater.downloadUpdate().catch(err => {
     mainWindow?.webContents.send('update-error', err.message)
   })
@@ -315,4 +378,83 @@ ipcMain.on('installUpdate', () => {
 
 ipcMain.on('openExternal', (event, url) => {
   shell.openExternal(url)
+})
+
+ipcMain.handle('openPanelWindow', async () => {
+  if (panelWindow && !panelWindow.isDestroyed()) {
+    panelWindow.focus()
+    return { success: true, alreadyOpen: true }
+  }
+
+  const mainBounds = mainWindow?.getBounds() || { x: 0, y: 0, width: 1400 }
+  
+  panelWindow = new BrowserWindow({
+    width: 420,
+    height: 700,
+    minWidth: 360,
+    minHeight: 500,
+    x: mainBounds.x + mainBounds.width,
+    y: mainBounds.y + 40,
+    title: 'SubSilicon - 管理面板',
+    icon: isWin ? path.join(__dirname, '../build/icon.ico') : path.join(__dirname, '../build/icon.png'),
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.cjs'),
+      nodeIntegration: false,
+      contextIsolation: true,
+      sandbox: false,
+      webSecurity: !isDev,
+    },
+    frame: true,
+    titleBarStyle: isMac ? 'default' : 'default',
+    trafficLightPosition: isMac ? { x: 12, y: 12 } : undefined,
+  })
+
+  if (isMac) {
+    panelWindow.setTitleBarOverlay({
+      color: '#1e293b',
+      symbolColor: '#e2e8f0',
+      height: 28,
+    })
+  }
+
+  if (isDev) {
+    panelWindow.loadURL('http://localhost:5173/panel')
+  } else {
+    panelWindow.loadFile(path.join(__dirname, '../dist/index.html'), {
+      hash: 'panel',
+    })
+  }
+
+  panelWindow.on('closed', () => {
+    panelWindow = null
+    mainWindow?.webContents.send('panel-closed')
+  })
+
+  panelWindow.webContents.on('will-navigate', (event, url) => {
+    if (url !== panelWindow.webContents.getURL()) {
+      event.preventDefault()
+      shell.openExternal(url)
+    }
+  })
+
+  panelWindow.webContents.setWindowOpenHandler(({ url }) => {
+    shell.openExternal(url)
+    return { action: 'deny' }
+  })
+
+  return { success: true, alreadyOpen: false }
+})
+
+ipcMain.on('closePanelWindow', () => {
+  if (panelWindow && !panelWindow.isDestroyed()) {
+    panelWindow.close()
+  }
+})
+
+ipcMain.on('panel-window-message', (event, message) => {
+  mainWindow?.webContents.send('panel-window-message', message)
+})
+
+ipcMain.on('main-window-message', (event, message) => {
+  panelWindow?.webContents.send('main-window-message', message)
 })

@@ -310,7 +310,7 @@ export async function publishToPlatform(
       platformConfigId: config.id,
       title: title.trim(),
       status: res.ok ? 'pending' : 'rejected',
-      rejectReason: res.ok ? undefined : (responseData.message || `服务器响应异常（${res.status}）`),
+      rejectReason: res.ok ? undefined : (responseData.error || responseData.message || `服务器响应异常（${res.status}）`),
       platformResponse: responseData,
       publishedAt: Date.now(),
       updatedAt: Date.now(),

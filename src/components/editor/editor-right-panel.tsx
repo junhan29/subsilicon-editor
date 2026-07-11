@@ -1,28 +1,18 @@
 'use client'
 
-import { useState, useCallback, useEffect, memo } from 'react'
-import { shallowEqual } from '@editor/lib/utils'
-import { Settings, Users, Image, Music, ChevronDown, ChevronUp, X, Plus, Edit3, Layers, BarChart3, Trash2, ShieldCheck, GitBranch, MessageSquare, Activity, Lock, Sparkles, Wand2 } from 'lucide-react'
-import { Button } from '@editor/components/ui/button'
+import { useState, useCallback, memo } from 'react'
+import { Settings, Users, Image, Music, ChevronDown, ChevronUp, X, Plus, Edit3, Layers, BarChart3, GitBranch, MessageSquare, Activity } from 'lucide-react'
 import { LivePreview } from './live-preview'
 import { PropertyPanel } from './property-panel'
 import { PuzzleEditor } from './puzzle/puzzle-editor'
 import { VariablePanel } from './editor-right-panel/variable-panel'
-import { QualityPanel } from './quality-panel'
 import { VersionPanel } from './version-panel'
 import { AnnotationPanel } from './annotation-panel'
 import { MemoizedWritingStatsPanel } from './writing-stats-panel'
-import { MonetizationSettingsPanel } from './monetization-settings-panel'
-import { AiSettingsPanel } from './ai-settings-panel'
-import { AiStoryPanel } from './ai-story-panel'
-import { AnalyticsPanel } from './analytics-panel'
-import { PluginManagerPanel } from './plugin-manager-panel'
 import { generateDefaultAvatar } from '@editor/lib/avatar-utils'
 import type { StoryNode, StoryCharacter, StoryEdge, StoryVariable, ComicScene, ComicAudio, NodeAnnotation, AnnotationType, StoryGraph } from '@editor/types/editor'
 import type { StoryGraphSnapshot } from '@editor/lib/history-store'
 import type { VersionSnapshot } from '@editor/lib/version-store'
-import type { MonetizationConfig } from '@editor/lib/work-monetization'
-import { generateWorkId } from '@editor/lib/work-monetization'
 
 interface EditorRightPanelProps {
   selectedNode: StoryNode | null
@@ -68,8 +58,6 @@ interface EditorRightPanelProps {
   onReplyAnnotation?: (id: string, text: string) => void
   onDeleteAnnotation?: (id: string) => void
   onOpenAnnotationDialog?: (nodeId: string) => void
-  monetization?: MonetizationConfig | null
-  onMonetizationChange?: (config: MonetizationConfig) => void
   workId?: string
 }
 
@@ -117,21 +105,11 @@ function EditorRightPanel({
   onReplyAnnotation,
   onDeleteAnnotation,
   onOpenAnnotationDialog,
-  monetization,
-  onMonetizationChange,
-  workId = generateWorkId(),
+  workId = 'default',
 }: EditorRightPanelProps) {
   const [previewCollapsed, setPreviewCollapsed] = useState(false)
   const [internalActiveTab, setInternalActiveTab] = useState('properties')
   const [tabGroup, setTabGroup] = useState<'edit' | 'manage'>('edit')
-  const activeTab = activeTabProp ?? internalActiveTab
-  const setActiveTab = (tab: string) => {
-    if (onTabChange) {
-      onTabChange(tab)
-    } else {
-      setInternalActiveTab(tab)
-    }
-  }
   const [sceneName, setSceneName] = useState('')
   const [sceneImage, setSceneImage] = useState('')
   const [audioName, setAudioName] = useState('')
@@ -140,6 +118,20 @@ function EditorRightPanel({
   const [editingScene, setEditingScene] = useState<ComicScene | null>(null)
   const [showPuzzleEditor, setShowPuzzleEditor] = useState(false)
   const [editCharId, setEditCharId] = useState<string>('')
+
+  const setActiveTabClean = useCallback((tab: string) => {
+    if (tab !== 'properties') {
+      setEditCharId('')
+    }
+    if (onTabChange) {
+      onTabChange(tab)
+    } else {
+      setInternalActiveTab(tab)
+    }
+  }, [onTabChange])
+
+  const activeTab = activeTabProp ?? internalActiveTab
+  const setActiveTab = setActiveTabClean
 
   const addScene = useCallback(() => {
     if (!sceneName.trim()) return
@@ -244,7 +236,7 @@ function EditorRightPanel({
               编辑
             </button>
             <button
-              onClick={() => { setTabGroup('manage'); setActiveTab('quality') }}
+              onClick={() => { setTabGroup('manage'); setActiveTab('versions') }}
               className={`flex-1 py-1.5 text-xs rounded-md transition-colors ${
                 tabGroup === 'manage' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-slate-200'
               }`}
@@ -315,17 +307,6 @@ function EditorRightPanel({
             {tabGroup === 'manage' && (
               <>
                 <button
-                  onClick={() => setActiveTab('quality')}
-                  className={`flex items-center px-4 py-2.5 text-xs transition-colors ${
-                    activeTab === 'quality'
-                      ? 'bg-slate-800 text-white'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-                  }`}
-                >
-                  <ShieldCheck className="w-3.5 h-3.5 mr-1.5" />
-                  质量
-                </button>
-                <button
                   onClick={() => setActiveTab('versions')}
                   className={`flex items-center px-4 py-2.5 text-xs transition-colors ${
                     activeTab === 'versions'
@@ -353,70 +334,15 @@ function EditorRightPanel({
                   )}
                 </button>
                 <button
-                  onClick={() => setActiveTab('stats')}
+                  onClick={() => setActiveTab('data')}
                   className={`flex items-center px-4 py-2.5 text-xs transition-colors ${
-                    activeTab === 'stats'
+                    activeTab === 'data'
                       ? 'bg-slate-800 text-white'
                       : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
                   }`}
                 >
                   <Activity className="w-3.5 h-3.5 mr-1.5" />
-                  统计
-                </button>
-                <button
-                  onClick={() => setActiveTab('monetization')}
-                  className={`flex items-center px-4 py-2.5 text-xs transition-colors ${
-                    activeTab === 'monetization'
-                      ? 'bg-slate-800 text-white'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-                  }`}
-                >
-                  <Lock className="w-3.5 h-3.5 mr-1.5" />
-                  付费
-                </button>
-                <button
-                  onClick={() => setActiveTab('ai')}
-                  className={`flex items-center px-4 py-2.5 text-xs transition-colors ${
-                    activeTab === 'ai'
-                      ? 'bg-slate-800 text-white'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-                  }`}
-                >
-                  <Sparkles className="w-3.5 h-3.5 mr-1.5" />
-                  AI设置
-                </button>
-                <button
-                  onClick={() => setActiveTab('ai-story')}
-                  className={`flex items-center px-4 py-2.5 text-xs transition-colors ${
-                    activeTab === 'ai-story'
-                      ? 'bg-slate-800 text-white'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-                  }`}
-                >
-                  <Wand2 className="w-3.5 h-3.5 mr-1.5" />
-                  AI创作
-                </button>
-                <button
-                  onClick={() => setActiveTab('analytics')}
-                  className={`flex items-center px-4 py-2.5 text-xs transition-colors ${
-                    activeTab === 'analytics'
-                      ? 'bg-slate-800 text-white'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-                  }`}
-                >
-                  <BarChart3 className="w-3.5 h-3.5 mr-1.5" />
-                  分析
-                </button>
-                <button
-                  onClick={() => setActiveTab('plugins')}
-                  className={`flex items-center px-4 py-2.5 text-xs transition-colors ${
-                    activeTab === 'plugins'
-                      ? 'bg-slate-800 text-white'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-                  }`}
-                >
-                  <Layers className="w-3.5 h-3.5 mr-1.5" />
-                  插件
+                  数据
                 </button>
               </>
             )}
@@ -740,16 +666,6 @@ function EditorRightPanel({
             />
           </div>}
 
-          {activeTab === 'quality' && <div className="flex-1 overflow-hidden p-0 m-0">
-            <QualityPanel
-              nodes={nodes}
-              edges={edges}
-              variables={variables}
-              onNodeClick={(id) => onNodeSelect?.(id)}
-              onEdgeClick={(id) => onEdgeSelect?.(id)}
-            />
-          </div>}
-
           {activeTab === 'versions' && <div className="flex-1 overflow-y-auto p-0">
             <VersionPanel
               versions={versions}
@@ -774,64 +690,11 @@ function EditorRightPanel({
             />
           </div>}
 
-          {activeTab === 'stats' && <div className="flex-1 overflow-hidden p-0 m-0">
-            <MemoizedWritingStatsPanel
+          {activeTab === 'data' && <div className="flex-1 overflow-hidden p-0 m-0">
+            <RightPanelDataTab
               workId={workId}
-              nodeCount={nodes.length}
-              wordCount={nodes.reduce((acc, node) => {
-                const data = node.data as Record<string, unknown> | undefined
-                if (!data) return acc
-                let count = 0
-                if (typeof data.text === 'string') count += data.text.length
-                if (typeof data.prompt === 'string') count += data.prompt.length
-                if (typeof data.title === 'string') count += data.title.length
-                if (Array.isArray(data.options)) {
-                  for (const opt of data.options) {
-                    if (opt && typeof opt === 'object') {
-                      const optObj = opt as Record<string, unknown>
-                      if (typeof optObj.text === 'string') {
-                        count += optObj.text.length
-                      }
-                    }
-                  }
-                }
-                return acc + count
-              }, 0)}
+              nodes={nodes}
             />
-          </div>}
-          
-          {activeTab === 'monetization' && <div className="flex-1 overflow-y-auto p-4 m-0">
-            {graph && onMonetizationChange && (
-              <MonetizationSettingsPanel
-                graph={graph}
-                config={monetization ?? null}
-                onChange={onMonetizationChange}
-                workId={workId}
-              />
-            )}
-          </div>}
-          
-          {activeTab === 'ai' && <div className="flex-1 overflow-y-auto p-4 m-0">
-            <AiSettingsPanel
-              onChange={(config) => {
-                localStorage.setItem('subsilicon_ai_config', JSON.stringify(config))
-              }}
-            />
-          </div>}
-          
-          {activeTab === 'ai-story' && <div className="flex-1 overflow-hidden p-0 m-0">
-            <AiStoryPanel
-              onApplyStory={onApplyStory || (() => {})}
-              onAddCharacters={onAddCharacters || (() => {})}
-            />
-          </div>}
-
-          {activeTab === 'analytics' && <div className="flex-1 overflow-hidden p-0 m-0">
-            <AnalyticsPanel />
-          </div>}
-
-          {activeTab === 'plugins' && <div className="flex-1 overflow-hidden p-0 m-0">
-            <PluginManagerPanel />
           </div>}
         </div>
       </div>
@@ -847,6 +710,37 @@ function EditorRightPanel({
           onSave={handleSaveScene}
         />
       )}
+    </div>
+  )
+}
+
+/** 数据面板：创作统计 */
+function RightPanelDataTab({ workId, nodes }: { workId: string; nodes: StoryNode[] }) {
+  return (
+    <div className="flex flex-col h-full overflow-y-auto">
+      <MemoizedWritingStatsPanel
+        workId={workId}
+        nodeCount={nodes.length}
+        wordCount={nodes.reduce((acc, node) => {
+          const data = node.data as Record<string, unknown> | undefined
+          if (!data) return acc
+          let count = 0
+          if (typeof data.text === 'string') count += data.text.length
+          if (typeof data.prompt === 'string') count += data.prompt.length
+          if (typeof data.title === 'string') count += data.title.length
+          if (Array.isArray(data.options)) {
+            for (const opt of data.options) {
+              if (opt && typeof opt === 'object') {
+                const optObj = opt as Record<string, unknown>
+                if (typeof optObj.text === 'string') {
+                  count += optObj.text.length
+                }
+              }
+            }
+          }
+          return acc + count
+        }, 0)}
+      />
     </div>
   )
 }

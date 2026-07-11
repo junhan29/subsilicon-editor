@@ -1,11 +1,13 @@
 'use client'
 
-import { useState, useEffect, memo } from 'react'
+import { useState, useEffect, memo, useCallback } from 'react'
 import { Button } from '@editor/components/ui/button'
 import { Input } from '@editor/components/ui/input'
 import { Label } from '@editor/components/ui/label'
 import { Textarea } from '@editor/components/ui/textarea'
-import { X, Plus, Trash2, Users, ArrowRight, ChevronDown, ChevronRight, Copy, Check, Layers, MessageSquare } from 'lucide-react'
+import { X, Plus, Trash2, Users, ArrowRight, ChevronDown, ChevronRight, Copy, Check, Layers, MessageSquare, Sparkles } from 'lucide-react'
+import { enrichCharacter, type PolishStyle } from '@editor/lib/ai-service'
+import { showToast } from './toast'
 import type { StoryNode, StoryCharacter, StoryEdge, StoryVariable, CharacterGender, NodeAnnotation } from '@editor/types/editor'
 import {
   NODE_TYPE_LABELS,
@@ -155,12 +157,45 @@ function PropertyPanel({
 }: PropertyPanelProps) {
   const [expandedCharId, setExpandedCharId] = useState<string | null>(null)
   const [copiedCharId, setCopiedCharId] = useState<string | null>(null)
+  const [enrichingCharId, setEnrichingCharId] = useState<string | null>(null)
 
   useEffect(() => {
     if (editCharId) {
       setExpandedCharId(editCharId)
     }
   }, [editCharId])
+
+  const handleEnrichCharacter = useCallback(async (char: StoryCharacter, style: PolishStyle) => {
+    setEnrichingCharId(char.id)
+    try {
+      const result = await enrichCharacter(char, style)
+      onUpdateCharacter({
+        ...char,
+        personality: result.personality.slice(0, 8),
+        appearance: result.appearance.slice(0, 8),
+        background: result.background,
+        speech: {
+          tone: result.speech.tone,
+          catchphrases: result.speech.catchphrases.slice(0, 3),
+          rhythm: char.speech?.rhythm,
+          vocabulary: char.speech?.vocabulary,
+        },
+        skills: result.skills.slice(0, 6),
+        motivation: result.motivation,
+        habits: result.habits.slice(0, 6),
+        fears: result.fears.slice(0, 6),
+        bio: result.bio,
+        occupation: result.occupation || char.occupation,
+        age: result.age || char.age,
+        gender: result.gender || char.gender,
+      })
+      showToast('success', `角色「${char.name}」设定已补充`)
+    } catch (error) {
+      showToast('error', (error as Error).message)
+    } finally {
+      setEnrichingCharId(null)
+    }
+  }, [onUpdateCharacter])
 
   // 选中边时显示边属性面板
   if (selectedEdge) {
@@ -310,6 +345,31 @@ function PropertyPanel({
                     <Input value={char.name}
                       onChange={(e) => onUpdateCharacter({ ...char, name: e.target.value })}
                       className="h-7 text-xs" placeholder="姓名" />
+                  </div>
+
+                  {/* AI 补充设定 */}
+                  <div className="pt-2 border-t border-border/40">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <Label className="text-[10px] flex items-center gap-1">
+                        <Sparkles className="w-3 h-3 text-amber-500" />
+                        AI 补充设定
+                      </Label>
+                    </div>
+                    <div className="grid grid-cols-3 gap-1">
+                      {(['general', 'vivid', 'literary'] as PolishStyle[]).map((style) => (
+                        <button
+                          key={style}
+                          onClick={() => handleEnrichCharacter(char, style)}
+                          disabled={!!enrichingCharId}
+                          className="py-1.5 px-2 text-[10px] rounded border border-border/60 hover:border-amber-500/50 hover:bg-amber-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {enrichingCharId === char.id ? '生成中...' : style === 'general' ? '通用' : style === 'vivid' ? '生动' : '文学'}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-[9px] text-muted-foreground mt-1">
+                      基于已有信息自动补充角色设定
+                    </p>
                   </div>
 
                   {/* 删除角色 */}

@@ -24,7 +24,6 @@ import {
   Sparkles,
   User,
   Library,
-  AlignLeft,
 } from 'lucide-react'
 import { Button } from '@editor/components/ui/button'
 import { Input } from '@editor/components/ui/input'
@@ -47,61 +46,55 @@ const NODE_TYPES: SidebarNodeType[] = [
     type: 'dialogue',
     label: '对话',
     icon: <MessageCircle className="w-5 h-5 text-primary" />,
-    description: '角色台词与对话',
-  },
-  {
-    type: 'narration',
-    label: '旁白',
-    icon: <AlignLeft className="w-5 h-5 text-slate-500" />,
-    description: '叙述与环境描写',
+    description: '角色说话的内容',
   },
   {
     type: 'choice',
     label: '选择',
     icon: <GitBranch className="w-5 h-5 text-amber-500" />,
-    description: '玩家分支选择',
+    description: '让读者做选择，走向不同剧情',
   },
   {
     type: 'gather',
     label: '汇聚',
     icon: <Merge className="w-5 h-5 text-slate-500" />,
-    description: '多分支汇聚到一处',
+    description: '多条路线汇合到一起',
   },
   {
     type: 'condition',
     label: '条件',
     icon: <SplitSquareVertical className="w-5 h-5 text-purple-500" />,
-    description: '按条件判断分支',
+    description: '满足条件走一条路，否则走另一条',
   },
   {
     type: 'unlock',
     label: '付费',
     icon: <Lock className="w-5 h-5 text-orange-500" />,
-    description: '付费解锁内容',
+    description: '读者付费后才能继续看',
   },
   {
     type: 'ending',
     label: '结局',
     icon: <Flag className="w-5 h-5 text-green-500" />,
-    description: '故事结局节点',
+    description: '故事结束的地方',
   },
   {
     type: 'cg',
-    label: 'CG过场',
+    label: '过场',
     icon: <Film className="w-5 h-5 text-purple-500" />,
-    description: '图片/视频过场动画',
+    description: '展示一张图或一段动画',
   },
   {
     type: 'jump',
     label: '跳转',
     icon: <Zap className="w-5 h-5 text-violet-500" />,
-    description: '跳转到指定节点',
+    description: '跳到故事中的另一个位置',
   },
   {
     type: 'random',
     label: '随机',
     icon: <Shuffle className="w-5 h-5 text-cyan-500" />,
-    description: '随机选择分支',
+    description: '随机走向某条路线',
   },
 ]
 
@@ -392,9 +385,9 @@ function EditorSidebar({
                     key={tpl.id}
                     draggable
                     onDragStart={(e) => onTemplateDragStart(e, tpl)}
-                    onClick={() => handleTemplateDoubleClick(tpl)}
-                    className="flex items-center gap-2 p-2 rounded-lg border border-blue-200/50 bg-blue-50/30 hover:bg-blue-100/50 hover:border-blue-300/70 cursor-pointer group transition-all"
-                    title={`${tpl.description}（点击插入）`}
+                    onDoubleClick={() => handleTemplateDoubleClick(tpl)}
+                    className="flex items-center gap-2 p-2 rounded-lg border border-blue-200/50 bg-blue-50/30 hover:bg-blue-100/50 hover:border-blue-300/70 cursor-grab group transition-all"
+                    title={tpl.description}
                   >
                     <div className="w-7 h-7 rounded-md bg-blue-100 flex items-center justify-center shrink-0 group-hover:bg-blue-200 transition-colors">
                       <Layers className="w-3.5 h-3.5 text-blue-600" />
@@ -430,9 +423,9 @@ function EditorSidebar({
                     key={tpl.id}
                     draggable={editingId !== tpl.id}
                     onDragStart={(e) => onTemplateDragStart(e, tpl)}
-                    onClick={() => handleTemplateDoubleClick(tpl)}
-                    className="flex items-center gap-2 p-2 rounded-lg border border-border/60 bg-background hover:bg-accent/50 hover:border-border cursor-pointer group transition-all relative"
-                    title={`${tpl.description}（点击插入）`}
+                    onDoubleClick={() => handleTemplateDoubleClick(tpl)}
+                    className="flex items-center gap-2 p-2 rounded-lg border border-border/60 bg-background hover:bg-accent/50 hover:border-border cursor-grab group transition-all relative"
+                    title={tpl.description}
                   >
                     <div className="w-7 h-7 rounded-md bg-muted flex items-center justify-center shrink-0 group-hover:bg-accent transition-colors">
                       <Layers className="w-3.5 h-3.5 text-muted-foreground" />

@@ -15,10 +15,9 @@ import {
   type Connection,
   type Edge,
   type Node,
-  type Edge as RFEdge,
   type NodeChange,
 } from '@xyflow/react'
-import { Undo2, Redo2, Trash2, X, Copy, ShieldCheck, Layers, ChevronDown, ChevronRight, Pencil, Download, MessageSquare, Lock, Crown, Upload, Play } from 'lucide-react'
+import { Undo2, Redo2, Trash2, X, Copy, Layers, ChevronDown, ChevronRight, Pencil, Download, MessageSquare, Upload, Play } from 'lucide-react'
 import clsx from 'clsx'
 import CustomEdge from './custom-edge'
 import '@xyflow/react/dist/style.css'
@@ -36,9 +35,11 @@ import { GroupNode } from './nodes/group-node'
 import { EditorSidebar } from './editor-sidebar'
 import { EditorRightPanel } from './editor-right-panel'
 import { EmptyCanvasGuide } from './onboarding/empty-canvas-guide'
+import { HelpMenu } from './onboarding/help-menu'
+import { ShortcutsModal } from './onboarding/shortcuts-modal'
 import { showToast, useToast, ToastContainer } from './toast'
 import { A11yAnnouncer, useA11yAnnouncer } from './a11y-announcer'
-import { HistoryStore, createSnapshot, type StoryGraphSnapshot, type HistoryActionType } from '@editor/lib/history-store'
+import { HistoryStore, type StoryGraphSnapshot, type HistoryActionType } from '@editor/lib/history-store'
 import {
   loadVersions,
   saveVersion,
@@ -52,14 +53,11 @@ import { ExportDialog } from './export-dialog'
 import { CreatorCenterDialog } from './creator-center-dialog'
 import { StoryPreview } from './preview/story-preview'
 import { AlignmentLines } from './alignment-lines'
-import type { AlignmentGuide } from '@editor/lib/alignment-guides'
-import type { StoryNode, StoryEdge, StoryCharacter, StoryGraph, ComicScene, ComicAudio, NodeGroup, NodeTemplate, CharacterSprite, NodeAnnotation, AnnotationType } from '@editor/types/editor'
+import type { StoryNode, StoryEdge, StoryCharacter, StoryGraph, ComicScene, ComicAudio, NodeGroup, NodeTemplate, CharacterSprite, NodeAnnotation, AnnotationType, StoryVariable } from '@editor/types/editor'
 import type { MonetizationConfig } from '@editor/lib/work-monetization'
 import { GROUP_COLORS } from '@editor/types/editor'
 import { parseOutline, generateNodesFromOutline, generateOutlineFromNodes } from '@editor/lib/outline-parser'
 import type { LibraryAsset } from '@editor/lib/asset-library'
-import { getCurrentEdition, isDesktop } from '@editor/lib/editor-versions'
-import { getAccount, isLoggedIn } from '@editor/lib/local-account-store'
 import { isLoggedIn as isCreatorLoggedIn, getCurrentAccount as getCreatorAccount, ensureCreatorServiceInit } from '@editor/lib/creator-service'
 import {
   loadAnnotations,
@@ -160,6 +158,10 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
   // 视图切换状态
   const [sidebarVisible, setSidebarVisible] = useState(true)
   const [rightPanelVisible, setRightPanelVisible] = useState(true)
+  // 快捷键面板状态
+  const [showShortcutsModal, setShowShortcutsModal] = useState(false)
+  // 独立面板窗口状态
+  const [panelWindowOpen, setPanelWindowOpen] = useState(false)
   // 主题状态（订阅变化以触发重渲染）
   const [currentTheme, setCurrentTheme] = useState<Theme>('dark')
   const annotationAuthor = useMemo(() => getAnnotationAuthor(), [])
@@ -213,6 +215,57 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
     const unsub = subscribeTheme((t) => setCurrentTheme(t))
     return unsub
   }, [])
+
+  // 监听面板窗口关闭事件
+  useEffect(() => {
+    const api = window.__electronAPI
+    if (!api) return
+    const unsubscribe = api.onPanelClosed(() => {
+      setPanelWindowOpen(false)
+    })
+    return unsubscribe
+  }, [])
+
+  // 同步状态到面板窗口（节流 200ms）
+  // 使用 graphRef 跟踪最新 graph，避免在 useEffect 声明后才定义的变量放入依赖数组
+  const graphRef = useRef<StoryGraph | undefined>(undefined)
+  const syncTimerRef = useRef<number | null>(null)
+  useEffect(() => {
+    if (!panelWindowOpen) return
+    const api = window.__electronAPI
+    if (!api) return
+    if (syncTimerRef.current) {
+      clearTimeout(syncTimerRef.current)
+    }
+    syncTimerRef.current = window.setTimeout(() => {
+      api.sendMainMessage({
+        action: 'stateUpdate',
+        payload: {
+          selectedNode: selectedNode || null,
+          selectedEdge: selectedEdge || null,
+          selectedNodeCount: selectedNodeIds.length,
+          characters,
+          tags,
+          title,
+          variables,
+          scenes: scenesRef.current,
+          audios: audioRef.current,
+          nodes: nodes as StoryNode[],
+          edges: edges as StoryEdge[],
+          graph: graphRef.current,
+          versions,
+          annotations,
+          annotationAuthor,
+          workId,
+        },
+      })
+    }, 200)
+    return () => {
+      if (syncTimerRef.current) {
+        clearTimeout(syncTimerRef.current)
+      }
+    }
+  }, [panelWindowOpen, selectedNode, selectedEdge, selectedNodeIds, characters, tags, title, variables, nodes, edges, versions, annotations, annotationAuthor, workId])
 
   // 创作时间统计：开始/结束会话
   useEffect(() => {
@@ -459,6 +512,9 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
     annotations,
     monetization: monetization ?? undefined,
   }), [title, templateId, characters, variables, nodes, edges, tags, groups, annotations, monetization])
+
+  // 保持 graphRef 为最新值，供异步面板同步使用
+  graphRef.current = graph
 
   // 通知外部数据变化（节流 200ms 避免拖拽时高频触发）
   const graphChangeTimerRef = useRef<number | null>(null)
@@ -1521,6 +1577,98 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
     onStartTour?.()
   }, [onStartTour])
 
+  const togglePanelWindow = useCallback(async () => {
+    const api = window.__electronAPI
+    if (!api) {
+      showToast('error', 'Electron API 不可用')
+      return
+    }
+    try {
+      const result = await api.openPanelWindow()
+      if (result.success) {
+        setPanelWindowOpen(true)
+        setRightPanelVisible(false)
+      }
+    } catch (error) {
+      showToast('error', '打开管理面板失败')
+    }
+  }, [])
+
+  // 监听面板窗口发送的消息
+  useEffect(() => {
+    const api = window.__electronAPI
+    if (!api) return
+    const unsubscribe = api.onPanelMessage((message) => {
+      const payload = message.payload as Record<string, unknown>
+      switch (message.action) {
+        case 'updateNode':
+          updateNodeData(payload.nodeId as string, payload.data as Partial<StoryNode['data']>)
+          break
+        case 'deleteNode':
+          deleteNode(payload.nodeId as string)
+          break
+        case 'updateEdge':
+          updateEdgeData(payload.edgeId as string, payload.data as Partial<StoryEdge>)
+          break
+        case 'deleteEdge':
+          handleDeleteEdge(payload.edgeId as string)
+          break
+        case 'addCharacter':
+          addCharacter(payload.character as StoryCharacter)
+          break
+        case 'updateCharacter':
+          updateCharacter(payload.character as StoryCharacter)
+          break
+        case 'deleteCharacter':
+          deleteCharacter(payload.characterId as string)
+          break
+        case 'updateTitle':
+          setTitle(payload.title as string)
+          break
+        case 'updateTags':
+          setTags(payload.tags as string[])
+          break
+        case 'updateVariables':
+          setVariables(payload.variables as StoryVariable[])
+          break
+        case 'nodeSelect':
+          handleNodeSelect(payload.nodeId as string)
+          break
+        case 'edgeSelect':
+          handleEdgeSelect(payload.edgeId as string)
+          break
+        case 'scenesChange':
+          handleScenesChange(payload.scenes as ComicScene[])
+          break
+        case 'audiosChange':
+          handleAudiosChange(payload.audios as ComicAudio[])
+          break
+        case 'saveVersion':
+          handleSaveVersion(payload.name as string, payload.description as string)
+          break
+        case 'restoreVersion':
+          handleRestoreVersion(payload.id as string)
+          break
+        case 'deleteVersion':
+          handleDeleteVersion(payload.id as string)
+          break
+        case 'addAnnotation':
+          handleAddAnnotation(payload as { nodeId: string; type: AnnotationType; text: string; author: string })
+          break
+        case 'resolveAnnotation':
+          handleResolveAnnotation(payload.id as string)
+          break
+        case 'replyAnnotation':
+          handleReplyAnnotation(payload.id as string, payload.text as string)
+          break
+        case 'deleteAnnotation':
+          handleDeleteAnnotation(payload.id as string)
+          break
+      }
+    })
+    return unsubscribe
+  }, [updateNodeData, deleteNode, updateEdgeData, handleDeleteEdge, addCharacter, updateCharacter, deleteCharacter, setTitle, setTags, setVariables, handleNodeSelect, handleEdgeSelect, handleScenesChange, handleAudiosChange, handleSaveVersion, handleRestoreVersion, handleDeleteVersion, handleAddAnnotation, handleResolveAnnotation, handleReplyAnnotation, handleDeleteAnnotation])
+
   return (
     <div className="flex h-[calc(100vh-52px)]">
       {/* 左侧：可拖拽节点面板（可通过 B 键切换显隐） */}
@@ -1691,6 +1839,8 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
               <Upload className="w-4 h-4" />
               <span className="text-xs font-medium">创作者中心</span>
             </button>
+            <span className="w-px h-4 bg-border" />
+            <HelpMenu onStartTour={handleStartTour} onShowShortcuts={() => setShowShortcutsModal(true)} />
           </div>
         )}
 
@@ -1709,7 +1859,6 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
             nodeCount={nodes.length}
             edgeCount={edges.length}
             completionPercent={completionPercent}
-            onQualityClick={() => setRightPanelTab('quality')}
           />
         )}
 
@@ -1722,10 +1871,13 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
             onRedo={redo}
             onPreview={() => setShowPreview(true)}
             onExport={() => setShowExportDialog(true)}
+            onOpenPanelWindow={togglePanelWindow}
             onDirectoryUpload={() => { setCreatorCenterTab('publish'); setShowCreatorCenter(true) }}
             loggedIn={isCreatorLoggedIn()}
             account={getCreatorAccount()}
             onOpenAccount={() => { setCreatorCenterTab('account'); setShowCreatorCenter(true) }}
+            onStartTour={handleStartTour}
+            onShowShortcuts={() => setShowShortcutsModal(true)}
           />
         )}
 
@@ -1797,25 +1949,8 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
           onReplyAnnotation={handleReplyAnnotation}
           onDeleteAnnotation={handleDeleteAnnotation}
           onOpenAnnotationDialog={(nodeId) => setAnnotationDialog({ nodeId })}
-          monetization={monetization ?? undefined}
-          onMonetizationChange={setMonetization}
           graph={graph}
           workId={workId}
-          onApplyStory={(newNodes, newEdges, newChars, newTitle) => {
-            setNodes(newNodes)
-            setEdges(newEdges)
-            setCharacters(newChars)
-            setTitle(newTitle)
-            setSelectedNodeIds(newNodes.map((n) => n.id))
-            pushHistory('BATCH', `应用 AI 生成故事「${newTitle}」`)
-            showToast('success', `故事「${newTitle}」已应用到画布`)
-            setTimeout(() => {
-              fitView({ padding: 0.3, duration: 500 })
-            }, 100)
-          }}
-          onAddCharacters={(newChars) => {
-            newChars.forEach((char) => addCharacter(char))
-          }}
         />
       )}
 
@@ -1855,6 +1990,12 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
         initialTab={creatorCenterTab}
         onLoginStateChange={() => setLoginState(n => n + 1)}
       />
+
+      {/* 快捷键面板 */}
+      <ShortcutsModal
+        open={showShortcutsModal}
+        onClose={() => setShowShortcutsModal(false)}
+      />
     </div>
   )
 }
@@ -1869,10 +2010,9 @@ interface StatusBarProps {
   nodeCount: number
   edgeCount: number
   completionPercent: number
-  onQualityClick: () => void
 }
 
-const StatusBar = memo(function StatusBar({ nodeCount, edgeCount, completionPercent, onQualityClick }: StatusBarProps) {
+const StatusBar = memo(function StatusBar({ nodeCount, edgeCount, completionPercent }: StatusBarProps) {
   return (
     <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-card/90 backdrop-blur border rounded-lg px-4 py-1.5 shadow-sm text-xs text-muted-foreground z-10">
       <span>{nodeCount} 个节点</span>
@@ -1880,15 +2020,6 @@ const StatusBar = memo(function StatusBar({ nodeCount, edgeCount, completionPerc
       <span>{edgeCount} 条连线</span>
       <span className="w-px h-3 bg-border" />
       <span>完成度 {completionPercent}%</span>
-      <span className="w-px h-3 bg-border" />
-      <button
-        onClick={onQualityClick}
-        className="flex items-center gap-1.5 hover:text-pink-400 transition-colors"
-        title="质量检测"
-      >
-        <ShieldCheck className="w-3.5 h-3.5" />
-        质量检测
-      </button>
       {nodeCount > 200 && (
         <>
           <span className="w-px h-3 bg-border" />
@@ -1913,12 +2044,15 @@ interface UndoRedoButtonsProps {
   onPreview?: () => void
   onExport?: () => void
   onDirectoryUpload?: () => void
+  onOpenPanelWindow?: () => void
   loggedIn?: boolean
   account?: { displayName: string; email: string } | null
   onOpenAccount?: () => void
+  onStartTour?: () => void
+  onShowShortcuts?: () => void
 }
 
-const UndoRedoButtons = memo(function UndoRedoButtons({ canUndo, canRedo, onUndo, onRedo, onPreview, onExport, onDirectoryUpload, loggedIn, account, onOpenAccount }: UndoRedoButtonsProps) {
+const UndoRedoButtons = memo(function UndoRedoButtons({ canUndo, canRedo, onUndo, onRedo, onPreview, onExport, onDirectoryUpload, onOpenPanelWindow, loggedIn, account, onOpenAccount, onStartTour, onShowShortcuts }: UndoRedoButtonsProps) {
   return (
     <div className="absolute top-4 right-4 flex items-center gap-1 bg-card/90 backdrop-blur border rounded-lg px-2 py-1 shadow-sm z-10">
       {/* 账号登录状态 */}
@@ -1968,6 +2102,20 @@ const UndoRedoButtons = memo(function UndoRedoButtons({ canUndo, canRedo, onUndo
           <span className="w-px h-4 bg-border" />
         </>
       )}
+      {/* 独立管理面板按钮 */}
+      {onOpenPanelWindow && (
+        <>
+          <button
+            onClick={onOpenPanelWindow}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md transition-colors bg-purple-500/15 hover:bg-purple-500/25 text-purple-400 hover:text-purple-300 border border-purple-500/30"
+            title="打开独立管理面板窗口"
+          >
+            <Layers className="w-4 h-4" />
+            <span className="text-xs font-semibold">面板</span>
+          </button>
+          <span className="w-px h-4 bg-border" />
+        </>
+      )}
       {/* 作品墙上传按钮 */}
       {onDirectoryUpload && (
         <>
@@ -1998,6 +2146,8 @@ const UndoRedoButtons = memo(function UndoRedoButtons({ canUndo, canRedo, onUndo
       >
         <Redo2 className="w-4 h-4" />
       </button>
+      <span className="w-px h-4 bg-border" />
+      <HelpMenu onStartTour={onStartTour ?? (() => {})} onShowShortcuts={onShowShortcuts ?? (() => {})} />
     </div>
   )
 })

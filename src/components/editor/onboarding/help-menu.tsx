@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { HelpCircle, X, Play, Keyboard, BookOpen, MessageCircle, Lightbulb, RefreshCw, CheckCircle2, AlertCircle, Download, RotateCcw } from 'lucide-react'
+import { HelpCircle, X, Play, Keyboard, BookOpen, MessageCircle, Lightbulb, RefreshCw, CheckCircle2, AlertCircle, Download, RotateCcw, Sparkles } from 'lucide-react'
 import { Button } from '@editor/components/ui/button'
 import { showToast } from '../toast'
+import { AiSettingsDialog } from '../ai-settings-dialog'
 
 interface HelpMenuProps {
   onStartTour: () => void
@@ -18,6 +19,7 @@ interface UpdateInfo {
 
 export function HelpMenu({ onStartTour, onShowShortcuts }: HelpMenuProps) {
   const [open, setOpen] = useState(false)
+  const [showAiSettings, setShowAiSettings] = useState(false)
   const [updateChecking, setUpdateChecking] = useState(false)
   const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'available' | 'downloading' | 'downloaded' | 'not-available' | 'error'>('idle')
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null)
@@ -81,8 +83,14 @@ export function HelpMenu({ onStartTour, onShowShortcuts }: HelpMenuProps) {
   const handleDownloadUpdate = useCallback(() => {
     if (typeof window !== 'undefined' && window.__electronAPI) {
       window.__electronAPI.downloadUpdate()
-      setUpdateStatus('downloading')
-      setDownloadProgress(0)
+      // macOS 会打开浏览器跳转下载页，不进入下载状态
+      if (window.__electronAPI.platform === 'darwin') {
+        setUpdateStatus('idle')
+        setOpen(false)
+      } else {
+        setUpdateStatus('downloading')
+        setDownloadProgress(0)
+      }
     }
   }, [])
 
@@ -102,7 +110,13 @@ export function HelpMenu({ onStartTour, onShowShortcuts }: HelpMenuProps) {
     onShowShortcuts()
   }
 
+  const handleOpenAiSettings = () => {
+    setOpen(false)
+    setShowAiSettings(true)
+  }
+
   const menuItems = [
+    { icon: <Sparkles className="w-4 h-4 text-amber-500" />, label: 'AI 辅助设置', desc: '配置 API 密钥和服务商', onClick: handleOpenAiSettings },
     { icon: <Play className="w-4 h-4" />, label: '重新播放引导', desc: '1 分钟快速上手', onClick: handleStartTour, shortcut: 'Shift + ?' },
     { icon: <Keyboard className="w-4 h-4" />, label: '键盘快捷键', desc: '查看所有快捷键', onClick: handleShowShortcuts, shortcut: '?' },
     {
@@ -259,6 +273,8 @@ export function HelpMenu({ onStartTour, onShowShortcuts }: HelpMenuProps) {
           </div>
         </div>
       )}
+
+      <AiSettingsDialog open={showAiSettings} onClose={() => setShowAiSettings(false)} />
     </div>
   )
 }

@@ -10,6 +10,9 @@ contextBridge.exposeInMainWorld('__electronAPI', {
   getProjectPath: () => ipcRenderer.invoke('getProjectPath'),
   copyToProject: (sourcePath, fileName) => ipcRenderer.invoke('copyToProject', sourcePath, fileName),
   getRecentFiles: () => ipcRenderer.invoke('getRecentFiles'),
+  addRecentFile: (filePath) => ipcRenderer.invoke('addRecentFile', filePath),
+  removeRecentFile: (filePath) => ipcRenderer.invoke('removeRecentFile', filePath),
+  getDefaultProjectsDir: () => ipcRenderer.invoke('getDefaultProjectsDir'),
   getVersion: () => ipcRenderer.invoke('getVersion'),
   minimizeWindow: () => ipcRenderer.send('minimizeWindow'),
   maximizeWindow: () => ipcRenderer.send('maximizeWindow'),
@@ -17,6 +20,25 @@ contextBridge.exposeInMainWorld('__electronAPI', {
   checkForUpdates: () => ipcRenderer.send('checkForUpdates'),
   downloadUpdate: () => ipcRenderer.send('downloadUpdate'),
   installUpdate: () => ipcRenderer.send('installUpdate'),
+  openPanelWindow: () => ipcRenderer.invoke('openPanelWindow'),
+  closePanelWindow: () => ipcRenderer.send('closePanelWindow'),
+  sendPanelMessage: (message) => ipcRenderer.send('panel-window-message', message),
+  sendMainMessage: (message) => ipcRenderer.send('main-window-message', message),
+  onPanelClosed: (callback) => {
+    const listener = () => callback()
+    ipcRenderer.on('panel-closed', listener)
+    return () => ipcRenderer.removeListener('panel-closed', listener)
+  },
+  onPanelMessage: (callback) => {
+    const listener = (event, message) => callback(message)
+    ipcRenderer.on('panel-window-message', listener)
+    return () => ipcRenderer.removeListener('panel-window-message', listener)
+  },
+  onMainMessage: (callback) => {
+    const listener = (event, message) => callback(message)
+    ipcRenderer.on('main-window-message', listener)
+    return () => ipcRenderer.removeListener('main-window-message', listener)
+  },
   onUpdateChecking: (callback) => {
     const listener = () => callback()
     ipcRenderer.on('update-checking', listener)

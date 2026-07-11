@@ -1,6 +1,8 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import ReactDOM from 'react-dom/client'
 import { StoryCanvas } from './components/editor/story-canvas'
+import { ProjectManager } from './components/project-manager'
+import { PanelWindow } from './components/panel-window'
 import { ErrorBoundary } from './components/error-boundary'
 import { showToast } from './components/editor/toast'
 import { EditorTour, isTourCompleted, markTourCompleted } from './components/editor/onboarding/editor-tour'
@@ -63,15 +65,20 @@ function handleSave(graph: StoryGraph): void {
 
 function App() {
   const [showTour, setShowTour] = useState(false)
+  const [currentGraph, setCurrentGraph] = useState<StoryGraph | null>(null)
+  const [showProjectManager, setShowProjectManager] = useState(true)
+  const [isPanelWindow, setIsPanelWindow] = useState(false)
 
   useEffect(() => {
-    const completed = isTourCompleted()
-    if (!completed) {
-      const timer = setTimeout(() => {
-        setShowTour(true)
-      }, 500)
-      return () => clearTimeout(timer)
+    if (window.location.hash === '#panel') {
+      setIsPanelWindow(true)
+      setShowProjectManager(false)
     }
+  }, [])
+
+  const handleOpenProject = useCallback((graph: StoryGraph) => {
+    setCurrentGraph(graph)
+    setShowProjectManager(false)
   }, [])
 
   useEffect(() => {
@@ -108,11 +115,42 @@ function App() {
     }
   }, [])
 
+  useEffect(() => {
+    if (showProjectManager) return
+    const completed = isTourCompleted()
+    if (!completed) {
+      const timer = setTimeout(() => {
+        setShowTour(true)
+      }, 500)
+      return () => clearTimeout(timer)
+    }
+  }, [showProjectManager])
+
+  if (showProjectManager) {
+    return (
+      <ErrorBoundary onReset={() => window.location.reload()}>
+        <ProjectManager onOpenProject={handleOpenProject} />
+      </ErrorBoundary>
+    )
+  }
+
+  if (isPanelWindow) {
+    return (
+      <ErrorBoundary onReset={() => window.location.reload()}>
+        <PanelWindow />
+      </ErrorBoundary>
+    )
+  }
+
   return (
     <>
       <ErrorBoundary onReset={() => window.location.reload()}>
         <ErrorBoundary onReset={() => window.location.reload()}>
-          <StoryCanvas initialGraph={emptyGraph} onSave={handleSave} />
+          <StoryCanvas
+            initialGraph={currentGraph || emptyGraph}
+            onSave={handleSave}
+            onStartTour={() => setShowTour(true)}
+          />
         </ErrorBoundary>
       </ErrorBoundary>
       <EditorTour
@@ -120,7 +158,6 @@ function App() {
         steps={DEFAULT_TOUR_STEPS}
         onClose={() => {
           setShowTour(false)
-          // 任何方式关闭（Esc/X 按钮）都标记为已完成，避免下次打开再次弹出
           markTourCompleted()
         }}
       />
