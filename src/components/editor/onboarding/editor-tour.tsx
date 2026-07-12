@@ -5,6 +5,16 @@ import { X, ChevronRight, ChevronLeft, Sparkles } from 'lucide-react'
 import { Button } from '@editor/components/ui/button'
 import type { TourStep } from './tour-steps'
 
+const TOUR_COMPLETED_KEY = 'subsilicon_editor_tour_completed'
+
+export function isTourCompleted(): boolean {
+  return localStorage.getItem(TOUR_COMPLETED_KEY) === 'true'
+}
+
+export function markTourCompleted(): void {
+  localStorage.setItem(TOUR_COMPLETED_KEY, 'true')
+}
+
 interface EditorTourProps {
   active: boolean
   steps: TourStep[]
