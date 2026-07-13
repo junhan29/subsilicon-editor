@@ -23,7 +23,7 @@ jobs:
           mkdir -p release
           cd release
           echo "Downloading Release $VERSION assets..."
-          gh release download "$VERSION"
+          gh release download "$VERSION" -R junhan29/subsilicon-editor
           echo "Download complete"
           ls -la
 
