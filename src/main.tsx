@@ -1,12 +1,14 @@
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState } from 'react'
 import ReactDOM from 'react-dom/client'
 import { StoryCanvas } from './components/editor/story-canvas'
 import { ProjectManager } from './components/project-manager'
-import { PanelWindow } from './components/panel-window'
+import { SettingsPage } from './components/settings-page'
 import { ErrorBoundary } from './components/error-boundary'
 import { showToast } from './components/editor/toast'
 import { EditorTour, isTourCompleted, markTourCompleted } from './components/editor/onboarding/editor-tour'
 import { DEFAULT_TOUR_STEPS } from './components/editor/onboarding/tour-steps'
+import { saveWork } from '@editor/lib/local-db/work-store'
+import type { StoredWork } from '@editor/lib/local-db/work-store'
 import type { StoryGraph } from './types/editor'
 import './index.css'
 
@@ -37,48 +39,19 @@ function logError(type: ErrorLogEntry['type'], message: string, stack?: string) 
   }
 }
 
-const emptyGraph: StoryGraph = {
-  title: '未命名故事',
-  description: '',
-  templateId: 'custom',
-  characters: [],
-  variables: [],
-  nodes: [],
-  edges: [],
-  settings: {
-    title: '未命名故事',
-    tags: [],
-  },
-  assets: {
-    images: [],
-    audios: [],
-    fonts: [],
-  },
-  scenes: [],
-  audios: [],
-  groups: [],
-  annotations: [],
-}
-
-function handleSave(graph: StoryGraph): void {
-}
-
 function App() {
+  const [appMode, setAppMode] = useState<'project-manager' | 'editor' | 'settings'>('project-manager')
+  const [currentWork, setCurrentWork] = useState<StoredWork | null>(null)
   const [showTour, setShowTour] = useState(false)
-  const [currentGraph, setCurrentGraph] = useState<StoryGraph | null>(null)
-  const [showProjectManager, setShowProjectManager] = useState(true)
-  const [isPanelWindow, setIsPanelWindow] = useState(false)
 
   useEffect(() => {
-    if (window.location.hash === '#panel') {
-      setIsPanelWindow(true)
-      setShowProjectManager(false)
+    const completed = isTourCompleted()
+    if (!completed) {
+      const timer = setTimeout(() => {
+        setShowTour(true)
+      }, 500)
+      return () => clearTimeout(timer)
     }
-  }, [])
-
-  const handleOpenProject = useCallback((graph: StoryGraph) => {
-    setCurrentGraph(graph)
-    setShowProjectManager(false)
   }, [])
 
   useEffect(() => {
@@ -115,43 +88,58 @@ function App() {
     }
   }, [])
 
-  useEffect(() => {
-    if (showProjectManager) return
-    const completed = isTourCompleted()
-    if (!completed) {
-      const timer = setTimeout(() => {
-        setShowTour(true)
-      }, 500)
-      return () => clearTimeout(timer)
-    }
-  }, [showProjectManager])
-
-  if (showProjectManager) {
-    return (
-      <ErrorBoundary onReset={() => window.location.reload()}>
-        <ProjectManager onOpenProject={handleOpenProject} />
-      </ErrorBoundary>
-    )
+  const handleOpenProject = (work: StoredWork) => {
+    setCurrentWork(work)
+    setAppMode('editor')
   }
 
-  if (isPanelWindow) {
-    return (
-      <ErrorBoundary onReset={() => window.location.reload()}>
-        <PanelWindow />
-      </ErrorBoundary>
-    )
+  const handleNewProject = (work: StoredWork) => {
+    setCurrentWork(work)
+    setAppMode('editor')
+  }
+
+  const handleSaveGraph = async (graph: StoryGraph) => {
+    if (!currentWork) return
+    const updated: StoredWork = {
+      ...currentWork,
+      name: graph.title,
+      updatedAt: Date.now(),
+      lastOpened: Date.now(),
+      nodeCount: graph.nodes.length,
+      edgeCount: graph.edges.length,
+      editorData: graph,
+    }
+    setCurrentWork(updated)
+    await saveWork(updated)
+  }
+
+  const handleBackToProjects = async () => {
+    setAppMode('project-manager')
+    setCurrentWork(null)
   }
 
   return (
     <>
       <ErrorBoundary onReset={() => window.location.reload()}>
-        <ErrorBoundary onReset={() => window.location.reload()}>
-          <StoryCanvas
-            initialGraph={currentGraph || emptyGraph}
-            onSave={handleSave}
-            onStartTour={() => setShowTour(true)}
+        {appMode === 'project-manager' && (
+          <ProjectManager
+            onOpenProject={handleOpenProject}
+            onNewProject={handleNewProject}
+            onOpenSettings={() => setAppMode('settings')}
           />
-        </ErrorBoundary>
+        )}
+        {appMode === 'editor' && currentWork && (
+          <StoryCanvas
+            initialGraph={currentWork.editorData}
+            onSave={handleSaveGraph}
+            onBack={handleBackToProjects}
+          />
+        )}
+        {appMode === 'settings' && (
+          <SettingsPage
+            onBack={() => setAppMode('project-manager')}
+          />
+        )}
       </ErrorBoundary>
       <EditorTour
         active={showTour}

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { X, Download, FileCode, Archive, FileText, BookOpen, Image as ImageIcon, Settings2, Loader2, Languages, Lock, ShieldCheck, Search, Type } from 'lucide-react'
+import { X, Download, FileCode, Archive, FileText, BookOpen, Image as ImageIcon, Settings2, Loader2, Languages, Lock, ShieldCheck } from 'lucide-react'
 import { Button } from '@editor/components/ui/button'
 import type { StoryGraph } from '@editor/types/editor'
 import type { MonetizationConfig } from '@editor/lib/work-monetization'
@@ -9,17 +9,14 @@ import { exportToHTML } from '@editor/lib/export-html'
 import { exportToZIP } from '@editor/lib/export-zip'
 import { exportToScript } from '@editor/lib/export-script'
 import { exportToEPUB } from '@editor/lib/export-epub'
-import { exportToExploreHTML } from '@editor/lib/export-explore-html'
-import { exportToMinimalHTML } from '@editor/lib/export-minimal-html'
 import { exportToStoryHTML, type StoryExportConfig, type UnlockMode } from '@editor/lib/export-story-html'
-// editor-versions no longer needed - desktop only
 import { READER_THEME_PRESETS, themeToCSS, type ReaderTheme } from '@editor/lib/theme-presets'
 import { I18nExportPanel } from './i18n-export-panel'
 import { SUBMIT_CONFIG } from '@editor/lib/submit-config'
 import { showToast } from './toast'
 import { trapFocus, focusFirstInteractive, restoreFocus } from '@editor/lib/focus-manager'
 
-type ExportFormat = 'html' | 'zip' | 'script' | 'epub' | 'i18n' | 'story_exec' | 'explore_html' | 'minimal_html'
+type ExportFormat = 'html' | 'zip' | 'script' | 'epub' | 'i18n' | 'story_exec'
 type ImageQuality = 'original' | 'high' | 'medium' | 'low'
 
 interface ExportDialogProps {
@@ -31,9 +28,7 @@ interface ExportDialogProps {
 }
 
 const FORMATS: { id: ExportFormat; name: string; description: string; icon: typeof FileCode; ext: string }[] = [
-  { id: 'html', name: 'HTML 单文件', description: '对话叙事模板，可直接在浏览器打开', icon: FileCode, ext: '.html' },
-  { id: 'explore_html', name: '探索解谜 HTML', description: '场景探索 + 热点交互 + 物品栏', icon: Search, ext: '.html' },
-  { id: 'minimal_html', name: '极简文字 HTML', description: '纯文字流，沉浸式阅读体验', icon: Type, ext: '.html' },
+  { id: 'html', name: 'HTML 单文件', description: '可直接在浏览器打开', icon: FileCode, ext: '.html' },
   { id: 'zip', name: 'ZIP 包', description: '含 HTML 和资源文件', icon: Archive, ext: '.zip' },
   { id: 'story_exec', name: '可执行故事', description: '加密 + 扫码付费解锁', icon: ShieldCheck, ext: '.story.html' },
   { id: 'script', name: '剧本文本', description: '剧本格式的纯文本', icon: FileText, ext: '.txt' },
@@ -53,7 +48,6 @@ function sanitizeFilename(name: string): string {
   return name.replace(/[\\/:*?"<>|]/g, '_').trim() || '未命名故事'
 }
 
-// 触发浏览器下载
 function triggerDownload(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
@@ -63,14 +57,11 @@ function triggerDownload(blob: Blob, filename: string): void {
   document.body.appendChild(a)
   a.click()
   document.body.removeChild(a)
-  // 释放 URL，给浏览器一点时间发起下载
   setTimeout(() => URL.revokeObjectURL(url), 2000)
 }
 
-// 将主题 CSS 注入到 HTML 字符串中
 function applyThemeToHTML(html: string, theme: ReaderTheme): string {
   const css = themeToCSS(theme)
-  // 在第一个 </style> 之前注入主题覆盖样式
   return html.replace('</style>', `${css}\n  </style>`)
 }
 
@@ -87,7 +78,6 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
   const titleId = 'export-dialog-title'
   const descId = 'export-dialog-description'
 
-  // DRM 可执行故事设置
   const [drmEnabled, setDrmEnabled] = useState(false)
   const [drmPrice, setDrmPrice] = useState<number>(9.9)
   const [drmFreePreview, setDrmFreePreview] = useState<number>(3)
@@ -95,6 +85,13 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
   const [drmWechatQR, setDrmWechatQR] = useState<string>('')
   const [drmAlipayQR, setDrmAlipayQR] = useState<string>('')
   const [drmContact, setDrmContact] = useState<string>('')
+  const [drmWebhookUrl, setDrmWebhookUrl] = useState<string>('')
+  const [drmWebhookProvider, setDrmWebhookProvider] = useState<string>('stripe')
+  const [drmStripeUrl, setDrmStripeUrl] = useState<string>('')
+  const [drmPaypalUrl, setDrmPaypalUrl] = useState<string>('')
+  const [drmPatreonUrl, setDrmPatreonUrl] = useState<string>('')
+  const [drmKofiUrl, setDrmKofiUrl] = useState<string>('')
+  const [drmCurrency, setDrmCurrency] = useState<string>('CNY')
 
   useEffect(() => {
     if (!open) return
@@ -122,16 +119,10 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
 
   const selectedTheme = READER_THEME_PRESETS.find((t) => t.id === themeId) || READER_THEME_PRESETS[0]
 
-  // 主题仅在对话叙事 HTML 下适用
-  const themeApplicable = format === 'html'
-  // 资源选项仅在 ZIP / EPUB 下有意义
+  const themeApplicable = format !== 'script' && format !== 'i18n' && format !== 'story_exec'
   const assetsApplicable = format === 'zip' || format === 'epub'
-  // 翻译表格式使用独立面板，不需要底部导出按钮
   const isI18nFormat = format === 'i18n'
-  // 可执行故事格式
   const isStoryExecFormat = format === 'story_exec'
-  // 探索解谜/极简文字格式：无需主题/DRM设置
-  const isSpecialRuntime = format === 'explore_html' || format === 'minimal_html'
 
   const handleExport = useCallback(async () => {
     if (exporting) return
@@ -143,7 +134,6 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
       let blob: Blob | null = null
       let filename = ''
 
-      // 模拟分阶段进度反馈
       await new Promise((r) => setTimeout(r, 60))
       setProgress(30)
 
@@ -154,11 +144,9 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
             html = applyThemeToHTML(html, selectedTheme)
           }
           if (includeDebug) {
-            // 在 HTML 末尾注入调试信息（在 </body> 之前）
             const debugInfo = `\n<!-- 调试信息\n节点数: ${graph.nodes?.length || 0}\n连线数: ${graph.edges?.length || 0}\n角色数: ${graph.characters?.length || 0}\n导出时间: ${new Date().toISOString()}\n主题: ${selectedTheme.name}\n图片质量: ${imageQuality}\n付费解锁: ${monetization?.enabled ? '已开启' : '未开启'}\n-->\n`
             html = html.replace('</body>', `${debugInfo}</body>`)
           }
-          // 桌面版导出直接返回完整内容
           blob = new Blob([html], { type: 'text/html;charset=utf-8' })
           filename = `${safeTitle}.html`
           break
@@ -174,18 +162,6 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
           filename = `${safeTitle}.txt`
           break
         }
-        case 'explore_html': {
-          const exploreHTML = await exportToExploreHTML(graph)
-          blob = new Blob([exploreHTML], { type: 'text/html;charset=utf-8' })
-          filename = `${safeTitle}.html`
-          break
-        }
-        case 'minimal_html': {
-          const minimalHTML = await exportToMinimalHTML(graph)
-          blob = new Blob([minimalHTML], { type: 'text/html;charset=utf-8' })
-          filename = `${safeTitle}.html`
-          break
-        }
         case 'epub': {
           blob = await exportToEPUB(graph)
           filename = `${safeTitle}.epub`
@@ -195,17 +171,24 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
           const storyConfig: StoryExportConfig = {
             unlockMode: drmUnlockMode,
             price: drmEnabled ? drmPrice : 0,
+            currency: drmCurrency,
             freePreview: drmFreePreview,
             wechatQRCode: drmWechatQR || undefined,
             alipayQRCode: drmAlipayQR || undefined,
             contactInfo: drmContact || undefined,
+            // Webhook 相关
+            webhookUrl: drmWebhookUrl || undefined,
+            webhookProvider: (drmWebhookProvider as any) || undefined,
+            stripeCheckoutUrl: drmStripeUrl || undefined,
+            paypalLink: drmPaypalUrl || undefined,
+            patreonLink: drmPatreonUrl || undefined,
+            kofiLink: drmKofiUrl || undefined,
           }
 
           setProgress(50)
           const result = await exportToStoryHTML(graph, storyConfig)
           setProgress(70)
 
-          // 如果开启了付费，上传密钥到服务器
           if (drmEnabled && result.keyBase64) {
             try {
               await fetch(SUBMIT_CONFIG.storyUnlockUrl, {
@@ -239,7 +222,6 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
         triggerDownload(blob, filename)
         setProgress(100)
         showToast('success', `已导出为 ${filename}`)
-        // 稍作停留让用户看到完成状态，再关闭弹窗
         setTimeout(() => {
           setExporting(false)
           setProgress(0)
@@ -254,7 +236,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
       const msg = err instanceof Error ? err.message : String(err)
       showToast('error', `导出失败：${msg}`)
     }
-  }, [exporting, format, graph, themeApplicable, selectedTheme, includeDebug, imageQuality, onClose, drmEnabled, drmPrice, drmFreePreview, drmUnlockMode, drmWechatQR, drmAlipayQR, drmContact])
+  }, [exporting, format, graph, themeApplicable, selectedTheme, includeDebug, imageQuality, onClose, drmEnabled, drmPrice, drmFreePreview, drmUnlockMode, drmWechatQR, drmAlipayQR, drmContact, drmWebhookUrl, drmWebhookProvider, drmStripeUrl, drmPaypalUrl, drmPatreonUrl, drmKofiUrl, drmCurrency])
 
   if (!open) return null
 
@@ -268,7 +250,6 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
         aria-describedby={descId}
         className="w-full max-w-2xl max-h-[90vh] bg-background rounded-2xl shadow-2xl overflow-hidden flex flex-col"
       >
-        {/* 头部 */}
         <div className="flex items-center justify-between px-5 py-4 border-b shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -288,9 +269,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
           </button>
         </div>
 
-        {/* 主体 */}
         <div className="overflow-y-auto px-5 py-4 space-y-5">
-          {/* 1. 格式选择 */}
           <section>
             <div className="flex items-center gap-2 mb-2.5">
               <FileCode className="w-3.5 h-3.5 text-muted-foreground" />
@@ -338,13 +317,8 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
 
           {isI18nFormat ? (
             <I18nExportPanel graph={graph} onImport={onImportTranslation} />
-          ) : isSpecialRuntime ? (
-            <div className="p-4 text-center text-sm text-muted-foreground">
-              {format === 'explore_html' ? '将生成场景探索 + 热点交互 + 物品栏的独立 HTML 文件' : '将生成纯文字流沉浸式阅读的独立 HTML 文件'}
-            </div>
           ) : isStoryExecFormat ? (
             <>
-          {/* 可执行故事 DRM 设置 */}
           <section>
             <div className="flex items-center gap-2 mb-2.5">
               <Lock className="w-3.5 h-3.5 text-muted-foreground" />
@@ -353,7 +327,6 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
               </h4>
             </div>
             <div className="space-y-3">
-              {/* 启用付费 */}
               <label className="flex items-center gap-2.5 p-2.5 rounded-lg border border-border hover:bg-muted/40 transition-colors cursor-pointer">
                 <input
                   type="checkbox"
@@ -371,7 +344,6 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
 
               {drmEnabled && (
                 <>
-                  {/* 价格 */}
                   <div className="p-2.5 rounded-lg border border-border">
                     <div className="text-sm mb-2">作品价格</div>
                     <div className="flex items-center gap-2">
@@ -389,7 +361,6 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                     </div>
                   </div>
 
-                  {/* 免费试读 */}
                   <div className="p-2.5 rounded-lg border border-border">
                     <div className="text-sm mb-2">免费试读节点数</div>
                     <div className="flex items-center gap-2">
@@ -407,10 +378,9 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                     </div>
                   </div>
 
-                  {/* 解锁模式 */}
                   <div className="p-2.5 rounded-lg border border-border">
                     <div className="text-sm mb-2">解锁方式</div>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-3 gap-2">
                       <button
                         type="button"
                         onClick={() => setDrmUnlockMode('semi_auto')}
@@ -422,7 +392,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                       >
                         <div className="font-medium">半自动解锁</div>
                         <div className="text-[10px] text-muted-foreground mt-1">
-                          读者粘贴订单号后自动解锁，无需创作者操作
+                          读者粘贴订单号后自动解锁
                         </div>
                       </button>
                       <button
@@ -436,44 +406,160 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                       >
                         <div className="font-medium">手动激活码</div>
                         <div className="text-[10px] text-muted-foreground mt-1">
-                          读者付款后联系你，你手动生成激活码发给读者
+                          读者付款后联系你获取激活码
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDrmUnlockMode('webhook')}
+                        className={`p-2.5 rounded-lg border text-left text-xs transition-all ${
+                          drmUnlockMode === 'webhook'
+                            ? 'border-primary bg-primary/5 ring-1 ring-primary/30'
+                            : 'border-border hover:bg-muted/40'
+                        }`}
+                      >
+                        <div className="font-medium">Webhook 自动解锁</div>
+                        <div className="text-[10px] text-muted-foreground mt-1">
+                          Stripe/PayPal 等海外渠道自动发放解锁码
                         </div>
                       </button>
                     </div>
                   </div>
 
-                  {/* 收款二维码 */}
-                  <div className="p-2.5 rounded-lg border border-border">
-                    <div className="text-sm mb-2">收款二维码（可选）</div>
-                    <div className="text-[11px] text-muted-foreground mb-2">
-                      粘贴你个人微信/支付宝收款码的图片 URL，读者的付款直接到你的账户。
-                      推荐先在编辑器中导入收款码图片作为素材，然后右键复制图片地址。
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="text-[11px] text-muted-foreground block mb-1">微信收款码 URL</label>
-                        <input
-                          type="text"
-                          value={drmWechatQR}
-                          onChange={(e) => setDrmWechatQR(e.target.value)}
-                          placeholder="data:image/png;base64,..."
-                          className="w-full px-2 py-1.5 rounded border border-border bg-background text-xs"
-                        />
+                  {drmUnlockMode !== 'webhook' && (
+                    <div className="p-2.5 rounded-lg border border-border">
+                      <div className="text-sm mb-2">收款二维码（可选）</div>
+                      <div className="text-[11px] text-muted-foreground mb-2">
+                        粘贴你个人微信/支付宝收款码的图片 URL，读者的付款直接到你的账户。
+                        推荐先在编辑器中导入收款码图片作为素材，然后右键复制图片地址。
                       </div>
-                      <div>
-                        <label className="text-[11px] text-muted-foreground block mb-1">支付宝收款码 URL</label>
-                        <input
-                          type="text"
-                          value={drmAlipayQR}
-                          onChange={(e) => setDrmAlipayQR(e.target.value)}
-                          placeholder="data:image/png;base64,..."
-                          className="w-full px-2 py-1.5 rounded border border-border bg-background text-xs"
-                        />
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[11px] text-muted-foreground block mb-1">微信收款码 URL</label>
+                          <input
+                            type="text"
+                            value={drmWechatQR}
+                            onChange={(e) => setDrmWechatQR(e.target.value)}
+                            placeholder="data:image/png;base64,..."
+                            className="w-full px-2 py-1.5 rounded border border-border bg-background text-xs"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] text-muted-foreground block mb-1">支付宝收款码 URL</label>
+                          <input
+                            type="text"
+                            value={drmAlipayQR}
+                            onChange={(e) => setDrmAlipayQR(e.target.value)}
+                            placeholder="data:image/png;base64,..."
+                            className="w-full px-2 py-1.5 rounded border border-border bg-background text-xs"
+                          />
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
 
-                  {/* 联系方式 */}
+                  {drmUnlockMode === 'webhook' && (
+                    <>
+                      <div className="p-2.5 rounded-lg border border-border">
+                        <div className="text-sm mb-2">货币</div>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setDrmCurrency('CNY')}
+                            className={`px-3 py-1.5 rounded text-xs ${drmCurrency === 'CNY' ? 'bg-primary text-white' : 'bg-muted'}`}
+                          >
+                            CNY (人民币)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDrmCurrency('USD')}
+                            className={`px-3 py-1.5 rounded text-xs ${drmCurrency === 'USD' ? 'bg-primary text-white' : 'bg-muted'}`}
+                          >
+                            USD (美元)
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="p-2.5 rounded-lg border border-border">
+                        <div className="text-sm mb-2">付款渠道</div>
+                        <div className="grid grid-cols-5 gap-1.5 mb-3">
+                          {['stripe', 'paypal', 'patreon', 'kofi', 'custom'].map((p) => (
+                            <button
+                              key={p}
+                              type="button"
+                              onClick={() => setDrmWebhookProvider(p)}
+                              className={`py-1.5 px-2 rounded text-[10px] font-medium transition-all ${
+                                drmWebhookProvider === p ? 'bg-primary text-white' : 'bg-muted hover:bg-muted/80'
+                              }`}
+                            >
+                              {p === 'stripe' ? 'Stripe' : p === 'paypal' ? 'PayPal' : p === 'patreon' ? 'Patreon' : p === 'kofi' ? 'Ko-fi' : '自定义'}
+                            </button>
+                          ))}
+                        </div>
+
+                        <div className="space-y-2">
+                          <div>
+                            <label className="text-[11px] text-muted-foreground block mb-1">Webhook 端点 URL</label>
+                            <input
+                              type="text"
+                              value={drmWebhookUrl}
+                              onChange={(e) => setDrmWebhookUrl(e.target.value)}
+                              placeholder="https://your-server.com/api/unlock"
+                              className="w-full px-2 py-1.5 rounded border border-border bg-background text-xs"
+                            />
+                            <div className="text-[10px] text-muted-foreground mt-1">
+                              读者付款后，系统将向此地址 POST 请求以获取解锁码
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="text-[11px] text-muted-foreground block mb-1">Stripe 结账链接</label>
+                            <input
+                              type="text"
+                              value={drmStripeUrl}
+                              onChange={(e) => setDrmStripeUrl(e.target.value)}
+                              placeholder="https://buy.stripe.com/..."
+                              className="w-full px-2 py-1.5 rounded border border-border bg-background text-xs"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-[11px] text-muted-foreground block mb-1">PayPal 付款链接</label>
+                            <input
+                              type="text"
+                              value={drmPaypalUrl}
+                              onChange={(e) => setDrmPaypalUrl(e.target.value)}
+                              placeholder="https://paypal.me/..."
+                              className="w-full px-2 py-1.5 rounded border border-border bg-background text-xs"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-[11px] text-muted-foreground block mb-1">Patreon 赞助链接</label>
+                            <input
+                              type="text"
+                              value={drmPatreonUrl}
+                              onChange={(e) => setDrmPatreonUrl(e.target.value)}
+                              placeholder="https://patreon.com/..."
+                              className="w-full px-2 py-1.5 rounded border border-border bg-background text-xs"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-[11px] text-muted-foreground block mb-1">Ko-fi 赞助链接</label>
+                            <input
+                              type="text"
+                              value={drmKofiUrl}
+                              onChange={(e) => setDrmKofiUrl(e.target.value)}
+                              placeholder="https://ko-fi.com/..."
+                              className="w-full px-2 py-1.5 rounded border border-border bg-background text-xs"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
                   <div className="p-2.5 rounded-lg border border-border">
                     <div className="text-sm mb-2">联系方式（可选）</div>
                     <input
@@ -494,7 +580,6 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
             </>
           ) : (
             <>
-          {/* 2. 主题选择 */}
           <section className={themeApplicable ? '' : 'opacity-40 pointer-events-none'}>
             <div className="flex items-center gap-2 mb-2.5">
               <ImageIcon className="w-3.5 h-3.5 text-muted-foreground" />
@@ -519,7 +604,6 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                     }`}
                     title={theme.name}
                   >
-                    {/* 预览块 */}
                     <div
                       className="h-14 px-2 py-1.5 flex flex-col justify-between"
                       style={{ backgroundColor: theme.backgroundColor, color: theme.textColor }}
@@ -562,7 +646,6 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
             </div>
           </section>
 
-          {/* 3. 导出选项 */}
           <section>
             <div className="flex items-center gap-2 mb-2.5">
               <Settings2 className="w-3.5 h-3.5 text-muted-foreground" />
@@ -571,7 +654,6 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
               </h4>
             </div>
             <div className="space-y-2.5">
-              {/* 包含资源文件 */}
               <label
                 className={`flex items-center gap-2.5 p-2.5 rounded-lg border border-border hover:bg-muted/40 transition-colors cursor-pointer ${
                   !assetsApplicable ? 'opacity-40 pointer-events-none' : ''
@@ -592,7 +674,6 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                 </div>
               </label>
 
-              {/* 压缩图片质量 */}
               <div
                 className={`p-2.5 rounded-lg border border-border ${
                   !assetsApplicable ? 'opacity-40 pointer-events-none' : ''
@@ -628,7 +709,6 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                 </div>
               </div>
 
-              {/* 包含调试信息 */}
               <label className="flex items-center gap-2.5 p-2.5 rounded-lg border border-border hover:bg-muted/40 transition-colors cursor-pointer">
                 <input
                   type="checkbox"
@@ -649,7 +729,6 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
           )}
         </div>
 
-        {/* 底部：进度 + 按钮 */}
         <div className="px-5 py-3.5 border-t bg-muted/20 shrink-0">
           {exporting && (
             <div className="mb-3">

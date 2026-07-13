@@ -1,9 +1,5 @@
 import { createSnapshot, type StoryGraphSnapshot } from '@editor/lib/history-store'
 
-// ============================================
-// 版本快照类型定义
-// ============================================
-
 export interface VersionSnapshot {
   id: string
   name: string // 用户命名的版本名，如"第一章完成v1"
@@ -42,16 +38,8 @@ export interface VersionDiff {
   }
 }
 
-// ============================================
-// localStorage 配置
-// ============================================
-
 export const VERSION_STORAGE_KEY = 'subsilicon-versions'
 const MAX_VERSIONS = 30
-
-// ============================================
-// 内部工具：从快照节点中提取可读信息
-// ============================================
 
 interface SnapshotNode {
   id: string
@@ -135,7 +123,6 @@ function asCharacter(value: unknown): SnapshotCharacter | null {
   return { id: v.id, name: v.name }
 }
 
-// 从节点数据中派生可读标签
 export function getNodeLabel(node: SnapshotNode): string {
   const data = node.data || {}
   const typeLabel = nodeTypeLabels[node.type] || node.type || '节点'
@@ -193,10 +180,6 @@ function valuesEqual(a: unknown, b: unknown): boolean {
   }
 }
 
-// ============================================
-// localStorage 读写
-// ============================================
-
 function isBrowser(): boolean {
   return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined'
 }
@@ -231,7 +214,6 @@ function persistVersions(versions: VersionSnapshot[]): void {
   try {
     window.localStorage.setItem(VERSION_STORAGE_KEY, JSON.stringify(versions))
   } catch {
-    // localStorage 写入失败（配额超限等）静默忽略
   }
 }
 
@@ -280,11 +262,6 @@ export function restoreVersion(id: string): VersionSnapshot | null {
   }
 }
 
-// ============================================
-// 版本对比逻辑
-// v1 = 旧版本（before），v2 = 新版本（after）
-// ============================================
-
 export function compareVersions(
   v1: VersionSnapshot,
   v2: VersionSnapshot
@@ -300,7 +277,6 @@ export function compareVersions(
   const addedCharacters: VersionDiff['addedCharacters'] = []
   const removedCharacters: VersionDiff['removedCharacters'] = []
 
-  // ---- 节点对比 ----
   const nodes1 = new Map<string, SnapshotNode>()
   for (const raw of g1.nodes) {
     const n = asNode(raw)
@@ -312,31 +288,26 @@ export function compareVersions(
     if (n) nodes2.set(n.id, n)
   }
 
-  // v2 中新增
   for (const [id, node2] of nodes2) {
     if (!nodes1.has(id)) {
       addedNodes.push({ id, type: node2.type, label: getNodeLabel(node2) })
     }
   }
-  // v1 中被删除
   for (const [id, node1] of nodes1) {
     if (!nodes2.has(id)) {
       removedNodes.push({ id, type: node1.type, label: getNodeLabel(node1) })
     }
   }
-  // 两边都存在 → 字段级 diff
   for (const [id, node1] of nodes1) {
     const node2 = nodes2.get(id)
     if (!node2) continue
 
     const changes: VersionFieldChange[] = []
 
-    // type 变化
     if (node1.type !== node2.type) {
       changes.push({ field: 'type', before: node1.type, after: node2.type })
     }
 
-    // position 变化
     const p1 = node1.position
     const p2 = node2.position
     if (p1 && p2) {
@@ -346,7 +317,6 @@ export function compareVersions(
       changes.push({ field: 'position', before: p1, after: p2 })
     }
 
-    // data 字段变化
     const data1 = node1.data || {}
     const data2 = node2.data || {}
     const dataKeys = new Set([...Object.keys(data1), ...Object.keys(data2)])
@@ -368,7 +338,6 @@ export function compareVersions(
     }
   }
 
-  // ---- 连线对比 ----
   const edges1 = new Map<string, SnapshotEdge>()
   for (const raw of g1.edges) {
     const e = asEdge(raw)
@@ -391,7 +360,6 @@ export function compareVersions(
     }
   }
 
-  // ---- 角色对比 ----
   const chars1 = new Map<string, SnapshotCharacter>()
   for (const raw of g1.characters) {
     const c = asCharacter(raw)

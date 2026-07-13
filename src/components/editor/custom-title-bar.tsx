@@ -114,14 +114,14 @@ export function CustomTitleBar() {
 
   return (
     <div className="h-10 bg-[#0f172a] border-b border-border flex items-center justify-between select-none relative">
-      <div className="flex items-center gap-2 pl-3" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}>
+      <div className="flex items-center gap-2 pl-3">
         <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-amber-500 to-red-500 flex items-center justify-center">
           <span className="text-white text-xs font-bold">S</span>
         </div>
         <span className="text-sm font-medium text-white">SubSilicon Editor</span>
       </div>
 
-      <div className="flex-1 mx-4 flex items-center justify-center" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}>
+      <div className="flex-1 mx-4 flex items-center justify-center">
         <div className="max-w-md flex items-center gap-2 text-xs text-muted-foreground truncate">
           <FolderOpen className="w-3.5 h-3.5 opacity-60" />
           <span className="truncate">{filename}</span>

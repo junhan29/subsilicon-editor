@@ -1,21 +1,10 @@
-'use client'
-
-import { useState, useEffect, useCallback } from 'react'
-import { FileText, FolderOpen, Plus, Trash2, Clock, Sparkles, AlertCircle, RefreshCw, Download, RotateCcw, CheckCircle2 } from 'lucide-react'
-import { showToast } from './editor/toast'
-import { Button } from '../components/ui/button'
-import { initTheme, subscribeTheme, type Theme } from '@editor/lib/theme-manager'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { Plus, FolderOpen, Settings, Trash2, Copy, Edit3, MoreHorizontal, BookOpen, Clock, FileText, Sparkles, RefreshCw, Download, RotateCcw, AlertCircle, CheckCircle2, X } from 'lucide-react'
 import type { StoryGraph } from '@editor/types/editor'
+import { getAllWorks, loadWork, saveWork, deleteWork, generateProjectId, type StoredWork } from '@editor/lib/local-db/work-store'
 
-interface ProjectFile {
-  path: string
-  name: string
-  modifiedAt?: string
-}
-
-interface ProjectManagerProps {
-  onOpenProject: (graph: StoryGraph) => void
-}
+type UpdateStatus = 'idle' | 'checking' | 'available' | 'downloading' | 'downloaded' | 'not-available' | 'error'
+interface UpdateInfo { version: string; releaseDate?: string; releaseNotes?: string }
 
 const emptyGraph: StoryGraph = {
   title: '未命名故事',
@@ -33,355 +22,269 @@ const emptyGraph: StoryGraph = {
   annotations: [],
 }
 
-export function ProjectManager({ onOpenProject }: ProjectManagerProps) {
-  const [recentFiles, setRecentFiles] = useState<ProjectFile[]>([])
-  const [loading, setLoading] = useState(true)
-  const [deletingPath, setDeletingPath] = useState<string | null>(null)
-  const [theme, setTheme] = useState<Theme>('dark')
-  const [version, setVersion] = useState('加载中...')
-  const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'available' | 'downloading' | 'downloaded' | 'not-available' | 'error'>('idle')
-  const [updateInfo, setUpdateInfo] = useState<{ version: string; releaseDate?: string; releaseNotes?: string } | null>(null)
-  const [downloadProgress, setDownloadProgress] = useState(0)
+interface ProjectManagerProps {
+  onOpenProject: (work: StoredWork) => void
+  onNewProject: (work: StoredWork) => void
+  onOpenSettings: () => void
+}
 
-  useEffect(() => {
-    const initial = initTheme()
-    setTheme(initial)
-    const unsub = subscribeTheme((t) => setTheme(t))
-    return unsub
+export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings }: ProjectManagerProps) {
+  const [works, setWorks] = useState<StoredWork[]>([])
+  const [loading, setLoading] = useState(true)
+  const [menuOpenId, setMenuOpenId] = useState<string | null>(null)
+  const [renamingId, setRenamingId] = useState<string | null>(null)
+  const [renameValue, setRenameValue] = useState('')
+
+  const loadWorks = useCallback(async () => {
+    setLoading(true)
+    try {
+      const all = await getAllWorks()
+      all.sort((a, b) => b.lastOpened - a.lastOpened)
+      setWorks(all)
+    } catch {
+      setWorks([])
+    }
+    setLoading(false)
   }, [])
 
   useEffect(() => {
-    loadRecentFiles()
-    loadVersion()
+    loadWorks()
+  }, [loadWorks])
 
-    // 监听自动更新事件
+  const [updateStatus, setUpdateStatus] = useState<UpdateStatus>('idle')
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null)
+  const [downloadProgress, setDownloadProgress] = useState(0)
+  const updateInitRef = useRef(false)
+
+  useEffect(() => {
+    if (updateInitRef.current) return
+    updateInitRef.current = true
     const api = window.__electronAPI
-    if (api) {
-      api.onUpdateChecking(() => {
-        setUpdateStatus('checking')
-      })
+    if (!api) return
+
+    const unsubs = [
+      api.onUpdateChecking(() => setUpdateStatus('checking')),
       api.onUpdateAvailable((info) => {
         setUpdateStatus('available')
         setUpdateInfo(info)
-        showToast('info', `发现新版本 v${info.version}`)
-      })
-      api.onUpdateNotAvailable(() => {
-        setUpdateStatus('not-available')
-      })
-      api.onUpdateError((message) => {
-        setUpdateStatus('error')
-        showToast('error', `更新检查失败: ${message}`)
-      })
-      api.onUpdateProgress((progress) => {
+      }),
+      api.onUpdateNotAvailable(() => setUpdateStatus('not-available')),
+      api.onUpdateError(() => setUpdateStatus('error')),
+      api.onUpdateProgress((p) => {
         setUpdateStatus('downloading')
-        setDownloadProgress(Math.round(progress.percent))
-      })
+        setDownloadProgress(Math.round(p.percent))
+      }),
       api.onUpdateDownloaded(() => {
         setUpdateStatus('downloaded')
         setDownloadProgress(100)
-        showToast('success', '更新已下载完成，点击重启安装')
-      })
+      }),
+    ]
 
-      // 自动检查更新
-      setTimeout(() => {
-        api.checkForUpdates()
-      }, 3000)
-    }
+    setTimeout(() => api.checkForUpdates(), 2000)
+
+    return () => unsubs.forEach(fn => fn())
   }, [])
 
-  const loadVersion = useCallback(async () => {
-    try {
-      const api = window.__electronAPI
-      if (api && api.getVersion) {
-        const result = await api.getVersion()
-        if (result.success && result.version) {
-          setVersion(result.version)
-        }
-      }
-    } catch {
-      setVersion('1.2.6')
-    }
-  }, [])
+  const handleCheckUpdates = () => {
+    if (updateStatus === 'checking' || updateStatus === 'downloading') return
+    setUpdateStatus('checking')
+    window.__electronAPI?.checkForUpdates()
+    setTimeout(() => setUpdateStatus(s => s === 'checking' ? 'idle' : s), 15000)
+  }
 
-  const loadRecentFiles = useCallback(async () => {
-    setLoading(true)
+  const handleDownloadUpdate = () => {
+    window.__electronAPI?.downloadUpdate()
+    setUpdateStatus('downloading')
+    setDownloadProgress(0)
+  }
+
+  const handleInstallUpdate = () => {
+    window.__electronAPI?.installUpdate()
+  }
+
+  const handleNewProject = async () => {
+    const id = generateProjectId()
+    const now = Date.now()
+    const work: StoredWork = {
+      id,
+      name: '新项目',
+      updatedAt: now,
+      createdAt: now,
+      lastOpened: now,
+      nodeCount: 0,
+      edgeCount: 0,
+      templateId: 'custom',
+      editorData: { ...emptyGraph, title: '新项目' },
+    }
+    await saveWork(work)
+    onNewProject(work)
+  }
+
+  const handleOpenProject = async (work: StoredWork) => {
     try {
-      const api = window.__electronAPI
-      if (!api) {
-        setRecentFiles([])
-        setLoading(false)
+      const fresh = await loadWork(work.id)
+      if (fresh) {
+        fresh.lastOpened = Date.now()
+        await saveWork(fresh)
+        onOpenProject(fresh)
         return
       }
+    } catch { }
+    work.lastOpened = Date.now()
+    await saveWork(work)
+    onOpenProject(work)
+  }
 
-      const result = await api.getRecentFiles()
-      if (result.success) {
-        const files: ProjectFile[] = (result.files || []).map((filePath: string) => ({
-          path: filePath,
-          name: filePath.split(/[\\/]/).pop() || '未命名',
-        }))
-        setRecentFiles(files)
-      }
-    } catch (error) {
-      console.error('Failed to load recent files:', error)
-    } finally {
-      setLoading(false)
+  const handleDelete = async (id: string) => {
+    await deleteWork(id)
+    setMenuOpenId(null)
+    loadWorks()
+  }
+
+  const handleDuplicate = async (work: StoredWork) => {
+    const id = generateProjectId()
+    const now = Date.now()
+    const copy: StoredWork = {
+      ...work,
+      id,
+      name: work.name + ' (副本)',
+      createdAt: now,
+      lastOpened: now,
+      updatedAt: now,
+      editorData: { ...work.editorData },
     }
-  }, [])
+    await saveWork(copy)
+    setMenuOpenId(null)
+    loadWorks()
+  }
 
-  const handleNewProject = useCallback(async () => {
-    const api = window.__electronAPI
-    if (!api) {
-      onOpenProject(emptyGraph)
-      return
+  const startRename = (work: StoredWork) => {
+    setRenamingId(work.id)
+    setRenameValue(work.name)
+    setMenuOpenId(null)
+  }
+
+  const confirmRename = async () => {
+    if (!renamingId || !renameValue.trim()) return
+    const work = works.find((w) => w.id === renamingId)
+    if (work) {
+      work.name = renameValue.trim()
+      work.editorData.title = renameValue.trim()
+      await saveWork(work)
+      loadWorks()
     }
+    setRenamingId(null)
+  }
 
-    try {
-      const result = await api.getDefaultProjectsDir()
-      let defaultPath = result.success ? result.path : ''
-
-      const saveResult = await api.saveFileDialog({
-        defaultPath: defaultPath ? `${defaultPath}/未命名故事.json` : undefined,
-        filters: [{ name: 'SubSilicon 项目', extensions: ['json'] }],
-      })
-
-      if (!saveResult.success || !saveResult.path) return
-
-      const filePath = saveResult.path
-      const content = JSON.stringify(emptyGraph, null, 2)
-      const bytes = new TextEncoder().encode(content)
-      await api.writeFile(filePath, Array.from(bytes))
-      await api.addRecentFile(filePath)
-
-      onOpenProject(emptyGraph)
-      showToast('success', '新项目已创建')
-    } catch (error) {
-      showToast('error', '创建项目失败')
-    }
-  }, [onOpenProject])
-
-  const handleOpenProject = useCallback(async () => {
-    const api = window.__electronAPI
-    if (!api) {
-      console.log('[ProjectManager] No electron API, using empty graph')
-      onOpenProject(emptyGraph)
-      return
-    }
-
-    try {
-      console.log('[ProjectManager] Opening file dialog...')
-      const result = await api.openFileDialog({
-        filters: [{ name: 'SubSilicon 项目', extensions: ['json'] }],
-      })
-
-      console.log('[ProjectManager] Dialog result:', result)
-      if (!result.success || !result.path) {
-        console.log('[ProjectManager] Dialog canceled or no path')
-        return
-      }
-
-      const filePath = result.path
-      console.log('[ProjectManager] Reading file:', filePath)
-      const readResult = await api.readFile(filePath)
-      console.log('[ProjectManager] Read result:', readResult.success, readResult.error)
-
-      if (!readResult.success) {
-        showToast('error', '读取项目失败: ' + (readResult.error || '未知错误'))
-        return
-      }
-
-      let graph: StoryGraph
-      try {
-        const bytes = readResult.data as number[] || []
-        console.log('[ProjectManager] File size:', bytes.length, 'bytes')
-        const content = new TextDecoder('utf-8').decode(new Uint8Array(bytes))
-        console.log('[ProjectManager] File content preview:', content.substring(0, 200))
-        graph = JSON.parse(content)
-        console.log('[ProjectManager] Parsed graph successfully:', graph.title, graph.nodes?.length, 'nodes')
-      } catch (parseError) {
-        console.error('[ProjectManager] Parse error:', parseError)
-        showToast('error', '项目文件格式无效: ' + (parseError instanceof Error ? parseError.message : String(parseError)))
-        return
-      }
-
-      await api.addRecentFile(filePath)
-      console.log('[ProjectManager] Opening project...')
-      onOpenProject(graph)
-    } catch (error) {
-      console.error('[ProjectManager] Open project error:', error)
-      showToast('error', '打开项目失败')
-    }
-  }, [onOpenProject])
-
-  const handleOpenRecent = useCallback(async (project: ProjectFile) => {
-    const api = window.__electronAPI
-    if (!api) {
-      showToast('error', 'Electron API 不可用')
-      return
-    }
-
-    try {
-      const readResult = await api.readFile(project.path)
-      if (!readResult.success) {
-        showToast('error', '读取项目失败')
-        return
-      }
-
-      let graph: StoryGraph
-      try {
-        const bytes = readResult.data as number[] || []
-        const content = new TextDecoder('utf-8').decode(new Uint8Array(bytes))
-        graph = JSON.parse(content)
-      } catch {
-        showToast('error', '项目文件格式无效')
-        return
-      }
-
-      await api.addRecentFile(project.path)
-      onOpenProject(graph)
-    } catch (error) {
-      console.error('Failed to open recent project:', error)
-      showToast('error', '打开项目失败')
-    }
-  }, [onOpenProject])
-
-  const handleDeleteRecent = useCallback(async (project: ProjectFile) => {
-    setDeletingPath(project.path)
-    try {
-      const api = window.__electronAPI
-      if (!api) return
-
-      const result = await api.removeRecentFile(project.path)
-      if (result.success) {
-        setRecentFiles(prev => prev.filter(p => p.path !== project.path))
-        showToast('info', '已从最近列表移除')
-      }
-    } catch (error) {
-      showToast('error', '删除失败')
-    } finally {
-      setDeletingPath(null)
-    }
-  }, [])
+  const formatDate = (ts: number) => {
+    const d = new Date(ts)
+    const now = new Date()
+    const diff = now.getTime() - d.getTime()
+    if (diff < 60000) return '刚刚'
+    if (diff < 3600000) return `${Math.floor(diff / 60000)} 分钟前`
+    if (diff < 86400000) return `${Math.floor(diff / 3600000)} 小时前`
+    if (diff < 604800000) return `${Math.floor(diff / 86400000)} 天前`
+    return d.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })
+  }
 
   return (
-    <div className={`min-h-screen flex flex-col items-center justify-center p-8 ${theme === 'dark' ? 'bg-[#0f172a]' : 'bg-white'}`}>
-      <div className={`w-full max-w-md ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-        <div className="text-center mb-12">
-          <div className={`w-20 h-20 mx-auto mb-6 rounded-2xl flex items-center justify-center ${theme === 'dark' ? 'bg-gradient-to-br from-emerald-500/20 to-cyan-500/20' : 'bg-gradient-to-br from-emerald-100 to-cyan-100'}`}>
-            <Sparkles className={`w-10 h-10 ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`} />
+    <div className="h-screen w-screen bg-slate-900 flex flex-col overflow-hidden">
+      {/* 顶栏 */}
+      <header className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-900/80 backdrop-blur">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center">
+            <Sparkles className="w-4 h-4 text-white" />
           </div>
-          <h1 className={`text-2xl font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>SubSilicon Editor</h1>
-          <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>互动叙事创作工具</p>
+          <h1 className="text-lg font-semibold text-white">SubSilicon Editor</h1>
         </div>
-
-        <div className="grid grid-cols-2 gap-4 mb-8">
-          <Button
-            onClick={handleNewProject}
-            className={`${theme === 'dark' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-emerald-500 hover:bg-emerald-600'} text-white h-14 text-base font-medium`}
-            size="lg"
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleCheckUpdates}
+            disabled={updateStatus === 'checking' || updateStatus === 'downloading'}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg transition-colors ${
+              updateStatus === 'available'
+                ? 'bg-amber-500/15 text-amber-400 hover:bg-amber-500/25'
+                : updateStatus === 'downloaded'
+                ? 'bg-green-500/15 text-green-400 hover:bg-green-500/25'
+                : updateStatus === 'not-available'
+                ? 'text-green-400 hover:bg-slate-800'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+            } ${(updateStatus === 'checking' || updateStatus === 'downloading') ? 'opacity-50 cursor-not-allowed' : ''}`}
+            title={
+              updateStatus === 'available' ? `发现新版本 v${updateInfo?.version}` :
+              updateStatus === 'downloaded' ? '已下载，点击安装' :
+              updateStatus === 'checking' ? '检查中...' :
+              updateStatus === 'downloading' ? `下载中 ${downloadProgress}%` :
+              '检查更新'
+            }
           >
-            <Plus className="w-5 h-5 mr-2" />
-            新建项目
-          </Button>
-          <Button
-            onClick={handleOpenProject}
-            variant={theme === 'dark' ? 'outline' : 'secondary'}
-            className={`h-14 text-base font-medium ${theme === 'dark' ? 'border-gray-700 hover:bg-gray-800' : ''}`}
-            size="lg"
+            {updateStatus === 'checking' ? (
+              <RefreshCw className="w-4 h-4 animate-spin" />
+            ) : updateStatus === 'available' || updateStatus === 'downloading' ? (
+              <Download className="w-4 h-4" />
+            ) : updateStatus === 'downloaded' ? (
+              <RotateCcw className="w-4 h-4" />
+            ) : updateStatus === 'not-available' ? (
+              <CheckCircle2 className="w-4 h-4" />
+            ) : (
+              <RefreshCw className="w-4 h-4" />
+            )}
+            {updateStatus === 'checking' ? '检查中' :
+             updateStatus === 'available' ? '有更新' :
+             updateStatus === 'downloading' ? `${downloadProgress}%` :
+             updateStatus === 'downloaded' ? '安装' :
+             updateStatus === 'not-available' ? '已是最新' :
+             '检查更新'}
+          </button>
+          <button
+            onClick={onOpenSettings}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
           >
-            <FolderOpen className="w-5 h-5 mr-2" />
-            打开项目
-          </Button>
+            <Settings className="w-4 h-4" />
+            设置
+          </button>
         </div>
+      </header>
 
-        {recentFiles.length > 0 && (
-          <div className={`rounded-xl p-4 ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'}`}>
-            <div className="flex items-center gap-2 mb-4">
-              <Clock className={`w-4 h-4 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`} />
-              <span className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>最近项目</span>
-            </div>
-            <div className="space-y-2">
-              {recentFiles.map((project) => (
-                <div
-                  key={project.path}
-                  className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${theme === 'dark' ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
-                  onClick={() => handleOpenRecent(project)}
-                >
-                  <div className="flex items-center gap-3">
-                    <FileText className={`w-5 h-5 ${theme === 'dark' ? 'text-cyan-400' : 'text-cyan-500'}`} />
-                    <div className="min-w-0">
-                      <p className={`text-sm font-medium truncate ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                        {project.name}
-                      </p>
-                      <p className={`text-xs truncate ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
-                        {project.path}
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleDeleteRecent(project)
-                    }}
-                    disabled={deletingPath === project.path}
-                    className={`p-1.5 rounded-md transition-colors ${theme === 'dark' ? 'hover:bg-red-500/20 text-gray-400 hover:text-red-400' : 'hover:bg-red-50 text-gray-400 hover:text-red-500'} ${deletingPath === project.path ? 'opacity-50' : ''}`}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {!loading && recentFiles.length === 0 && (
-          <div className={`rounded-xl p-8 text-center ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'}`}>
-            <AlertCircle className={`w-10 h-10 mx-auto mb-3 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`} />
-            <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>暂无最近项目</p>
-            <p className={`text-xs mt-1 ${theme === 'dark' ? 'text-gray-600' : 'text-gray-400'}`}>点击「新建项目」开始创作</p>
-          </div>
-        )}
-
-        {loading && (
-          <div className={`rounded-xl p-8 text-center ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'}`}>
-            <div className={`w-6 h-6 mx-auto border-2 border-t-transparent rounded-full animate-spin ${theme === 'dark' ? 'border-emerald-500' : 'border-gray-300'}`} />
-          </div>
-        )}
-
-        {/* 更新提示 */}
-        {updateInfo && (updateStatus === 'available' || updateStatus === 'downloading' || updateStatus === 'downloaded') && (
-          <div className={`mt-6 mx-auto max-w-sm rounded-xl p-4 border ${theme === 'dark' ? 'bg-amber-500/5 border-amber-500/20' : 'bg-amber-50 border-amber-200'}`}>
-            <div className="flex items-center gap-2 mb-2">
-              <AlertCircle className="w-4 h-4 text-amber-500" />
-              <span className={`text-sm font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                发现新版本 v{updateInfo.version}
-              </span>
-            </div>
-            {updateInfo.releaseNotes && (
-              <div className={`text-xs mb-3 max-h-20 overflow-y-auto whitespace-pre-line ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                {updateInfo.releaseNotes.split('\n').slice(0, 5).join('\n')}
+      {/* 更新通知横幅 */}
+      {(updateStatus === 'available' || updateStatus === 'downloading' || updateStatus === 'downloaded') && updateInfo && (
+        <div className="mx-6 mt-3 mb-0 p-4 rounded-xl bg-gradient-to-r from-amber-500/10 to-amber-600/5 border border-amber-500/20">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                updateStatus === 'downloaded' ? 'bg-green-500/15' : 'bg-amber-500/15'
+              }`}>
+                {updateStatus === 'downloading' ? (
+                  <RefreshCw className="w-4 h-4 text-amber-400 animate-spin" />
+                ) : updateStatus === 'downloaded' ? (
+                  <CheckCircle2 className="w-4 h-4 text-green-400" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 text-amber-400" />
+                )}
               </div>
-            )}
-            {updateStatus === 'downloading' && (
-              <div className="mb-3">
-                <div className="w-full h-1.5 bg-gray-700 rounded-full overflow-hidden">
-                  <div className="h-full bg-amber-500 transition-all duration-300" style={{ width: `${downloadProgress}%` }} />
-                </div>
-                <p className={`text-xs mt-1 text-center ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>{downloadProgress}%</p>
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-white">
+                  {updateStatus === 'available' && `新版本 v${updateInfo.version} 可用`}
+                  {updateStatus === 'downloading' && `正在下载更新 ${downloadProgress}%`}
+                  {updateStatus === 'downloaded' && `更新已下载完成`}
+                </p>
+                {updateInfo.releaseNotes && (
+                  <p className="text-xs text-slate-400 mt-0.5 line-clamp-1">
+                    {updateInfo.releaseNotes.split('\n').slice(1, 3).join(' · ').replace(/^##\s*/, '')}
+                  </p>
+                )}
               </div>
-            )}
-            <div className="flex gap-2">
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {updateStatus === 'downloading' && (
+                <div className="w-24 h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                  <div className="h-full bg-amber-500 transition-all duration-300 rounded-full" style={{ width: `${downloadProgress}%` }} />
+                </div>
+              )}
               {updateStatus === 'available' && (
                 <button
-                  onClick={() => {
-                    window.__electronAPI?.downloadUpdate()
-                    if (window.__electronAPI?.platform === 'darwin') {
-                      setUpdateStatus('idle')
-                    } else {
-                      setUpdateStatus('downloading')
-                      setDownloadProgress(0)
-                    }
-                  }}
-                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-medium transition-colors"
+                  onClick={handleDownloadUpdate}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-medium rounded-lg transition-colors"
                 >
                   <Download className="w-3.5 h-3.5" />
                   下载更新
@@ -389,42 +292,161 @@ export function ProjectManager({ onOpenProject }: ProjectManagerProps) {
               )}
               {updateStatus === 'downloaded' && (
                 <button
-                  onClick={() => window.__electronAPI?.installUpdate()}
-                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-green-500 hover:bg-green-600 text-white text-xs font-medium transition-colors"
+                  onClick={handleInstallUpdate}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-xs font-medium rounded-lg transition-colors"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
                   重启安装
                 </button>
               )}
+              {(updateStatus === 'available' || updateStatus === 'downloaded') && (
+                <button
+                  onClick={() => { setUpdateStatus('idle'); setUpdateInfo(null) }}
+                  className="p-2 rounded-lg hover:bg-slate-800 text-slate-500 hover:text-slate-300 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 内容区 */}
+      <div className="flex-1 overflow-y-auto p-6">
+        {loading ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="w-6 h-6 border-2 border-pink-500 border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : works.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full gap-6">
+            <div className="w-20 h-20 rounded-2xl bg-slate-800 border-2 border-dashed border-slate-600 flex items-center justify-center">
+              <FolderOpen className="w-8 h-8 text-slate-500" />
+            </div>
+            <div className="text-center">
+              <h2 className="text-lg font-medium text-white mb-1">欢迎使用 SubSilicon Editor</h2>
+              <p className="text-sm text-slate-400 mb-6">创建一个新项目开始你的故事创作</p>
+            </div>
+            <button
+              onClick={handleNewProject}
+              className="flex items-center gap-2 px-6 py-3 bg-pink-500 hover:bg-pink-600 text-white rounded-xl text-sm font-medium transition-colors shadow-lg shadow-pink-500/20"
+            >
+              <Plus className="w-5 h-5" />
+              新建项目
+            </button>
+          </div>
+        ) : (
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-medium text-slate-300">最近的项目</h2>
+              <button
+                onClick={handleNewProject}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-pink-500 hover:bg-pink-600 text-white rounded-lg transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                新建项目
+              </button>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4">
+              {works.map((work) => (
+                <div
+                  key={work.id}
+                  className="group relative bg-slate-800/50 rounded-xl border border-slate-700/50 hover:border-pink-500/50 transition-all overflow-hidden cursor-pointer"
+                  onClick={() => {
+                    if (renamingId !== work.id) handleOpenProject(work)
+                  }}
+                >
+                  {/* 缩略图占位 */}
+                  <div className="aspect-[16/10] bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center">
+                    {work.thumbnail ? (
+                      <img src={work.thumbnail} alt={work.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="flex flex-col items-center gap-1 text-slate-600">
+                        <BookOpen className="w-8 h-8" />
+                        <span className="text-[10px]">{work.nodeCount} 个节点</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 信息区 */}
+                  <div className="p-3">
+                    {renamingId === work.id ? (
+                      <input
+                        value={renameValue}
+                        onChange={(e) => setRenameValue(e.target.value)}
+                        onBlur={confirmRename}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') confirmRename()
+                          if (e.key === 'Escape') setRenamingId(null)
+                        }}
+                        className="w-full text-xs font-medium bg-slate-700 border border-pink-500 rounded px-1.5 py-0.5 text-white outline-none"
+                        autoFocus
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    ) : (
+                      <p className="text-xs font-medium text-white truncate">{work.name}</p>
+                    )}
+                    <div className="flex items-center gap-2 mt-1.5 text-[10px] text-slate-500">
+                      <Clock className="w-3 h-3" />
+                      <span>{formatDate(work.lastOpened)}</span>
+                      <span className="ml-auto">{work.nodeCount} 节点</span>
+                    </div>
+                  </div>
+
+                  {/* 菜单按钮 */}
+                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="relative">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setMenuOpenId(menuOpenId === work.id ? null : work.id)
+                        }}
+                        className="p-1 rounded-lg bg-black/50 hover:bg-black/70 text-white transition-colors"
+                      >
+                        <MoreHorizontal className="w-4 h-4" />
+                      </button>
+                      {menuOpenId === work.id && (
+                        <>
+                          <div className="fixed inset-0 z-10" onClick={() => setMenuOpenId(null)} />
+                          <div className="absolute right-0 top-full mt-1 z-20 w-36 bg-slate-800 rounded-lg border border-slate-700 shadow-xl overflow-hidden">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); startRename(work) }}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-300 hover:bg-slate-700 transition-colors"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                              重命名
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDuplicate(work) }}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-300 hover:bg-slate-700 transition-colors"
+                            >
+                              <Copy className="w-3.5 h-3.5" />
+                              复制
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDelete(work.id) }}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-xs text-red-400 hover:bg-slate-700 transition-colors"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              删除
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
-
-        {/* 版本信息 */}
-        <div className={`mt-8 text-center text-xs ${theme === 'dark' ? 'text-gray-600' : 'text-gray-400'}`}>
-          <div className="flex items-center justify-center gap-2">
-            <span>版本 {version}</span>
-            <button
-              onClick={() => {
-                if (updateStatus === 'checking' || updateStatus === 'downloading') return
-                setUpdateStatus('checking')
-                window.__electronAPI?.checkForUpdates()
-              }}
-              disabled={updateStatus === 'checking' || updateStatus === 'downloading'}
-              className={`inline-flex items-center gap-1 transition-colors ${updateStatus === 'checking' ? 'opacity-50' : 'hover:text-amber-500'}`}
-              title="检查更新"
-            >
-              {updateStatus === 'checking' ? (
-                <RefreshCw className="w-3 h-3 animate-spin" />
-              ) : updateStatus === 'not-available' ? (
-                <CheckCircle2 className="w-3 h-3 text-green-500" />
-              ) : (
-                <RefreshCw className="w-3 h-3" />
-              )}
-            </button>
-          </div>
-        </div>
       </div>
+
+      {/* 底部信息 */}
+      <footer className="flex items-center justify-between px-6 py-2 border-t border-slate-800 bg-slate-900/80">
+        <span className="text-[10px] text-slate-600">SubSilicon Editor 1.2.3</span>
+        <span className="text-[10px] text-slate-600">项目存储在本地数据库中</span>
+      </footer>
     </div>
   )
 }

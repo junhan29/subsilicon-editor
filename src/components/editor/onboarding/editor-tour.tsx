@@ -5,14 +5,28 @@ import { X, ChevronRight, ChevronLeft, Sparkles } from 'lucide-react'
 import { Button } from '@editor/components/ui/button'
 import type { TourStep } from './tour-steps'
 
-const TOUR_COMPLETED_KEY = 'subsilicon_editor_tour_completed'
+const TOUR_COMPLETED_KEY = 'subsilicon_tour_completed'
 
 export function isTourCompleted(): boolean {
-  return localStorage.getItem(TOUR_COMPLETED_KEY) === 'true'
+  try {
+    return localStorage.getItem(TOUR_COMPLETED_KEY) === 'true'
+  } catch {
+    return false
+  }
 }
 
 export function markTourCompleted(): void {
-  localStorage.setItem(TOUR_COMPLETED_KEY, 'true')
+  try {
+    localStorage.setItem(TOUR_COMPLETED_KEY, 'true')
+  } catch {
+  }
+}
+
+export function resetTour(): void {
+  try {
+    localStorage.removeItem(TOUR_COMPLETED_KEY)
+  } catch {
+  }
 }
 
 interface EditorTourProps {
@@ -51,6 +65,7 @@ export function EditorTour({ active, steps, onClose, onComplete }: EditorTourPro
 
   const handleNext = () => {
     if (isLast) {
+      markTourCompleted()
       onClose()
       onComplete?.()
     } else {

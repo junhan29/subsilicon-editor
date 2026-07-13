@@ -1,37 +1,11 @@
 import { openDB } from './local-db/db'
 import type { PlatformConfig, CreatorAccount, PublishRecord } from '@editor/types/creator'
-import { encryptString, decryptString } from './crypto-utils'
-
-async function encryptPlatformSecrets(config: PlatformConfig): Promise<PlatformConfig> {
-  if (!config.config) return config
-  const encrypted = { ...config, config: { ...config.config } }
-  if (encrypted.config.platformPassword) {
-    encrypted.config.platformPassword = await encryptString(encrypted.config.platformPassword)
-  }
-  if (encrypted.config.submitToken) {
-    encrypted.config.submitToken = await encryptString(encrypted.config.submitToken)
-  }
-  return encrypted
-}
-
-async function decryptPlatformSecrets(config: PlatformConfig): Promise<PlatformConfig> {
-  if (!config.config) return config
-  const decrypted = { ...config, config: { ...config.config } }
-  if (decrypted.config.platformPassword) {
-    decrypted.config.platformPassword = await decryptString(decrypted.config.platformPassword)
-  }
-  if (decrypted.config.submitToken) {
-    decrypted.config.submitToken = await decryptString(decrypted.config.submitToken)
-  }
-  return decrypted
-}
 
 export async function savePlatformConfig(config: PlatformConfig): Promise<void> {
   const db = await openDB()
-  const encrypted = await encryptPlatformSecrets(config)
   return new Promise((resolve, reject) => {
     const tx = db.transaction('platformConfigs', 'readwrite')
-    tx.objectStore('platformConfigs').put(encrypted)
+    tx.objectStore('platformConfigs').put(config)
     tx.oncomplete = () => resolve()
     tx.onerror = () => reject(tx.error)
   })
@@ -43,14 +17,7 @@ export async function getPlatformConfig(id: string): Promise<PlatformConfig | nu
     const request = db.transaction('platformConfigs', 'readonly')
       .objectStore('platformConfigs')
       .get(id)
-    request.onsuccess = async () => {
-      const result = request.result || null
-      if (result) {
-        resolve(await decryptPlatformSecrets(result))
-      } else {
-        resolve(null)
-      }
-    }
+    request.onsuccess = () => resolve(request.result || null)
     request.onerror = () => reject(request.error)
   })
 }
@@ -61,11 +28,7 @@ export async function getAllPlatformConfigs(): Promise<PlatformConfig[]> {
     const request = db.transaction('platformConfigs', 'readonly')
       .objectStore('platformConfigs')
       .getAll()
-    request.onsuccess = async () => {
-      const results = request.result || []
-      const decrypted = await Promise.all(results.map((r: PlatformConfig) => decryptPlatformSecrets(r)))
-      resolve(decrypted)
-    }
+    request.onsuccess = () => resolve(request.result || [])
     request.onerror = () => reject(request.error)
   })
 }

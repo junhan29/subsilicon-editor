@@ -1,15 +1,12 @@
 'use client'
 
-import { memo, useState } from 'react'
+import { memo } from 'react'
 import { Handle, Position } from '@xyflow/react'
-import { AlignLeft, Image, ChevronDown, ChevronUp } from 'lucide-react'
+import { AlignLeft, Image } from 'lucide-react'
 import { areNodesEqual } from '@editor/lib/utils'
 
 function NarrationNodeComponent({ data, selected }: any) {
-  const [expanded, setExpanded] = useState(false)
   const hasBg = !!data.backgroundColor
-  const text = data.text || ''
-  const isLong = text.length > 80
 
   return (
     <div
@@ -51,18 +48,9 @@ function NarrationNodeComponent({ data, selected }: any) {
         </div>
 
         <div className="bg-slate-50 dark:bg-slate-800/50 rounded-md px-2 py-1.5">
-          <p className={`text-xs text-slate-500 dark:text-slate-400 leading-relaxed italic ${expanded ? '' : 'line-clamp-2'}`}>
-            {text || '点击编辑旁白文本...'}
+          <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed italic">
+            {data.text || '点击编辑旁白文本...'}
           </p>
-          {isLong && (
-            <button
-              onClick={(e) => { e.stopPropagation(); setExpanded(!expanded) }}
-              className="flex items-center gap-0.5 mt-0.5 text-[10px] text-slate-500 hover:text-slate-400 transition-colors"
-            >
-              {expanded ? <ChevronUp className="w-2.5 h-2.5" /> : <ChevronDown className="w-2.5 h-2.5" />}
-              {expanded ? '收起' : '展开'}
-            </button>
-          )}
         </div>
 
         <div className="flex items-center justify-end mt-1.5">

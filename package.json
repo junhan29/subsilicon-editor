@@ -1,45 +1,268 @@
 {
-  "name": "@subsilicon/editor",
-  "version": "1.3.0",
-  "private": true,
+  "name": "subsilicon-editor",
+  "version": "1.2.3",
+  "license": "MIT",
+  "description": "零代码可视化互动叙事编辑器 | Zero-code visual interactive narrative editor",
+  "keywords": [
+    "visual-novel",
+    "interactive-fiction",
+    "narrative-editor",
+    "electron",
+    "react"
+  ],
   "type": "module",
+  "main": "desktop/main.cjs",
   "scripts": {
-    "typecheck": "tsc --noEmit",
-    "dev": "tsc --watch",
-    "test": "vitest run",
-    "test:watch": "vitest",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
     "lint": "eslint src --ext .ts,.tsx",
     "lint:fix": "eslint src --ext .ts,.tsx --fix",
-    "format": "prettier --write src"
+    "format": "prettier --write src",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "electron:dev": "node desktop/build.cjs && concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "electron:build": "vite build && node desktop/build.cjs && electron-builder",
+    "electron:build:win": "vite build && node desktop/build.cjs && electron-builder --win",
+    "electron:build:mac": "vite build && node desktop/build.cjs && electron-builder --mac",
+    "electron:build:linux": "vite build && node desktop/build.cjs && electron-builder --linux",
+    "electron:build:all": "vite build && node desktop/build.cjs && electron-builder -mw",
+    "electron:pack": "vite build && node desktop/build.cjs && electron-builder --dir"
   },
   "dependencies": {
-    "@radix-ui/react-dialog": "^1.1.5",
-    "@radix-ui/react-label": "^2.1.2",
-    "@radix-ui/react-slider": "^1.2.3",
-    "@radix-ui/react-slot": "^1.1.1",
-    "@radix-ui/react-tabs": "^1.1.2",
-    "@xyflow/react": "^12.3.0",
-    "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1",
-    "jszip": "^3.10.1",
-    "lucide-react": "^0.460.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "tailwind-merge": "^2.6.0",
-    "uuid": "^11.0.0",
-    "zustand": "^5.0.0"
+    "@radix-ui/react-dialog": "1.1.17",
+    "@radix-ui/react-label": "2.1.10",
+    "@radix-ui/react-slot": "1.3.0",
+    "@radix-ui/react-tabs": "1.1.15",
+    "@tiptap/extension-link": "3.27.1",
+    "@tiptap/extension-placeholder": "3.27.1",
+    "@tiptap/pm": "3.27.1",
+    "@tiptap/react": "3.27.1",
+    "@tiptap/starter-kit": "3.27.1",
+    "@xyflow/react": "12.11.1",
+    "class-variance-authority": "0.7.1",
+    "clsx": "2.1.1",
+    "electron-updater": "^6.8.9",
+    "jszip": "3.10.1",
+    "lucide-react": "0.462.0",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "tailwind-merge": "2.5.5",
+    "uuid": "11.0.0",
+    "zustand": "5.0.14"
   },
   "devDependencies": {
-    "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0",
-    "@types/uuid": "^10.0.0",
-    "electron": "^43.0.0",
-    "electron-builder": "^26.15.3",
-    "typescript": "^5.6.0",
-    "vitest": "^2.0.0"
+    "@types/react": "19.0.0",
+    "@types/react-dom": "19.0.0",
+    "@types/uuid": "10.0.0",
+    "@typescript-eslint/eslint-plugin": "8.10.0",
+    "@typescript-eslint/parser": "8.10.0",
+    "@vitejs/plugin-react": "4.3.3",
+    "autoprefixer": "10.4.20",
+    "concurrently": "8.2.2",
+    "cos-nodejs-sdk-v5": "^3.0.0",
+    "electron": "43.0.0",
+    "electron-builder": "26.15.3",
+    "esbuild": "^0.28.1",
+    "eslint": "9.0.0",
+    "eslint-plugin-react-hooks": "5.1.0",
+    "postcss": "8.4.49",
+    "prettier": "3.3.3",
+    "tailwindcss": "3.4.15",
+    "tailwindcss-animate": "1.0.7",
+    "typescript": "5.4.5",
+    "vite": "5.4.10",
+    "vitest": "2.1.4",
+    "wait-on": "7.2.0"
   },
-  "peerDependencies": {
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+  "build": {
+    "appId": "cn.subsilicon.editor",
+    "productName": "SubSilicon Editor",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**/*",
+      "desktop/main.cjs",
+      "desktop/preload.cjs",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "build/",
+        "to": "build",
+        "filter": [
+          "icon.icns",
+          "icon.ico",
+          "icon.png"
+        ]
+      }
+    ],
+    "asar": true,
+    "compression": "maximum",
+    "artifactName": "${productName}-${version}-${platform}-${arch}.${ext}",
+    "electronDownload": {
+      "mirror": "https://npmmirror.com/mirrors/electron/"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "SubSilicon Editor",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
+      "language": "2052"
+    },
+    "extraMetadata": {
+      "main": "desktop/main.cjs"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "artifactName": "${productName}-${version}-windows-${arch}.${ext}",
+      "signAndEditExecutable": false
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "icon": "build/icon.icns",
+      "artifactName": "${productName}-${version}-macos-${arch}.${ext}",
+      "category": "public.app-category.productivity",
+      "type": "distribution",
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "darkModeSupport": true,
+      "extendInfo": {
+        "NSRequiresAquaSystemAppearance": false
+      }
+    },
+    "dmg": {
+      "title": "${productName} ${version}",
+      "icon": "build/icon.icns",
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "tar.gz",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png",
+      "artifactName": "${productName}-${version}-linux-${arch}.${ext}",
+      "category": "Office",
+      "maintainer": "SubSilicon Team <contact@subsilicon.cn>",
+      "vendor": "SubSilicon",
+      "description": "Zero-code visual interactive narrative editor"
+    },
+    "deb": {
+      "packageCategory": "editors",
+      "priority": "optional",
+      "depends": [
+        "libgtk-3-0",
+        "libnotify4",
+        "libnss3",
+        "libxss1",
+        "libxtst6",
+        "xdg-utils",
+        "libatspi2.0-0",
+        "libuuid1",
+        "libsecret-1-0"
+      ],
+      "recommends": [
+        "pulseaudio | libasound2"
+      ],
+      "fpm": [
+        "--deb-compression",
+        "xz"
+      ]
+    },
+    "rpm": {
+      "packageCategory": "Editors",
+      "depends": [
+        "gtk3",
+        "libnotify",
+        "nss",
+        "libXScrnSaver",
+        "libXtst",
+        "xdg-utils",
+        "at-spi2-core",
+        "libuuid",
+        "libsecret"
+      ],
+      "fpm": [
+        "--rpm-compression",
+        "xz"
+      ]
+    },
+    "appImage": {
+      "category": "Office",
+      "license": "LICENSE"
+    },
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "https://subsilicon.cn/releases"
+      }
+    ]
   }
 }

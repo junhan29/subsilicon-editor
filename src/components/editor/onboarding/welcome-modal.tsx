@@ -112,7 +112,7 @@ export function WelcomeModal({
             </div>
             <h2 className="text-xl font-bold text-slate-50 tracking-tight">SubSilicon Editor</h2>
             <p className="text-xs text-amber-300/80 mt-1 font-medium tracking-wide">
-              互动图文小说创作工具
+              零代码可视化互动叙事编辑器
             </p>
           </div>
           <button
@@ -228,6 +228,8 @@ export function WelcomeModal({
               直接开始
             </Button>
           </div>
+
+
         </div>
 
         {/* 底部提示 */}

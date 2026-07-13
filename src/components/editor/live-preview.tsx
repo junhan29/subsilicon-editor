@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef, memo, useMemo } from 'react'
 import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Maximize2 } from 'lucide-react'
 import { Button } from '@editor/components/ui/button'
 import { RuntimeSceneRenderer } from './puzzle/runtime-scene-renderer'
+import { AudioManager, createAudioManager } from '@editor/lib/audio-manager'
 import type { StoryNode, StoryCharacter, ComicScene, ComicAudio } from '@editor/types/editor'
 
 interface LivePreviewProps {
@@ -13,7 +14,6 @@ interface LivePreviewProps {
   audios?: ComicAudio[]
   selectedNodeId: string | null
   onNodeSelect?: (nodeId: string) => void
-  onFullscreen?: () => void
   className?: string
 }
 
@@ -26,7 +26,6 @@ function LivePreview({
   audios = [],
   selectedNodeId,
   onNodeSelect,
-  onFullscreen,
   className = '',
 }: LivePreviewProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -36,7 +35,21 @@ function LivePreview({
   const [isTyping, setIsTyping] = useState(false)
   const [sceneTransition, setSceneTransition] = useState(false)
   const [characterEntering, setCharacterEntering] = useState(false)
-  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const audioManager = useRef<AudioManager | null>(null)
+  const mountedRef = useRef(true)
+
+  useEffect(() => {
+    mountedRef.current = true
+    return () => { mountedRef.current = false }
+  }, [])
+
+  useEffect(() => {
+    audioManager.current = createAudioManager()
+    return () => {
+      audioManager.current?.destroy()
+      audioManager.current = null
+    }
+  }, [])
 
   const dialogueNodes = useMemo(() => {
     return nodes.filter((n) => n.type === 'dialogue' || n.type === 'choice' || n.type === 'narration' || n.type === 'ending' || n.type === 'cg')
@@ -124,6 +137,45 @@ function LivePreview({
   }, [selectedNodeId, dialogueNodes])
 
   useEffect(() => {
+    if (!mountedRef.current) return
+    const node = dialogueNodes[currentIndex]
+    if (!node) return
+    const data = node.data as any
+
+    if (data.bgm) {
+      const currentBgm = audioManager.current?.getCurrentUrl('bgm')
+      if (currentBgm !== data.bgm) {
+        audioManager.current?.stop('bgm', 500)
+        audioManager.current?.play('bgm', data.bgm, { loop: true, volume: data.bgmVolume || 0.3, fadeTime: 500 })
+      }
+    }
+
+    if (data.bgs) {
+      const currentBgs = audioManager.current?.getCurrentUrl('bgs')
+      if (currentBgs !== data.bgs) {
+        audioManager.current?.stop('bgs', 500)
+        audioManager.current?.play('bgs', data.bgs, { loop: true, volume: data.bgsVolume || 0.2, fadeTime: 500 })
+      }
+    }
+
+    if (data.seUrl) {
+      audioManager.current?.play('se', data.seUrl, { loop: false, volume: data.seVolume || 0.5 })
+    }
+
+    if (data.voiceUrl) {
+      audioManager.current?.play('voice', data.voiceUrl, { loop: false, volume: 0.8 })
+    }
+  }, [currentIndex, dialogueNodes])
+
+  useEffect(() => {
+    if (isMuted) {
+      audioManager.current?.pauseAll()
+    } else {
+      audioManager.current?.resumeAll()
+    }
+  }, [isMuted])
+
+  useEffect(() => {
     if (!isPlaying || !currentNode) return
     if (currentNode.type === 'choice') {
       setIsPlaying(false)
@@ -157,7 +209,7 @@ function LivePreview({
     if (currentIndex > 0) {
       setCurrentIndex(currentIndex - 1)
       setCharacterEntering(true)
-      setTimeout(() => setCharacterEntering(false), 500)
+      setTimeout(() => { if (mountedRef.current) setCharacterEntering(false) }, 500)
     }
   }, [currentIndex])
 
@@ -165,7 +217,7 @@ function LivePreview({
     if (currentIndex < dialogueNodes.length - 1) {
       setCurrentIndex(currentIndex + 1)
       setCharacterEntering(true)
-      setTimeout(() => setCharacterEntering(false), 500)
+      setTimeout(() => { if (mountedRef.current) setCharacterEntering(false) }, 500)
       if (onNodeSelect && dialogueNodes[currentIndex + 1]) {
         onNodeSelect(dialogueNodes[currentIndex + 1].id)
       }
@@ -305,13 +357,37 @@ function LivePreview({
       const d = currentNode.data as any
       const isVideo = d.mediaType === 'video'
       const hasLetterbox = d.letterbox !== false
+      const displayMode: 'contain' | 'cover' | 'fill' | 'custom' = d.displayMode || 'contain'
+      const objectPosition: string = d.objectPosition || 'center'
+
+      // 根据显示模式构建 className 与 style
+      const isCustom = displayMode === 'custom'
+      const mediaClassName = isCustom
+        ? 'object-contain'
+        : displayMode === 'cover'
+          ? 'w-full h-full object-cover'
+          : displayMode === 'fill'
+            ? 'w-full h-full object-fill'
+            : 'w-full h-full object-contain'
+      const mediaStyle = isCustom
+        ? {
+            width: `${d.customWidth || 100}%`,
+            height: `${d.customHeight || 100}%`,
+            position: 'absolute' as const,
+            left: '50%',
+            top: '50%',
+            transform: 'translate(-50%, -50%)',
+            objectPosition,
+          }
+        : { objectPosition }
 
       return (
         <div className="absolute inset-0 z-10 bg-black">
           {isVideo ? (
             <video
               src={d.url}
-              className="w-full h-full object-contain"
+              className={mediaClassName}
+              style={mediaStyle}
               autoPlay
               muted={isMuted}
               loop={false}
@@ -326,7 +402,8 @@ function LivePreview({
               <img
                 src={d.url}
                 alt={d.title || 'CG'}
-                className="w-full h-full object-contain"
+                className={mediaClassName}
+                style={mediaStyle}
               />
             )
           )}
@@ -370,6 +447,7 @@ function LivePreview({
       const endingType = (currentNode.data as any)?.endingType || 'neutral'
       const title = (currentNode.data as any)?.title || '结局'
       const text = (currentNode.data as any)?.text || ''
+      const coverImage = (currentNode.data as any)?.coverImage
 
       const typeConfig: Record<string, { emoji: string; color: string; label: string }> = {
         good: { emoji: '🌟', color: '#fbbf24', label: '好结局' },
@@ -382,8 +460,16 @@ function LivePreview({
 
       return (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          {coverImage && (
+            <img
+              src={coverImage}
+              alt="结局封面"
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+          )}
+          {coverImage && <div className="absolute inset-0 bg-black/50" />}
           <div
-            className="bg-slate-900/95 backdrop-blur-md rounded-2xl border shadow-2xl p-8 max-w-md mx-4 text-center"
+            className="bg-slate-900/95 backdrop-blur-md rounded-2xl border shadow-2xl p-8 max-w-md mx-4 text-center relative z-10"
             style={{ borderColor: config.color }}
           >
             <div className="text-5xl mb-4">{config.emoji}</div>
@@ -444,12 +530,10 @@ function LivePreview({
 
         {renderDialogueBox()}
 
-        <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-          {onFullscreen && (
-            <Button size="icon" variant="ghost" className="h-8 w-8 bg-black/50 hover:bg-black/70 text-white" onClick={onFullscreen}>
-              <Maximize2 className="w-4 h-4" />
-            </Button>
-          )}
+        <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+          <Button size="icon" variant="ghost" className="h-8 w-8 bg-black/50 hover:bg-black/70 text-white">
+            <Maximize2 className="w-4 h-4" />
+          </Button>
         </div>
       </div>
 
@@ -513,7 +597,7 @@ function LivePreview({
                 const val = parseInt(e.target.value)
                 setCurrentIndex(val)
                 setCharacterEntering(true)
-                setTimeout(() => setCharacterEntering(false), 500)
+                setTimeout(() => { if (mountedRef.current) setCharacterEntering(false) }, 500)
               }}
               className="w-full h-1 accent-pink-500 cursor-pointer"
             />

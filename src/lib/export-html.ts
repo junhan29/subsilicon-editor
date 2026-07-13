@@ -8,14 +8,8 @@ import {
 } from '@editor/lib/work-monetization'
 import { getAsset } from '@editor/lib/local-db'
 
-// ============ 常量 ============
-
-/** 付费内容加密前缀 */
 const ENC_PREFIX = '__ENC__:'
 
-// ============ 素材内嵌工具函数 ============
-
-/** Blob 转 data URL（base64 编码） */
 function blobToDataURL(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
@@ -25,46 +19,33 @@ function blobToDataURL(blob: Blob): Promise<string> {
   })
 }
 
-/**
- * 从 blob: URL 中提取 hash 部分
- * blob: URL 格式: blob:http://localhost:3001/<hash-or-uuid>
- */
 function extractHashFromBlobURL(url: string): string | null {
-  // 尝试匹配 blob:origin/path 格式，取 path 部分作为 hash
   const match = url.match(/^blob:[^/]+\/\/[^/]+\/(.+)$/)
   if (match) return match[1]
-  // 备用：取最后一个 / 后面的部分
   const lastSlash = url.lastIndexOf('/')
   if (lastSlash !== -1) return url.slice(lastSlash + 1)
   return null
 }
 
-/**
- * 获取 blob: URL 对应的 Blob 对象
- * 优先从 IndexedDB 通过 hash 获取，回退到直接 fetch blob URL
- */
 async function fetchBlobFromURL(url: string): Promise<Blob | null> {
-  // 1. 尝试从 IndexedDB 通过 hash 获取
+  // 尝试从 IndexedDB 通过 hash 获取
   const hash = extractHashFromBlobURL(url)
   if (hash) {
     try {
       const asset = await getAsset(hash)
       if (asset) return asset.blob
     } catch {
-      // IndexedDB 查询失败，继续尝试其他方式
     }
   }
-  // 2. 回退：直接 fetch blob URL（适用于 URL.createObjectURL 生成的标准 blob URL）
+  // 回退：直接 fetch blob URL（适用于 URL.createObjectURL 生成的标准 blob URL）
   try {
     const response = await fetch(url)
     if (response.ok) return await response.blob()
   } catch {
-    // fetch 失败，返回 null
   }
   return null
 }
 
-/** 递归收集对象中所有 blob: URL */
 function collectBlobURLs(obj: unknown, urls: Set<string>): void {
   if (!obj || typeof obj !== 'object') return
   if (Array.isArray(obj)) {
@@ -88,7 +69,6 @@ function collectBlobURLs(obj: unknown, urls: Set<string>): void {
   }
 }
 
-/** 递归替换对象中所有 blob: URL */
 function replaceBlobURLs(obj: unknown, urlMap: Map<string, string>): void {
   if (!obj || typeof obj !== 'object') return
   if (Array.isArray(obj)) {
@@ -112,23 +92,17 @@ function replaceBlobURLs(obj: unknown, urlMap: Map<string, string>): void {
   }
 }
 
-// ============ 修复 1：素材内嵌 ============
-
-/**
- * 将 StoryGraph 中所有 blob: URL 转为 data URL（base64 内嵌）
- * 确保导出的 HTML 在新页面中打开后素材不失效
- */
 export async function embedAssets(graph: StoryGraph): Promise<StoryGraph> {
   // 深拷贝，避免修改原始 graph
   const newGraph: StoryGraph = JSON.parse(JSON.stringify(graph))
 
-  // 1. 递归收集所有 blob: URL
+  // 递归收集所有 blob: URL
   const blobURLs = new Set<string>()
   collectBlobURLs(newGraph, blobURLs)
 
   if (blobURLs.size === 0) return newGraph
 
-  // 2. 批量获取 Blob 并转为 data URL（控制并发避免内存峰值）
+  // 批量获取 Blob 并转为 data URL（控制并发避免内存峰值）
   const urlMap = new Map<string, string>()
   const batchSize = 5
   const blobURLArray = Array.from(blobURLs)
@@ -154,23 +128,16 @@ export async function embedAssets(graph: StoryGraph): Promise<StoryGraph> {
     }
   }
 
-  // 3. 递归替换所有 blob: URL
+  // 递归替换所有 blob: URL
   replaceBlobURLs(newGraph, urlMap)
 
   return newGraph
 }
 
-// ============ 修复 2：付费内容加密 ============
-
-/** Base64 编码（支持中文，使用 UTF-8 编码） */
 function encodeBase64UTF8(text: string): string {
   return btoa(unescape(encodeURIComponent(text)))
 }
 
-/**
- * 加密付费节点内容（Base64 编码，防止 F12 直接查看明文）
- * 只加密敏感文本字段，URL 等非敏感字段不加密
- */
 export function encryptPaidContent(
   graph: StoryGraph,
   monetization: MonetizationConfig
@@ -217,8 +184,6 @@ export function encryptPaidContent(
 
   return newGraph
 }
-
-// ============ HTML 模板构建 ============
 
 function buildHTMLTemplate(params: {
   title: string
@@ -315,16 +280,9 @@ function buildHTMLTemplate(params: {
       var root = document.getElementById('root');
       var currentNodeId = graph.nodes.find(function(n) { return n.type === 'dialogue' || n.type === 'choice'; })?.id || graph.nodes[0]?.id;
 
-      // 解锁码前缀常量
       var UNLOCK_PREFIX = '${UNLOCK_CODE_PREFIX}';
       var REQ_PREFIX = '${UNLOCK_REQUEST_PREFIX}';
 
-      // ============ 付费内容解密 ============
-
-      /**
-       * 解密单个字段值
-       * 如果值以 __ENC__: 开头，则进行 Base64 解码
-       */
       function decryptField(value) {
         if (typeof value !== 'string') return value;
         if (value.indexOf('${ENC_PREFIX}') !== 0) return value;
@@ -336,10 +294,6 @@ function buildHTMLTemplate(params: {
         }
       }
 
-      /**
-       * 解密节点数据中的所有加密字段
-       * 在 renderNode 之前调用，确保渲染时拿到的是明文
-       */
       function decryptNodeData(data) {
         if (!data) return {};
         var result = {};
@@ -365,8 +319,6 @@ function buildHTMLTemplate(params: {
         }
         return result;
       }
-
-      // ============ 付费解锁系统 ============
 
       function getUnlockState() {
         if (!monetization) return { unlockedNodes: [], unlockedChapters: [] };
@@ -618,15 +570,12 @@ function buildHTMLTemplate(params: {
        * 这是公开可验证的，无需种子密钥
        */
       async function verifyUnlockCodeBinding(unlockCode, requestCode, workId) {
-        // 1. 格式检查
         if (!unlockCode.startsWith(UNLOCK_PREFIX)) return false;
         var hmacPart = unlockCode.slice(UNLOCK_PREFIX.length);
         if (!/^[A-F0-9]{16}$/i.test(hmacPart)) return false;
 
-        // 2. 检查请求凭证格式
         if (!requestCode || !requestCode.startsWith(REQ_PREFIX)) return false;
 
-        // 3. 验证解锁码与请求凭证的绑定关系
         // 解锁码前 8 位 = SHA256(requestCode + '|' + workId) 前 8 位
         var expectedPrefix = await simpleHash(requestCode + '|' + workId);
         return hmacPart.slice(0, 8).toUpperCase() === expectedPrefix.slice(0, 8).toUpperCase();
@@ -732,8 +681,6 @@ function buildHTMLTemplate(params: {
           resultEl.style.display = 'block';
         }
       };
-
-      // ============ 故事渲染逻辑 ============
 
       function findNode(id) {
         return graph.nodes.find(function(n) { return n.id === id; });
@@ -970,28 +917,19 @@ function buildHTMLTemplate(params: {
 </html>`
 }
 
-// ============ 主函数 ============
-
-/**
- * 导出完整 HTML 文件
- *
- * 修复 1：素材内嵌 - blob: URL 转为 data URL，确保新页面打开不失效
- * 修复 2：付费内容加密 - 付费节点文本 Base64 编码，防止 F12 查看明文
- * 修复 3：解锁码绑定验证 - 验证解锁码与请求凭证的关联，防止编造解锁码
- */
 export async function exportToHTML(
   graph: StoryGraph,
   monetization?: MonetizationConfig
 ): Promise<string> {
-  // 1. 素材内嵌：将 blob: URL 转为 data URL
+  // 素材内嵌：将 blob: URL 转为 data URL
   let processedGraph = await embedAssets(graph)
 
-  // 2. 付费内容加密：将付费节点文本 Base64 编码
+  // 付费内容加密：将付费节点文本 Base64 编码
   if (monetization && monetization.enabled && monetization.seedKey) {
     processedGraph = encryptPaidContent(processedGraph, monetization)
   }
 
-  // 3. 安全转义 JSON（防止 </script> 注入）
+  // 安全转义 JSON（防止 </script> 注入）
   const graphJSON = JSON.stringify(processedGraph)
     .replace(/</g, '\\u003c')
     .replace(/>/g, '\\u003e')
@@ -999,7 +937,6 @@ export async function exportToHTML(
     .replace(/\u2028/g, '\\u2028')
     .replace(/\u2029/g, '\\u2029')
 
-  // 4. 处理付费配置
   let htmlMonetization: HTMLMonetizationConfig | undefined = undefined
   if (monetization && monetization.enabled && monetization.seedKey) {
     const seedKeyHash = await hashSeedKey(monetization.seedKey)
@@ -1019,7 +956,6 @@ export async function exportToHTML(
     }
   }
 
-  // 5. 构建 HTML
   return buildHTMLTemplate({
     title: graph.title || '未命名故事',
     graphJSON,

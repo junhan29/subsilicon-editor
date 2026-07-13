@@ -1,16 +1,13 @@
 'use client'
 
-import { useState, useCallback } from 'react'
 import { Label } from '@editor/components/ui/label'
 import { Input } from '@editor/components/ui/input'
 import { Textarea } from '@editor/components/ui/textarea'
 import { Slider } from '@editor/components/ui/slider'
-import { Eye, Sparkles } from 'lucide-react'
+import { Eye } from 'lucide-react'
 import type { BasePanelProps } from './shared-props'
 import { TEXT_ANIMATION_TYPES } from './shared-props'
 import { useDebouncedState } from '@editor/lib/use-debounced-state'
-import { expandScene, type PolishStyle } from '@editor/lib/ai-service'
-import { showToast } from '../toast'
 
 export function NarrationPanel({ node, onUpdateNode }: BasePanelProps) {
   const { data, id } = node
@@ -20,33 +17,11 @@ export function NarrationPanel({ node, onUpdateNode }: BasePanelProps) {
     300,
     (value) => onUpdateNode(id, { ...data, text: value })
   )
-  const [isExpanding, setIsExpanding] = useState(false)
-
-  const handleExpand = useCallback(async (style: PolishStyle) => {
-    if (!text.trim()) return
-    setIsExpanding(true)
-    try {
-      const result = await expandScene(text, style)
-      setText(result)
-      onUpdateNode(id, { ...data, text: result })
-      showToast('success', '场景描写已扩写')
-    } catch (error) {
-      showToast('error', (error as Error).message)
-    } finally {
-      setIsExpanding(false)
-    }
-  }, [text, data, id, onUpdateNode, setText])
 
   return (
     <>
       <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <Label className="text-xs">旁白文本</Label>
-          <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
-            <Sparkles className="w-3 h-3 text-amber-500" />
-            AI 扩写
-          </span>
-        </div>
+        <Label className="text-xs">旁白文本</Label>
         <Textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
@@ -57,18 +32,6 @@ export function NarrationPanel({ node, onUpdateNode }: BasePanelProps) {
           placeholder="输入旁白文本..."
           className="min-h-[80px] resize-none text-sm"
         />
-        <div className="grid grid-cols-4 gap-1">
-          {(['general', 'vivid', 'concise', 'literary'] as PolishStyle[]).map((style) => (
-            <button
-              key={style}
-              onClick={() => handleExpand(style)}
-              disabled={isExpanding || !text.trim()}
-              className="py-1 px-1.5 text-[10px] rounded border border-border/60 hover:border-amber-500/50 hover:bg-amber-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isExpanding ? '...' : style === 'general' ? '补充' : style === 'vivid' ? '生动' : style === 'concise' ? '精简' : '文学'}
-            </button>
-          ))}
-        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-2">
@@ -127,6 +90,33 @@ export function NarrationPanel({ node, onUpdateNode }: BasePanelProps) {
             placeholder="留空使用默认背景"
             className="text-sm h-8 flex-1"
           />
+        </div>
+      </div>
+
+      {/* 音频控制 */}
+      <div className="space-y-2 pt-2 border-t border-border/40">
+        <Label className="text-xs">背景音乐 (BGM)</Label>
+        <div className="flex items-center gap-2">
+          <Input
+            value={(data as any).bgm || ''}
+            onChange={(e) => onUpdateNode(id, { ...data, bgm: e.target.value })}
+            placeholder="BGM URL"
+            className="text-sm flex-1"
+          />
+          {(data as any).bgm && (
+            <button onClick={() => onUpdateNode(id, { ...data, bgm: '' })}
+              className="text-xs text-red-400 hover:text-red-600 px-2">清除</button>
+          )}
+        </div>
+        <div className="space-y-1">
+          <div className="flex justify-between text-[10px] text-muted-foreground">
+            <span>音量</span>
+            <span>{Math.round(((data as any).bgmVolume ?? 0.3) * 100)}%</span>
+          </div>
+          <input type="range" min="0" max="1" step="0.05"
+            value={(data as any).bgmVolume ?? 0.3}
+            onChange={(e) => onUpdateNode(id, { ...data, bgmVolume: Number(e.target.value) })}
+            className="w-full accent-purple-500" />
         </div>
       </div>
 

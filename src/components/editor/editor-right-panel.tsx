@@ -1,7 +1,9 @@
 'use client'
 
-import { useState, useCallback, useRef, memo } from 'react'
-import { Settings, Users, Image, Music, ChevronDown, ChevronUp, X, Plus, Edit3, Layers, BarChart3, GitBranch, MessageSquare, Activity } from 'lucide-react'
+import { useState, useCallback, useEffect, memo } from 'react'
+import { shallowEqual } from '@editor/lib/utils'
+import { Settings, Users, Image, Music, ChevronDown, ChevronUp, X, Plus, Edit3, Layers, BarChart3, Trash2, ShieldCheck, GitBranch, MessageSquare, Activity, Lock, Sparkles, Wand2, DollarSign } from 'lucide-react'
+import { Button } from '@editor/components/ui/button'
 import { LivePreview } from './live-preview'
 import { PropertyPanel } from './property-panel'
 import { PuzzleEditor } from './puzzle/puzzle-editor'
@@ -9,10 +11,16 @@ import { VariablePanel } from './editor-right-panel/variable-panel'
 import { VersionPanel } from './version-panel'
 import { AnnotationPanel } from './annotation-panel'
 import { MemoizedWritingStatsPanel } from './writing-stats-panel'
+import { IncomePanel } from './income-panel'
+import { AiPanel } from './ai-panel'
+import { AnalyticsPanel } from './analytics-panel'
+import { PluginManagerPanel } from './plugin-manager-panel'
 import { generateDefaultAvatar } from '@editor/lib/avatar-utils'
 import type { StoryNode, StoryCharacter, StoryEdge, StoryVariable, ComicScene, ComicAudio, NodeAnnotation, AnnotationType, StoryGraph } from '@editor/types/editor'
 import type { StoryGraphSnapshot } from '@editor/lib/history-store'
 import type { VersionSnapshot } from '@editor/lib/version-store'
+import type { MonetizationConfig } from '@editor/lib/work-monetization'
+import { generateWorkId } from '@editor/lib/work-monetization'
 
 interface EditorRightPanelProps {
   selectedNode: StoryNode | null
@@ -58,6 +66,8 @@ interface EditorRightPanelProps {
   onReplyAnnotation?: (id: string, text: string) => void
   onDeleteAnnotation?: (id: string) => void
   onOpenAnnotationDialog?: (nodeId: string) => void
+  monetization?: MonetizationConfig | null
+  onMonetizationChange?: (config: MonetizationConfig) => void
   workId?: string
 }
 
@@ -105,20 +115,21 @@ function EditorRightPanel({
   onReplyAnnotation,
   onDeleteAnnotation,
   onOpenAnnotationDialog,
-  workId = 'default',
+  monetization,
+  onMonetizationChange,
+  workId = generateWorkId(),
 }: EditorRightPanelProps) {
   const [previewCollapsed, setPreviewCollapsed] = useState(false)
   const [internalActiveTab, setInternalActiveTab] = useState('properties')
-  const [panelWidth, setPanelWidth] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('editor_right_panel_width')
-      return saved ? parseInt(saved) : 360
+  const [tabGroup, setTabGroup] = useState<'edit' | 'manage'>('edit')
+  const activeTab = activeTabProp ?? internalActiveTab
+  const setActiveTab = (tab: string) => {
+    if (onTabChange) {
+      onTabChange(tab)
+    } else {
+      setInternalActiveTab(tab)
     }
-    return 360
-  })
-  const isDraggingRef = useRef(false)
-  const startXRef = useRef(0)
-  const startWidthRef = useRef(0)
+  }
   const [sceneName, setSceneName] = useState('')
   const [sceneImage, setSceneImage] = useState('')
   const [audioName, setAudioName] = useState('')
@@ -127,50 +138,6 @@ function EditorRightPanel({
   const [editingScene, setEditingScene] = useState<ComicScene | null>(null)
   const [showPuzzleEditor, setShowPuzzleEditor] = useState(false)
   const [editCharId, setEditCharId] = useState<string>('')
-  const [fullscreenPreview, setFullscreenPreview] = useState(false)
-
-  const handleResizeStart = useCallback((e: React.MouseEvent) => {
-    e.preventDefault()
-    isDraggingRef.current = true
-    startXRef.current = e.clientX
-    startWidthRef.current = panelWidth
-    document.body.style.cursor = 'col-resize'
-    document.body.style.userSelect = 'none'
-
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      if (!isDraggingRef.current) return
-      const delta = startXRef.current - moveEvent.clientX
-      const newWidth = Math.max(280, Math.min(520, startWidthRef.current + delta))
-      setPanelWidth(newWidth)
-    }
-
-    const handleMouseUp = () => {
-      if (!isDraggingRef.current) return
-      isDraggingRef.current = false
-      document.body.style.cursor = ''
-      document.body.style.userSelect = ''
-      localStorage.setItem('editor_right_panel_width', String(panelWidth))
-      document.removeEventListener('mousemove', handleMouseMove)
-      document.removeEventListener('mouseup', handleMouseUp)
-    }
-
-    document.addEventListener('mousemove', handleMouseMove)
-    document.addEventListener('mouseup', handleMouseUp)
-  }, [panelWidth])
-
-  const setActiveTabClean = useCallback((tab: string) => {
-    if (tab !== 'properties') {
-      setEditCharId('')
-    }
-    if (onTabChange) {
-      onTabChange(tab)
-    } else {
-      setInternalActiveTab(tab)
-    }
-  }, [onTabChange])
-
-  const activeTab = activeTabProp ?? internalActiveTab
-  const setActiveTab = setActiveTabClean
 
   const addScene = useCallback(() => {
     if (!sceneName.trim()) return
@@ -234,14 +201,7 @@ function EditorRightPanel({
   }, [sceneName, sceneImage, scenes, onScenesChange])
 
   return (
-    <div role="region" aria-label="右侧属性面板" className="flex flex-col bg-slate-800 border-l border-slate-700 h-full relative" style={{ width: panelWidth }}>
-      {/* 拖拽宽度调节手柄 */}
-      <div
-        className="absolute left-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-amber-500/30 active:bg-amber-500/50 transition-colors z-30 group"
-        onMouseDown={handleResizeStart}
-      >
-        <div className="absolute left-0.5 top-1/2 -translate-y-1/2 w-0.5 h-8 rounded-full bg-slate-600 group-hover:bg-amber-400 transition-colors" />
-      </div>
+    <div role="region" aria-label="右侧属性面板" className="w-[360px] flex flex-col bg-slate-800 border-l border-slate-700 h-full">
       {!previewCollapsed ? (
         <div className="h-[40%] min-h-[220px] relative border-b border-slate-700 bg-slate-900">
           <LivePreview
@@ -251,7 +211,6 @@ function EditorRightPanel({
             audios={audios}
             selectedNodeId={selectedNode?.id || null}
             onNodeSelect={onNodeSelect}
-            onFullscreen={() => setFullscreenPreview(true)}
           />
           <button
             onClick={() => setPreviewCollapsed(true)}
@@ -273,109 +232,170 @@ function EditorRightPanel({
 
       <div className="flex-1 flex flex-col overflow-hidden">
         <div className="flex flex-col h-full">
-          <div className="flex items-stretch border-b border-slate-800 bg-slate-900">
+          <div className="flex items-center gap-1 px-2 py-1.5 bg-slate-900 border-b border-slate-800">
             <button
-              onClick={() => setActiveTab('properties')}
-              className={`flex items-center px-3 py-2.5 text-xs transition-colors ${
-                activeTab === 'properties'
-                  ? 'bg-slate-800 text-white border-b-2 border-amber-400'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+              onClick={() => { setTabGroup('edit'); setActiveTab('properties') }}
+              className={`flex-1 py-1.5 text-xs rounded-md transition-colors ${
+                tabGroup === 'edit' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-slate-200'
               }`}
-              title="属性编辑"
             >
-              <Settings className="w-3.5 h-3.5 mr-1.5" />
-              属性
+              编辑
             </button>
             <button
-              onClick={() => setActiveTab('characters')}
-              className={`flex items-center px-3 py-2.5 text-xs transition-colors ${
-                activeTab === 'characters'
-                  ? 'bg-slate-800 text-white border-b-2 border-amber-400'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+              onClick={() => { setTabGroup('manage'); setActiveTab('versions') }}
+              className={`flex-1 py-1.5 text-xs rounded-md transition-colors ${
+                tabGroup === 'manage' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-slate-200'
               }`}
-              title="角色管理"
             >
-              <Users className="w-3.5 h-3.5 mr-1.5" />
-              角色
+              管理
             </button>
-            <button
-              onClick={() => setActiveTab('scenes')}
-              className={`flex items-center px-3 py-2.5 text-xs transition-colors ${
-                activeTab === 'scenes'
-                  ? 'bg-slate-800 text-white border-b-2 border-amber-400'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-              }`}
-              title="场景管理"
-            >
-              <Image className="w-3.5 h-3.5 mr-1.5" />
-              场景
-            </button>
-            <button
-              onClick={() => setActiveTab('audio')}
-              className={`flex items-center px-3 py-2.5 text-xs transition-colors ${
-                activeTab === 'audio'
-                  ? 'bg-slate-800 text-white border-b-2 border-amber-400'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-              }`}
-              title="音频管理"
-            >
-              <Music className="w-3.5 h-3.5 mr-1.5" />
-              音频
-            </button>
-            <button
-              onClick={() => setActiveTab('variables')}
-              className={`flex items-center px-3 py-2.5 text-xs transition-colors ${
-                activeTab === 'variables'
-                  ? 'bg-slate-800 text-white border-b-2 border-amber-400'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-              }`}
-              title="变量管理"
-            >
-              <BarChart3 className="w-3.5 h-3.5 mr-1.5" />
-              变量
-            </button>
-
-            <div className="flex-1" />
-
-            {/* 管理类工具按钮 — 点击切换到对应标签页 */}
-            <button
-              onClick={() => setActiveTab('versions')}
-              className={`flex items-center px-2.5 py-2.5 text-xs transition-colors ${
-                activeTab === 'versions'
-                  ? 'text-white bg-slate-800'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-              }`}
-              title="版本管理"
-            >
-              <GitBranch className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => setActiveTab('annotations')}
-              className={`flex items-center px-2.5 py-2.5 text-xs transition-colors relative ${
-                activeTab === 'annotations'
-                  ? 'text-white bg-slate-800'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-              }`}
-              title="批注管理"
-            >
-              <MessageSquare className="w-3.5 h-3.5" />
-              {annotations.length > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 inline-flex items-center justify-center min-w-[14px] h-3.5 px-1 text-[11px] font-semibold rounded-full bg-blue-500/80 text-white">
-                  {annotations.length > 9 ? '9+' : annotations.length}
-                </span>
-              )}
-            </button>
-            <button
-              onClick={() => setActiveTab('data')}
-              className={`flex items-center px-2.5 py-2.5 text-xs transition-colors ${
-                activeTab === 'data'
-                  ? 'text-white bg-slate-800'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-              }`}
-              title="创作数据统计"
-            >
-              <Activity className="w-3.5 h-3.5" />
-            </button>
+          </div>
+          <div className="w-full flex flex-wrap border-b border-slate-800 bg-slate-900">
+            {tabGroup === 'edit' && (
+              <>
+                <button
+                  onClick={() => setActiveTab('properties')}
+                  className={`flex items-center px-4 py-2.5 text-xs transition-colors ${
+                    activeTab === 'properties'
+                      ? 'bg-slate-800 text-white'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                  }`}
+                >
+                  <Settings className="w-3.5 h-3.5 mr-1.5" />
+                  属性
+                </button>
+                <button
+                  onClick={() => setActiveTab('characters')}
+                  className={`flex items-center px-4 py-2.5 text-xs transition-colors ${
+                    activeTab === 'characters'
+                      ? 'bg-slate-800 text-white'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                  }`}
+                >
+                  <Users className="w-3.5 h-3.5 mr-1.5" />
+                  角色
+                </button>
+                <button
+                  onClick={() => setActiveTab('scenes')}
+                  className={`flex items-center px-4 py-2.5 text-xs transition-colors ${
+                    activeTab === 'scenes'
+                      ? 'bg-slate-800 text-white'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                  }`}
+                >
+                  <Image className="w-3.5 h-3.5 mr-1.5" />
+                  场景
+                </button>
+                <button
+                  onClick={() => setActiveTab('audio')}
+                  className={`flex items-center px-4 py-2.5 text-xs transition-colors ${
+                    activeTab === 'audio'
+                      ? 'bg-slate-800 text-white'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                  }`}
+                >
+                  <Music className="w-3.5 h-3.5 mr-1.5" />
+                  音频
+                </button>
+                <button
+                  onClick={() => setActiveTab('variables')}
+                  className={`flex items-center px-4 py-2.5 text-xs transition-colors ${
+                    activeTab === 'variables'
+                      ? 'bg-slate-800 text-white'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                  }`}
+                >
+                  <BarChart3 className="w-3.5 h-3.5 mr-1.5" />
+                  变量
+                </button>
+              </>
+            )}
+            {tabGroup === 'manage' && (
+              <>
+                <button
+                  onClick={() => setActiveTab('versions')}
+                  className={`flex items-center px-4 py-2.5 text-xs transition-colors ${
+                    activeTab === 'versions'
+                      ? 'bg-slate-800 text-white'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                  }`}
+                >
+                  <GitBranch className="w-3.5 h-3.5 mr-1.5" />
+                  版本
+                </button>
+                <button
+                  onClick={() => setActiveTab('annotations')}
+                  className={`flex items-center px-4 py-2.5 text-xs transition-colors relative ${
+                    activeTab === 'annotations'
+                      ? 'bg-slate-800 text-white'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                  }`}
+                >
+                  <MessageSquare className="w-3.5 h-3.5 mr-1.5" />
+                  批注
+                  {annotations.length > 0 && (
+                    <span className="ml-1 inline-flex items-center justify-center min-w-[16px] h-4 px-1 text-[9px] font-semibold rounded-full bg-blue-500/80 text-white">
+                      {annotations.length}
+                    </span>
+                  )}
+                </button>
+                <button
+                  onClick={() => setActiveTab('stats')}
+                  className={`flex items-center px-4 py-2.5 text-xs transition-colors ${
+                    activeTab === 'stats'
+                      ? 'bg-slate-800 text-white'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                  }`}
+                >
+                  <Activity className="w-3.5 h-3.5 mr-1.5" />
+                  统计
+                </button>
+                <button
+                  onClick={() => setActiveTab('income')}
+                  className={`flex items-center px-4 py-2.5 text-xs transition-colors ${
+                    activeTab === 'income'
+                      ? 'bg-slate-800 text-white'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                  }`}
+                >
+                  <DollarSign className="w-3.5 h-3.5 mr-1.5" />
+                  收益
+                </button>
+                <button
+                  onClick={() => setActiveTab('ai')}
+                  className={`flex items-center px-4 py-2.5 text-xs transition-colors ${
+                    activeTab === 'ai'
+                      ? 'bg-slate-800 text-white'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                  }`}
+                >
+                  <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+                  AI
+                </button>
+                <button
+                  onClick={() => setActiveTab('analytics')}
+                  className={`flex items-center px-4 py-2.5 text-xs transition-colors ${
+                    activeTab === 'analytics'
+                      ? 'bg-slate-800 text-white'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                  }`}
+                >
+                  <BarChart3 className="w-3.5 h-3.5 mr-1.5" />
+                  分析
+                </button>
+                <button
+                  onClick={() => setActiveTab('plugins')}
+                  className={`flex items-center px-4 py-2.5 text-xs transition-colors ${
+                    activeTab === 'plugins'
+                      ? 'bg-slate-800 text-white'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                  }`}
+                >
+                  <Layers className="w-3.5 h-3.5 mr-1.5" />
+                  插件
+                </button>
+              </>
+            )}
           </div>
 
           {activeTab === 'properties' && <div className="flex-1 overflow-y-auto p-0">
@@ -479,7 +499,7 @@ function EditorRightPanel({
                       setEditCharId(newChar.id)
                       setActiveTab('properties')
                     }}
-                    className="px-2 py-1 text-[11px] rounded-md border border-slate-600 bg-slate-700/50 hover:bg-slate-700 transition-colors"
+                    className="px-2 py-1 text-[10px] rounded-md border border-slate-600 bg-slate-700/50 hover:bg-slate-700 transition-colors"
                     style={{ color: preset.color }}
                   >
                     {preset.name}
@@ -558,7 +578,7 @@ function EditorRightPanel({
                 />
                 <Image className="w-6 h-6 text-slate-500 mx-auto mb-1" />
                 <p className="text-xs text-slate-400">拖拽或点击上传图片</p>
-                <p className="text-[11px] text-slate-600 mt-0.5">JPG / PNG / WebP，支持批量</p>
+                <p className="text-[10px] text-slate-600 mt-0.5">JPG / PNG / WebP，支持批量</p>
               </div>
 
               <div className="space-y-2">
@@ -571,7 +591,7 @@ function EditorRightPanel({
                       <img src={scene.backgroundImage} alt={scene.name} className="w-full h-full object-cover" />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
                       {scene.puzzleData && (
-                        <div className="absolute top-2 left-2 flex items-center gap-1 px-1.5 py-0.5 bg-pink-500/80 rounded text-[10px] text-white">
+                        <div className="absolute top-2 left-2 flex items-center gap-1 px-1.5 py-0.5 bg-pink-500/80 rounded text-[9px] text-white">
                           <Layers className="w-2.5 h-2.5" />
                           拼图
                         </div>
@@ -584,7 +604,7 @@ function EditorRightPanel({
                       </button>
                       <button
                         onClick={() => handleEditScene(scene)}
-                        className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 flex items-center gap-1 px-2 py-1 bg-pink-500 hover:bg-pink-600 text-white rounded text-[11px] transition-all"
+                        className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 flex items-center gap-1 px-2 py-1 bg-pink-500 hover:bg-pink-600 text-white rounded text-[10px] transition-all"
                       >
                         <Edit3 className="w-2.5 h-2.5" />
                         {scene.puzzleData ? '编辑' : '拼图'}
@@ -593,7 +613,7 @@ function EditorRightPanel({
                     <div className="p-2 bg-slate-800/50">
                       <p className="text-xs font-medium text-white truncate">{scene.name}</p>
                       {scene.puzzleData && (
-                        <p className="text-[11px] text-slate-500">{scene.puzzleData.layers?.length ?? 0} 个图层</p>
+                        <p className="text-[10px] text-slate-500">{scene.puzzleData.layers?.length ?? 0} 个图层</p>
                       )}
                     </div>
                   </div>
@@ -636,7 +656,7 @@ function EditorRightPanel({
                 />
                 <Music className="w-6 h-6 text-slate-500 mx-auto mb-1" />
                 <p className="text-xs text-slate-400">拖拽或点击上传音频</p>
-                <p className="text-[11px] text-slate-600 mt-0.5">MP3 / WAV / OGG</p>
+                <p className="text-[10px] text-slate-600 mt-0.5">MP3 / WAV / OGG</p>
               </div>
 
               <div className="flex gap-2">
@@ -675,7 +695,7 @@ function EditorRightPanel({
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium text-white truncate">{audio.name}</p>
-                      <p className="text-[11px] text-slate-500 truncate">{audio.url?.startsWith('blob:') ? '本地文件' : '在线'}</p>
+                      <p className="text-[10px] text-slate-500 truncate">{audio.url?.startsWith('blob:') ? '本地文件' : '在线'}</p>
                     </div>
                     <button
                       onClick={() => deleteAudio(audio.id)}
@@ -720,13 +740,53 @@ function EditorRightPanel({
             />
           </div>}
 
-          {activeTab === 'data' && <div className="flex-1 overflow-hidden p-0 m-0">
-            <RightPanelDataTab
+          {activeTab === 'stats' && <div className="flex-1 overflow-hidden p-0 m-0">
+            <MemoizedWritingStatsPanel
               workId={workId}
-              nodes={nodes}
+              nodeCount={nodes.length}
+              wordCount={nodes.reduce((acc, node) => {
+                const data = node.data as Record<string, unknown> | undefined
+                if (!data) return acc
+                let count = 0
+                if (typeof data.text === 'string') count += data.text.length
+                if (typeof data.prompt === 'string') count += data.prompt.length
+                if (typeof data.title === 'string') count += data.title.length
+                if (Array.isArray(data.options)) {
+                  for (const opt of data.options) {
+                    if (opt && typeof opt === 'object') {
+                      const optObj = opt as Record<string, unknown>
+                      if (typeof optObj.text === 'string') {
+                        count += optObj.text.length
+                      }
+                    }
+                  }
+                }
+                return acc + count
+              }, 0)}
+            />
+          </div>}
+          
+          {activeTab === 'income' && <div className="flex-1 overflow-y-auto p-4 m-0">
+            <IncomePanel
+              graph={graph}
+              workId={workId}
+            />
+          </div>}
+          
+          {activeTab === 'ai' && <div className="flex-1 overflow-y-auto p-0 m-0">
+            <AiPanel
+              onApplyStory={onApplyStory || (() => {})}
+              onAddCharacters={onAddCharacters || (() => {})}
             />
           </div>}
 
+          {activeTab === 'analytics' && <div className="flex-1 overflow-hidden p-0 m-0">
+            <AnalyticsPanel />
+          </div>}
+
+          {activeTab === 'plugins' && <div className="flex-1 overflow-hidden p-0 m-0">
+            <PluginManagerPanel />
+          </div>}
         </div>
       </div>
 
@@ -741,62 +801,7 @@ function EditorRightPanel({
           onSave={handleSaveScene}
         />
       )}
-
-      {/* 全屏预览模态框 */}
-      {fullscreenPreview && (
-        <div className="fixed inset-0 z-50 bg-black flex flex-col">
-          <div className="flex items-center justify-between px-4 py-2 bg-slate-900 border-b border-slate-700">
-            <span className="text-sm text-white font-medium">全屏预览</span>
-            <button
-              onClick={() => setFullscreenPreview(false)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-md transition-colors"
-            >
-              <X className="w-3.5 h-3.5" />
-              关闭
-            </button>
-          </div>
-          <div className="flex-1 overflow-hidden">
-            <LivePreview
-              nodes={nodes}
-              characters={characters}
-              scenes={scenes}
-              audios={audios}
-              selectedNodeId={selectedNode?.id || null}
-              onNodeSelect={onNodeSelect}
-            />
-          </div>
-        </div>
-      )}
     </div>
-  )
-}
-
-/** 数据面板：创作统计 */
-function RightPanelDataTab({ workId, nodes }: { workId: string; nodes: StoryNode[] }) {
-  return (
-    <MemoizedWritingStatsPanel
-      workId={workId}
-      nodeCount={nodes.length}
-      wordCount={nodes.reduce((acc, node) => {
-        const data = node.data as Record<string, unknown> | undefined
-        if (!data) return acc
-        let count = 0
-        if (typeof data.text === 'string') count += data.text.length
-        if (typeof data.prompt === 'string') count += data.prompt.length
-        if (typeof data.title === 'string') count += data.title.length
-        if (Array.isArray(data.options)) {
-          for (const opt of data.options) {
-            if (opt && typeof opt === 'object') {
-              const optObj = opt as Record<string, unknown>
-              if (typeof optObj.text === 'string') {
-                count += optObj.text.length
-              }
-            }
-          }
-        }
-        return acc + count
-      }, 0)}
-    />
   )
 }
 

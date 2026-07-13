@@ -29,7 +29,7 @@ export const SAVE_SLOT_COUNT = 9
 export const QUICK_SAVE_ID = 0
 export const CURRENT_SAVE_VERSION: SaveVersion = 3
 
-// 注意：djb2 哈希用于本地存档完整性校验，不是安全用途（P2-3）
+// 注意：djb2 哈希用于本地存档完整性校验，不是安全用途
 function calculateChecksum(data: string): string {
   let hash = 5381
   for (let i = 0; i < data.length; i++) {
@@ -122,7 +122,7 @@ export function loadSaveSlots(graphId: string): SaveSlot[] {
     let needsRewrite = false
 
     for (const item of slots) {
-      // schema 校验（P0-5）
+      // schema 校验
       if (!validateSaveShape(item)) {
         needsRewrite = true
         continue
@@ -168,7 +168,6 @@ export function saveSaveSlots(graphId: string, slots: SaveSlot[]): void {
     const key = `${SAVE_KEY_PREFIX}${graphId}`
     localStorage.setItem(key, JSON.stringify(slots))
   } catch {
-    // ignore
   }
 }
 

@@ -24,22 +24,15 @@ import {
   Sparkles,
   User,
   Library,
-  Download,
-  Upload,
-  Globe,
-  Puzzle,
-  Settings,
-  Check,
-  ExternalLink,
+  AlignLeft,
 } from 'lucide-react'
 import { Button } from '@editor/components/ui/button'
 import { Input } from '@editor/components/ui/input'
-import { loadTemplates, saveTemplate, deleteTemplate, getOfficialTemplates, createTemplateFromSelection, exportTemplateToFile, importTemplateFromFile, publishTemplateToCommunity } from '@editor/lib/template-store'
+import { loadTemplates, saveTemplate, deleteTemplate, getOfficialTemplates, createTemplateFromSelection } from '@editor/lib/template-store'
 import { parseOutline, generateNodesFromOutline } from '@editor/lib/outline-parser'
 import { showToast } from './toast'
 import { AssetLibraryPanel } from './asset-library-panel'
-import { getInstalledPlugins, getPluginConfig, setPluginConfig, uninstallPlugin, enablePlugin, disablePlugin, isPluginEnabled, getAvailablePlugins, createPluginSandbox, destroyPluginSandbox } from '@editor/lib/plugins/plugin-registry'
-import type { NodeTemplate, StoryNode, StoryEdge, PluginManifest } from '@editor/types/editor'
+import type { NodeTemplate, StoryNode, StoryEdge } from '@editor/types/editor'
 import type { LibraryAsset } from '@editor/lib/asset-library'
 
 export interface SidebarNodeType {
@@ -54,59 +47,65 @@ const NODE_TYPES: SidebarNodeType[] = [
     type: 'dialogue',
     label: '对话',
     icon: <MessageCircle className="w-5 h-5 text-primary" />,
-    description: '角色说话的内容',
+    description: '角色台词与对话',
+  },
+  {
+    type: 'narration',
+    label: '旁白',
+    icon: <AlignLeft className="w-5 h-5 text-slate-500" />,
+    description: '叙述与环境描写',
   },
   {
     type: 'choice',
     label: '选择',
     icon: <GitBranch className="w-5 h-5 text-amber-500" />,
-    description: '让读者做选择，走向不同剧情',
+    description: '玩家分支选择',
   },
   {
     type: 'gather',
     label: '汇聚',
     icon: <Merge className="w-5 h-5 text-slate-500" />,
-    description: '多条路线汇合到一起',
+    description: '多分支汇聚到一处',
   },
   {
     type: 'condition',
     label: '条件',
     icon: <SplitSquareVertical className="w-5 h-5 text-purple-500" />,
-    description: '满足条件走一条路，否则走另一条',
+    description: '按条件判断分支',
   },
   {
     type: 'unlock',
     label: '付费',
     icon: <Lock className="w-5 h-5 text-orange-500" />,
-    description: '读者付费后才能继续看',
+    description: '付费解锁内容',
   },
   {
     type: 'ending',
     label: '结局',
     icon: <Flag className="w-5 h-5 text-green-500" />,
-    description: '故事结束的地方',
+    description: '故事结局节点',
   },
   {
     type: 'cg',
-    label: '过场',
+    label: 'CG过场',
     icon: <Film className="w-5 h-5 text-purple-500" />,
-    description: '展示一张图或一段动画',
+    description: '图片/视频过场动画',
   },
   {
     type: 'jump',
     label: '跳转',
     icon: <Zap className="w-5 h-5 text-violet-500" />,
-    description: '跳到故事中的另一个位置',
+    description: '跳转到指定节点',
   },
   {
     type: 'random',
     label: '随机',
     icon: <Shuffle className="w-5 h-5 text-cyan-500" />,
-    description: '随机走向某条路线',
+    description: '随机选择分支',
   },
 ]
 
-type TabKey = 'nodes' | 'templates' | 'outline' | 'assets' | 'plugins'
+type TabKey = 'nodes' | 'templates' | 'outline' | 'assets'
 
 interface EditorSidebarProps {
   onQuickAdd: (type: string) => void
@@ -147,7 +146,6 @@ function EditorSidebar({
   const [editingName, setEditingName] = useState('')
   const [showGenerateConfirm, setShowGenerateConfirm] = useState(false)
   const [pendingNodeCount, setPendingNodeCount] = useState(0)
-  const [isPublishing, setIsPublishing] = useState(false)
   const editInputRef = useRef<HTMLInputElement>(null)
 
   const outline = outlineProp !== undefined ? outlineProp : internalOutline
@@ -286,7 +284,6 @@ function EditorSidebar({
     { key: 'templates' as TabKey, label: '模板', icon: <Save className="w-3.5 h-3.5" /> },
     { key: 'outline' as TabKey, label: '大纲', icon: <FileText className="w-3.5 h-3.5" /> },
     { key: 'assets' as TabKey, label: '素材', icon: <Library className="w-3.5 h-3.5" /> },
-    { key: 'plugins' as TabKey, label: '插件', icon: <Puzzle className="w-3.5 h-3.5" /> },
   ]
 
   return (
@@ -395,9 +392,9 @@ function EditorSidebar({
                     key={tpl.id}
                     draggable
                     onDragStart={(e) => onTemplateDragStart(e, tpl)}
-                    onDoubleClick={() => handleTemplateDoubleClick(tpl)}
-                    className="flex items-center gap-2 p-2 rounded-lg border border-blue-200/50 bg-blue-50/30 hover:bg-blue-100/50 hover:border-blue-300/70 cursor-grab group transition-all"
-                    title={tpl.description}
+                    onClick={() => handleTemplateDoubleClick(tpl)}
+                    className="flex items-center gap-2 p-2 rounded-lg border border-blue-200/50 bg-blue-50/30 hover:bg-blue-100/50 hover:border-blue-300/70 cursor-pointer group transition-all"
+                    title={`${tpl.description}（点击插入）`}
                   >
                     <div className="w-7 h-7 rounded-md bg-blue-100 flex items-center justify-center shrink-0 group-hover:bg-blue-200 transition-colors">
                       <Layers className="w-3.5 h-3.5 text-blue-600" />
@@ -433,9 +430,9 @@ function EditorSidebar({
                     key={tpl.id}
                     draggable={editingId !== tpl.id}
                     onDragStart={(e) => onTemplateDragStart(e, tpl)}
-                    onDoubleClick={() => handleTemplateDoubleClick(tpl)}
-                    className="flex items-center gap-2 p-2 rounded-lg border border-border/60 bg-background hover:bg-accent/50 hover:border-border cursor-grab group transition-all relative"
-                    title={tpl.description}
+                    onClick={() => handleTemplateDoubleClick(tpl)}
+                    className="flex items-center gap-2 p-2 rounded-lg border border-border/60 bg-background hover:bg-accent/50 hover:border-border cursor-pointer group transition-all relative"
+                    title={`${tpl.description}（点击插入）`}
                   >
                     <div className="w-7 h-7 rounded-md bg-muted flex items-center justify-center shrink-0 group-hover:bg-accent transition-colors">
                       <Layers className="w-3.5 h-3.5 text-muted-foreground" />
@@ -475,16 +472,6 @@ function EditorSidebar({
                         <Pencil className="w-3 h-3" />
                       </button>
                       <button
-                        className="w-5 h-5 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          exportTemplateToFile(tpl)
-                        }}
-                        title="导出模板文件"
-                      >
-                        <Download className="w-3 h-3" />
-                      </button>
-                      <button
                         className="w-5 h-5 rounded flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                         onClick={(e) => {
                           e.stopPropagation()
@@ -498,44 +485,6 @@ function EditorSidebar({
                   </div>
                 ))}
               </div>
-            </div>
-
-            <div className="flex gap-1 pt-2 border-t border-slate-700">
-              <button
-                onClick={async () => {
-                  const tpl = await importTemplateFromFile()
-                  if (tpl) {
-                    saveTemplate(tpl)
-                    setCustomTemplates(loadTemplates())
-                    showToast('success', '模板导入成功')
-                  } else {
-                    showToast('error', '导入失败，文件格式不正确')
-                  }
-                }}
-                className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-[10px] bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-md transition-colors"
-              >
-                <Upload className="w-3 h-3" />
-                导入
-              </button>
-              <button
-                onClick={() => {
-                  if (customTemplates.length === 0) { showToast('info', '暂无自定义模板可发布'); return }
-                  setIsPublishing(true)
-                  publishTemplateToCommunity(customTemplates[0], 'platform').then((res) => {
-                    setIsPublishing(false)
-                    if (res.success) {
-                      showToast('success', '模板已发布到社区！')
-                    } else {
-                      showToast('error', res.error || '发布失败')
-                    }
-                  })
-                }}
-                disabled={isPublishing}
-                className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-[10px] bg-pink-600 hover:bg-pink-500 text-white rounded-md transition-colors disabled:opacity-50"
-              >
-                <Globe className="w-3 h-3" />
-                {isPublishing ? '发布中...' : '发布'}
-              </button>
             </div>
           </div>
 
@@ -608,11 +557,6 @@ function EditorSidebar({
           selectedNode={selectedNode}
           onInsertAsset={onInsertAsset}
         />
-      )}
-
-      {/* 插件面板 */}
-      {activeTab === 'plugins' && (
-        <PluginPanelContent />
       )}
 
       {showSaveDialog && (
@@ -731,239 +675,3 @@ function EditorSidebar({
 export const MemoizedEditorSidebar = memo(EditorSidebar)
 export { EditorSidebar }
 export default MemoizedEditorSidebar
-
-/** 插件管理面板 */
-function PluginPanelContent() {
-  const [installed, setInstalled] = useState<PluginManifest[]>([])
-  const [available, setAvailable] = useState<PluginManifest[]>([])
-  const [showAvailable, setShowAvailable] = useState(false)
-  const [configOpen, setConfigOpen] = useState<string | null>(null)
-  const [configValues, setConfigValues] = useState<Record<string, string>>({})
-
-  useEffect(() => {
-    setInstalled(getInstalledPlugins())
-    getAvailablePlugins().then(setAvailable)
-  }, [])
-
-  const refresh = () => {
-    setInstalled(getInstalledPlugins())
-  }
-
-  const handleToggle = (pluginId: string, enabled: boolean) => {
-    if (enabled) disablePlugin(pluginId)
-    else enablePlugin(pluginId)
-    refresh()
-  }
-
-  const handleUninstall = (pluginId: string) => {
-    destroyPluginSandbox(pluginId)
-    uninstallPlugin(pluginId)
-    refresh()
-  }
-
-  const openConfig = (pluginId: string) => {
-    setConfigOpen(pluginId)
-    setConfigValues(getPluginConfig(pluginId))
-  }
-
-  const saveConfig = () => {
-    if (configOpen) {
-      setPluginConfig(configOpen, configValues)
-      setConfigOpen(null)
-      showToast('success', '插件配置已保存')
-    }
-  }
-
-  const handleInstallFromUrl = async () => {
-    const url = window.prompt('输入插件 manifest URL:')
-    if (!url) return
-    try {
-      const res = await fetch(url)
-      const manifest: PluginManifest = await res.json()
-      if (!manifest.pluginId || !manifest.name) {
-        showToast('error', '无效的插件清单')
-        return
-      }
-      const success = await import('@editor/lib/plugins/plugin-registry').then(m => m.installPlugin(manifest, url))
-      if (success) {
-        showToast('success', `插件 ${manifest.name} 已安装`)
-        refresh()
-      } else {
-        showToast('error', '插件已安装或安装失败')
-      }
-    } catch {
-      showToast('error', '无法获取插件清单')
-    }
-  }
-
-  return (
-    <div className="flex-1 overflow-y-auto p-0 m-0">
-      <div className="p-3 space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="text-xs font-semibold text-foreground">
-            已安装 ({installed.length})
-          </h3>
-          <div className="flex gap-1">
-            <button
-              onClick={() => setShowAvailable(!showAvailable)}
-              className="px-2 py-1 text-[10px] bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-md transition-colors"
-            >
-              {showAvailable ? '收起' : `可用 (${available.length})`}
-            </button>
-            <button
-              onClick={handleInstallFromUrl}
-              className="px-2 py-1 text-[10px] bg-pink-600 hover:bg-pink-500 text-white rounded-md transition-colors"
-              title="从 URL 安装插件"
-            >
-              <Plus className="w-3 h-3" />
-            </button>
-          </div>
-        </div>
-
-        {installed.length === 0 && !showAvailable && (
-          <div className="text-center py-8 text-slate-500 text-[10px]">
-            暂无已安装的插件
-            <br />
-            点击"可用"按钮浏览社区插件
-          </div>
-        )}
-
-        <div className="space-y-1.5">
-          {installed.map((p) => {
-            const enabled = isPluginEnabled(p.pluginId)
-            return (
-              <div key={p.pluginId} className="p-2 rounded-lg bg-slate-800/40 border border-slate-700/50">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-white truncate">{p.name}</p>
-                    <p className="text-[10px] text-slate-400 line-clamp-1">{p.description}</p>
-                    <p className="text-[9px] text-slate-500 mt-0.5">
-                      v{p.version} · {renderAuthor(p.author)}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    {p.configFields && p.configFields.length > 0 && (
-                      <button
-                        onClick={() => openConfig(p.pluginId)}
-                        className="p-1 text-slate-400 hover:text-white transition-colors"
-                        title="配置"
-                      >
-                        <Settings className="w-3 h-3" />
-                      </button>
-                    )}
-                    <button
-                      onClick={() => handleToggle(p.pluginId, enabled)}
-                      className={`px-1.5 py-0.5 text-[9px] rounded transition-colors ${
-                        enabled
-                          ? 'bg-emerald-600/30 text-emerald-400'
-                          : 'bg-slate-700 text-slate-400'
-                      }`}
-                    >
-                      {enabled ? '启用' : '禁用'}
-                    </button>
-                    <button
-                      onClick={() => handleUninstall(p.pluginId)}
-                      className="p-1 text-red-400/60 hover:text-red-400 transition-colors"
-                      title="卸载"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-
-        {/* 可用插件列表 */}
-        {showAvailable && (
-          <div className="space-y-1.5 pt-2 border-t border-slate-700/50">
-            <p className="text-[10px] text-slate-500">社区可用插件</p>
-            {available.length === 0 ? (
-              <p className="text-center py-4 text-slate-600 text-[10px]">暂无可用插件</p>
-            ) : (
-              available.filter(a => !installed.find(i => i.pluginId === a.pluginId)).map((p) => (
-                <div key={p.pluginId} className="p-2 rounded-lg bg-slate-800/20 border border-slate-700/30">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-white truncate">{p.name}</p>
-                      <p className="text-[10px] text-slate-400 line-clamp-1">{p.description}</p>
-                      <p className="text-[9px] text-slate-500 mt-0.5">
-                        v{p.version} · {renderAuthor(p.author)}
-                      </p>
-                    </div>
-                    <button
-                      onClick={async () => {
-                        const success = await import('@editor/lib/plugins/plugin-registry').then(m => m.installPlugin(p, p.source.url))
-                        if (success) {
-                          showToast('success', `插件 ${p.name} 已安装`)
-                          refresh()
-                        }
-                      }}
-                      className="px-2 py-0.5 text-[9px] bg-pink-600 hover:bg-pink-500 text-white rounded transition-colors shrink-0"
-                    >
-                      <Plus className="w-2.5 h-2.5" />
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        )}
-
-        {/* 配置弹窗 */}
-        {configOpen && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setConfigOpen(null)}>
-            <div className="bg-card border rounded-lg shadow-xl w-72 p-4" onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-medium">插件配置</h3>
-                <button onClick={() => setConfigOpen(null)} className="p-1 text-muted-foreground hover:text-foreground">
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              </div>
-              <div className="space-y-3">
-                {getPlugin(configOpen)?.configFields?.map((field) => (
-                  <div key={field.key}>
-                    <label className="text-[10px] text-muted-foreground block mb-1">{field.label}</label>
-                    {field.type === 'select' ? (
-                      <select
-                        value={configValues[field.key] || ''}
-                        onChange={(e) => setConfigValues({ ...configValues, [field.key]: e.target.value })}
-                        className="w-full h-7 text-xs bg-muted border rounded px-2"
-                      >
-                        {field.options?.map((opt) => (
-                          <option key={opt.value} value={opt.value}>{opt.label}</option>
-                        ))}
-                      </select>
-                    ) : (
-                      <Input
-                        value={configValues[field.key] || ''}
-                        onChange={(e) => setConfigValues({ ...configValues, [field.key]: e.target.value })}
-                        placeholder={field.placeholder}
-                        type={field.type === 'password' ? 'password' : 'text'}
-                        className="h-7 text-xs"
-                      />
-                    )}
-                  </div>
-                ))}
-              </div>
-              <div className="flex justify-end gap-2 mt-4">
-                <button onClick={() => setConfigOpen(null)} className="px-3 py-1 text-xs text-muted-foreground hover:text-foreground">取消</button>
-                <button onClick={saveConfig} className="px-3 py-1 text-xs bg-pink-600 text-white rounded hover:bg-pink-500">保存</button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
-function getPlugin(id: string): PluginManifest | undefined {
-  return getInstalledPlugins().find(p => p.pluginId === id)
-}
-
-function renderAuthor(author: string | { name: string; email?: string; homepage?: string; publicKey?: string }): string {
-  if (typeof author === 'string') return author || '未知作者'
-  return author.name || '未知作者'
-}

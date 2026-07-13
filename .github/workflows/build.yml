@@ -1,0 +1,130 @@
+name: Build & Release Desktop App
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '版本号 (不含 v)'
+        required: true
+        default: '1.2.3'
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+      - run: npm run build
+
+      - name: Build macOS
+        if: matrix.os == 'macos-latest'
+        run: npm run electron:build:mac
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - name: Build Windows
+        if: matrix.os == 'windows-latest'
+        run: npm run electron:build:win
+
+      - name: Build Linux
+        if: matrix.os == 'ubuntu-latest'
+        run: npm run electron:build:linux
+
+      - name: List release files
+        run: ls -la release/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.os }}-build
+          path: release/
+          if-no-files-found: warn
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+          path: release
+
+      - name: List release files
+        run: ls -la release/
+
+      - name: Create GitHub Release (public editor repo)
+        env:
+          GH_TOKEN: ${{ secrets.PUBLIC_EDITOR_TOKEN }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          gh release create "${{ github.ref_name }}" \
+            --repo junhan29/subsilicon-editor \
+            --title "Release ${{ github.ref_name }}" \
+            --notes "## 🚀 SubSilicon Editor v$VERSION
+
+          ### 下载
+
+          | 平台 | 文件 |
+          |------|------|
+          | macOS (Apple Silicon) | SubSilicon Editor-$VERSION-macos-arm64.dmg |
+          | macOS (Intel) | SubSilicon Editor-$VERSION-macos-x64.dmg |
+          | Windows | SubSilicon Editor-$VERSION-windows-x64.exe |
+          | Linux | SubSilicon Editor-$VERSION-linux-x86_64.AppImage |
+          " \
+            release/*
+
+      - name: Upload to COS
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          npm install cos-nodejs-sdk-v5
+          VERSION="$VERSION" node scripts/upload-to-cos.mjs
+        env:
+          COS_SECRET_ID: ${{ secrets.COS_SECRET_ID }}
+          COS_SECRET_KEY: ${{ secrets.COS_SECRET_KEY }}
+          COS_BUCKET: subsilicon-works-1446327579
+          COS_REGION: ap-shanghai
+
+      - name: Sync releases to Tencent Server
+        env:
+          SERVER_HOST: ${{ secrets.DEPLOY_HOST }}
+          SERVER_USER: ${{ secrets.DEPLOY_USER }}
+          SERVER_SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          RELEASE_DIR="/var/www/subsilicon/releases/v${VERSION}"
+
+          mkdir -p ~/.ssh
+          echo "$SERVER_SSH_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          echo "Syncing to server: $RELEASE_DIR"
+          ssh "$SERVER_USER@$SERVER_HOST" "mkdir -p $RELEASE_DIR"
+          scp release/* "$SERVER_USER@$SERVER_HOST:$RELEASE_DIR/"
+          ssh "$SERVER_USER@$SERVER_HOST" "ls -la $RELEASE_DIR/"
+
+      - uses: geekyeggo/delete-artifact@v5
+        with:
+          name: '*'
+          failOnError: false

@@ -1,24 +1,14 @@
-// SubSilicon 互动漫剧编辑器类型定义
-
-// ============================================
-// 节点类型 - 重新定义为分镜式
-// ============================================
-
 export type ComicNodeType =
-  | 'dialogue'     // 对话
-  | 'choice'       // 分支选择
-  | 'narration'    // 旁白/叙述
-  | 'ending'       // 结局
-  | 'unlock'       // 解锁
-  | 'gather'       // 汇聚
-  | 'condition'    // 条件判断
-  | 'cg'           // CG过场动画（图片/视频）
-  | 'jump'         // 跳转
-  | 'random'       // 随机
-
-// ============================================
-// 场景系统
-// ============================================
+  | 'dialogue'
+  | 'choice'
+  | 'narration'
+  | 'ending'
+  | 'unlock'
+  | 'gather'
+  | 'condition'
+  | 'cg'
+  | 'jump'
+  | 'random'
 
 export type PuzzleLayerType =
   | 'background'
@@ -76,49 +66,41 @@ export interface ComicScene {
   puzzleData?: PuzzleScene
 }
 
-// ============================================
-// 角色系统
-// ============================================
-
 export type CharacterGender = 'male' | 'female' | 'other' | 'unknown'
 
 export type EmotionType = 'normal' | 'happy' | 'sad' | 'angry' | 'surprised' | 'embarrassed' | 'thinking' | 'scared' | 'crying' | 'laughing'
 
 export interface CharacterSprite {
-  id?: string                // 唯一标识（可选）
+  id?: string
   emotion: string            // 表情：normal/happy/angry/sad/surprised 等
   image?: string             // 立绘URL（兼容旧字段）
   url?: string               // 立绘URL（新字段，优先使用）
-  name?: string              // 立绘名称（可选）
-  position?: 'left' | 'center' | 'right'  // 默认位置
-  scale?: number             // 缩放
-  opacity?: number           // 透明度
+  name?: string
+  position?: 'left' | 'center' | 'right'
+  scale?: number
+  opacity?: number
 }
 
 export interface ComicCharacter {
   id: string
   name: string
-  avatar: string         // 头像/缩略图
-  sprites: CharacterSprite[]  // 所有表情立绘
-  color: string          // 对话框边框颜色
+  avatar: string
+  sprites: CharacterSprite[]
+  color: string
   gender?: CharacterGender
-  voiceUrl?: string       // 角色语音
+  voiceUrl?: string
 }
 
-// ============================================
-// 对话节点数据
-// ============================================
-
 export interface DialogueData {
-  characterId: string    // 说话角色ID
-  spriteEmotion?: string // 使用表情（默认normal）
+  characterId: string
+  spriteEmotion?: string
   spritePosition?: 'left' | 'center' | 'right'
-  text: string          // 对话文本
+  text: string
   fontSize?: number
   fontColor?: string
   textAnimation?: 'typewriter' | 'fade' | 'none'
-  bgsound?: string       // 背景音效
-  voiceUrl?: string      // 语音URL
+  bgsound?: string
+  voiceUrl?: string
   backgroundImage?: string
   bgm?: string
   bgmVolume?: number
@@ -129,34 +111,28 @@ export interface DialogueData {
   emotion?: string
 }
 
-// ============================================
-// 旁白节点数据
-// ============================================
-
 export interface NarrationData {
   text: string
   fontSize?: number
   fontColor?: string
   textAnimation?: 'none' | 'typewriter' | 'fade' | 'slide-up'
-  backgroundColor?: string  // 可选背景色覆盖
+  backgroundColor?: string
+  bgm?: string
+  bgmVolume?: number
 }
-
-// ============================================
-// 分支选择节点
-// ============================================
 
 export interface ChoiceOption {
   id: string
   text: string
   icon?: string
-  condition?: string     // 显示条件
-  nextNodeId?: string    // 固定跳转（可选）
-  effects?: {           // 选择效果
+  condition?: string
+  nextNodeId?: string
+  effects?: {
     variableName: string
     operation: 'set' | 'add' | 'subtract'
     value: string | number | boolean
   }[]
-  variableEffect?: {    // 单个变量效果（实际使用中更常用）
+  variableEffect?: {
     variableName: string
     operation: 'set' | 'add' | 'subtract' | 'multiply'
     value: string | number | boolean
@@ -164,35 +140,27 @@ export interface ChoiceOption {
 }
 
 export interface ChoiceData {
-  prompt?: string        // 选择提示
+  prompt?: string
   options: ChoiceOption[]
-  defaultNext?: string   // 无条件时的默认下一节点
+  defaultNext?: string
 }
 
-// ============================================
-// 转场节点
-// ============================================
-
-export type TransitionType = 
-  | 'none'              // 无转场
-  | 'fade'              // 淡入淡出
-  | 'slide-left'        // 左滑
-  | 'slide-right'       // 右滑
-  | 'slide-up'          // 上滑
-  | 'slide-down'        // 下滑
-  | 'zoom-in'           // 放大
-  | 'zoom-out'          // 缩小
-  | 'wipe'              // 擦除
-  | 'cross-dissolve'     // 溶解
+export type TransitionType =
+  | 'none'
+  | 'fade'
+  | 'slide-left'
+  | 'slide-right'
+  | 'slide-up'
+  | 'slide-down'
+  | 'zoom-in'
+  | 'zoom-out'
+  | 'wipe'
+  | 'cross-dissolve'
 
 export interface TransitionData {
   type: TransitionType
-  duration?: number      // 转场时长（毫秒）
+  duration?: number
 }
-
-// ============================================
-// 结局节点
-// ============================================
 
 export interface EndingData {
   title: string
@@ -200,41 +168,36 @@ export interface EndingData {
   text?: string
   coverImage?: string
   endingType: 'good' | 'bad' | 'neutral' | 'secret'
+  bgm?: string
+  bgmVolume?: number
 }
-
-// ============================================
-// CG过场动画节点
-// ============================================
 
 export type CgMediaType = 'image' | 'video'
 
 export interface CgData {
-  mediaType: CgMediaType      // 媒体类型：图片或视频
-  url: string                 // 媒体资源URL
-  title?: string              // CG标题（可选）
-  subtitle?: string           // CG副标题（可选）
-  duration?: number           // 自动播放时长（毫秒，0表示点击继续）
-  canSkip?: boolean           // 是否允许跳过
-  transitionIn?: TransitionType   // 入场转场
-  transitionOut?: TransitionType  // 出场转场
-  transitionDuration?: number     // 转场时长（毫秒）
-  bgm?: string                // 背景音乐URL
-  soundEffect?: string        // 音效URL
-  letterbox?: boolean         // 是否显示黑边（电影感）
+  mediaType: CgMediaType
+  url: string
+  title?: string
+  subtitle?: string
+  duration?: number           // 0 表示点击继续
+  canSkip?: boolean
+  transitionIn?: TransitionType
+  transitionOut?: TransitionType
+  transitionDuration?: number
+  bgm?: string
+  bgmVolume?: number
+  soundEffect?: string
+  letterbox?: boolean
+  displayMode?: 'contain' | 'cover' | 'fill' | 'custom'
+  customWidth?: number    // 百分比 (10-100)
+  customHeight?: number   // 百分比 (10-100)
+  objectPosition?: string // CSS object-position 值，如 'center top'
 }
-
-// ============================================
-// 场景节点数据
-// ============================================
 
 export interface SceneData {
-  sceneId: string        // 关联场景ID
+  sceneId: string
   transition?: TransitionData
 }
-
-// ============================================
-// 节点数据联合类型
-// ============================================
 
 export type ComicNodeData =
   | SceneData
@@ -245,10 +208,6 @@ export type ComicNodeData =
   | EndingData
   | CgData
 
-// ============================================
-// 分镜节点
-// ============================================
-
 export interface ComicNode {
   id: string
   type: ComicNodeType
@@ -256,23 +215,15 @@ export interface ComicNode {
   data: ComicNodeData
 }
 
-// ============================================
-// 分镜连线
-// ============================================
-
 export interface ComicEdge {
   id: string
   source: string
   target: string
   sourceHandle?: string
   targetHandle?: string
-  condition?: string     // 条件表达式
+  condition?: string
   transition?: TransitionType
 }
-
-// ============================================
-// 变量系统
-// ============================================
 
 export interface ComicVariable {
   id: string
@@ -296,22 +247,14 @@ export interface ConditionGroup {
   clauses: ConditionClause[]
 }
 
-// ============================================
-// 音效系统
-// ============================================
-
 export interface ComicAudio {
   id: string
   name: string
   type: 'bgm' | 'sfx' | 'voice'
   url: string
-  loop?: boolean         // 仅BGM支持循环
+  loop?: boolean         // 仅 BGM 支持循环
   volume?: number
 }
-
-// ============================================
-// 故事工程
-// ============================================
 
 export interface ComicSettings {
   title: string
@@ -346,18 +289,14 @@ export const GROUP_COLORS = [
 
 export interface ComicGraph {
   settings: ComicSettings
-  scenes: ComicScene[]           // 场景库
-  characters: ComicCharacter[]    // 角色库
-  variables: ComicVariable[]     // 变量
-  nodes: ComicNode[]             // 分镜节点
-  edges: ComicEdge[]             // 连线
-  audios: ComicAudio[]           // 音效库
-  groups: NodeGroup[]            // 节点分组
+  scenes: ComicScene[]
+  characters: ComicCharacter[]
+  variables: ComicVariable[]
+  nodes: ComicNode[]
+  edges: ComicEdge[]
+  audios: ComicAudio[]
+  groups: NodeGroup[]
 }
-
-// ============================================
-// 模板定义
-// ============================================
 
 export type ComicTemplateId = 'romance' | 'adventure' | 'mystery' | 'custom'
 
@@ -421,10 +360,7 @@ export const COMIC_TEMPLATES: ComicTemplate[] = [
   },
 ]
 
-// ============================================
 // 兼容旧版类型（用于迁移）
-// ============================================
-
 export type TemplateId = ComicTemplateId
 
 export interface StoryCharacter {
@@ -482,48 +418,6 @@ export interface StoryEdge {
   }
 }
 
-// ============================================
-// 去中心化市场 - 模板/插件文件格式
-// ============================================
-
-export type TemplateCategory =
-  | 'beginner' | 'romance' | 'adventure'
-  | 'mystery' | 'horror' | 'daily'
-  | 'sci-fi' | 'fantasy' | 'custom'
-
-export type TemplateSource =
-  | { type: 'platform' }
-  | { type: 'github'; repo: string; path?: string }
-  | { type: 'cloud_drive'; url: string }
-  | { type: 'local' }
-
-export interface TemplateManifest {
-  formatVersion: '1.0'
-  templateId: string
-  name: string
-  description: string
-  category: TemplateCategory
-  tags: string[]
-  thumbnail?: string
-  creator: {
-    name: string
-    publicKey?: string
-    signature?: string
-  }
-  nodes: StoryNode[]
-  edges: StoryEdge[]
-  variables?: StoryVariable[]
-  characters?: Partial<StoryCharacter>[]
-  payment?: {
-    type: 'free' | 'donation' | 'paid'
-    price?: number
-    payLink?: string
-  }
-  source: TemplateSource
-  createdAt: string
-  updatedAt: string
-}
-
 export interface StoryGraph {
   title: string
   description: string
@@ -551,10 +445,6 @@ export interface StoryGraph {
   monetization?: import('@editor/lib/work-monetization').MonetizationConfig
 }
 
-// ============================================
-// 节点批注系统（类 Figma 评论）
-// ============================================
-
 export type AnnotationType = 'comment' | 'todo' | 'warning' | 'idea'
 
 export interface AnnotationReply {
@@ -566,12 +456,12 @@ export interface AnnotationReply {
 
 export interface NodeAnnotation {
   id: string
-  nodeId: string             // 关联的节点ID
-  type: AnnotationType       // 批注类型
+  nodeId: string
+  type: AnnotationType
   text: string
-  author: string             // 作者名（本地存储）
+  author: string
   createdAt: number
-  resolved: boolean          // 是否已解决
+  resolved: boolean
   replies?: AnnotationReply[]
 }
 
@@ -620,72 +510,4 @@ export interface NodeTemplate {
   edges: StoryEdge[]
   createdAt: number
   thumbnail?: string
-}
-
-// ============================================
-// 插件系统
-// ============================================
-
-export type PluginPermission =
-  | 'storage:read'
-  | 'storage:write'
-  | 'network:fetch'
-  | 'network:websocket'
-  | 'editor:read'
-  | 'editor:write'
-  | 'editor:read-nodes'
-  | 'editor:write-nodes'
-  | 'editor:read-variables'
-  | 'editor:write-variables'
-  | 'ui:toast'
-  | 'ui:modal'
-  | 'ui:add-panel'
-  | 'file:read'
-  | 'file:write'
-  | 'export:intercept'
-  | 'storage:local'
-
-export interface PluginSource {
-  url: string
-  checksum?: string
-}
-
-export interface CreatorIdentity {
-  id: string
-  displayName: string
-  publicKey: string
-  privateKey: string
-  bio?: string
-  registeredAt: number
-  syncedToServer: boolean
-}
-
-export interface PluginManifest {
-  pluginId: string
-  name: string
-  version: string
-  description: string
-  author: string | {
-    name: string
-    email?: string
-    homepage?: string
-    publicKey?: string
-  }
-  icon?: string
-  permissions: PluginPermission[]
-  source: PluginSource
-  homepage?: string
-  keywords?: string[]
-  hooks?: string[]
-  signature?: string
-  engineVersion?: string
-  entry?: string
-  configFields?: Array<{
-    key: string
-    type: 'text' | 'password' | 'select' | 'number'
-    label: string
-    placeholder?: string
-    required?: boolean
-    options?: { label: string; value: string }[]
-  }>
 }

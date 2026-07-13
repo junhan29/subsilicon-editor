@@ -1,8 +1,5 @@
 import type { OutlineItem, StoryNode, StoryEdge } from '@editor/types/editor'
-
-function generateId(): string {
-  return `outline-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-}
+import { generateId } from './utils'
 
 function inferNodeType(title: string): string {
   if (title.includes('结局')) return 'ending'
@@ -26,7 +23,7 @@ export function parseOutline(text: string): OutlineItem[] {
       const level = chapterMatch[1].length
       const title = chapterMatch[2].trim()
       const item: OutlineItem = {
-        id: generateId(),
+        id: generateId('outline'),
         type: 'chapter',
         title,
         level,
@@ -55,7 +52,7 @@ export function parseOutline(text: string): OutlineItem[] {
       const nodeType = inferNodeType(title)
 
       const item: OutlineItem = {
-        id: generateId(),
+        id: generateId('outline'),
         type: 'node',
         title,
         level,

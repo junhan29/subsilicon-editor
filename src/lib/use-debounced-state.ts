@@ -11,8 +11,13 @@ export function useDebouncedState<T>(
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   const callbackRef = useRef(onDebouncedChange)
   callbackRef.current = onDebouncedChange
+  const initializedRef = useRef(false)
 
   useEffect(() => {
+    if (!initializedRef.current) {
+      initializedRef.current = true
+      return
+    }
     setValue(initialValue)
   }, [initialValue])
 

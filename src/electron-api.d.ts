@@ -21,9 +21,6 @@ declare global {
       getProjectPath: () => Promise<{ success: boolean; path?: string }>
       copyToProject: (sourcePath: string, fileName: string) => Promise<{ success: boolean; path?: string; error?: string }>
       getRecentFiles: () => Promise<{ success: boolean; files?: string[] }>
-      addRecentFile: (filePath: string) => Promise<{ success: boolean; files?: string[] }>
-      removeRecentFile: (filePath: string) => Promise<{ success: boolean; files?: string[] }>
-      getDefaultProjectsDir: () => Promise<{ success: boolean; path?: string; error?: string }>
       getVersion: () => Promise<{ success: boolean; version?: string }>
       minimizeWindow: () => void
       maximizeWindow: () => void
@@ -31,13 +28,6 @@ declare global {
       checkForUpdates: () => void
       downloadUpdate: () => void
       installUpdate: () => void
-      openPanelWindow: () => Promise<{ success: boolean; alreadyOpen?: boolean }>
-      closePanelWindow: () => void
-      sendPanelMessage: (message: { action: string; payload: unknown }) => void
-      sendMainMessage: (message: { action: string; payload: unknown }) => void
-      onPanelClosed: (callback: () => void) => () => void
-      onPanelMessage: (callback: (message: { action: string; payload: unknown }) => void) => () => void
-      onMainMessage: (callback: (message: { action: string; payload: unknown }) => void) => () => void
       onUpdateChecking: (callback: () => void) => () => void
       onUpdateAvailable: (callback: (info: { version: string }) => void) => () => void
       onUpdateNotAvailable: (callback: () => void) => () => void

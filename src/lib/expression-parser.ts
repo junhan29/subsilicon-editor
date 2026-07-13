@@ -1,8 +1,3 @@
-/**
- * 表达式解析器 - 借鉴 InkJS 的表达式解析器设计
- * 支持：比较运算、逻辑运算、数学运算、函数调用
- */
-
 // Token 类型
 export type TokenType =
   | 'NUMBER'      // 数字
@@ -75,9 +70,6 @@ export class ExpressionParser {
     this.context = context
   }
 
-  /**
-   * 解析表达式字符串并返回结果
-   */
   parse(expression: string): any {
     if (!expression || expression.trim() === '') {
       return true // 空表达式默认为 true
@@ -88,9 +80,6 @@ export class ExpressionParser {
     return this.parseExpression()
   }
 
-  /**
-   * 词法分析：将字符串转换为 token 数组
-   */
   private tokenize(expression: string): Token[] {
     const tokens: Token[] = []
     let i = 0
@@ -406,9 +395,6 @@ export class ExpressionParser {
   }
 }
 
-/**
- * 创建默认的评估上下文
- */
 export function createDefaultContext(variables: Record<string, any> = {}): EvaluationContext {
   return {
     variables,
@@ -420,9 +406,6 @@ export function createDefaultContext(variables: Record<string, any> = {}): Evalu
   }
 }
 
-/**
- * 验证表达式是否有效
- */
 export function validateExpression(expression: string): { valid: boolean; error?: string } {
   try {
     const parser = new ExpressionParser(createDefaultContext())
@@ -433,14 +416,11 @@ export function validateExpression(expression: string): { valid: boolean; error?
   }
 }
 
-/**
- * 提取表达式中的变量引用
- */
 export function extractVariables(expression: string): string[] {
   const parser = new ExpressionParser(createDefaultContext())
   const tokens = parser['tokenize'](expression)
   const variables: string[] = []
-  
+
   for (const token of tokens) {
     if (token.type === 'IDENTIFIER') {
       const nextToken = tokens[tokens.indexOf(token) + 1]
@@ -452,6 +432,6 @@ export function extractVariables(expression: string): string[] {
       }
     }
   }
-  
+
   return variables
 }

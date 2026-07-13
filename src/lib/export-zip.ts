@@ -2,11 +2,9 @@ import JSZip from 'jszip'
 import { exportToHTML } from './export-html'
 import type { StoryGraph } from '@editor/types/editor'
 
-// 从 StoryGraph 中提取所有资源
 function extractAssets(graph: StoryGraph): Array<{ name: string; blob: Blob }> {
   const assets: Array<{ name: string; blob: Blob }> = []
 
-  // 提取场景背景图
   if (graph.scenes) {
     for (const scene of graph.scenes) {
       if (scene.backgroundImage && scene.backgroundImage.startsWith('data:')) {
@@ -23,7 +21,6 @@ function extractAssets(graph: StoryGraph): Array<{ name: string; blob: Blob }> {
     }
   }
 
-  // 提取 CG 节点中的媒体资源
   if (graph.nodes) {
     for (const node of graph.nodes) {
       const data = node.data as Record<string, unknown> | undefined
@@ -45,7 +42,6 @@ function extractAssets(graph: StoryGraph): Array<{ name: string; blob: Blob }> {
   return assets
 }
 
-// 构建 README.txt
 function buildReadme(graph: StoryGraph): string {
   return `互动故事 - ${graph.title || '未命名故事'}
 ================================
@@ -67,24 +63,18 @@ function buildReadme(graph: StoryGraph): string {
 `
 }
 
-// 导出为 ZIP 文件
 export async function exportToZIP(graph: StoryGraph): Promise<Blob> {
   const zip = new JSZip()
 
-  // 1. 添加 index.html（故事运行时）
   const html = await exportToHTML(graph)
   zip.file('index.html', html)
 
-  // 2. 添加 media 文件夹（图片/音频/视频）
   const assets = extractAssets(graph)
   for (const asset of assets) {
     zip.file(asset.name, asset.blob)
   }
 
-  // 3. 添加 story.json（可导入编辑器的源数据）
   zip.file('story.json', JSON.stringify(graph, null, 2))
-
-  // 4. 添加 README.txt
   zip.file('README.txt', buildReadme(graph))
 
   return await zip.generateAsync({ type: 'blob' })

@@ -5,8 +5,11 @@ export interface WorkMetadata {
   id: string
   name: string
   updatedAt: number
+  createdAt: number
+  lastOpened: number
   nodeCount: number
   edgeCount: number
+  templateId: string
   thumbnail?: string
 }
 
@@ -55,4 +58,8 @@ export async function deleteWork(id: string): Promise<void> {
     request.onsuccess = () => resolve()
     request.onerror = () => reject(request.error)
   })
+}
+
+export function generateProjectId(): string {
+  return `proj_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 }

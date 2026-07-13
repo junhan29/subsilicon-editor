@@ -1,14 +1,26 @@
 'use client'
 
-import { useState, useEffect, memo, useCallback } from 'react'
+import { useState, useEffect, memo } from 'react'
 import { Button } from '@editor/components/ui/button'
 import { Input } from '@editor/components/ui/input'
 import { Label } from '@editor/components/ui/label'
 import { Textarea } from '@editor/components/ui/textarea'
-import { X, Plus, Trash2, Users, ArrowRight, ChevronDown, ChevronRight, Copy, Check, Layers, MessageSquare, Sparkles } from 'lucide-react'
-import { enrichCharacter, type PolishStyle } from '@editor/lib/ai-service'
-import { showToast } from './toast'
+import { X, Plus, Trash2, Users, ArrowRight, ChevronDown, ChevronRight, Copy, Check, Layers, MessageSquare } from 'lucide-react'
 import type { StoryNode, StoryCharacter, StoryEdge, StoryVariable, CharacterGender, NodeAnnotation } from '@editor/types/editor'
+import {
+  NODE_TYPE_LABELS,
+  CHAR_COLORS,
+  STORY_TAGS,
+  PERSONALITY_TRAITS,
+  APPEARANCE_TAGS,
+  SPEECH_TONES,
+  SPEECH_RHYTHMS,
+  SPEECH_VOCABULARY,
+  SKILL_TAGS,
+  HABIT_TAGS,
+  FEAR_TAGS,
+  CHARACTER_CUSTOM_TAGS,
+} from '@editor/constants'
 
 // 引入拆分的面板组件
 import { DialoguePanel } from './panels/dialogue-panel'
@@ -21,7 +33,6 @@ import { ConditionPanel } from './panels/condition-panel'
 import { GatherPanel } from './panels/gather-panel'
 import { JumpPanel } from './panels/jump-panel'
 import { RandomPanel } from './panels/random-panel'
-import { NODE_TYPE_LABELS } from './panels/shared-props'
 
 // 面板映射表
 const PANEL_MAP: Record<string, React.ComponentType<any>> = {
@@ -36,50 +47,6 @@ const PANEL_MAP: Record<string, React.ComponentType<any>> = {
   jump: JumpPanel,
   random: RandomPanel,
 }
-
-// ------ 角色管理相关常量（保留在主文件）------
-const CHAR_COLORS = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#e67e22', '#34495e']
-
-const STORY_TAGS = ['古风', '玄幻', '悬疑', '恋爱', '现代', '科幻', '恐怖', '校园', '都市', '穿越']
-
-const PERSONALITY_TRAITS = [
-  '勇敢', '冷静', '热血', '高傲', '温柔', '腹黑', '傲娇', '天然呆',
-  '正义', '邪恶', '乐观', '悲观', '开朗', '内向', '活泼', '稳重'
-]
-
-const APPEARANCE_TAGS = [
-  '长发', '短发', '卷发', '大眼', '小眼', '高挑', '娇小', '肌肉',
-  '眼镜', '帽子', '纹身', '伤疤', '马尾', '双马尾', '麻花辫'
-]
-
-const SPEECH_TONES = [
-  '热血激昂', '冷淡简洁', '软萌可爱', '成熟稳重', '痞气十足',
-  '文绉绉', '网络用语', '地方口音', '娃娃音', '御姐音'
-]
-
-const SPEECH_RHYTHMS = ['快节奏', '慢条斯理', '跳跃', '顿挫', '流畅']
-
-const SPEECH_VOCABULARY = ['直接', '委婉', '正式', '口语化', '文艺', '网络']
-
-const SKILL_TAGS = [
-  '格斗', '射击', '魔法', '烹饪', '黑客', '驾驶', '医术', '演技',
-  '管理', '谈判', '潜行', '跑酷', '乐器', '舞蹈', '绘画'
-]
-
-const HABIT_TAGS = [
-  '吃零食', '喝咖啡', '熬夜', '早起', '健身', '阅读', '发呆', '自言自语',
-  '整理东西', '迟到'
-]
-
-const FEAR_TAGS = [
-  '黑暗', '打雷', '虫子', '高处', '深海', '孤独', '失败', '背叛',
-  '鬼魂', '蛇', '蜘蛛', '密闭空间', '公开演讲'
-]
-
-const CHARACTER_CUSTOM_TAGS = [
-  '学生', '老师', '警察', '医生', '商人', '运动员', '艺术家', '程序员',
-  '热血', '御姐', '萝莉', '正太', '大叔', '女神', '男神', '萌新'
-]
 
 // 角色预设
 const CHARACTER_PRESETS: Array<{
@@ -188,45 +155,12 @@ function PropertyPanel({
 }: PropertyPanelProps) {
   const [expandedCharId, setExpandedCharId] = useState<string | null>(null)
   const [copiedCharId, setCopiedCharId] = useState<string | null>(null)
-  const [enrichingCharId, setEnrichingCharId] = useState<string | null>(null)
 
   useEffect(() => {
     if (editCharId) {
       setExpandedCharId(editCharId)
     }
   }, [editCharId])
-
-  const handleEnrichCharacter = useCallback(async (char: StoryCharacter, style: PolishStyle) => {
-    setEnrichingCharId(char.id)
-    try {
-      const result = await enrichCharacter(char, style)
-      onUpdateCharacter({
-        ...char,
-        personality: result.personality.slice(0, 8),
-        appearance: result.appearance.slice(0, 8),
-        background: result.background,
-        speech: {
-          tone: result.speech.tone,
-          catchphrases: result.speech.catchphrases.slice(0, 3),
-          rhythm: char.speech?.rhythm,
-          vocabulary: char.speech?.vocabulary,
-        },
-        skills: result.skills.slice(0, 6),
-        motivation: result.motivation,
-        habits: result.habits.slice(0, 6),
-        fears: result.fears.slice(0, 6),
-        bio: result.bio,
-        occupation: result.occupation || char.occupation,
-        age: result.age || char.age,
-        gender: result.gender || char.gender,
-      })
-      showToast('success', `角色「${char.name}」设定已补充`)
-    } catch (error) {
-      showToast('error', (error as Error).message)
-    } finally {
-      setEnrichingCharId(null)
-    }
-  }, [onUpdateCharacter])
 
   // 选中边时显示边属性面板
   if (selectedEdge) {
@@ -378,31 +312,6 @@ function PropertyPanel({
                       className="h-7 text-xs" placeholder="姓名" />
                   </div>
 
-                  {/* AI 补充设定 */}
-                  <div className="pt-2 border-t border-border/40">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <Label className="text-[10px] flex items-center gap-1">
-                        <Sparkles className="w-3 h-3 text-amber-500" />
-                        AI 补充设定
-                      </Label>
-                    </div>
-                    <div className="grid grid-cols-3 gap-1">
-                      {(['general', 'vivid', 'literary'] as PolishStyle[]).map((style) => (
-                        <button
-                          key={style}
-                          onClick={() => handleEnrichCharacter(char, style)}
-                          disabled={!!enrichingCharId}
-                          className="py-1.5 px-2 text-[10px] rounded border border-border/60 hover:border-amber-500/50 hover:bg-amber-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {enrichingCharId === char.id ? '生成中...' : style === 'general' ? '通用' : style === 'vivid' ? '生动' : '文学'}
-                        </button>
-                      ))}
-                    </div>
-                    <p className="text-[9px] text-muted-foreground mt-1">
-                      基于已有信息自动补充角色设定
-                    </p>
-                  </div>
-
                   {/* 删除角色 */}
                   <div className="pt-1 border-t border-border/40">
                     <Button variant="ghost" size="sm"
@@ -524,6 +433,7 @@ function arePropertyPanelPropsEqual(
   if (prevProps.selectedEdge?.id !== nextProps.selectedEdge?.id) return false
   if (prevProps.editCharId !== nextProps.editCharId) return false
   if (prevProps.annotations !== nextProps.annotations) return false
+  if (prevProps.selectedNode?.type !== nextProps.selectedNode?.type) return false
   return true
 }
 
