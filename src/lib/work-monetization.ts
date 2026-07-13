@@ -1,6 +1,6 @@
 import type { StoryGraph } from '@editor/types/editor'
 
-export type PaymentMethod = 'wechat_manual' | 'third_party' | 'both' | 'multi'
+export type PaymentMethod = 'wechat_manual' | 'third_party' | 'both' | 'multi' | 'offline'
 
 export type ThirdPartyPlatform = 'afdian' | 'mianbaoduo' | 'patreon' | 'ko-fi' | 'custom'
 
@@ -67,6 +67,10 @@ export interface MonetizationConfig {
   workId: string
   seedKey?: string
   seedKeyHash?: string
+  /** 自定义解锁验证服务端点（留空则使用离线验证） */
+  customApiUrl?: string
+  /** 离线解锁码列表（纯离线模式下使用） */
+  offlineCodes?: OfflineUnlockCode[]
 }
 
 export interface PaidChapter {
@@ -164,6 +168,57 @@ export interface PreGeneratedCode {
   code: string
   usedAt?: number
   deviceFingerprint?: string
+}
+
+/** 离线解锁码：每个码对应一个 XOR 掩码后的解密密钥 */
+export interface OfflineUnlockCode {
+  code: string
+  maskedKeyBase64: string
+  usedAt?: number
+  deviceFingerprint?: string
+}
+
+/**
+ * 生成离线解锁码
+ *
+ * 原理：将 AES 解密密钥与 SHA256(code) 做 XOR，读者输入正确 code 后即可本地恢复密钥
+ * 无需任何服务器验证，纯客户端离线运行
+ */
+export async function generateOfflineUnlockCodes(
+  count: number,
+  keyBase64: string
+): Promise<OfflineUnlockCode[]> {
+  const codes: OfflineUnlockCode[] = []
+  const encoder = new TextEncoder()
+  const keyBytes = Uint8Array.from(atob(keyBase64), c => c.charCodeAt(0))
+
+  for (let i = 0; i < count; i++) {
+    // 生成随机 12 位字母数字码
+    const randBytes = crypto.getRandomValues(new Uint8Array(8))
+    const code = Array.from(randBytes)
+      .map(b => b.toString(36).padStart(2, '0'))
+      .join('')
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, '')
+      .slice(0, 12)
+
+    // SHA256(code)
+    const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(code))
+    const hashBytes = new Uint8Array(hashBuffer)
+
+    // XOR 掩码
+    const maskedBytes = new Uint8Array(keyBytes.length)
+    for (let j = 0; j < keyBytes.length; j++) {
+      maskedBytes[j] = keyBytes[j] ^ hashBytes[j % hashBytes.length]
+    }
+
+    codes.push({
+      code,
+      maskedKeyBase64: btoa(String.fromCharCode(...maskedBytes)),
+    })
+  }
+
+  return codes
 }
 
 export const SEED_KEY_PREFIX = 'SUBSL-SEED-'

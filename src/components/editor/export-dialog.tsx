@@ -184,7 +184,10 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
         }
         case 'story_exec': {
           // 根据 monetization 配置确定解锁模式
-          const unlockMode: UnlockMode = monetization?.paymentMethod === 'multi' ? 'hybrid' : drmUnlockMode
+          let unlockMode: UnlockMode = monetization?.paymentMethod === 'multi' ? 'hybrid' : drmUnlockMode
+          if (monetization?.paymentMethod === 'offline') {
+            unlockMode = 'offline'
+          }
           const storyConfig: StoryExportConfig = {
             unlockMode,
             price: drmEnabled ? drmPrice : 0,
@@ -202,13 +205,20 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
             kofiLink: drmKofiUrl || undefined,
             // 混合模式配置
             multiChannel: monetization?.multiChannel,
+            // 去中心化配置
+            customApiUrl: monetization?.customApiUrl,
+            offlineCodes: monetization?.offlineCodes?.map(c => ({
+              code: c.code,
+              maskedKeyBase64: c.maskedKeyBase64,
+            })),
           }
 
           setProgress(50)
           const result = await exportToStoryHTML(graph, storyConfig)
           setProgress(70)
 
-          if (drmEnabled && result.keyBase64) {
+          // 仅在非离线模式下向服务端注册密钥
+          if (drmEnabled && result.keyBase64 && unlockMode !== 'offline') {
             try {
               await fetch(SUBMIT_CONFIG.storyUnlockUrl, {
                 method: 'POST',
@@ -228,6 +238,8 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
             } catch {
               showToast('info', '密钥上传失败，请检查网络后重试导出')
             }
+          } else if (unlockMode === 'offline') {
+            setProgress(80)
           }
 
           blob = new Blob([result.html], { type: 'text/html;charset=utf-8' })

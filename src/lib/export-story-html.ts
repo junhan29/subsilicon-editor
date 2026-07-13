@@ -14,7 +14,7 @@ import { encryptStoryData, AES_ENC_PREFIX } from '@editor/lib/story-encrypt'
 import { generateWorkId } from '@editor/lib/work-monetization'
 import type { MultiChannelConfig, PreGeneratedCode } from '@editor/lib/work-monetization'
 
-export type UnlockMode = 'manual' | 'semi_auto' | 'webhook' | 'hybrid'
+export type UnlockMode = 'manual' | 'semi_auto' | 'webhook' | 'hybrid' | 'offline'
 
 export interface StoryExportConfig {
   unlockMode: UnlockMode
@@ -34,8 +34,12 @@ export interface StoryExportConfig {
   kofiLink?: string
   /** 多渠道配置（混合模式） */
   multiChannel?: MultiChannelConfig
-  /** 预生成解锁码 */
+  /** 预生成解锁码（向后兼容） */
   preGeneratedCodes?: PreGeneratedCode[]
+  /** 自定义解锁验证服务端点（留空则使用离线验证） */
+  customApiUrl?: string
+  /** 离线解锁码列表（纯离线模式下使用） */
+  offlineCodes?: { code: string; maskedKeyBase64: string }[]
 }
 
 export interface StoryExportResult {
@@ -45,7 +49,7 @@ export interface StoryExportResult {
   workId: string
 }
 
-const UNLOCK_API_URL = 'https://subsilicon.cn/api/story-unlock'
+const DEFAULT_API_URL = 'https://subsilicon.cn/api/story-unlock'
 const STORY_STORAGE_KEY_PREFIX = 'subsilicon_story_'
 
 const EXPRESSION_PARSER_CODE = `
@@ -203,7 +207,7 @@ class ExpressionParser {
 }
 `
 
-function buildStoryHTML(encryptedData: string, config: StoryExportConfig): string {
+function buildStoryHTML(encryptedData: string, ivBase64: string, config: StoryExportConfig): string {
   const priceStr = config.price.toFixed(2)
 
   return `<!DOCTYPE html>
@@ -419,10 +423,13 @@ function buildStoryHTML(encryptedData: string, config: StoryExportConfig): strin
       alipayQRCode: ${config.alipayQRCode ? JSON.stringify(config.alipayQRCode) : 'null'},
       contactInfo: ${config.contactInfo ? JSON.stringify(config.contactInfo) : 'null'},
       encryptedData: ${JSON.stringify(encryptedData)},
-      apiUrl: '${UNLOCK_API_URL}',
+      apiUrl: ${config.customApiUrl ? JSON.stringify(config.customApiUrl) : 'null'},
       storageKey: '${STORY_STORAGE_KEY_PREFIX}${config.workId}',
       multiChannel: ${config.multiChannel ? JSON.stringify(config.multiChannel) : 'null'},
       preGeneratedCodes: ${config.preGeneratedCodes ? JSON.stringify(config.preGeneratedCodes) : 'null'},
+      offlineCodes: ${config.offlineCodes ? JSON.stringify(config.offlineCodes) : 'null'},
+      isOffline: ${config.unlockMode === 'offline' || !config.customApiUrl ? 'true' : 'false'},
+      ivBase64: '${ivBase64}',
     };
   </script>
   <script>
@@ -679,6 +686,48 @@ function buildStoryHTML(encryptedData: string, config: StoryExportConfig): strin
         return Array.from(new Uint8Array(hash)).map(function(b) { return b.toString(16).padStart(2,'0'); }).join('');
       }
 
+      async function sha256Bytes(text) {
+        var data = new TextEncoder().encode(text);
+        var hash = await crypto.subtle.digest('SHA-256', data);
+        return new Uint8Array(hash);
+      }
+
+      function xorBytes(a, b) {
+        var result = new Uint8Array(a.length);
+        for (var i = 0; i < a.length; i++) {
+          result[i] = a[i] ^ b[i % b.length];
+        }
+        return result;
+      }
+
+      function bytesToBase64(bytes) {
+        var binary = '';
+        for (var i = 0; i < bytes.length; i++) {
+          binary += String.fromCharCode(bytes[i]);
+        }
+        return btoa(binary);
+      }
+
+      async function tryOfflineUnlock(code) {
+        var codes = C.offlineCodes || [];
+        var item = codes.find(function(c) { return c.code === code; });
+        if (!item) return null;
+        if (item.usedAt) return { error: '该解锁码已被使用' };
+        try {
+          var hashBytes = await sha256Bytes(code);
+          var maskedBytes = Uint8Array.from(atob(item.maskedKeyBase64), function(c) { return c.charCodeAt(0); });
+          var keyBytes = xorBytes(maskedBytes, hashBytes);
+          var keyBase64 = bytesToBase64(keyBytes);
+          var storyIv = C.ivBase64;
+          decodedData = await decryptData(keyBase64, storyIv);
+          graph = JSON.parse(decodedData);
+          initVariables();
+          setUnlocked(keyBase64, storyIv);
+          item.usedAt = Date.now();
+          return { success: true };
+        } catch(e) { return { error: '解锁码验证失败' }; }
+      }
+
       function initVariables() {
         variables = {};
         var graphVars = graph.variables || [];
@@ -858,6 +907,26 @@ function buildStoryHTML(encryptedData: string, config: StoryExportConfig): strin
         var msg = document.getElementById('unlock-msg') || document.getElementById('manual-msg');
         if (!msg) return;
         msg.className = 'pw-msg info'; msg.textContent = '正在验证...';
+
+        // 优先尝试离线验证
+        var offline = await tryOfflineUnlock(item.code);
+        if (offline && offline.success) {
+          item.usedAt = Date.now();
+          msg.className = 'pw-msg success'; msg.textContent = '解锁成功！即将开始阅读...';
+          setTimeout(function() { paywall.classList.add('hidden'); startStory(); }, 1200);
+          return;
+        }
+        if (offline && offline.error) {
+          msg.className = 'pw-msg error'; msg.textContent = offline.error;
+          return;
+        }
+
+        // 离线验证不可用，尝试 API
+        if (!C.apiUrl) {
+          msg.className = 'pw-msg error'; msg.textContent = '离线验证不可用，请联系创作者获取有效解锁码';
+          return;
+        }
+
         try {
           var fingerprint = await sha256(navigator.userAgent + screen.width + 'x' + screen.height);
           var resp = await fetch(C.apiUrl, {
@@ -891,9 +960,22 @@ function buildStoryHTML(encryptedData: string, config: StoryExportConfig): strin
         btn.disabled = true; btn.textContent = '验证中...';
         msg.className = 'pw-msg info'; msg.textContent = '正在验证订单...';
 
+        // 优先尝试离线验证（将订单号视为解锁码）
+        var offline = await tryOfflineUnlock(orderNo);
+        if (offline && offline.success) {
+          msg.className = 'pw-msg success'; msg.textContent = '解锁成功！即将开始阅读...';
+          setTimeout(function() { paywall.classList.add('hidden'); startStory(); }, 1200);
+          return;
+        }
+        if (offline && offline.error) {
+          msg.className = 'pw-msg error'; msg.textContent = offline.error;
+          btn.disabled = false; btn.textContent = '重试解锁';
+          return;
+        }
+
+        // 离线验证不可用，尝试第三方端点 + API
         try {
           var fingerprint = await sha256(navigator.userAgent + screen.width + 'x' + screen.height);
-          // 如果有配置验证端点，优先尝试
           var channels = (C.multiChannel && C.multiChannel.thirdPartyChannels) || [];
           var verified = false;
 
@@ -911,7 +993,11 @@ function buildStoryHTML(encryptedData: string, config: StoryExportConfig): strin
           }
 
           if (!verified) {
-            // 未配置自动验证端点，回退到服务端验证
+            if (!C.apiUrl) {
+              msg.className = 'pw-msg error'; msg.textContent = '离线验证不可用，请联系创作者获取有效解锁码';
+              btn.disabled = false; btn.textContent = '重试解锁';
+              return;
+            }
             var resp = await fetch(C.apiUrl, {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ action: 'unlock', workId: C.workId, orderNo: orderNo, deviceFingerprint: fingerprint }),
@@ -929,7 +1015,11 @@ function buildStoryHTML(encryptedData: string, config: StoryExportConfig): strin
               btn.disabled = false; btn.textContent = '重试解锁';
             }
           } else {
-            // 本地验证通过，直接解锁（使用服务端密钥）
+            if (!C.apiUrl) {
+              msg.className = 'pw-msg error'; msg.textContent = '第三方验证通过，但缺少服务端密钥。请联系创作者';
+              btn.disabled = false; btn.textContent = '重试解锁';
+              return;
+            }
             var resp2 = await fetch(C.apiUrl, {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ action: 'unlock', workId: C.workId, orderNo: orderNo, deviceFingerprint: fingerprint }),
@@ -958,12 +1048,32 @@ function buildStoryHTML(encryptedData: string, config: StoryExportConfig): strin
         var msg = document.getElementById('unlock-msg');
         if (!btn) return;
         var orderNo = '';
-        if (C.price > 0 && C.unlockMode === 'semi_auto') {
+        if (C.price > 0 && (C.unlockMode === 'semi_auto' || C.unlockMode === 'offline')) {
           orderNo = (document.getElementById('order-input') || {}).value.trim();
-          if (!orderNo) { msg.className = 'pw-msg error'; msg.textContent = '请先粘贴完整的交易单号'; return; }
+          if (!orderNo) { msg.className = 'pw-msg error'; msg.textContent = '请先粘贴完整的交易单号或解锁码'; return; }
         }
         btn.disabled = true; btn.textContent = '处理中...';
         msg.className = 'pw-msg info'; msg.textContent = '正在验证...';
+
+        // 优先尝试离线验证
+        var offline = await tryOfflineUnlock(orderNo);
+        if (offline && offline.success) {
+          msg.className = 'pw-msg success'; msg.textContent = '解锁成功！即将开始阅读...';
+          setTimeout(function() { paywall.classList.add('hidden'); startStory(); }, 1200);
+          return;
+        }
+        if (offline && offline.error) {
+          msg.className = 'pw-msg error'; msg.textContent = offline.error;
+          btn.disabled = false; btn.textContent = '重试解锁';
+          return;
+        }
+
+        if (!C.apiUrl) {
+          msg.className = 'pw-msg error'; msg.textContent = '离线验证不可用，请联系创作者获取有效解锁码';
+          btn.disabled = false; btn.textContent = '重试解锁';
+          return;
+        }
+
         try {
           var fingerprint = await sha256(navigator.userAgent + screen.width + 'x' + screen.height);
           var resp = await fetch(C.apiUrl, {
@@ -994,6 +1104,24 @@ function buildStoryHTML(encryptedData: string, config: StoryExportConfig): strin
         var code = (input || {}).value.trim();
         if (!code) { if(msg){msg.className = 'pw-msg error'; msg.textContent = '请输入创作者给你的激活码';} return; }
         if(msg){msg.className = 'pw-msg info'; msg.textContent = '验证中...';}
+
+        // 优先尝试离线验证
+        var offline = await tryOfflineUnlock(code);
+        if (offline && offline.success) {
+          if(msg){msg.className = 'pw-msg success'; msg.textContent = '解锁成功！';}
+          setTimeout(function() { paywall.classList.add('hidden'); startStory(); }, 1200);
+          return;
+        }
+        if (offline && offline.error) {
+          if(msg){msg.className = 'pw-msg error'; msg.textContent = offline.error;}
+          return;
+        }
+
+        if (!C.apiUrl) {
+          if(msg){msg.className = 'pw-msg error'; msg.textContent = '离线验证不可用，请联系创作者获取有效解锁码';}
+          return;
+        }
+
         try {
           var fingerprint = await sha256(navigator.userAgent + screen.width + 'x' + screen.height);
           var resp = await fetch(C.apiUrl, {
@@ -1282,7 +1410,7 @@ export async function exportToStoryHTML(
   const processedGraph = await embedAssets(graph)
   const graphJSON = JSON.stringify(processedGraph)
   const { encryptedData, keyBase64, ivBase64 } = await encryptStoryData(graphJSON)
-  const html = buildStoryHTML(encryptedData, { ...config, workId })
+  const html = buildStoryHTML(encryptedData, ivBase64, { ...config, workId })
 
   return { html, keyBase64, ivBase64, workId }
 }

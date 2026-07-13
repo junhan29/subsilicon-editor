@@ -19,7 +19,8 @@ import type {
 import {
   generateSeedKey, hashSeedKey, generateWorkId, saveSeedKey, loadSeedKey,
   THIRD_PARTY_PLATFORMS, formatPrice, suggestPaidNodes, getMonetizationStats,
-  SEED_KEY_PREFIX, DEFAULT_PRICE_OPTIONS
+  SEED_KEY_PREFIX, DEFAULT_PRICE_OPTIONS,
+  generateOfflineUnlockCodes, type OfflineUnlockCode
 } from '@editor/lib/work-monetization'
 import {
   loadIncomeTracking, addIncomeRecord, getComplianceStatus, deleteIncomeRecord
@@ -158,7 +159,14 @@ export function MonetizationSettingsPanel({
   const [seedKey, setSeedKey] = useState<string>('')
   const [seedKeyGenerated, setSeedKeyGenerated] = useState(false)
   const [showSeedKey, setShowSeedKey] = useState(false)
-  
+
+  // 离线解锁码
+  const [offlineCodes, setOfflineCodes] = useState<OfflineUnlockCode[]>(config?.offlineCodes ?? [])
+  const [showOfflineCodes, setShowOfflineCodes] = useState(false)
+
+  // 自定义验证端点
+  const [customApiUrl, setCustomApiUrl] = useState<string>(config?.customApiUrl ?? '')
+
   const [expandedSection, setExpandedSection] = useState<string>('basic')
   const [qrCodePreview, setQrCodePreview] = useState<string>('')
   const [nodeFilter, setNodeFilter] = useState<string>('')
@@ -216,6 +224,37 @@ export function MonetizationSettingsPanel({
     saveSeedKey(workId, newKey)
     showToast('success', '种子密钥已生成并保存到本地')
   }, [workId])
+
+  // 生成离线解锁码
+  const handleGenerateOfflineCodes = useCallback(async (count: number) => {
+    if (!seedKey) {
+      showToast('error', '请先生成种子密钥')
+      return
+    }
+    showToast('info', '正在生成解锁码...')
+    try {
+      const codes = await generateOfflineUnlockCodes(count, seedKey)
+      setOfflineCodes(prev => [...prev, ...codes])
+      showToast('success', `已生成 ${count} 个离线解锁码`)
+    } catch {
+      showToast('error', '生成失败，请重试')
+    }
+  }, [seedKey])
+
+  // 复制离线解锁码到剪贴板
+  const handleCopyOfflineCodes = useCallback(() => {
+    const text = offlineCodes.map(c => c.code).join('\n')
+    navigator.clipboard.writeText(text).then(() => {
+      showToast('success', '解锁码已复制到剪贴板')
+    }).catch(() => {
+      showToast('error', '复制失败')
+    })
+  }, [offlineCodes])
+
+  // 删除单个离线解锁码
+  const handleDeleteOfflineCode = useCallback((code: string) => {
+    setOfflineCodes(prev => prev.filter(c => c.code !== code))
+  }, [])
 
   // 上传收款码
   const handleUploadQRCode = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -422,6 +461,13 @@ export function MonetizationSettingsPanel({
         return
       }
     }
+
+    if (paymentMethod === 'offline') {
+      if (offlineCodes.length === 0) {
+        showToast('error', '请至少生成一个离线解锁码')
+        return
+      }
+    }
     
     // 多渠道模式验证
     if (paymentMethod === 'multi') {
@@ -480,6 +526,8 @@ export function MonetizationSettingsPanel({
       freePreviewText: freePreviewText || undefined,
       workId,
       seedKey,
+      customApiUrl: customApiUrl.trim() || undefined,
+      offlineCodes: paymentMethod === 'offline' ? offlineCodes : undefined,
     }
 
     onChange(newConfig)
@@ -491,7 +539,8 @@ export function MonetizationSettingsPanel({
     workId, seedKey, seedKeyGenerated, onChange,
     buildMultiChannelConfig,
     afdianEnabled, afdianLink, mianbaoduoEnabled, mianbaoduoLink,
-    manualWechatEnabled, manualWechatQRCode, manualAlipayEnabled, manualAlipayQRCode
+    manualWechatEnabled, manualWechatQRCode, manualAlipayEnabled, manualAlipayQRCode,
+    customApiUrl, offlineCodes
   ])
 
   // 统计信息
@@ -1573,6 +1622,7 @@ export function MonetizationSettingsPanel({
                   <label className="text-sm font-medium mb-2 block">收款方式</label>
                   <div className="space-y-2">
                     {[
+                      { id: 'offline', label: '纯离线模式', desc: '零依赖：预生成解锁码，读者离线验证', icon: Shield, badge: '去中心化', color: 'text-purple-500' },
                       { id: 'multi', label: '多渠道收款', desc: '推荐：爱发电+面包多+收款码', icon: Wallet, badge: '推荐' },
                       { id: 'wechat_manual', label: '微信手动收款', desc: '适合刚开始，零门槛', icon: MessageCircle },
                       { id: 'third_party', label: '第三方平台', desc: '爱发电/面包多等', icon: Globe },
@@ -1587,12 +1637,16 @@ export function MonetizationSettingsPanel({
                             : 'border-border hover:border-primary/30'
                         }`}
                       >
-                        <option.icon className={`w-5 h-5 ${option.id === 'multi' ? 'text-amber-500' : ''}`} />
+                        <option.icon className={`w-5 h-5 ${option.color || (option.id === 'multi' ? 'text-amber-500' : '')}`} />
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
                             <p className="font-medium text-sm">{option.label}</p>
                             {option.badge && (
-                              <span className="px-1.5 py-0.5 bg-amber-500/20 text-amber-500 text-[10px] rounded">
+                              <span className={`px-1.5 py-0.5 text-[10px] rounded ${
+                                option.id === 'offline'
+                                  ? 'bg-purple-500/20 text-purple-500'
+                                  : 'bg-amber-500/20 text-amber-500'
+                              }`}>
                                 {option.badge}
                               </span>
                             )}
@@ -1603,6 +1657,109 @@ export function MonetizationSettingsPanel({
                     ))}
                   </div>
                 </div>
+
+                {/* 纯离线模式配置 */}
+                {paymentMethod === 'offline' && (
+                  <div className="space-y-4 p-3 bg-purple-500/5 border border-purple-500/20 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <Shield className="w-4 h-4 text-purple-500" />
+                      <p className="text-sm font-medium">纯离线解锁</p>
+                      <span className="px-1.5 py-0.5 bg-purple-500/20 text-purple-500 text-[10px] rounded">零依赖</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      预先生成解锁码，分发给读者。读者输入解锁码后，作品在浏览器中本地验证，无需连接任何服务器。
+                      创作者可以完全独立运营，不依赖任何平台。
+                    </p>
+
+                    {/* 自定义验证端点（可选） */}
+                    <div>
+                      <label className="text-xs text-muted-foreground mb-1 block flex items-center gap-1">
+                        自定义验证服务端点（可选）
+                        <span className="text-[10px] text-purple-500 bg-purple-500/10 px-1.5 py-0.5 rounded">高级</span>
+                      </label>
+                      <input
+                        type="url"
+                        value={customApiUrl}
+                        onChange={(e) => setCustomApiUrl(e.target.value)}
+                        placeholder="留空则完全离线，不连接任何服务器"
+                        className="w-full px-3 py-2 bg-muted border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                      />
+                      <p className="text-[11px] text-muted-foreground mt-1">
+                        如果你有自己的验证服务器，可以填入地址。留空则作品完全离线运行，不需要网络。
+                      </p>
+                    </div>
+
+                    {/* 解锁码管理 */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-medium">已生成解锁码</p>
+                        <span className="text-xs text-muted-foreground">{offlineCodes.length} 个</span>
+                      </div>
+
+                      {offlineCodes.length > 0 && (
+                        <div className="space-y-1 max-h-[200px] overflow-y-auto">
+                          {offlineCodes.map((code, idx) => (
+                            <div key={code.code} className="flex items-center justify-between p-2 bg-muted/50 rounded text-xs">
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono font-medium">{code.code}</span>
+                                {code.usedAt && (
+                                  <span className="px-1 py-0.5 bg-green-500/20 text-green-500 rounded text-[10px]">已使用</span>
+                                )}
+                              </div>
+                              <button
+                                onClick={() => handleDeleteOfflineCode(code.code)}
+                                className="p-1 hover:bg-destructive/10 hover:text-destructive rounded transition-colors"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1"
+                          onClick={() => handleGenerateOfflineCodes(10)}
+                          disabled={!seedKeyGenerated}
+                        >
+                          <Plus className="w-3.5 h-3.5 mr-1" />
+                          生成 10 个
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1"
+                          onClick={() => handleGenerateOfflineCodes(50)}
+                          disabled={!seedKeyGenerated}
+                        >
+                          <Plus className="w-3.5 h-3.5 mr-1" />
+                          生成 50 个
+                        </Button>
+                      </div>
+
+                      {offlineCodes.length > 0 && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="w-full"
+                          onClick={handleCopyOfflineCodes}
+                        >
+                          <FileText className="w-3.5 h-3.5 mr-1" />
+                          复制全部解锁码
+                        </Button>
+                      )}
+
+                      {!seedKeyGenerated && (
+                        <p className="text-xs text-amber-500">
+                          请先在「安全密钥」中生成种子密钥，才能生成解锁码
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* 多渠道收款配置 */}
                 {paymentMethod === 'multi' && renderMultiChannelConfig()}
