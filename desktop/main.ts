@@ -540,7 +540,7 @@ function setupAutoUpdate(): void {
   // electron-updater 配置：从服务器 API 获取更新元数据
   autoUpdater.setFeedURL({
     provider: 'generic',
-    url: 'https://subsilicon.cn/api/updates',
+    url: 'https://subsilicon.cn/releases',
     channel: 'latest',
   })
 

@@ -18,7 +18,7 @@ import {
   type Edge as RFEdge,
   type NodeChange,
 } from '@xyflow/react'
-import { Undo2, Redo2, Trash2, X, Copy, ShieldCheck, Layers, ChevronDown, ChevronRight, Pencil, Download, MessageSquare, Lock, Crown, Upload, Play, ArrowLeft } from 'lucide-react'
+import { Undo2, Redo2, Trash2, X, Copy, ShieldCheck, Layers, ChevronDown, ChevronRight, Pencil, Download, MessageSquare, Lock, Crown, Upload, Play, ArrowLeft, Globe } from 'lucide-react'
 import clsx from 'clsx'
 import CustomEdge from './custom-edge'
 import '@xyflow/react/dist/style.css'
@@ -50,6 +50,7 @@ import { getPerformanceMode, PERFORMANCE_CONFIG } from '@editor/lib/performance-
 import { NodeSearch } from './node-search'
 import { ExportDialog } from './export-dialog'
 import { CreatorCenterDialog } from './creator-center-dialog'
+import { DiscoverDialog } from './discover-dialog'
 import { StoryPreview } from './preview/story-preview'
 import { AlignmentLines } from './alignment-lines'
 import type { AlignmentGuide } from '@editor/lib/alignment-guides'
@@ -148,6 +149,8 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
   const [showCreatorCenter, setShowCreatorCenter] = useState(false)
   const [creatorCenterTab, setCreatorCenterTab] = useState<'account' | 'platforms' | 'publish' | 'records'>('account')
   const [loginState, setLoginState] = useState(0) // 用于刷新登录状态
+  // 作品发现
+  const [showDiscover, setShowDiscover] = useState(false)
   // 预览状态
   const [showPreview, setShowPreview] = useState(false)
   const [historyState, setHistoryState] = useState({ canUndo: false, canRedo: false })
@@ -1725,6 +1728,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
             onPreview={() => setShowPreview(true)}
             onExport={() => setShowExportDialog(true)}
             onDirectoryUpload={() => { setCreatorCenterTab('publish'); setShowCreatorCenter(true) }}
+            onDiscover={() => setShowDiscover(true)}
             loggedIn={isCreatorLoggedIn()}
             account={getCreatorAccount()}
             onOpenAccount={() => { setCreatorCenterTab('account'); setShowCreatorCenter(true) }}
@@ -1856,6 +1860,12 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
         initialTab={creatorCenterTab}
         onLoginStateChange={() => setLoginState(n => n + 1)}
       />
+
+      {/* 作品发现 */}
+      <DiscoverDialog
+        open={showDiscover}
+        onClose={() => setShowDiscover(false)}
+      />
     </div>
   )
 }
@@ -1914,13 +1924,14 @@ interface UndoRedoButtonsProps {
   onPreview?: () => void
   onExport?: () => void
   onDirectoryUpload?: () => void
+  onDiscover?: () => void
   loggedIn?: boolean
   account?: { displayName: string; email: string } | null
   onOpenAccount?: () => void
   onBack?: () => void
 }
 
-const UndoRedoButtons = memo(function UndoRedoButtons({ canUndo, canRedo, onUndo, onRedo, onPreview, onExport, onDirectoryUpload, loggedIn, account, onOpenAccount, onBack }: UndoRedoButtonsProps) {
+const UndoRedoButtons = memo(function UndoRedoButtons({ canUndo, canRedo, onUndo, onRedo, onPreview, onExport, onDirectoryUpload, onDiscover, loggedIn, account, onOpenAccount, onBack }: UndoRedoButtonsProps) {
   return (
     <div className="absolute top-4 right-4 flex items-center gap-1 bg-card/90 backdrop-blur border rounded-lg px-2 py-1 shadow-sm z-10">
       {onBack && (
@@ -1993,6 +2004,20 @@ const UndoRedoButtons = memo(function UndoRedoButtons({ canUndo, canRedo, onUndo
           >
             <Upload className="w-4 h-4" />
             <span className="text-xs font-medium">创作者中心</span>
+          </button>
+          <span className="w-px h-4 bg-border" />
+        </>
+      )}
+      {/* 作品发现按钮 */}
+      {onDiscover && (
+        <>
+          <button
+            onClick={onDiscover}
+            className="flex items-center gap-1.5 px-2 py-1 rounded transition-colors hover:bg-purple-500/10 text-foreground hover:text-purple-400"
+            title="发现作品 - 探索去中心化作品生态"
+          >
+            <Globe className="w-4 h-4" />
+            <span className="text-xs font-medium hidden sm:inline">发现</span>
           </button>
           <span className="w-px h-4 bg-border" />
         </>

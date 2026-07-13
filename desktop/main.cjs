@@ -270,7 +270,7 @@ function setupAutoUpdate() {
 
   autoUpdater.setFeedURL({
     provider: 'generic',
-    url: 'https://subsilicon.cn/api/updates',
+    url: 'https://subsilicon.cn/releases',
     channel: 'latest',
   })
 

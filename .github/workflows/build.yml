@@ -48,7 +48,7 @@ jobs:
         run: npm run electron:build:linux
 
       - name: List release files
-        run: ls -la release/
+        run: ls release/
 
       - uses: actions/upload-artifact@v4
         with:
@@ -71,7 +71,7 @@ jobs:
           path: release
 
       - name: List release files
-        run: ls -la release/
+        run: ls release/
 
       - name: Create GitHub Release
         env:
@@ -91,7 +91,7 @@ jobs:
           | Windows | SubSilicon Editor-$VERSION-windows-x64.exe |
           | Linux | SubSilicon Editor-$VERSION-linux-x86_64.AppImage |
           " \
-            release/*
+            release/*.dmg release/*.exe release/*.AppImage release/*.zip release/*.deb release/*.tar.gz
 
       - name: Sync releases to Tencent Server
         env:
@@ -100,17 +100,23 @@ jobs:
           SERVER_SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          RELEASE_DIR="/var/www/subsilicon/releases/v${VERSION}"
+          RELEASE_DIR="/var/www/subsilicon/releases"
+          VERSION_DIR="$RELEASE_DIR/v${VERSION}"
 
           mkdir -p ~/.ssh
           echo "$SERVER_SSH_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
 
-          echo "Syncing to server: $RELEASE_DIR"
-          ssh "$SERVER_USER@$SERVER_HOST" "mkdir -p $RELEASE_DIR"
-          scp release/* "$SERVER_USER@$SERVER_HOST:$RELEASE_DIR/"
+          echo "Syncing to server: $VERSION_DIR"
+          ssh "$SERVER_USER@$SERVER_HOST" "mkdir -p $VERSION_DIR"
+          scp release/*.dmg release/*.exe release/*.AppImage release/*.zip release/*.deb release/*.tar.gz "$SERVER_USER@$SERVER_HOST:$VERSION_DIR/"
+          
+          echo "Syncing latest.yml for auto-updater"
+          scp release/latest-mac.yml release/latest-linux.yml release/latest.yml "$SERVER_USER@$SERVER_HOST:$RELEASE_DIR/" 2>/dev/null || true
+          
           ssh "$SERVER_USER@$SERVER_HOST" "ls -la $RELEASE_DIR/"
+          ssh "$SERVER_USER@$SERVER_HOST" "ls -la $VERSION_DIR/"
 
       - uses: geekyeggo/delete-artifact@v5
         with:

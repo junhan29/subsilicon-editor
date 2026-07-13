@@ -10,6 +10,12 @@ import {
   CheckCircle2,
   Loader2,
   Plus,
+  Globe,
+  CheckCircle,
+  XCircle,
+  Clock,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react'
 import type { StoryGraph } from '@editor/types/editor'
 import { getAccount, isLoggedIn } from '@editor/lib/local-account-store'
@@ -23,6 +29,15 @@ import {
   type SubmitProvider,
 } from '@editor/lib/submit-providers'
 import { exportPreviewHTML } from '@editor/lib/export-preview-html'
+import {
+  publishToMultiple,
+  loadPublishRecords,
+  loadPublishTargets,
+  savePublishTargets,
+  getPublishStats,
+  type PublishRecord,
+  type PublishTarget,
+} from '@editor/lib/multi-publish'
 import { showToast } from './toast'
 import { AccountDialog } from './account-dialog'
 
@@ -64,6 +79,11 @@ export function DirectoryUploadDialog({
   const [activeProvider, setActiveProviderState] = useState<SubmitProvider>(() => getActiveProvider())
   const [showAddProvider, setShowAddProvider] = useState(false)
   const [newProvider, setNewProvider] = useState({ name: '', apiUrl: '', authToken: '', description: '' })
+  const [publishMode, setPublishMode] = useState<'single' | 'multi'>('multi')
+  const [publishTargets, setPublishTargets] = useState<PublishTarget[]>([])
+  const [publishResults, setPublishResults] = useState<Record<string, 'publishing' | 'success' | 'failed' | 'idle'>>({})
+  const [publishRecords, setPublishRecords] = useState<PublishRecord[]>([])
+  const [showHistory, setShowHistory] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const screenshotsInputRef = useRef<HTMLInputElement>(null)
 
@@ -92,8 +112,25 @@ export function DirectoryUploadDialog({
       setScreenshots([])
       setSubmitted(false)
       setErrors({})
+      setPublishResults({})
+      if (workId) {
+        setPublishTargets(loadPublishTargets(workId))
+        setPublishRecords(loadPublishRecords(workId))
+      }
     }
-  }, [open, graph])
+  }, [open, graph, workId])
+
+  const toggleTarget = (providerId: string) => {
+    setPublishTargets(prev => {
+      const updated = prev.map(t =>
+        t.providerId === providerId ? { ...t, selected: !t.selected } : t
+      )
+      if (workId) savePublishTargets(workId, updated)
+      return updated
+    })
+  }
+
+  const selectedCount = publishTargets.filter(t => t.selected).length
 
   useEffect(() => {
     if (!open) return
@@ -203,49 +240,102 @@ export function DirectoryUploadDialog({
       return
     }
 
-    setSubmitting(true)
-    try {
-      const previewHtml = exportPreviewHTML(graph)
-      const previewBlob = new Blob([previewHtml], { type: 'text/html;charset=utf-8' })
-
-      const formData = new FormData()
-      formData.append('creatorEmail', currentAccount.email)
-      formData.append('creatorName', currentAccount.displayName)
-      formData.append('creatorBio', currentAccount.bio || '')
-      formData.append('title', title.trim())
-      formData.append('summary', summary.trim())
-      formData.append('tags', JSON.stringify(tags))
-      if (coverImage) formData.append('coverImage', coverImage)
-      screenshots.forEach((s, i) => {
-        formData.append(`screenshot-${i}`, s.file)
-      })
-      formData.append('contactInfo', wechat.trim())
-      formData.append('externalLink', afdianLink.trim())
-      formData.append('previewHtml', previewBlob, 'preview.html')
-      if (workId) formData.append('workId', workId)
-
-      const res = await fetch(activeProvider.apiUrl, {
-        method: 'POST',
-        headers: {
-          [activeProvider.authHeader || 'X-Submit-Token']: activeProvider.authToken || '',
-        },
-        body: formData,
-      })
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error(data.message || `服务器响应异常（${res.status}）`)
+    if (publishMode === 'multi') {
+      const selectedProviderIds = publishTargets.filter(t => t.selected).map(t => t.providerId)
+      if (selectedProviderIds.length === 0) {
+        showToast('error', '请至少选择一个发布目标')
+        return
       }
 
-      setSubmitted(true)
-      showToast('success', `上传成功，审核通过后将在 ${activeProvider.name} 展示`)
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      showToast('error', `提交失败：${msg}`)
-    } finally {
-      setSubmitting(false)
+      setSubmitting(true)
+      try {
+        const initialResults: Record<string, 'publishing' | 'success' | 'failed' | 'idle'> = {}
+        selectedProviderIds.forEach(id => { initialResults[id] = 'publishing' })
+        setPublishResults(initialResults)
+
+        const results = await publishToMultiple(
+          selectedProviderIds,
+          graph,
+          workId || '',
+          {
+            title,
+            summary,
+            tags,
+            coverImage,
+            screenshots,
+            contactInfo: wechat.trim(),
+            externalLink: afdianLink.trim(),
+          },
+          (providerId, status, error) => {
+            setPublishResults(prev => ({ ...prev, [providerId]: status }))
+          }
+        )
+
+        const successCount = results.filter(r => r.success).length
+        const failCount = results.filter(r => !r.success).length
+
+        setPublishRecords(loadPublishRecords(workId || ''))
+
+        if (failCount === 0) {
+          showToast('success', `已成功发布到 ${successCount} 个平台`)
+        } else if (successCount > 0) {
+          showToast('warning', `发布完成：${successCount} 个成功，${failCount} 个失败`)
+        } else {
+          showToast('error', `发布失败：全部 ${failCount} 个平台均失败`)
+        }
+
+        setSubmitted(true)
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        showToast('error', `发布失败：${msg}`)
+      } finally {
+        setSubmitting(false)
+      }
+    } else {
+      setSubmitting(true)
+      try {
+        const previewHtml = exportPreviewHTML(graph)
+        const previewBlob = new Blob([previewHtml], { type: 'text/html;charset=utf-8' })
+
+        const formData = new FormData()
+        formData.append('creatorEmail', currentAccount.email)
+        formData.append('creatorName', currentAccount.displayName)
+        formData.append('creatorBio', currentAccount.bio || '')
+        formData.append('title', title.trim())
+        formData.append('summary', summary.trim())
+        formData.append('tags', JSON.stringify(tags))
+        if (coverImage) formData.append('coverImage', coverImage)
+        screenshots.forEach((s, i) => {
+          formData.append(`screenshot-${i}`, s.file)
+        })
+        formData.append('contactInfo', wechat.trim())
+        formData.append('externalLink', afdianLink.trim())
+        formData.append('previewHtml', previewBlob, 'preview.html')
+        if (workId) formData.append('workId', workId)
+
+        const res = await fetch(activeProvider.apiUrl, {
+          method: 'POST',
+          headers: {
+            [activeProvider.authHeader || 'X-Submit-Token']: activeProvider.authToken || '',
+          },
+          body: formData,
+        })
+
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}))
+          throw new Error(data.message || `服务器响应异常（${res.status}）`)
+        }
+
+        setSubmitted(true)
+        showToast('success', `上传成功，审核通过后将在 ${activeProvider.name} 展示`)
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        showToast('error', `提交失败：${msg}`)
+      } finally {
+        setSubmitting(false)
+      }
     }
-  }, [submitting, title, summary, tags, wechat, afdianLink, coverImage, graph, workId])
+  }, [submitting, publishMode, title, summary, tags, wechat, afdianLink, coverImage, screenshots, graph, workId, publishTargets, activeProvider])
 
   if (!open) return null
 
@@ -316,31 +406,181 @@ export function DirectoryUploadDialog({
             </div>
           )}
 
-          {/* 提交目标选择：支持任意实现了公共提交协议的作品墙 */}
+          {/* 发布设置 */}
           <div className="mb-5 p-4 rounded-xl border border-slate-700 bg-slate-800/40">
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-medium text-slate-300">提交到</label>
-              <button
-                type="button"
-                onClick={() => setShowAddProvider(s => !s)}
-                className="text-[11px] text-amber-400 hover:text-amber-300 flex items-center gap-1"
-              >
-                <Plus className="w-3 h-3" />
-                添加展示墙
-              </button>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Globe className="w-4 h-4 text-amber-400" />
+                <label className="text-xs font-medium text-slate-300">发布目标</label>
+              </div>
+              <div className="flex items-center gap-1 bg-slate-900 rounded-lg p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setPublishMode('multi')}
+                  className={`px-2.5 py-1 text-[11px] rounded-md transition-colors ${
+                    publishMode === 'multi'
+                      ? 'bg-amber-500 text-slate-900 font-medium'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  多平台
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPublishMode('single')}
+                  className={`px-2.5 py-1 text-[11px] rounded-md transition-colors ${
+                    publishMode === 'single'
+                      ? 'bg-amber-500 text-slate-900 font-medium'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  单平台
+                </button>
+              </div>
             </div>
-            <select
-              value={activeProvider.id}
-              onChange={(e) => setActiveProvider(e.target.value)}
-              disabled={submitting}
-              className="w-full px-2.5 py-1.5 text-sm bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:border-amber-500/60"
-            >
-              {providers.filter(p => p.enabled).map(p => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
-            {activeProvider.description && (
-              <p className="mt-1.5 text-[11px] text-slate-400 leading-relaxed">{activeProvider.description}</p>
+
+            {publishMode === 'multi' && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-[11px] text-slate-400">
+                    已选择 <span className="text-amber-400 font-medium">{selectedCount}</span> / {providers.filter(p => p.enabled).length} 个平台
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const allIds = providers.filter(p => p.enabled).map(p => p.id)
+                        setPublishTargets(prev => {
+                          const updated = prev.map(t => ({ ...t, selected: allIds.includes(t.providerId) }))
+                          const existingIds = new Set(updated.map(t => t.providerId))
+                          allIds.forEach(id => {
+                            if (!existingIds.has(id)) {
+                              updated.push({ providerId: id, selected: true })
+                            }
+                          })
+                          if (workId) savePublishTargets(workId, updated)
+                          return updated
+                        })
+                      }}
+                      className="text-[11px] text-amber-400 hover:text-amber-300"
+                    >
+                      全选
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPublishTargets(prev => {
+                          const updated = prev.map(t => ({ ...t, selected: false }))
+                          if (workId) savePublishTargets(workId, updated)
+                          return updated
+                        })
+                      }}
+                      className="text-[11px] text-slate-400 hover:text-slate-300"
+                    >
+                      全不选
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowAddProvider(s => !s)}
+                      className="text-[11px] text-amber-400 hover:text-amber-300 flex items-center gap-0.5"
+                    >
+                      <Plus className="w-3 h-3" />
+                      添加
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
+                  {providers.filter(p => p.enabled).map(provider => {
+                    const target = publishTargets.find(t => t.providerId === provider.id)
+                    const isSelected = target?.selected ?? true
+                    const result = publishResults[provider.id]
+                    return (
+                      <div
+                        key={provider.id}
+                        className={`flex items-center gap-2.5 p-2.5 rounded-lg border transition-all ${
+                          isSelected
+                            ? 'bg-amber-500/10 border-amber-500/30'
+                            : 'bg-slate-900/50 border-slate-700'
+                        }`}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => toggleTarget(provider.id)}
+                          disabled={submitting}
+                          className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 transition-colors ${
+                            isSelected
+                              ? 'bg-amber-500 border-amber-500'
+                              : 'border-slate-600 hover:border-slate-500'
+                          }`}
+                        >
+                          {isSelected && <CheckCircle className="w-3 h-3 text-slate-900" />}
+                        </button>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium text-slate-200 truncate">{provider.name}</p>
+                          {provider.description && (
+                            <p className="text-[10px] text-slate-500 truncate">{provider.description}</p>
+                          )}
+                        </div>
+                        {result && (
+                          <div className="flex-shrink-0">
+                            {result === 'publishing' && (
+                              <Loader2 className="w-4 h-4 text-amber-400 animate-spin" />
+                            )}
+                            {result === 'success' && (
+                              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                            )}
+                            {result === 'failed' && (
+                              <XCircle className="w-4 h-4 text-red-400" />
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {publishMode === 'single' && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <select
+                    value={activeProvider.id}
+                    onChange={(e) => setActiveProvider(e.target.value)}
+                    disabled={submitting}
+                    className="flex-1 px-2.5 py-1.5 text-sm bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:border-amber-500/60"
+                  >
+                    {providers.filter(p => p.enabled).map(p => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddProvider(s => !s)}
+                    className="text-[11px] text-amber-400 hover:text-amber-300 flex items-center gap-1 ml-2"
+                  >
+                    <Plus className="w-3 h-3" />
+                    添加
+                  </button>
+                </div>
+                {activeProvider.description && (
+                  <p className="text-[11px] text-slate-400 leading-relaxed">{activeProvider.description}</p>
+                )}
+                {!activeProvider.builtin && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      removeProvider(activeProvider.id)
+                      showToast('info', '已移除该展示墙')
+                    }}
+                    disabled={submitting}
+                    className="text-[11px] text-red-400 hover:text-red-300"
+                  >
+                    移除此展示墙
+                  </button>
+                )}
+              </div>
             )}
 
             {showAddProvider && (
@@ -411,18 +651,41 @@ export function DirectoryUploadDialog({
               </div>
             )}
 
-            {!activeProvider.builtin && (
-              <button
-                type="button"
-                onClick={() => {
-                  removeProvider(activeProvider.id)
-                  showToast('info', '已移除该展示墙')
-                }}
-                disabled={submitting}
-                className="mt-2 text-[11px] text-red-400 hover:text-red-300"
-              >
-                移除此展示墙
-              </button>
+            {/* 发布历史 */}
+            {publishRecords.length > 0 && (
+              <div className="mt-3 pt-3 border-t border-slate-700">
+                <button
+                  type="button"
+                  onClick={() => setShowHistory(!showHistory)}
+                  className="flex items-center justify-between w-full text-[11px] text-slate-400 hover:text-slate-300"
+                >
+                  <span className="flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    发布历史 ({publishRecords.length})
+                  </span>
+                  {showHistory ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                </button>
+                {showHistory && (
+                  <div className="mt-2 space-y-1.5 max-h-[150px] overflow-y-auto">
+                    {publishRecords.slice(0, 10).map(record => (
+                      <div key={record.id} className="flex items-center gap-2 p-2 rounded-lg bg-slate-900/50">
+                        {record.status === 'success' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />}
+                        {record.status === 'failed' && <XCircle className="w-3.5 h-3.5 text-red-400 flex-shrink-0" />}
+                        {(record.status === 'pending' || record.status === 'publishing') && <Clock className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[11px] text-slate-300 truncate">{record.providerName}</p>
+                          <p className="text-[10px] text-slate-500">
+                            {new Date(record.submittedAt).toLocaleDateString()}
+                          </p>
+                        </div>
+                        {record.errorMessage && (
+                          <p className="text-[10px] text-red-400 truncate max-w-[120px]">{record.errorMessage}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             )}
           </div>
 
@@ -677,7 +940,7 @@ export function DirectoryUploadDialog({
               ) : (
                 <>
                   <Upload className="w-3.5 h-3.5" />
-                  提交审核
+                  {publishMode === 'multi' ? `发布到 ${selectedCount} 个平台` : '提交审核'}
                 </>
               )}
             </button>
