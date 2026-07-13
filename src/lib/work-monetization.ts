@@ -12,6 +12,14 @@ export interface ThirdPartyChannel {
   creatorName?: string
   planType?: 'subscription' | 'onetime'
   label?: string
+  /** 是否启用订单自动验证（读者输入订单号后自助解锁） */
+  autoVerify?: boolean
+  /** 自定义验证服务端点（可选，高级用户） */
+  verifyEndpoint?: string
+  /** 平台用户ID（从链接自动提取或手动填写，用于验证） */
+  platformUserId?: string
+  /** 方案/商品ID（用于限定验证范围） */
+  planId?: string
 }
 
 export interface ManualPaymentChannel {
@@ -138,12 +146,24 @@ export interface HTMLMonetizationConfig {
   paymentMethod: PaymentMethod
   wechatQRCode?: string
   wechatContact?: string
+  alipayQRCode?: string
+  alipayContact?: string
   thirdParty?: {
     platform: string
     link: string
     creatorName?: string
   }
+  /** 多渠道配置（混合模式） */
+  multiChannel?: MultiChannelConfig
+  /** 预生成解锁码（阶段一优化） */
+  preGeneratedCodes?: PreGeneratedCode[]
   granularity: PaymentGranularity
+}
+
+export interface PreGeneratedCode {
+  code: string
+  usedAt?: number
+  deviceFingerprint?: string
 }
 
 export const SEED_KEY_PREFIX = 'SUBSL-SEED-'

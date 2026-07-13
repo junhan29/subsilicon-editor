@@ -12,8 +12,9 @@ import type { StoryGraph } from '@editor/types/editor'
 import { embedAssets } from '@editor/lib/export-html'
 import { encryptStoryData, AES_ENC_PREFIX } from '@editor/lib/story-encrypt'
 import { generateWorkId } from '@editor/lib/work-monetization'
+import type { MultiChannelConfig, PreGeneratedCode } from '@editor/lib/work-monetization'
 
-export type UnlockMode = 'manual' | 'semi_auto' | 'webhook'
+export type UnlockMode = 'manual' | 'semi_auto' | 'webhook' | 'hybrid'
 
 export interface StoryExportConfig {
   unlockMode: UnlockMode
@@ -31,6 +32,10 @@ export interface StoryExportConfig {
   paypalLink?: string
   patreonLink?: string
   kofiLink?: string
+  /** 多渠道配置（混合模式） */
+  multiChannel?: MultiChannelConfig
+  /** 预生成解锁码 */
+  preGeneratedCodes?: PreGeneratedCode[]
 }
 
 export interface StoryExportResult {
@@ -313,6 +318,32 @@ function buildStoryHTML(encryptedData: string, config: StoryExportConfig): strin
     .pw-msg.info { display: block; background: #1e3a5f40; color: #93c5fd; border: 1px solid #1e3a5f60; }
     .pw-footnote { font-size: 11px; color: #475569; margin-top: 20px; line-height: 1.5; }
 
+    /* 混合模式 */
+    .pw-platform-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+    .pw-platform-btn {
+      display: flex; align-items: center; gap: 10px; width: 100%; padding: 12px;
+      background: #334155; border: 1px solid #475569; border-radius: 10px; color: #e2e8f0;
+      font-size: 14px; font-weight: 500; cursor: pointer; text-decoration: none;
+      transition: all 0.2s;
+    }
+    .pw-platform-btn:hover { background: #475569; border-color: #f59e0b; }
+    .pw-platform-icon { width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+    .pw-platform-info { flex: 1; text-align: left; }
+    .pw-platform-name { font-weight: 600; font-size: 14px; }
+    .pw-platform-desc { font-size: 11px; color: #94a3b8; font-weight: 400; }
+    .pw-platform-fee { font-size: 11px; color: #f59e0b; background: rgba(245,158,11,0.15); padding: 2px 8px; border-radius: 10px; white-space: nowrap; }
+    .pw-tab-row { display: flex; gap: 4px; margin-bottom: 16px; background: #0f172a; padding: 4px; border-radius: 10px; }
+    .pw-tab { flex: 1; padding: 8px; border: none; border-radius: 8px; background: transparent; color: #94a3b8; font-size: 13px; cursor: pointer; transition: all 0.2s; }
+    .pw-tab.active { background: #334155; color: #e2e8f0; font-weight: 500; }
+    .pw-section { display: none; }
+    .pw-section.active { display: block; }
+    .pw-or { display: flex; align-items: center; gap: 12px; margin: 16px 0; color: #64748b; font-size: 12px; }
+    .pw-or::before, .pw-or::after { content: ''; flex: 1; height: 1px; background: #334155; }
+    .pw-code-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 12px; }
+    .pw-code-item { padding: 8px; background: #0f172a; border: 1px solid #334155; border-radius: 6px; font-family: monospace; font-size: 12px; color: #94a3b8; text-align: center; cursor: pointer; transition: all 0.2s; }
+    .pw-code-item:hover { border-color: #f59e0b; color: #f59e0b; }
+    .pw-code-item.used { opacity: 0.4; text-decoration: line-through; cursor: not-allowed; }
+
     #controls {
       position: fixed; bottom: 20px; right: 20px; z-index: 100;
       display: flex; gap: 8px;
@@ -390,6 +421,8 @@ function buildStoryHTML(encryptedData: string, config: StoryExportConfig): strin
       encryptedData: ${JSON.stringify(encryptedData)},
       apiUrl: '${UNLOCK_API_URL}',
       storageKey: '${STORY_STORAGE_KEY_PREFIX}${config.workId}',
+      multiChannel: ${config.multiChannel ? JSON.stringify(config.multiChannel) : 'null'},
+      preGeneratedCodes: ${config.preGeneratedCodes ? JSON.stringify(config.preGeneratedCodes) : 'null'},
     };
   </script>
   <script>
@@ -676,29 +709,124 @@ function buildStoryHTML(encryptedData: string, config: StoryExportConfig): strin
         var mode = C.unlockMode;
         var price = C.price;
         var hasQR = !!(C.wechatQRCode || C.alipayQRCode);
+        var hasMultiChannel = !!(C.multiChannel);
+        var thirdPartyChannels = (C.multiChannel && C.multiChannel.thirdPartyChannels) || [];
+        var manualChannels = (C.multiChannel && C.multiChannel.manualChannels) || [];
+        var hasThirdParty = thirdPartyChannels.length > 0;
+        var hasManual = manualChannels.length > 0 || hasQR;
+        var isHybrid = mode === 'hybrid' || hasMultiChannel;
+
         var html = '<div class="pw-card">';
         html += '<div class="pw-icon">' + (price > 0 ? '🔒' : '📖') + '</div>';
         html += '<div class="pw-title">SubSilicon 互动故事</div>';
         html += '<div class="pw-subtitle">' + (C.freePreview > 0 ? '前 ' + C.freePreview + ' 页可免费试读，之后的精彩内容需要支持创作者' : '需要支持创作者后解锁完整故事') + '</div>';
+
         if (price > 0) {
           html += '<div class="pw-price">¥' + price + '<span class="pw-price-unit"> 元</span></div>';
-          if (hasQR) {
+
+          if (isHybrid && (hasThirdParty || hasManual)) {
+            // 混合模式：选项卡切换
+            var tabs = [];
+            if (hasThirdParty) tabs.push({ id: 'platform', label: '第三方平台' });
+            if (hasManual) tabs.push({ id: 'direct', label: '直接扫码' });
+
+            if (tabs.length > 1) {
+              html += '<div class="pw-tab-row">';
+              tabs.forEach(function(t, i) {
+                html += '<button class="pw-tab ' + (i === 0 ? 'active' : '') + '" data-tab="' + t.id + '" onclick="switchPaywallTab(\'' + t.id + '\')">' + t.label + '</button>';
+              });
+              html += '</div>';
+            }
+
+            // 第三方平台区域
+            if (hasThirdParty) {
+              html += '<div class="pw-section ' + (tabs[0].id === 'platform' ? 'active' : '') + '" data-section="platform">';
+              html += '<div class="pw-section-title">在平台支持创作者 · 自动解锁</div>';
+              html += '<div class="pw-platform-list">';
+              thirdPartyChannels.forEach(function(ch) {
+                var icon = ch.platform === 'afdian' ? '⚡' : ch.platform === 'mianbaoduo' ? '🍞' : '🔗';
+                var name = ch.platform === 'afdian' ? '爱发电' : ch.platform === 'mianbaoduo' ? '面包多' : ch.platform;
+                var fee = ch.platform === 'afdian' ? '抽成 6%' : ch.platform === 'mianbaoduo' ? '抽成 3%' : '';
+                html += '<a class="pw-platform-btn" href="' + (ch.link || '#') + '" target="_blank" rel="noopener">';
+                html += '<span class="pw-platform-icon">' + icon + '</span>';
+                html += '<span class="pw-platform-info"><span class="pw-platform-name">' + name + '</span><span class="pw-platform-desc">点击跳转支付，支付后回来输入订单号</span></span>';
+                if (fee) html += '<span class="pw-platform-fee">' + fee + '</span>';
+                html += '</a>';
+              });
+              html += '</div>';
+
+              // 自动验证输入区
+              var hasAutoVerify = thirdPartyChannels.some(function(c) { return c.autoVerify; });
+              if (hasAutoVerify) {
+                html += '<input type="text" class="pw-input" id="order-input" placeholder="输入第三方平台订单号" autocomplete="off">';
+                html += '<button class="pw-btn pw-btn-primary" id="unlock-btn" onclick="doHybridUnlock()">验证订单并解锁</button>';
+              } else {
+                html += '<p class="pw-footnote" style="text-align:center;margin:12px 0;">支付完成后，请联系创作者获取解锁码</p>';
+                html += '<input type="text" class="pw-input" id="activation-input" placeholder="粘贴创作者给你的解锁码">';
+                html += '<button class="pw-btn pw-btn-primary" onclick="doManualUnlock()">输入解锁码解锁</button>';
+              }
+              html += '<div class="pw-msg" id="unlock-msg"></div>';
+              html += '</div>';
+            }
+
+            // 直接扫码区域
+            if (hasManual) {
+              html += '<div class="pw-section ' + (tabs[0].id === 'direct' ? 'active' : '') + '" data-section="direct">';
+              html += '<div class="pw-section-title">扫码支付 · 零手续费 · 钱直接到创作者</div>';
+              html += '<div class="pw-qr-container">';
+              if (C.wechatQRCode) html += '<div class="pw-qr-item"><img src="' + C.wechatQRCode + '" alt="微信收款码"><div class="pw-qr-label">微信支付</div></div>';
+              if (C.alipayQRCode) html += '<div class="pw-qr-item"><img src="' + C.alipayQRCode + '" alt="支付宝收款码"><div class="pw-qr-label">支付宝</div></div>';
+              manualChannels.forEach(function(ch) {
+                if (ch.type === 'wechat' && ch.qrCode && !C.wechatQRCode) html += '<div class="pw-qr-item"><img src="' + ch.qrCode + '" alt="微信收款码"><div class="pw-qr-label">微信支付</div></div>';
+                if (ch.type === 'alipay' && ch.qrCode && !C.alipayQRCode) html += '<div class="pw-qr-item"><img src="' + ch.qrCode + '" alt="支付宝收款码"><div class="pw-qr-label">支付宝</div></div>';
+              });
+              html += '</div>';
+              html += '<p class="pw-footnote" style="text-align:center;margin:12px 0;">付款后截图发给创作者，获取解锁码</p>';
+              html += '<input type="text" class="pw-input" id="activation-input" placeholder="粘贴创作者给你的解锁码">';
+              html += '<button class="pw-btn pw-btn-primary" onclick="doManualUnlock()">输入解锁码解锁</button>';
+              html += '<div class="pw-msg" id="manual-msg"></div>';
+              html += '</div>';
+            }
+
+            // 预生成码区域
+            if (C.preGeneratedCodes && C.preGeneratedCodes.length > 0) {
+              html += '<div class="pw-divider"></div>';
+              html += '<div class="pw-section-title">已有解锁码？</div>';
+              html += '<div class="pw-code-grid">';
+              C.preGeneratedCodes.forEach(function(c, i) {
+                html += '<div class="pw-code-item' + (c.usedAt ? ' used' : '') + '" onclick="usePreGeneratedCode(' + i + ')">' + c.code + '</div>';
+              });
+              html += '</div>';
+            }
+          } else if (mode === 'semi_auto') {
+            // 原有半自动模式
+            if (hasQR) {
+              html += '<div class="pw-divider"></div>';
+              html += '<div class="pw-section-title">扫码支付 · 钱直接到创作者账户</div>';
+              html += '<div class="pw-qr-container">';
+              if (C.wechatQRCode) html += '<div class="pw-qr-item"><img src="' + C.wechatQRCode + '" alt="微信收款码"><div class="pw-qr-label">微信支付</div></div>';
+              if (C.alipayQRCode) html += '<div class="pw-qr-item"><img src="' + C.alipayQRCode + '" alt="支付宝收款码"><div class="pw-qr-label">支付宝</div></div>';
+              html += '</div>';
+            }
+            if (C.contactInfo) html += '<div class="pw-footnote">如有问题，联系创作者：' + C.contactInfo + '</div>';
             html += '<div class="pw-divider"></div>';
-            html += '<div class="pw-section-title">扫码支付 · 钱直接到创作者账户</div>';
-            html += '<div class="pw-qr-container">';
-            if (C.wechatQRCode) html += '<div class="pw-qr-item"><img src="' + C.wechatQRCode + '" alt="微信收款码"><div class="pw-qr-label">微信支付</div></div>';
-            if (C.alipayQRCode) html += '<div class="pw-qr-item"><img src="' + C.alipayQRCode + '" alt="支付宝收款码"><div class="pw-qr-label">支付宝</div></div>';
-            html += '</div>';
-          }
-          if (C.contactInfo) html += '<div class="pw-footnote">如有问题，联系创作者：' + C.contactInfo + '</div>';
-          html += '<div class="pw-divider"></div>';
-          if (mode === 'semi_auto') {
             html += '<div class="pw-section-title">付款后 · 粘贴交易单号自动解锁</div>';
             html += '<input type="text" class="pw-input" id="order-input" placeholder="从微信/支付宝账单复制完整的交易单号" autocomplete="off">';
             html += '<p class="pw-footnote" style="margin-top:-4px;margin-bottom:8px;">微信单号以 420000 开头 · 在微信支付 → 账单详情中可找到</p>';
             html += '<button class="pw-btn pw-btn-primary" id="unlock-btn" onclick="doUnlock()">解锁完整故事</button>';
             html += '<div class="pw-msg" id="unlock-msg"></div>';
           } else {
+            // 原有手动模式
+            if (hasQR) {
+              html += '<div class="pw-divider"></div>';
+              html += '<div class="pw-section-title">扫码支付 · 钱直接到创作者账户</div>';
+              html += '<div class="pw-qr-container">';
+              if (C.wechatQRCode) html += '<div class="pw-qr-item"><img src="' + C.wechatQRCode + '" alt="微信收款码"><div class="pw-qr-label">微信支付</div></div>';
+              if (C.alipayQRCode) html += '<div class="pw-qr-item"><img src="' + C.alipayQRCode + '" alt="支付宝收款码"><div class="pw-qr-label">支付宝</div></div>';
+              html += '</div>';
+            }
+            if (C.contactInfo) html += '<div class="pw-footnote">如有问题，联系创作者：' + C.contactInfo + '</div>';
+            html += '<div class="pw-divider"></div>';
             html += '<div class="pw-section-title">付款后 · 联系创作者获取激活码</div>';
             if (C.contactInfo) html += '<p style="color:#94a3b8;font-size:13px;margin-bottom:12px;">将支付截图发给创作者：' + C.contactInfo + '</p>';
             html += '<input type="text" class="pw-input" id="activation-input" placeholder="粘贴创作者给你的激活码">';
@@ -713,6 +841,117 @@ function buildStoryHTML(encryptedData: string, config: StoryExportConfig): strin
         paywall.innerHTML = html;
         paywall.classList.remove('hidden');
       }
+
+      window.switchPaywallTab = function(tabId) {
+        document.querySelectorAll('.pw-tab').forEach(function(t) {
+          t.classList.toggle('active', t.dataset.tab === tabId);
+        });
+        document.querySelectorAll('.pw-section').forEach(function(s) {
+          s.classList.toggle('active', s.dataset.section === tabId);
+        });
+      };
+
+      window.usePreGeneratedCode = async function(index) {
+        var codes = C.preGeneratedCodes || [];
+        var item = codes[index];
+        if (!item || item.usedAt) return;
+        var msg = document.getElementById('unlock-msg') || document.getElementById('manual-msg');
+        if (!msg) return;
+        msg.className = 'pw-msg info'; msg.textContent = '正在验证...';
+        try {
+          var fingerprint = await sha256(navigator.userAgent + screen.width + 'x' + screen.height);
+          var resp = await fetch(C.apiUrl, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'unlock', workId: C.workId, orderNo: item.code, deviceFingerprint: fingerprint }),
+          });
+          var result = await resp.json();
+          if (result.success) {
+            item.usedAt = Date.now();
+            item.deviceFingerprint = fingerprint;
+            setUnlocked(result.keyBase64, result.ivBase64);
+            decodedData = await decryptData(result.keyBase64, result.ivBase64);
+            graph = JSON.parse(decodedData);
+            initVariables();
+            msg.className = 'pw-msg success'; msg.textContent = '解锁成功！即将开始阅读...';
+            setTimeout(function() { paywall.classList.add('hidden'); startStory(); }, 1200);
+          } else {
+            msg.className = 'pw-msg error'; msg.textContent = result.error || '解锁码无效';
+          }
+        } catch(e) {
+          msg.className = 'pw-msg error'; msg.textContent = '网络错误';
+        }
+      };
+
+      window.doHybridUnlock = async function() {
+        var btn = document.getElementById('unlock-btn');
+        var msg = document.getElementById('unlock-msg');
+        if (!btn || !msg) return;
+        var orderNo = (document.getElementById('order-input') || {}).value.trim();
+        if (!orderNo) { msg.className = 'pw-msg error'; msg.textContent = '请输入订单号'; return; }
+        btn.disabled = true; btn.textContent = '验证中...';
+        msg.className = 'pw-msg info'; msg.textContent = '正在验证订单...';
+
+        try {
+          var fingerprint = await sha256(navigator.userAgent + screen.width + 'x' + screen.height);
+          // 如果有配置验证端点，优先尝试
+          var channels = (C.multiChannel && C.multiChannel.thirdPartyChannels) || [];
+          var verified = false;
+
+          for (var i = 0; i < channels.length; i++) {
+            var ch = channels[i];
+            if (!ch.autoVerify || !ch.verifyEndpoint) continue;
+            try {
+              var vResp = await fetch(ch.verifyEndpoint, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orderId: orderNo, platform: ch.platform, platformUserId: ch.platformUserId, planId: ch.planId }),
+              });
+              var vData = await vResp.json();
+              if (vData.success || vData.verified) { verified = true; break; }
+            } catch(ve) { /* ignore per-endpoint errors */ }
+          }
+
+          if (!verified) {
+            // 未配置自动验证端点，回退到服务端验证
+            var resp = await fetch(C.apiUrl, {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'unlock', workId: C.workId, orderNo: orderNo, deviceFingerprint: fingerprint }),
+            });
+            var result = await resp.json();
+            if (result.success) {
+              setUnlocked(result.keyBase64, result.ivBase64);
+              decodedData = await decryptData(result.keyBase64, result.ivBase64);
+              graph = JSON.parse(decodedData);
+              initVariables();
+              msg.className = 'pw-msg success'; msg.textContent = '解锁成功！即将开始阅读...';
+              setTimeout(function() { paywall.classList.add('hidden'); startStory(); }, 1200);
+            } else {
+              msg.className = 'pw-msg error'; msg.textContent = result.hint || result.error || '验证失败，请确认订单号正确或联系创作者';
+              btn.disabled = false; btn.textContent = '重试解锁';
+            }
+          } else {
+            // 本地验证通过，直接解锁（使用服务端密钥）
+            var resp2 = await fetch(C.apiUrl, {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'unlock', workId: C.workId, orderNo: orderNo, deviceFingerprint: fingerprint }),
+            });
+            var result2 = await resp2.json();
+            if (result2.success) {
+              setUnlocked(result2.keyBase64, result2.ivBase64);
+              decodedData = await decryptData(result2.keyBase64, result2.ivBase64);
+              graph = JSON.parse(decodedData);
+              initVariables();
+              msg.className = 'pw-msg success'; msg.textContent = '订单验证通过！即将开始阅读...';
+              setTimeout(function() { paywall.classList.add('hidden'); startStory(); }, 1200);
+            } else {
+              msg.className = 'pw-msg error'; msg.textContent = result2.hint || result2.error || '验证失败';
+              btn.disabled = false; btn.textContent = '重试解锁';
+            }
+          }
+        } catch(e) {
+          msg.className = 'pw-msg error'; msg.textContent = '网络错误，请检查网络后重试';
+          btn.disabled = false; btn.textContent = '重试解锁';
+        }
+      };
 
       window.doUnlock = async function() {
         var btn = document.getElementById('unlock-btn');
@@ -751,10 +990,10 @@ function buildStoryHTML(encryptedData: string, config: StoryExportConfig): strin
 
       window.doManualUnlock = async function() {
         var input = document.getElementById('activation-input');
-        var msg = document.getElementById('manual-msg');
+        var msg = document.getElementById('manual-msg') || document.getElementById('unlock-msg');
         var code = (input || {}).value.trim();
-        if (!code) { msg.className = 'pw-msg error'; msg.textContent = '请输入创作者给你的激活码'; return; }
-        msg.className = 'pw-msg info'; msg.textContent = '验证中...';
+        if (!code) { if(msg){msg.className = 'pw-msg error'; msg.textContent = '请输入创作者给你的激活码';} return; }
+        if(msg){msg.className = 'pw-msg info'; msg.textContent = '验证中...';}
         try {
           var fingerprint = await sha256(navigator.userAgent + screen.width + 'x' + screen.height);
           var resp = await fetch(C.apiUrl, {
@@ -767,13 +1006,13 @@ function buildStoryHTML(encryptedData: string, config: StoryExportConfig): strin
             decodedData = await decryptData(result.keyBase64, result.ivBase64);
             graph = JSON.parse(decodedData);
             initVariables();
-            msg.className = 'pw-msg success'; msg.textContent = '解锁成功！';
+            if(msg){msg.className = 'pw-msg success'; msg.textContent = '解锁成功！';}
             setTimeout(function() { paywall.classList.add('hidden'); startStory(); }, 1200);
           } else {
-            msg.className = 'pw-msg error'; msg.textContent = result.error || '激活码无效';
+            if(msg){msg.className = 'pw-msg error'; msg.textContent = result.error || '激活码无效';}
           }
         } catch(e) {
-          msg.className = 'pw-msg error'; msg.textContent = '网络错误';
+          if(msg){msg.className = 'pw-msg error'; msg.textContent = '网络错误';}
         }
       };
 

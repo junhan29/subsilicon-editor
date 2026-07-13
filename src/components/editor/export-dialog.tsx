@@ -93,6 +93,21 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
   const [drmKofiUrl, setDrmKofiUrl] = useState<string>('')
   const [drmCurrency, setDrmCurrency] = useState<string>('CNY')
 
+  // 从 monetization 配置初始化 DRM 设置
+  useEffect(() => {
+    if (!monetization) return
+    setDrmEnabled(monetization.enabled)
+    setDrmPrice(monetization.price || 9.9)
+    setDrmWechatQR(monetization.wechatQRCode || '')
+    setDrmAlipayQR(monetization.alipayQRCode || '')
+    setDrmContact(monetization.wechatContact || monetization.alipayContact || '')
+    // 如果有第三方平台配置，提取链接
+    if (monetization.thirdParty) {
+      if (monetization.thirdParty.platform === 'afdian') setDrmPatreonUrl(monetization.thirdParty.link)
+      if (monetization.thirdParty.platform === 'mianbaoduo') setDrmKofiUrl(monetization.thirdParty.link)
+    }
+  }, [monetization])
+
   useEffect(() => {
     if (!open) return
     if (dialogRef.current) {
@@ -168,8 +183,10 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
           break
         }
         case 'story_exec': {
+          // 根据 monetization 配置确定解锁模式
+          const unlockMode: UnlockMode = monetization?.paymentMethod === 'multi' ? 'hybrid' : drmUnlockMode
           const storyConfig: StoryExportConfig = {
-            unlockMode: drmUnlockMode,
+            unlockMode,
             price: drmEnabled ? drmPrice : 0,
             currency: drmCurrency,
             freePreview: drmFreePreview,
@@ -183,6 +200,8 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
             paypalLink: drmPaypalUrl || undefined,
             patreonLink: drmPatreonUrl || undefined,
             kofiLink: drmKofiUrl || undefined,
+            // 混合模式配置
+            multiChannel: monetization?.multiChannel,
           }
 
           setProgress(50)

@@ -12,6 +12,9 @@ import {
   getPublishRecordsByWork,
 } from './creator-store'
 import { SUBMIT_CONFIG } from './submit-config'
+import { encryptPasswordFields, decryptPasswordFields } from './password-crypto'
+
+const PASSWORD_FIELDS = ['platformPassword', 'submitToken']
 
 const CURRENT_ACCOUNT_KEY = 'subsilicon_creator_current_account'
 
@@ -200,8 +203,11 @@ export function isLoggedIn(): boolean {
 
 export async function addPlatformConfig(config: Omit<PlatformConfig, 'id' | 'createdAt' | 'updatedAt'>): Promise<PlatformConfig> {
   const now = Date.now()
+  // 加密密码字段
+  const encryptedConfig = await encryptPasswordFields(config.config, PASSWORD_FIELDS)
   const newConfig: PlatformConfig = {
     ...config,
+    config: encryptedConfig,
     id: generateId(),
     createdAt: now,
     updatedAt: now,
@@ -211,6 +217,9 @@ export async function addPlatformConfig(config: Omit<PlatformConfig, 'id' | 'cre
 }
 
 export async function updatePlatformConfig(config: PlatformConfig): Promise<void> {
+  // 加密密码字段
+  const encryptedConfig = await encryptPasswordFields(config.config, PASSWORD_FIELDS)
+  config.config = encryptedConfig
   config.updatedAt = Date.now()
   await savePlatformConfig(config)
 }
@@ -220,7 +229,14 @@ export async function removePlatformConfig(id: string): Promise<void> {
 }
 
 export async function getPlatformConfigs(): Promise<PlatformConfig[]> {
-  return getAllPlatformConfigs()
+  const configs = await getAllPlatformConfigs()
+  // 解密所有配置中的密码字段
+  return Promise.all(
+    configs.map(async (config) => ({
+      ...config,
+      config: await decryptPasswordFields(config.config, PASSWORD_FIELDS),
+    }))
+  )
 }
 
 export async function publishToPlatform(

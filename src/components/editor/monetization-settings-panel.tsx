@@ -79,7 +79,19 @@ export function MonetizationSettingsPanel({
   const [afdianPlanType, setAfdianPlanType] = useState<'subscription' | 'onetime'>(
     config?.multiChannel?.thirdPartyChannels?.find(c => c.platform === 'afdian')?.planType ?? 'subscription'
   )
-  
+  const [afdianAutoVerify, setAfdianAutoVerify] = useState(
+    config?.multiChannel?.thirdPartyChannels?.find(c => c.platform === 'afdian')?.autoVerify ?? false
+  )
+  const [afdianVerifyEndpoint, setAfdianVerifyEndpoint] = useState(
+    config?.multiChannel?.thirdPartyChannels?.find(c => c.platform === 'afdian')?.verifyEndpoint ?? ''
+  )
+  const [afdianPlatformUserId, setAfdianPlatformUserId] = useState(
+    config?.multiChannel?.thirdPartyChannels?.find(c => c.platform === 'afdian')?.platformUserId ?? ''
+  )
+  const [afdianPlanId, setAfdianPlanId] = useState(
+    config?.multiChannel?.thirdPartyChannels?.find(c => c.platform === 'afdian')?.planId ?? ''
+  )
+
   const [mianbaoduoEnabled, setMianbaoduoEnabled] = useState(
     config?.multiChannel?.thirdPartyChannels?.some(c => c.platform === 'mianbaoduo') ?? false
   )
@@ -89,7 +101,19 @@ export function MonetizationSettingsPanel({
   const [mianbaoduoCreatorName, setMianbaoduoCreatorName] = useState(
     config?.multiChannel?.thirdPartyChannels?.find(c => c.platform === 'mianbaoduo')?.creatorName ?? ''
   )
-  
+  const [mianbaoduoAutoVerify, setMianbaoduoAutoVerify] = useState(
+    config?.multiChannel?.thirdPartyChannels?.find(c => c.platform === 'mianbaoduo')?.autoVerify ?? false
+  )
+  const [mianbaoduoVerifyEndpoint, setMianbaoduoVerifyEndpoint] = useState(
+    config?.multiChannel?.thirdPartyChannels?.find(c => c.platform === 'mianbaoduo')?.verifyEndpoint ?? ''
+  )
+  const [mianbaoduoPlatformUserId, setMianbaoduoPlatformUserId] = useState(
+    config?.multiChannel?.thirdPartyChannels?.find(c => c.platform === 'mianbaoduo')?.platformUserId ?? ''
+  )
+  const [mianbaoduoPlanId, setMianbaoduoPlanId] = useState(
+    config?.multiChannel?.thirdPartyChannels?.find(c => c.platform === 'mianbaoduo')?.planId ?? ''
+  )
+
   const [manualWechatEnabled, setManualWechatEnabled] = useState(
     config?.multiChannel?.manualChannels?.some(c => c.type === 'wechat') ?? false
   )
@@ -247,28 +271,54 @@ export function MonetizationSettingsPanel({
     reader.readAsDataURL(file)
   }, [])
   
+  // 从第三方平台链接自动提取用户ID
+  const extractPlatformUserId = useCallback((platform: string, link: string): string => {
+    if (!link) return ''
+    try {
+      if (platform === 'afdian') {
+        // https://afdian.net/@username 或 https://afdian.net/a/username
+        const match = link.match(/afdian\.net\/(?:@|a\/)([^/?#]+)/)
+        return match?.[1] || ''
+      }
+      if (platform === 'mianbaoduo') {
+        // https://mianbaoduo.com/o/xxxxx
+        const match = link.match(/mianbaoduo\.com\/o\/([^/?#]+)/)
+        return match?.[1] || ''
+      }
+    } catch { /* ignore */ }
+    return ''
+  }, [])
+
   // 构建多渠道配置
   const buildMultiChannelConfig = useCallback((): MultiChannelConfig => {
     const thirdPartyChannels: ThirdPartyChannel[] = []
     const manualChannels: ManualPaymentChannel[] = []
-    
+
     if (afdianEnabled) {
       thirdPartyChannels.push({
         platform: 'afdian',
         link: afdianLink,
         creatorName: afdianCreatorName,
         planType: afdianPlanType,
+        autoVerify: afdianAutoVerify,
+        verifyEndpoint: afdianVerifyEndpoint.trim() || undefined,
+        platformUserId: afdianPlatformUserId.trim() || extractPlatformUserId('afdian', afdianLink) || undefined,
+        planId: afdianPlanId.trim() || undefined,
       })
     }
-    
+
     if (mianbaoduoEnabled) {
       thirdPartyChannels.push({
         platform: 'mianbaoduo',
         link: mianbaoduoLink,
         creatorName: mianbaoduoCreatorName,
+        autoVerify: mianbaoduoAutoVerify,
+        verifyEndpoint: mianbaoduoVerifyEndpoint.trim() || undefined,
+        platformUserId: mianbaoduoPlatformUserId.trim() || extractPlatformUserId('mianbaoduo', mianbaoduoLink) || undefined,
+        planId: mianbaoduoPlanId.trim() || undefined,
       })
     }
-    
+
     if (manualWechatEnabled) {
       manualChannels.push({
         type: 'wechat',
@@ -276,7 +326,7 @@ export function MonetizationSettingsPanel({
         contact: manualWechatContact,
       })
     }
-    
+
     if (manualAlipayEnabled) {
       manualChannels.push({
         type: 'alipay',
@@ -284,7 +334,7 @@ export function MonetizationSettingsPanel({
         contact: manualAlipayContact,
       })
     }
-    
+
     return {
       manualChannels,
       thirdPartyChannels,
@@ -292,10 +342,12 @@ export function MonetizationSettingsPanel({
     }
   }, [
     afdianEnabled, afdianLink, afdianCreatorName, afdianPlanType,
+    afdianAutoVerify, afdianVerifyEndpoint, afdianPlatformUserId, afdianPlanId,
     mianbaoduoEnabled, mianbaoduoLink, mianbaoduoCreatorName,
+    mianbaoduoAutoVerify, mianbaoduoVerifyEndpoint, mianbaoduoPlatformUserId, mianbaoduoPlanId,
     manualWechatEnabled, manualWechatQRCode, manualWechatContact,
     manualAlipayEnabled, manualAlipayQRCode, manualAlipayContact,
-    primaryChannel
+    primaryChannel, extractPlatformUserId
   ])
   
   // 添加收入记录
@@ -784,10 +836,23 @@ export function MonetizationSettingsPanel({
               <input
                 type="url"
                 value={afdianLink}
-                onChange={(e) => setAfdianLink(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value
+                  setAfdianLink(val)
+                  // 自动提取用户ID
+                  const extracted = extractPlatformUserId('afdian', val)
+                  if (extracted && !afdianPlatformUserId) {
+                    setAfdianPlatformUserId(extracted)
+                  }
+                }}
                 placeholder="https://afdian.net/@你的名字"
                 className="w-full px-3 py-2 bg-muted border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50"
               />
+              {afdianPlatformUserId && (
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  已识别用户 ID：<span className="text-amber-500 font-mono">{afdianPlatformUserId}</span>
+                </p>
+              )}
             </div>
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">
@@ -824,6 +889,72 @@ export function MonetizationSettingsPanel({
                 ))}
               </div>
             </div>
+
+            {/* 自动解锁开关 */}
+            <div className={`p-3 rounded-lg border transition-colors ${
+              afdianAutoVerify ? 'bg-amber-500/10 border-amber-500/20' : 'bg-muted/30 border-border'
+            }`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Unlock className="w-4 h-4 text-amber-500" />
+                  <div>
+                    <p className="text-sm font-medium">读者自助解锁</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      支付后输入订单号即可自动解锁，无需你手动发码
+                    </p>
+                  </div>
+                </div>
+                <Toggle
+                  checked={afdianAutoVerify}
+                  onChange={setAfdianAutoVerify}
+                  color="bg-amber-500"
+                  size="sm"
+                />
+              </div>
+
+              {afdianAutoVerify && (
+                <div className="mt-3 pt-3 border-t border-border/50 space-y-3">
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block flex items-center gap-1">
+                      验证服务地址（可选）
+                      <span className="text-[10px] text-amber-500 bg-amber-500/10 px-1.5 py-0.5 rounded">高级</span>
+                    </label>
+                    <input
+                      type="url"
+                      value={afdianVerifyEndpoint}
+                      onChange={(e) => setAfdianVerifyEndpoint(e.target.value)}
+                      placeholder="留空则使用手动确认模式"
+                      className="w-full px-3 py-2 bg-muted border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                    />
+                    <p className="text-[11px] text-muted-foreground mt-1">
+                      如果不填，读者输入订单号后会显示"等待创作者确认"，你可在创作者中心一键确认
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-xs text-muted-foreground mb-1 block">方案 ID（可选）</label>
+                      <input
+                        type="text"
+                        value={afdianPlanId}
+                        onChange={(e) => setAfdianPlanId(e.target.value)}
+                        placeholder="限定可解锁的方案"
+                        className="w-full px-3 py-2 bg-muted border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground mb-1 block">用户 ID</label>
+                      <input
+                        type="text"
+                        value={afdianPlatformUserId}
+                        onChange={(e) => setAfdianPlatformUserId(e.target.value)}
+                        placeholder="自动提取或手动填写"
+                        className="w-full px-3 py-2 bg-muted border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -857,10 +988,22 @@ export function MonetizationSettingsPanel({
               <input
                 type="url"
                 value={mianbaoduoLink}
-                onChange={(e) => setMianbaoduoLink(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value
+                  setMianbaoduoLink(val)
+                  const extracted = extractPlatformUserId('mianbaoduo', val)
+                  if (extracted && !mianbaoduoPlatformUserId) {
+                    setMianbaoduoPlatformUserId(extracted)
+                  }
+                }}
                 placeholder="https://mianbaoduo.com/o/你的作品"
                 className="w-full px-3 py-2 bg-muted border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/50"
               />
+              {mianbaoduoPlatformUserId && (
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  已识别商品 ID：<span className="text-orange-500 font-mono">{mianbaoduoPlatformUserId}</span>
+                </p>
+              )}
             </div>
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">
@@ -873,6 +1016,72 @@ export function MonetizationSettingsPanel({
                 placeholder="你在面包多的昵称"
                 className="w-full px-3 py-2 bg-muted border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/50"
               />
+            </div>
+
+            {/* 自动解锁开关 */}
+            <div className={`p-3 rounded-lg border transition-colors ${
+              mianbaoduoAutoVerify ? 'bg-orange-500/10 border-orange-500/20' : 'bg-muted/30 border-border'
+            }`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Unlock className="w-4 h-4 text-orange-500" />
+                  <div>
+                    <p className="text-sm font-medium">读者自助解锁</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      支付后输入订单号即可自动解锁，无需你手动发码
+                    </p>
+                  </div>
+                </div>
+                <Toggle
+                  checked={mianbaoduoAutoVerify}
+                  onChange={setMianbaoduoAutoVerify}
+                  color="bg-orange-500"
+                  size="sm"
+                />
+              </div>
+
+              {mianbaoduoAutoVerify && (
+                <div className="mt-3 pt-3 border-t border-border/50 space-y-3">
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block flex items-center gap-1">
+                      验证服务地址（可选）
+                      <span className="text-[10px] text-orange-500 bg-orange-500/10 px-1.5 py-0.5 rounded">高级</span>
+                    </label>
+                    <input
+                      type="url"
+                      value={mianbaoduoVerifyEndpoint}
+                      onChange={(e) => setMianbaoduoVerifyEndpoint(e.target.value)}
+                      placeholder="留空则使用手动确认模式"
+                      className="w-full px-3 py-2 bg-muted border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/50"
+                    />
+                    <p className="text-[11px] text-muted-foreground mt-1">
+                      如果不填，读者输入订单号后会显示"等待创作者确认"，你可在创作者中心一键确认
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-xs text-muted-foreground mb-1 block">商品 ID（可选）</label>
+                      <input
+                        type="text"
+                        value={mianbaoduoPlanId}
+                        onChange={(e) => setMianbaoduoPlanId(e.target.value)}
+                        placeholder="限定可解锁的商品"
+                        className="w-full px-3 py-2 bg-muted border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/50"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground mb-1 block">店铺 ID</label>
+                      <input
+                        type="text"
+                        value={mianbaoduoPlatformUserId}
+                        onChange={(e) => setMianbaoduoPlatformUserId(e.target.value)}
+                        placeholder="自动提取或手动填写"
+                        className="w-full px-3 py-2 bg-muted border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/50"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

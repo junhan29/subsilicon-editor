@@ -475,7 +475,7 @@ function buildHTMLTemplate(params: {
 
         tabs.forEach(function(t) { t.classList.remove('active'); });
 
-        if (tab === 'wechat') {
+        if (tab === 'wechat' || tab === 'direct') {
           if (wechatDiv) wechatDiv.style.display = 'block';
           if (platformDiv) platformDiv.style.display = 'none';
           if (tabs[0]) tabs[0].classList.add('active');
@@ -951,7 +951,10 @@ export async function exportToHTML(
       paymentMethod: monetization.paymentMethod,
       wechatQRCode: monetization.wechatQRCode,
       wechatContact: monetization.wechatContact,
+      alipayQRCode: monetization.alipayQRCode,
+      alipayContact: monetization.alipayContact,
       thirdParty: monetization.thirdParty,
+      multiChannel: monetization.multiChannel,
       granularity: monetization.granularity,
     }
   }
