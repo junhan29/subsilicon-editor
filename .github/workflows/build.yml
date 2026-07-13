@@ -112,7 +112,10 @@ jobs:
           echo "Syncing to server: $VERSION_DIR"
           ssh -p "$SSH_PORT" "$SERVER_USER@$SERVER_HOST" "mkdir -p $VERSION_DIR"
           scp -P "$SSH_PORT" release/*.dmg release/*.exe release/*.AppImage release/*.zip release/*.deb release/*.tar.gz "$SERVER_USER@$SERVER_HOST:$VERSION_DIR/"
-          
+
+          echo "Renaming files (dot to space in product name)"
+          ssh -p "$SSH_PORT" "$SERVER_USER@$SERVER_HOST" "cd $VERSION_DIR && for f in SubSilicon.Editor-*; do [ -f \"\$f\" ] && mv -v \"\$f\" \"\${f/.Editor-/.Editor -}\" || true; done"
+
           echo "Syncing latest.yml for auto-updater"
           scp -P "$SSH_PORT" release/latest-mac.yml release/latest-linux.yml release/latest.yml "$SERVER_USER@$SERVER_HOST:$RELEASE_DIR/" 2>/dev/null || true
           
