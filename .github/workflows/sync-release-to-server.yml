@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: '版本号 (例如: v1.1.0)'
+        description: '版本号 (例如: v1.2.3)'
         required: true
-        default: 'v1.2.0'
+        default: 'v1.2.3'
 
 permissions:
   contents: read
@@ -22,16 +22,16 @@ jobs:
           VERSION=${{ github.event.inputs.version }}
           mkdir -p release
           cd release
-          echo "📥 下载 Release $VERSION 资产..."
-          gh release download "$VERSION" --repo junhan29/subsilicon-editor
-          echo "✅ 下载完成"
+          echo "Downloading Release $VERSION assets..."
+          gh release download "$VERSION"
+          echo "Download complete"
           ls -la
 
       - name: Setup SSH
         env:
-          SERVER_HOST: ${{ secrets.SERVER_HOST }}
-          SERVER_USER: ${{ secrets.SERVER_USER }}
-          SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+          SERVER_HOST: ${{ secrets.DEPLOY_HOST }}
+          SERVER_USER: ${{ secrets.DEPLOY_USER }}
+          SERVER_SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         run: |
           mkdir -p ~/.ssh
           echo "$SERVER_SSH_KEY" > ~/.ssh/id_rsa
@@ -40,15 +40,15 @@ jobs:
 
       - name: Sync to Tencent Server
         env:
-          SERVER_HOST: ${{ secrets.SERVER_HOST }}
-          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_HOST: ${{ secrets.DEPLOY_HOST }}
+          SERVER_USER: ${{ secrets.DEPLOY_USER }}
         run: |
           VERSION=${{ github.event.inputs.version }}
           VERSION_NO_V=${VERSION#v}
           RELEASE_DIR="/var/www/subsilicon/releases/v${VERSION_NO_V}"
 
-          echo "📤 同步安装包到服务器: $RELEASE_DIR"
+          echo "Syncing to server: $RELEASE_DIR"
           ssh "$SERVER_USER@$SERVER_HOST" "mkdir -p $RELEASE_DIR && chown -R www-data:www-data /var/www/subsilicon/releases"
           scp release/* "$SERVER_USER@$SERVER_HOST:$RELEASE_DIR/"
           ssh "$SERVER_USER@$SERVER_HOST" "ls -la $RELEASE_DIR/"
-          echo "✅ 同步完成"
+          echo "Sync complete"
