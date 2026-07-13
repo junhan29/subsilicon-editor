@@ -15,18 +15,6 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - name: Download release assets
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          VERSION=${{ github.event.inputs.version }}
-          mkdir -p release
-          cd release
-          echo "Downloading Release $VERSION assets..."
-          gh release download "$VERSION" -R junhan29/subsilicon-editor
-          echo "Download complete"
-          ls -la
-
       - name: Setup SSH
         env:
           SERVER_HOST: ${{ secrets.DEPLOY_HOST }}
@@ -39,7 +27,7 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -p "$SSH_PORT" -H "$SERVER_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
 
-      - name: Sync to Tencent Server
+      - name: Download release on server via gh-proxy.com mirror
         env:
           SERVER_HOST: ${{ secrets.DEPLOY_HOST }}
           SERVER_USER: ${{ secrets.DEPLOY_USER }}
@@ -49,18 +37,123 @@ jobs:
           VERSION_NO_V=${VERSION#v}
           VERSION_DIR="/var/www/subsilicon/releases/v${VERSION_NO_V}"
           RELEASE_DIR="/var/www/subsilicon/releases"
+          GITHUB_REPO="junhan29/subsilicon-editor"
+          MIRROR="https://gh-proxy.com/https://github.com/${GITHUB_REPO}/releases/download/${VERSION}"
 
-          echo "Syncing to server: $VERSION_DIR"
+          echo "Creating version directory on server..."
           ssh -p "$SSH_PORT" "$SERVER_USER@$SERVER_HOST" "mkdir -p $VERSION_DIR"
-          scp -P "$SSH_PORT" release/* "$SERVER_USER@$SERVER_HOST:$VERSION_DIR/"
 
-          echo "Renaming files (dot to space in product name)"
-          ssh -p "$SSH_PORT" "$SERVER_USER@$SERVER_HOST" "cd $VERSION_DIR && for f in SubSilicon.Editor-*; do [ -f \"\$f\" ] && mv -v \"\$f\" \"\${f/.Editor-/.Editor -}\" || true; done"
+          echo "Downloading release assets on server via gh-proxy.com mirror (10MB/s+ speed)..."
+          ssh -p "$SSH_PORT" "$SERVER_USER@$SERVER_HOST" "
+            cd $VERSION_DIR
+            FILES=(
+              'SubSilicon.Editor-${VERSION_NO_V}-macos-arm64.dmg'
+              'SubSilicon.Editor-${VERSION_NO_V}-macos-arm64.zip'
+              'SubSilicon.Editor-${VERSION_NO_V}-macos-x64.dmg'
+              'SubSilicon.Editor-${VERSION_NO_V}-macos-x64.zip'
+              'SubSilicon.Editor-${VERSION_NO_V}-windows-x64.exe'
+              'SubSilicon.Editor-${VERSION_NO_V}-windows-x64.zip'
+              'SubSilicon.Editor-${VERSION_NO_V}-linux-amd64.deb'
+              'SubSilicon.Editor-${VERSION_NO_V}-linux-x64.tar.gz'
+              'SubSilicon.Editor-${VERSION_NO_V}-linux-x86_64.AppImage'
+            )
+            for f in \"\${FILES[@]}\"; do
+              if [ -f \"\$f\" ]; then
+                echo \"Skipping \$f (already exists)\"
+                continue
+              fi
+              echo \"Downloading \$f...\"
+              curl -sL --max-time 300 -o \"\$f\" \"${MIRROR}/\$f\"
+              if [ \$? -eq 0 ] && [ -s \"\$f\" ]; then
+                echo \"  Done: \$(ls -lh \$f | awk '{print \$5}')\"
+              else
+                echo \"  Failed: \$f\"
+              fi
+            done
+          "
 
-          echo "Syncing latest.yml for auto-updater"
-          scp -P "$SSH_PORT" release/latest-mac.yml release/latest.yml "$SERVER_USER@$SERVER_HOST:$RELEASE_DIR/" 2>/dev/null || true
+          echo "Renaming files (dot to space in product name)..."
+          ssh -p "$SSH_PORT" "$SERVER_USER@$SERVER_HOST" "
+            cd $VERSION_DIR
+            for f in SubSilicon.Editor-*; do
+              [ -f \"\$f\" ] && mv -v \"\$f\" \"\${f/.Editor-/.Editor -}\" || true
+            done
+          "
 
-          echo "Verifying"
-          ssh -p "$SSH_PORT" "$SERVER_USER@$SERVER_HOST" "ls -la $RELEASE_DIR/"
-          ssh -p "$SSH_PORT" "$SERVER_USER@$SERVER_HOST" "ls -la $VERSION_DIR/"
-          echo "Sync complete"
+          echo "Generating update metadata yml files..."
+          ssh -p "$SSH_PORT" "$SERVER_USER@$SERVER_HOST" "
+            cd $VERSION_DIR
+
+            # Generate latest-mac.yml
+            MAC_X64_ZIP_SHA=\$(sha512sum \"SubSilicon Editor-${VERSION_NO_V}-macos-x64.zip\" | awk '{print \$1}')
+            MAC_ARM64_ZIP_SHA=\$(sha512sum \"SubSilicon Editor-${VERSION_NO_V}-macos-arm64.zip\" | awk '{print \$1}')
+            MAC_X64_DMG_SHA=\$(sha512sum \"SubSilicon Editor-${VERSION_NO_V}-macos-x64.dmg\" | awk '{print \$1}')
+            MAC_ARM64_DMG_SHA=\$(sha512sum \"SubSilicon Editor-${VERSION_NO_V}-macos-arm64.dmg\" | awk '{print \$1}')
+            MAC_X64_ZIP_SIZE=\$(stat -c%s \"SubSilicon Editor-${VERSION_NO_V}-macos-x64.zip\")
+            MAC_ARM64_ZIP_SIZE=\$(stat -c%s \"SubSilicon Editor-${VERSION_NO_V}-macos-arm64.zip\")
+            MAC_X64_DMG_SIZE=\$(stat -c%s \"SubSilicon Editor-${VERSION_NO_V}-macos-x64.dmg\")
+            MAC_ARM64_DMG_SIZE=\$(stat -c%s \"SubSilicon Editor-${VERSION_NO_V}-macos-arm64.dmg\")
+
+            cat > latest-mac.yml << EOF
+          version: ${VERSION_NO_V}
+          files:
+            - url: SubSilicon Editor-${VERSION_NO_V}-macos-x64.zip
+              sha512: \${MAC_X64_ZIP_SHA}
+              size: \${MAC_X64_ZIP_SIZE}
+            - url: SubSilicon Editor-${VERSION_NO_V}-macos-arm64.zip
+              sha512: \${MAC_ARM64_ZIP_SHA}
+              size: \${MAC_ARM64_ZIP_SIZE}
+            - url: SubSilicon Editor-${VERSION_NO_V}-macos-x64.dmg
+              sha512: \${MAC_X64_DMG_SHA}
+              size: \${MAC_X64_DMG_SIZE}
+            - url: SubSilicon Editor-${VERSION_NO_V}-macos-arm64.dmg
+              sha512: \${MAC_ARM64_DMG_SHA}
+              size: \${MAC_ARM64_DMG_SIZE}
+          path: SubSilicon Editor-${VERSION_NO_V}-macos-x64.zip
+          sha512: \${MAC_X64_ZIP_SHA}
+          releaseDate: '\$(date -u +%Y-%m-%dT%H:%M:%SZ)'
+          EOF
+
+            # Generate latest.yml (Windows)
+            WIN_EXE_SHA=\$(sha512sum \"SubSilicon Editor-${VERSION_NO_V}-windows-x64.exe\" | awk '{print \$1}')
+            WIN_EXE_SIZE=\$(stat -c%s \"SubSilicon Editor-${VERSION_NO_V}-windows-x64.exe\")
+
+            cat > latest.yml << EOF
+          version: ${VERSION_NO_V}
+          files:
+            - url: SubSilicon Editor-${VERSION_NO_V}-windows-x64.exe
+              sha512: \${WIN_EXE_SHA}
+              size: \${WIN_EXE_SIZE}
+          path: SubSilicon Editor-${VERSION_NO_V}-windows-x64.exe
+          sha512: \${WIN_EXE_SHA}
+          releaseDate: '\$(date -u +%Y-%m-%dT%H:%M:%SZ)'
+          EOF
+
+            echo '=== latest-mac.yml ==='
+            cat latest-mac.yml
+            echo '=== latest.yml ==='
+            cat latest.yml
+          "
+
+          echo "Creating standalone symlink..."
+          ssh -p "$SSH_PORT" "$SERVER_USER@$SERVER_HOST" "
+            STANDALONE_DIR=\"/var/www/subsilicon/.next/standalone/releases\"
+            if [ -d \"\$STANDALONE_DIR\" ]; then
+              ln -sf \"$VERSION_DIR\" \"\$STANDALONE_DIR/${VERSION}\"
+              echo \"Symlink created: \$STANDALONE_DIR/${VERSION} -> $VERSION_DIR\"
+            else
+              echo \"Standalone dir not found, skipping symlink\"
+            fi
+          "
+
+          echo "Copying root yml files and restarting PM2..."
+          ssh -p "$SSH_PORT" "$SERVER_USER@$SERVER_HOST" "
+            cp $VERSION_DIR/latest-mac.yml $RELEASE_DIR/latest-mac.yml
+            cp $VERSION_DIR/latest.yml $RELEASE_DIR/latest.yml
+            pm2 restart subsilicon 2>&1 || true
+            echo 'PM2 restarted'
+          "
+
+          echo "=== Verification ==="
+          ssh -p "$SSH_PORT" "$SERVER_USER@$SERVER_HOST" "ls -lh $VERSION_DIR/"
+          echo "=== Sync complete ==="
