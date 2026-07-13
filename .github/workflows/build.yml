@@ -48,7 +48,12 @@ jobs:
         run: npm run electron:build:linux
 
       - name: List release files
-        run: ls -la release/
+        run: |
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            dir release/
+          else
+            ls -la release/
+          fi
 
       - uses: actions/upload-artifact@v4
         with:
@@ -71,7 +76,12 @@ jobs:
           path: release
 
       - name: List release files
-        run: ls -la release/
+        run: |
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            dir release/
+          else
+            ls -la release/
+          fi
 
       - name: Create GitHub Release
         env:
