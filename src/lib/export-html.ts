@@ -255,6 +255,8 @@ function buildHTMLTemplate(params: {
     .paywall-success-msg { color: #10b981; font-size: 14px; margin-top: 12px; display: none; }
     .paywall-error-msg { color: #ef4444; font-size: 14px; margin-top: 12px; }
     .paywall-hidden { display: none; }
+    .paywall-opvp-desc { font-size: 12px; color: #94a3b8; margin-bottom: 12px; line-height: 1.5; }
+    .paywall-opvp-note { font-size: 11px; color: #64748b; margin-top: 8px; text-align: center; }
     .paywall-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
     .paywall-tab { flex: 1; padding: 10px; background: #334155; border: 1px solid #475569; border-radius: 8px; color: #94a3b8; font-size: 13px; cursor: pointer; transition: all 0.2s; }
     .paywall-tab.active { background: #1e293b; border-color: #3b82f6; color: #e2e8f0; }
@@ -451,6 +453,25 @@ function buildHTMLTemplate(params: {
           paywallHTML += '</div>';
         }
 
+        // OPVP 自动验证（开放支付验证协议）
+        if (monetization.opvp && monetization.opvp.enabled) {
+          var opvpDisplay = (monetization.paymentMethod !== 'third_party' && monetization.paymentMethod !== 'wechat_manual') ? '' : 'display:none;';
+          paywallHTML += '<div id="paywall-opvp" style="' + opvpDisplay + '">';
+          paywallHTML += '<div class="paywall-divider"></div>';
+          paywallHTML += '<p class="paywall-section-title">自动验证解锁</p>';
+          paywallHTML += '<p class="paywall-opvp-desc">使用 ' + (monetization.opvp.platformName || 'OPVP 协议') + ' 订单号自动验证，验证成功立即解锁</p>';
+          if (monetization.opvp.purchaseLink) {
+            paywallHTML += '<a href="' + monetization.opvp.purchaseLink + '" target="_blank" class="paywall-platform-btn">前往购买</a>';
+          }
+          paywallHTML += '<div class="paywall-divider"></div>';
+          paywallHTML += '<p class="paywall-section-title">订单号</p>';
+          paywallHTML += '<input type="text" class="paywall-input" id="opvp-order-id" placeholder="输入完整订单号" />';
+          paywallHTML += '<button class="paywall-btn" id="opvp-verify-btn" onclick="verifyWithOPVP()">立即验证解锁</button>';
+          paywallHTML += '<div id="opvp-result" class="paywall-hidden"></div>';
+          paywallHTML += '<p class="paywall-opvp-note">基于 OPVP 开放协议，安全可靠</p>';
+          paywallHTML += '</div>';
+        }
+
         paywallHTML += '</div>';
         overlay.innerHTML = paywallHTML;
         overlay.classList.remove('paywall-hidden');
@@ -471,18 +492,26 @@ function buildHTMLTemplate(params: {
       window.switchPaywallTab = function(tab) {
         var wechatDiv = document.getElementById('paywall-wechat');
         var platformDiv = document.getElementById('paywall-platform');
+        var opvpDiv = document.getElementById('paywall-opvp');
         var tabs = document.querySelectorAll('.paywall-tab');
 
         tabs.forEach(function(t) { t.classList.remove('active'); });
 
+        if (wechatDiv) wechatDiv.style.display = 'none';
+        if (platformDiv) platformDiv.style.display = 'none';
+        if (opvpDiv) opvpDiv.style.display = 'none';
+
         if (tab === 'wechat' || tab === 'direct') {
           if (wechatDiv) wechatDiv.style.display = 'block';
-          if (platformDiv) platformDiv.style.display = 'none';
           if (tabs[0]) tabs[0].classList.add('active');
-        } else {
-          if (wechatDiv) wechatDiv.style.display = 'none';
+        } else if (tab === 'platform') {
           if (platformDiv) platformDiv.style.display = 'block';
-          if (tabs[1]) tabs[1].classList.add('active');
+          var platformTabIndex = Array.from(tabs).findIndex(function(t) { return t.textContent.includes('平台'); });
+          if (platformTabIndex >= 0 && tabs[platformTabIndex]) tabs[platformTabIndex].classList.add('active');
+        } else if (tab === 'opvp') {
+          if (opvpDiv) opvpDiv.style.display = 'block';
+          var opvpTabIndex = Array.from(tabs).findIndex(function(t) { return t.textContent.includes('自动'); });
+          if (opvpTabIndex >= 0 && tabs[opvpTabIndex]) tabs[opvpTabIndex].classList.add('active');
         }
       };
 
@@ -679,6 +708,77 @@ function buildHTMLTemplate(params: {
           resultEl.textContent = '解锁码无效或与凭证不匹配';
           resultEl.className = 'paywall-error-msg';
           resultEl.style.display = 'block';
+        }
+      };
+
+      // OPVP 自动验证解锁
+      window.verifyWithOPVP = async function() {
+        if (!monetization.opvp || !monetization.opvp.enabled) return;
+
+        var orderInput = document.getElementById('opvp-order-id');
+        var orderId = orderInput.value.trim();
+        var resultEl = document.getElementById('opvp-result');
+        var verifyBtn = document.getElementById('opvp-verify-btn');
+
+        if (!orderId) {
+          resultEl.textContent = '请输入订单号';
+          resultEl.className = 'paywall-error-msg';
+          resultEl.style.display = 'block';
+          return;
+        }
+
+        // 禁用按钮，显示加载状态
+        verifyBtn.disabled = true;
+        verifyBtn.textContent = '验证中...';
+        resultEl.style.display = 'none';
+
+        try {
+          var timestamp = Date.now();
+          var signatureBase = orderId + '|' + monetization.opvp.workId + '|' + timestamp;
+          var signature = await simpleHash(signatureBase);
+
+          var response = await fetch(monetization.opvp.verifierUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              protocolVersion: '1.0',
+              orderId: orderId,
+              workId: monetization.opvp.workId,
+              creatorId: monetization.opvp.creatorId || '',
+              amount: monetization.price,
+              currency: 'CNY',
+              timestamp: timestamp,
+              signature: signature.slice(0, 32),
+            }),
+          });
+
+          var data = await response.json();
+
+          if (data.verified) {
+            // 验证成功，直接解锁
+            saveUnlockState(window.__currentPaidNodeId, window.__currentChapterId);
+            resultEl.textContent = '验证成功！正在解锁...';
+            resultEl.className = 'paywall-success-msg';
+            resultEl.style.display = 'block';
+
+            setTimeout(function() {
+              hidePaywall();
+              renderNode(findNode(window.__currentPaidNodeId));
+            }, 1000);
+          } else {
+            resultEl.textContent = data.message || '验证失败，请检查订单号是否正确';
+            resultEl.className = 'paywall-error-msg';
+            resultEl.style.display = 'block';
+          }
+        } catch (e) {
+          resultEl.textContent = '验证服务连接失败，请稍后重试';
+          resultEl.className = 'paywall-error-msg';
+          resultEl.style.display = 'block';
+        } finally {
+          verifyBtn.disabled = false;
+          verifyBtn.textContent = '立即验证解锁';
         }
       };
 
@@ -956,6 +1056,7 @@ export async function exportToHTML(
       thirdParty: monetization.thirdParty,
       multiChannel: monetization.multiChannel,
       granularity: monetization.granularity,
+      opvp: (monetization as MonetizationConfig & { opvp?: HTMLMonetizationConfig['opvp'] }).opvp,
     }
   }
 

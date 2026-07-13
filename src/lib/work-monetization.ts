@@ -71,6 +71,16 @@ export interface MonetizationConfig {
   customApiUrl?: string
   /** 离线解锁码列表（纯离线模式下使用） */
   offlineCodes?: OfflineUnlockCode[]
+  /** OPVP 自动验证配置（开放支付验证协议） */
+  opvp?: {
+    enabled: boolean
+    verifierUrl: string
+    workId: string
+    creatorId?: string
+    platform?: string
+    platformName?: string
+    purchaseLink?: string
+  }
 }
 
 export interface PaidChapter {
@@ -162,6 +172,18 @@ export interface HTMLMonetizationConfig {
   /** 预生成解锁码（阶段一优化） */
   preGeneratedCodes?: PreGeneratedCode[]
   granularity: PaymentGranularity
+  /** OPVP 自动验证配置（开放支付验证协议） */
+  opvp?: {
+    enabled: boolean
+    verifierUrl: string
+    workId: string
+    creatorId?: string
+    platform?: string
+    /** 支付平台名称（显示用） */
+    platformName?: string
+    /** 购买链接（可选，跳转到支付页面） */
+    purchaseLink?: string
+  }
 }
 
 export interface PreGeneratedCode {
