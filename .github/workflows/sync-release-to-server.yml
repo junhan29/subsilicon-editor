@@ -32,23 +32,32 @@ jobs:
           SERVER_HOST: ${{ secrets.DEPLOY_HOST }}
           SERVER_USER: ${{ secrets.DEPLOY_USER }}
           SERVER_SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_PORT: '22022'
         run: |
           mkdir -p ~/.ssh
           echo "$SERVER_SSH_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          ssh-keyscan -p "$SSH_PORT" -H "$SERVER_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
 
       - name: Sync to Tencent Server
         env:
           SERVER_HOST: ${{ secrets.DEPLOY_HOST }}
           SERVER_USER: ${{ secrets.DEPLOY_USER }}
+          SSH_PORT: '22022'
         run: |
           VERSION=${{ github.event.inputs.version }}
           VERSION_NO_V=${VERSION#v}
-          RELEASE_DIR="/var/www/subsilicon/releases/v${VERSION_NO_V}"
+          VERSION_DIR="/var/www/subsilicon/releases/v${VERSION_NO_V}"
+          RELEASE_DIR="/var/www/subsilicon/releases"
 
-          echo "Syncing to server: $RELEASE_DIR"
-          ssh "$SERVER_USER@$SERVER_HOST" "mkdir -p $RELEASE_DIR && chown -R www-data:www-data /var/www/subsilicon/releases"
-          scp release/* "$SERVER_USER@$SERVER_HOST:$RELEASE_DIR/"
-          ssh "$SERVER_USER@$SERVER_HOST" "ls -la $RELEASE_DIR/"
+          echo "Syncing to server: $VERSION_DIR"
+          ssh -p "$SSH_PORT" "$SERVER_USER@$SERVER_HOST" "mkdir -p $VERSION_DIR && chown -R www-data:www-data /var/www/subsilicon/releases"
+          scp -P "$SSH_PORT" release/* "$SERVER_USER@$SERVER_HOST:$VERSION_DIR/"
+
+          echo "Syncing latest.yml for auto-updater"
+          scp -P "$SSH_PORT" release/latest-mac.yml release/latest.yml "$SERVER_USER@$SERVER_HOST:$RELEASE_DIR/" 2>/dev/null || true
+
+          echo "Verifying"
+          ssh -p "$SSH_PORT" "$SERVER_USER@$SERVER_HOST" "ls -la $RELEASE_DIR/"
+          ssh -p "$SSH_PORT" "$SERVER_USER@$SERVER_HOST" "ls -la $VERSION_DIR/"
           echo "Sync complete"

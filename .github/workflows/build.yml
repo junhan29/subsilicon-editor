@@ -98,6 +98,7 @@ jobs:
           SERVER_HOST: ${{ secrets.DEPLOY_HOST }}
           SERVER_USER: ${{ secrets.DEPLOY_USER }}
           SERVER_SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_PORT: '22022'
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           RELEASE_DIR="/var/www/subsilicon/releases"
@@ -106,17 +107,17 @@ jobs:
           mkdir -p ~/.ssh
           echo "$SERVER_SSH_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          ssh-keyscan -p "$SSH_PORT" -H "$SERVER_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
 
           echo "Syncing to server: $VERSION_DIR"
-          ssh "$SERVER_USER@$SERVER_HOST" "mkdir -p $VERSION_DIR"
-          scp release/*.dmg release/*.exe release/*.AppImage release/*.zip release/*.deb release/*.tar.gz "$SERVER_USER@$SERVER_HOST:$VERSION_DIR/"
+          ssh -p "$SSH_PORT" "$SERVER_USER@$SERVER_HOST" "mkdir -p $VERSION_DIR"
+          scp -P "$SSH_PORT" release/*.dmg release/*.exe release/*.AppImage release/*.zip release/*.deb release/*.tar.gz "$SERVER_USER@$SERVER_HOST:$VERSION_DIR/"
           
           echo "Syncing latest.yml for auto-updater"
-          scp release/latest-mac.yml release/latest-linux.yml release/latest.yml "$SERVER_USER@$SERVER_HOST:$RELEASE_DIR/" 2>/dev/null || true
+          scp -P "$SSH_PORT" release/latest-mac.yml release/latest-linux.yml release/latest.yml "$SERVER_USER@$SERVER_HOST:$RELEASE_DIR/" 2>/dev/null || true
           
-          ssh "$SERVER_USER@$SERVER_HOST" "ls -la $RELEASE_DIR/"
-          ssh "$SERVER_USER@$SERVER_HOST" "ls -la $VERSION_DIR/"
+          ssh -p "$SSH_PORT" "$SERVER_USER@$SERVER_HOST" "ls -la $RELEASE_DIR/"
+          ssh -p "$SSH_PORT" "$SERVER_USER@$SERVER_HOST" "ls -la $VERSION_DIR/"
 
       - uses: geekyeggo/delete-artifact@v5
         with:
