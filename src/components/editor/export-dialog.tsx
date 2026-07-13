@@ -414,30 +414,30 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                     <div className="grid grid-cols-3 gap-2">
                       <button
                         type="button"
-                        onClick={() => setDrmUnlockMode('semi_auto')}
+                        onClick={() => setDrmUnlockMode('hybrid')}
                         className={`p-2.5 rounded-lg border text-left text-xs transition-all ${
-                          drmUnlockMode === 'semi_auto'
+                          drmUnlockMode === 'hybrid'
                             ? 'border-primary bg-primary/5 ring-1 ring-primary/30'
                             : 'border-border hover:bg-muted/40'
                         }`}
                       >
-                        <div className="font-medium">半自动解锁</div>
+                        <div className="font-medium">混合模式</div>
                         <div className="text-[10px] text-muted-foreground mt-1">
-                          读者粘贴订单号后自动解锁
+                          支持多种收款方式，读者自主选择
                         </div>
                       </button>
                       <button
                         type="button"
-                        onClick={() => setDrmUnlockMode('manual')}
+                        onClick={() => setDrmUnlockMode('offline')}
                         className={`p-2.5 rounded-lg border text-left text-xs transition-all ${
-                          drmUnlockMode === 'manual'
+                          drmUnlockMode === 'offline'
                             ? 'border-primary bg-primary/5 ring-1 ring-primary/30'
                             : 'border-border hover:bg-muted/40'
                         }`}
                       >
-                        <div className="font-medium">手动激活码</div>
+                        <div className="font-medium">纯离线模式</div>
                         <div className="text-[10px] text-muted-foreground mt-1">
-                          读者付款后联系你获取激活码
+                          预生成解锁码，完全无需服务器
                         </div>
                       </button>
                       <button
@@ -453,6 +453,32 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                         <div className="text-[10px] text-muted-foreground mt-1">
                           Stripe/PayPal 等海外渠道自动发放解锁码
                         </div>
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 mt-2">
+                      <button
+                        type="button"
+                        onClick={() => setDrmUnlockMode('semi_auto')}
+                        className={`p-2 rounded-lg border text-left text-xs transition-all ${
+                          drmUnlockMode === 'semi_auto'
+                            ? 'border-primary bg-primary/5 ring-1 ring-primary/30'
+                            : 'border-border hover:bg-muted/40'
+                        }`}
+                      >
+                        <div className="font-medium">半自动解锁</div>
+                        <div className="text-[10px] text-muted-foreground mt-1">粘贴订单号自动验证</div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDrmUnlockMode('manual')}
+                        className={`p-2 rounded-lg border text-left text-xs transition-all ${
+                          drmUnlockMode === 'manual'
+                            ? 'border-primary bg-primary/5 ring-1 ring-primary/30'
+                            : 'border-border hover:bg-muted/40'
+                        }`}
+                      >
+                        <div className="font-medium">手动激活码</div>
+                        <div className="text-[10px] text-muted-foreground mt-1">联系创作者获取激活码</div>
                       </button>
                     </div>
                   </div>

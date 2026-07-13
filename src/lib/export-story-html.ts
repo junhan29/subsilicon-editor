@@ -993,6 +993,12 @@ function buildStoryHTML(encryptedData: string, ivBase64: string, config: StoryEx
           }
 
           if (!verified) {
+            var offlineResult = await tryOfflineUnlock(orderNo);
+            if (offlineResult && offlineResult.success) {
+              msg.className = 'pw-msg success'; msg.textContent = '解锁成功！即将开始阅读...';
+              setTimeout(function() { paywall.classList.add('hidden'); startStory(); }, 1200);
+              return;
+            }
             if (!C.apiUrl) {
               msg.className = 'pw-msg error'; msg.textContent = '离线验证不可用，请联系创作者获取有效解锁码';
               btn.disabled = false; btn.textContent = '重试解锁';
@@ -1015,6 +1021,46 @@ function buildStoryHTML(encryptedData: string, ivBase64: string, config: StoryEx
               btn.disabled = false; btn.textContent = '重试解锁';
             }
           } else {
+            msg.className = 'pw-msg info'; msg.textContent = '订单验证通过！正在解锁...';
+            var unlockedChannel = null;
+            for (var j = 0; j < channels.length; j++) {
+              var ch2 = channels[j];
+              if (!ch2.autoVerify) continue;
+              if (ch2.verifyEndpoint) {
+                try {
+                  var vResp2 = await fetch(ch2.verifyEndpoint, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ orderId: orderNo, platform: ch2.platform, platformUserId: ch2.platformUserId, planId: ch2.planId }),
+                  });
+                  var vData2 = await vResp2.json();
+                  if (vData2.success || vData2.verified) {
+                    if (vData2.keyBase64 && vData2.ivBase64) {
+                      setUnlocked(vData2.keyBase64, vData2.ivBase64);
+                      decodedData = await decryptData(vData2.keyBase64, vData2.ivBase64);
+                      graph = JSON.parse(decodedData);
+                      initVariables();
+                      msg.className = 'pw-msg success'; msg.textContent = '订单验证通过！即将开始阅读...';
+                      setTimeout(function() { paywall.classList.add('hidden'); startStory(); }, 1200);
+                      return;
+                    }
+                    unlockedChannel = ch2;
+                    break;
+                  }
+                } catch(ve2) { /* ignore */ }
+              }
+            }
+            if (unlockedChannel) {
+              var unusedOfflineCodes = C.offlineCodes ? C.offlineCodes.filter(function(c) { return !c.usedAt; }) : [];
+              if (unusedOfflineCodes.length > 0) {
+                var firstCode = unusedOfflineCodes[0];
+                var offlineUnlock = await tryOfflineUnlock(firstCode.code);
+                if (offlineUnlock && offlineUnlock.success) {
+                  msg.className = 'pw-msg success'; msg.textContent = '订单验证通过！即将开始阅读...';
+                  setTimeout(function() { paywall.classList.add('hidden'); startStory(); }, 1200);
+                  return;
+                }
+              }
+            }
             if (!C.apiUrl) {
               msg.className = 'pw-msg error'; msg.textContent = '第三方验证通过，但缺少服务端密钥。请联系创作者';
               btn.disabled = false; btn.textContent = '重试解锁';
