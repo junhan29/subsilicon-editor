@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Plus, FolderOpen, Settings, Trash2, Copy, Edit3, MoreHorizontal, BookOpen, Clock, FileText, Sparkles, RefreshCw, Download, RotateCcw, AlertCircle, CheckCircle2, X } from 'lucide-react'
+import { Plus, FolderOpen, Settings, Trash2, Copy, Edit3, MoreHorizontal, BookOpen, Clock, FileText, Sparkles, RefreshCw, Download, RotateCcw, AlertCircle, CheckCircle2, X, FolderSync, CheckCircle } from 'lucide-react'
 import type { StoryGraph } from '@editor/types/editor'
 import { getAllWorks, loadWork, saveWork, deleteWork, generateProjectId, type StoredWork } from '@editor/lib/local-db/work-store'
 
@@ -34,6 +34,15 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings }: 
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null)
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
+  
+  // 新建项目对话框状态
+  const [showNewProjectDialog, setShowNewProjectDialog] = useState(false)
+  const [newProjectName, setNewProjectName] = useState('')
+  const [newProjectPath, setNewProjectPath] = useState('')
+  const [creating, setCreating] = useState(false)
+  
+  // 导入项目状态
+  const [importing, setImporting] = useState(false)
 
   const loadWorks = useCallback(async () => {
     setLoading(true)
@@ -100,6 +109,95 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings }: 
 
   const handleInstallUpdate = () => {
     window.__electronAPI?.installUpdate()
+  }
+
+  // 打开新建项目对话框
+  const handleOpenNewProjectDialog = () => {
+    setNewProjectName('')
+    setNewProjectPath('')
+    setShowNewProjectDialog(true)
+  }
+
+  // 确认创建新项目
+  const handleConfirmNewProject = async () => {
+    if (!newProjectName.trim()) return
+    setCreating(true)
+    
+    const id = generateProjectId()
+    const now = Date.now()
+    const work: StoredWork = {
+      id,
+      name: newProjectName.trim(),
+      updatedAt: now,
+      createdAt: now,
+      lastOpened: now,
+      nodeCount: 0,
+      edgeCount: 0,
+      templateId: 'custom',
+      editorData: { ...emptyGraph, title: newProjectName.trim() },
+      customPath: newProjectPath.trim() || undefined,
+    }
+    await saveWork(work)
+    setCreating(false)
+    setShowNewProjectDialog(false)
+    onNewProject(work)
+  }
+
+  // 从文件导入项目
+  const handleImportProject = async () => {
+    setImporting(true)
+    try {
+      // 使用 Electron 的文件选择对话框
+      const result = await window.__electronAPI?.openFileDialog({
+        title: '选择项目文件',
+        filters: [
+          { name: 'SubSilicon 项目', extensions: ['json', 'story.html'] },
+          { name: 'JSON 文件', extensions: ['json'] },
+          { name: 'HTML 故事文件', extensions: ['story.html'] },
+        ],
+        properties: ['openFile'],
+      })
+      
+      if (result && result.filePaths && result.filePaths[0]) {
+        const filePath = result.filePaths[0]
+        const content = await window.__electronAPI?.readFile(filePath)
+        if (content) {
+          let projectData: Partial<StoryGraph> | null = null
+          
+          // 解析文件内容
+          if (filePath.endsWith('.json')) {
+            projectData = JSON.parse(content)
+          } else if (filePath.endsWith('.story.html')) {
+            // 从 HTML 中提取嵌入的 JSON 数据
+            const match = content.match(/<script[^>]*id="story-data"[^>]*>([\s\S]*?)<\/script>/)
+            if (match) {
+              projectData = JSON.parse(match[1])
+            }
+          }
+          
+          if (projectData) {
+            const id = generateProjectId()
+            const now = Date.now()
+            const work: StoredWork = {
+              id,
+              name: projectData.title || projectData.settings?.title || '导入的项目',
+              updatedAt: now,
+              createdAt: now,
+              lastOpened: now,
+              nodeCount: projectData.nodes?.length || 0,
+              edgeCount: projectData.edges?.length || 0,
+              templateId: projectData.templateId || 'custom',
+              editorData: { ...emptyGraph, ...projectData, title: projectData.title || projectData.settings?.title || '导入的项目' },
+            }
+            await saveWork(work)
+            loadWorks()
+          }
+        }
+      }
+    } catch (error) {
+      console.error('导入项目失败:', error)
+    }
+    setImporting(false)
   }
 
   const handleNewProject = async () => {
@@ -325,27 +423,55 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings }: 
             </div>
             <div className="text-center">
               <h2 className="text-lg font-medium text-white mb-1">欢迎使用 SubSilicon Editor</h2>
-              <p className="text-sm text-slate-400 mb-6">创建一个新项目开始你的故事创作</p>
+              <p className="text-sm text-slate-400 mb-6">创建一个新项目或打开已有项目</p>
             </div>
-            <button
-              onClick={handleNewProject}
-              className="flex items-center gap-2 px-6 py-3 bg-pink-500 hover:bg-pink-600 text-white rounded-xl text-sm font-medium transition-colors shadow-lg shadow-pink-500/20"
-            >
-              <Plus className="w-5 h-5" />
-              新建项目
-            </button>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={handleOpenNewProjectDialog}
+                className="flex items-center gap-2 px-6 py-3 bg-pink-500 hover:bg-pink-600 text-white rounded-xl text-sm font-medium transition-colors shadow-lg shadow-pink-500/20"
+              >
+                <Plus className="w-5 h-5" />
+                新建项目
+              </button>
+              <button
+                onClick={handleImportProject}
+                disabled={importing}
+                className="flex items-center justify-center gap-2 px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl text-sm font-medium transition-colors disabled:opacity-50"
+              >
+                {importing ? (
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <FolderSync className="w-5 h-5" />
+                )}
+                打开其他位置
+              </button>
+            </div>
           </div>
         ) : (
           <div>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-medium text-slate-300">最近的项目</h2>
-              <button
-                onClick={handleNewProject}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-pink-500 hover:bg-pink-600 text-white rounded-lg transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                新建项目
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleImportProject}
+                  disabled={importing}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {importing ? (
+                    <div className="w-4 h-4 border-2 border-slate-500 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <FolderSync className="w-4 h-4" />
+                  )}
+                  打开
+                </button>
+                <button
+                  onClick={handleOpenNewProjectDialog}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-pink-500 hover:bg-pink-600 text-white rounded-lg transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  新建项目
+                </button>
+              </div>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4">
               {works.map((work) => (
@@ -444,9 +570,90 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings }: 
 
       {/* 底部信息 */}
       <footer className="flex items-center justify-between px-6 py-2 border-t border-slate-800 bg-slate-900/80">
-        <span className="text-[10px] text-slate-600">SubSilicon Editor 1.2.3</span>
+        <span className="text-[10px] text-slate-600">SubSilicon Editor 1.3.0</span>
         <span className="text-[10px] text-slate-600">项目存储在本地数据库中</span>
       </footer>
+
+      {/* 新建项目对话框 */}
+      {showNewProjectDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-slate-800 rounded-xl border border-slate-700 shadow-2xl w-full max-w-md mx-4">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700">
+              <h3 className="text-sm font-medium text-white">新建项目</h3>
+              <button
+                onClick={() => setShowNewProjectDialog(false)}
+                className="p-1 rounded hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            
+            <div className="p-4 space-y-4">
+              <div className="space-y-2">
+                <label className="text-xs text-slate-400">项目名称 *</label>
+                <input
+                  type="text"
+                  value={newProjectName}
+                  onChange={(e) => setNewProjectName(e.target.value)}
+                  placeholder="输入项目名称..."
+                  className="w-full h-9 text-sm rounded-lg border border-slate-600 bg-slate-700 px-3 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-pink-500/50"
+                  autoFocus
+                  onKeyDown={(e) => e.key === 'Enter' && handleConfirmNewProject()}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-xs text-slate-400">存储位置（可选）</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newProjectPath}
+                    onChange={(e) => setNewProjectPath(e.target.value)}
+                    placeholder="默认使用应用数据目录"
+                    className="flex-1 h-9 text-sm rounded-lg border border-slate-600 bg-slate-700 px-3 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-pink-500/50"
+                  />
+                  <button
+                    onClick={async () => {
+                      const result = await window.__electronAPI?.openFileDialog({
+                        title: '选择存储目录',
+                        properties: ['openDirectory'],
+                      })
+                      if (result?.filePaths?.[0]) {
+                        setNewProjectPath(result.filePaths[0])
+                      }
+                    }}
+                    className="px-3 h-9 text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg border border-slate-600 transition-colors"
+                  >
+                    浏览
+                  </button>
+                </div>
+                <p className="text-[10px] text-slate-500">留空则使用默认位置，推荐大多数用户使用默认设置</p>
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-2 px-4 py-3 border-t border-slate-700">
+              <button
+                onClick={() => setShowNewProjectDialog(false)}
+                className="px-4 py-2 text-xs text-slate-400 hover:text-white transition-colors"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleConfirmNewProject}
+                disabled={!newProjectName.trim() || creating}
+                className="flex items-center gap-1.5 px-4 py-2 text-xs bg-pink-500 hover:bg-pink-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {creating ? (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <CheckCircle className="w-4 h-4" />
+                )}
+                创建并打开
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

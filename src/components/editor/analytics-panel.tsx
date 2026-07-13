@@ -289,12 +289,12 @@ export function AnalyticsPanel() {
           )}
 
           <div className="p-3 bg-amber-500/10 rounded-lg text-xs text-amber-600">
-            <p className="font-medium mb-1">数据分析说明</p>
+            <p className="font-medium mb-1">去中心化模式说明</p>
             <ul className="space-y-1 list-disc list-inside">
-              <li>数据仅存储在本地，不会上传到服务器</li>
-              <li>支持按故事 ID 过滤查看不同故事的数据</li>
-              <li>节点访问统计包含停留时间和访问次数</li>
-              <li>选择分布展示每个选项的选择比例</li>
+              <li>作品导出为 .story.html 文件后，平台无法收集读者数据</li>
+              <li>如需读者行为分析，请自行托管作品并接入分析服务</li>
+              <li>推荐使用：百度统计、Google Analytics、或自建埋点系统</li>
+              <li>当前面板数据仅在编辑器预览时本地记录</li>
             </ul>
           </div>
         </div>
