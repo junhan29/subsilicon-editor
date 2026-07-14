@@ -68,6 +68,7 @@ import {
   addAnnotation as storeAddAnnotation,
   updateAnnotation as storeUpdateAnnotation,
   deleteAnnotation as storeDeleteAnnotation,
+  deleteAnnotationsByNode as storeDeleteAnnotationsByNode,
   addReply as storeAddReply,
   getAnnotationAuthor,
   setAnnotationAuthor as storeSetAuthor,
@@ -590,6 +591,14 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
     const idsToDelete = [...selectedNodeIds]
     const deletedCount = idsToDelete.length
 
+    // 清理关联的批注
+    const wid = workId || 'default'
+    idsToDelete.forEach(nodeId => {
+      storeDeleteAnnotationsByNode(wid, nodeId)
+    })
+    // 重新加载批注以更新 UI
+    setAnnotations(loadAnnotations(wid))
+
     setNodes((nds) => nds.filter((n) => !idsToDelete.includes(n.id)))
     setEdges((eds) => eds.filter((e) => !idsToDelete.includes(e.source) && !idsToDelete.includes(e.target)))
     setSelectedNodeIds([])
@@ -602,7 +611,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
       pushHistory('BATCH', `批量删除 ${deletedCount} 个节点`)
       showToast('info', `已删除 ${deletedCount} 个节点`)
     }
-  }, [selectedNodeIds, nodes, setNodes, setEdges, pushHistory])
+  }, [selectedNodeIds, nodes, setNodes, setEdges, pushHistory, workId])
 
   const createGroupFromSelection = useCallback(() => {
     if (selectedNodeIds.length < 2) {

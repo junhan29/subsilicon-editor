@@ -28,7 +28,7 @@ const DEFAULT_BINDINGS: ShortcutBinding[] = [
   { id: 'zoomToSelection', action: '缩放到选中', description: '将视图缩放到当前选中节点', defaultKeys: ['Shift', '2'], category: 'canvas', icon: 'Focus' },
   { id: 'panCanvas', action: '平移画布', description: '按住空格键拖拽平移画布', defaultKeys: ['Space'], category: 'canvas', icon: 'Move' },
   { id: 'undo', action: '撤销', description: '撤销上一步操作', defaultKeys: ['Ctrl', 'Z'], category: 'canvas', icon: 'Undo' },
-  { id: 'redo', action: '重做', description: '重做已撤销的操作', defaultKeys: ['Ctrl', 'Shift', 'Z'], category: 'canvas', icon: 'Redo' },
+  { id: 'redo', action: '重做', description: '重做已撤销的操作', defaultKeys: ['Ctrl', 'Y', 'Ctrl', 'Shift', 'Z'], category: 'canvas', icon: 'Redo' },
 
   { id: 'addDialogue', action: '添加对话节点', description: '在画布中心添加一个对话节点', defaultKeys: ['D'], category: 'node', icon: 'MessageCircle' },
   { id: 'addChoice', action: '添加选择节点', description: '在画布中心添加一个选择节点', defaultKeys: ['C'], category: 'node', icon: 'GitBranch' },
