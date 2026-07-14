@@ -479,7 +479,7 @@ function setupMenu(): void {
         { type: 'separator' },
         { role: 'toggleDevTools' },
         { type: 'separator' },
-        { role: 'toggleFullScreen' },
+        { role: 'togglefullscreen' },
       ],
     },
     {

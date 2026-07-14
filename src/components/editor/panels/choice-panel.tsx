@@ -6,6 +6,7 @@ import { Input } from '@editor/components/ui/input'
 import { Button } from '@editor/components/ui/button'
 import { Plus, X } from 'lucide-react'
 import type { BasePanelProps } from './shared-props'
+import { AiAssistButton } from '../ai-assist-button'
 
 export function ChoicePanel({ node, variables, onUpdateNode }: BasePanelProps) {
   const { data, id } = node
@@ -21,7 +22,24 @@ export function ChoicePanel({ node, variables, onUpdateNode }: BasePanelProps) {
   return (
     <>
       <div className="space-y-2">
-        <Label className="text-xs">选项列表</Label>
+        <div className="flex items-center justify-between">
+          <Label className="text-xs">选项列表</Label>
+          <AiAssistButton
+            mode="generate"
+            context={`当前选项：${((data as any).options || []).map((o: any) => o.text).join('、') || '暂无'}\n请生成2-3个适合互动叙事的选项。`}
+            onResult={(result) => {
+              const lines = result.split(/\n/).filter(l => l.trim()).map(l => l.replace(/^[-\d.\s]+/, '').trim())
+              const options = (data as any).options || []
+              const newOptions = [
+                ...options,
+                ...lines.filter(l => l).map((text: string) => ({ id: `opt-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, text }))
+              ]
+              commitOptions(newOptions)
+            }}
+            size="sm"
+            label="AI生成选项"
+          />
+        </div>
         <div className="space-y-2.5">
           {((data as any).options || []).map((opt: any, i: number) => (
             <OptionItem

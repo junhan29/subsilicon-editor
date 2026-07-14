@@ -5,8 +5,11 @@ import { Button } from '@editor/components/ui/button'
 import { Input } from '@editor/components/ui/input'
 import { Label } from '@editor/components/ui/label'
 import { Textarea } from '@editor/components/ui/textarea'
-import { X, Plus, Trash2, Users, ArrowRight, ChevronDown, ChevronRight, Copy, Check, Layers, MessageSquare } from 'lucide-react'
+import { X, Plus, Trash2, Users, ArrowRight, ChevronDown, ChevronRight, Copy, Check, Layers, MessageSquare, Sparkles } from 'lucide-react'
 import type { StoryNode, StoryCharacter, StoryEdge, StoryVariable, CharacterGender, NodeAnnotation } from '@editor/types/editor'
+import { AiAssistButton } from './ai-assist-button'
+import { enhanceCharacter } from '@editor/lib/ai'
+import { showToast } from './toast'
 import {
   NODE_TYPE_LABELS,
   CHAR_COLORS,
@@ -310,6 +313,50 @@ function PropertyPanel({
                     <Input value={char.name}
                       onChange={(e) => onUpdateCharacter({ ...char, name: e.target.value })}
                       className="h-7 text-xs" placeholder="姓名" />
+                  </div>
+
+                  {/* AI 增强 */}
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] flex items-center gap-1">
+                      <Sparkles className="w-3 h-3 text-amber-500" />
+                      AI 辅助
+                    </Label>
+                    <div className="flex flex-wrap gap-1">
+                      <button
+                        onClick={async () => {
+                          const result = await enhanceCharacter(char, 'background')
+                          if (result.background) {
+                            onUpdateCharacter({ ...char, background: result.background })
+                            showToast('success', '背景故事已生成')
+                          }
+                        }}
+                        className="px-2 py-1 text-[10px] rounded bg-amber-500/10 text-amber-600 border border-amber-500/20 hover:bg-amber-500/20 transition-colors"
+                      >
+                        生成背景
+                      </button>
+                      <button
+                        onClick={async () => {
+                          const result = await enhanceCharacter(char, 'personality')
+                          if (result.personality) {
+                            onUpdateCharacter({ ...char, personality: result.personality })
+                            showToast('success', '性格特点已生成')
+                          }
+                        }}
+                        className="px-2 py-1 text-[10px] rounded bg-amber-500/10 text-amber-600 border border-amber-500/20 hover:bg-amber-500/20 transition-colors"
+                      >
+                        生成性格
+                      </button>
+                      <button
+                        onClick={async () => {
+                          const result = await enhanceCharacter(char, 'full')
+                          onUpdateCharacter({ ...char, ...result })
+                          showToast('success', '角色设定已增强')
+                        }}
+                        className="px-2 py-1 text-[10px] rounded bg-amber-500/10 text-amber-600 border border-amber-500/20 hover:bg-amber-500/20 transition-colors"
+                      >
+                        完整增强
+                      </button>
+                    </div>
                   </div>
 
                   {/* 删除角色 */}

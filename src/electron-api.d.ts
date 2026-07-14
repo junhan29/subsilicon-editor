@@ -1,3 +1,6 @@
+declare const __APP_VERSION__: string
+declare const __APP_NAME__: string
+
 declare global {
   interface Window {
     __electronAPI?: {

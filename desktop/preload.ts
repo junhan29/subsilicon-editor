@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 
 contextBridge.exposeInMainWorld('__electronAPI', {
   readFile: (path: string): Promise<{ success: boolean; data?: number[]; error?: string }> =>
@@ -66,28 +66,32 @@ contextBridge.exposeInMainWorld('__electronAPI', {
   },
 
   onUpdateAvailable: (callback: (info: { version: string }) => void): () => void => {
-    ipcRenderer.on('update:available', (_e, info) => callback(info))
-    return () => ipcRenderer.removeListener('update:available', callback)
+    const handler = (_e: IpcRendererEvent, info: { version: string }) => callback(info)
+    ipcRenderer.on('update:available', handler)
+    return () => ipcRenderer.removeListener('update:available', handler)
   },
 
   onUpdateNotAvailable: (callback: () => void): () => void => {
-    ipcRenderer.on('update:not-available', callback)
-    return () => ipcRenderer.removeListener('update:not-available', callback)
+    const handler = () => callback()
+    ipcRenderer.on('update:not-available', handler)
+    return () => ipcRenderer.removeListener('update:not-available', handler)
   },
 
   onUpdateError: (callback: (message: string) => void): () => void => {
-    ipcRenderer.on('update:error', (_e, message) => callback(message))
-    return () => ipcRenderer.removeListener('update:error', callback)
+    const handler = (_e: IpcRendererEvent, message: string) => callback(message)
+    ipcRenderer.on('update:error', handler)
+    return () => ipcRenderer.removeListener('update:error', handler)
   },
 
   onUpdateProgress: (callback: (progress: { percent: number }) => void): () => void => {
-    ipcRenderer.on('update:progress', (_e, progress) => callback(progress))
-    return () => ipcRenderer.removeListener('update:progress', callback)
+    const handler = (_e: IpcRendererEvent, progress: { percent: number }) => callback(progress)
+    return () => ipcRenderer.removeListener('update:progress', handler)
   },
 
   onUpdateDownloaded: (callback: () => void): () => void => {
-    ipcRenderer.on('update:downloaded', callback)
-    return () => ipcRenderer.removeListener('update:downloaded', callback)
+    const handler = () => callback()
+    ipcRenderer.on('update:downloaded', handler)
+    return () => ipcRenderer.removeListener('update:downloaded', handler)
   },
 
   onNewFile: (callback: () => void): () => void => {
@@ -111,13 +115,15 @@ contextBridge.exposeInMainWorld('__electronAPI', {
   },
 
   onOpenRecent: (callback: (filePath: string) => void): () => void => {
-    ipcRenderer.on('app:open-recent', (_e, filePath) => callback(filePath))
-    return () => ipcRenderer.removeListener('app:open-recent', callback)
+    const handler = (_e: IpcRendererEvent, filePath: string) => callback(filePath)
+    ipcRenderer.on('app:open-recent', handler)
+    return () => ipcRenderer.removeListener('app:open-recent', handler)
   },
 
   onOpenFileWithPath: (callback: (filePath: string) => void): () => void => {
-    ipcRenderer.on('app:open-file-with-path', (_e, filePath) => callback(filePath))
-    return () => ipcRenderer.removeListener('app:open-file-with-path', callback)
+    const handler = (_e: IpcRendererEvent, filePath: string) => callback(filePath)
+    ipcRenderer.on('app:open-file-with-path', handler)
+    return () => ipcRenderer.removeListener('app:open-file-with-path', handler)
   },
 
   onAbout: (callback: () => void): () => void => {

@@ -23,6 +23,27 @@ export {
 } from './services/scene-service'
 export { generateOutline } from './services/outline-service'
 export { generateFullStory } from './services/full-story-service'
+export {
+  suggestNextPlot,
+  generateNodeContent,
+  enhanceCharacter,
+} from './services/story-assist-service'
+export type { PlotSuggestion, StoryBranchSuggestion } from './services/story-assist-service'
+
+export {
+  generateMedia,
+  optimizePrompt,
+  generateCharacterPrompt,
+  buildConsistentImagePrompt,
+  getMediaProviderConfig,
+  saveMediaProviderConfig,
+} from './services/media-generation-service'
+export type {
+  ImageGenerationParams,
+  VideoGenerationParams,
+  MediaGenerationResult,
+  MediaProviderConfig,
+} from './services/media-generation-service'
 
 export {
   streamPolishText,

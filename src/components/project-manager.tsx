@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Plus, FolderOpen, Settings, Trash2, Copy, Edit3, MoreHorizontal, BookOpen, Clock, FileText, Sparkles, RefreshCw, Download, RotateCcw, AlertCircle, CheckCircle2, X, FolderSync, CheckCircle } from 'lucide-react'
+import { Plus, FolderOpen, Settings, Trash2, Copy, Edit3, MoreHorizontal, BookOpen, Clock, FileText, Sparkles, RefreshCw, Download, RotateCcw, AlertCircle, CheckCircle2, X, FolderSync, CheckCircle, Search, Grid, List, Star, HardDrive, Hash } from 'lucide-react'
 import type { StoryGraph } from '@editor/types/editor'
 import { getAllWorks, loadWork, saveWork, deleteWork, generateProjectId, type StoredWork } from '@editor/lib/local-db/work-store'
 
@@ -34,6 +34,9 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings }: 
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null)
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+  const [sortBy, setSortBy] = useState<'lastOpened' | 'created' | 'name'>('lastOpened')
   
   // 新建项目对话框状态
   const [showNewProjectDialog, setShowNewProjectDialog] = useState(false)
@@ -285,6 +288,20 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings }: 
     return d.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })
   }
 
+  // 过滤和排序
+  const filteredWorks = works
+    .filter((w) => {
+      if (!searchQuery.trim()) return true
+      const q = searchQuery.toLowerCase()
+      return w.name.toLowerCase().includes(q)
+    })
+    .sort((a, b) => {
+      if (sortBy === 'lastOpened') return (b.lastOpened || 0) - (a.lastOpened || 0)
+      if (sortBy === 'created') return (b.createdAt || 0) - (a.createdAt || 0)
+      if (sortBy === 'name') return a.name.localeCompare(b.name)
+      return 0
+    })
+
   return (
     <div className="h-screen w-screen bg-slate-900 flex flex-col overflow-hidden">
       {/* 顶栏 */}
@@ -449,9 +466,58 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings }: 
           </div>
         ) : (
           <div>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-medium text-slate-300">最近的项目</h2>
-              <div className="flex items-center gap-2">
+            {/* 工具栏：搜索、排序、视图切换 */}
+            <div className="flex items-center gap-3 mb-4">
+              <div className="relative flex-1 max-w-xs">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="搜索项目..."
+                  className="w-full h-8 pl-8 pr-3 text-xs rounded-lg border border-slate-700 bg-slate-800 text-white placeholder:text-slate-500 focus:outline-none focus:border-pink-500/50"
+                />
+              </div>
+              <div className="flex items-center gap-1 bg-slate-800 rounded-lg p-0.5 border border-slate-700">
+                <button
+                  onClick={() => setSortBy('lastOpened')}
+                  className={`px-2 py-1 text-[10px] rounded-md transition-colors ${sortBy === 'lastOpened' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'}`}
+                  title="最近打开"
+                >
+                  <Clock className="w-3 h-3" />
+                </button>
+                <button
+                  onClick={() => setSortBy('created')}
+                  className={`px-2 py-1 text-[10px] rounded-md transition-colors ${sortBy === 'created' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'}`}
+                  title="创建时间"
+                >
+                  <Star className="w-3 h-3" />
+                </button>
+                <button
+                  onClick={() => setSortBy('name')}
+                  className={`px-2 py-1 text-[10px] rounded-md transition-colors ${sortBy === 'name' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'}`}
+                  title="名称"
+                >
+                  <Hash className="w-3 h-3" />
+                </button>
+              </div>
+              <div className="flex items-center gap-1 bg-slate-800 rounded-lg p-0.5 border border-slate-700">
+                <button
+                  onClick={() => setViewMode('grid')}
+                  className={`p-1 rounded-md transition-colors ${viewMode === 'grid' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'}`}
+                  title="网格视图"
+                >
+                  <Grid className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`p-1 rounded-md transition-colors ${viewMode === 'list' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'}`}
+                  title="列表视图"
+                >
+                  <List className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              <div className="flex items-center gap-2 ml-auto">
                 <button
                   onClick={handleImportProject}
                   disabled={importing}
@@ -473,104 +539,217 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings }: 
                 </button>
               </div>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4">
-              {works.map((work) => (
-                <div
-                  key={work.id}
-                  className="group relative bg-slate-800/50 rounded-xl border border-slate-700/50 hover:border-pink-500/50 transition-all overflow-hidden cursor-pointer"
-                  onClick={() => {
-                    if (renamingId !== work.id) handleOpenProject(work)
-                  }}
-                >
-                  {/* 缩略图占位 */}
-                  <div className="aspect-[16/10] bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center">
-                    {work.thumbnail ? (
-                      <img src={work.thumbnail} alt={work.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="flex flex-col items-center gap-1 text-slate-600">
-                        <BookOpen className="w-8 h-8" />
-                        <span className="text-[10px]">{work.nodeCount} 个节点</span>
-                      </div>
-                    )}
-                  </div>
 
-                  {/* 信息区 */}
-                  <div className="p-3">
-                    {renamingId === work.id ? (
-                      <input
-                        value={renameValue}
-                        onChange={(e) => setRenameValue(e.target.value)}
-                        onBlur={confirmRename}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') confirmRename()
-                          if (e.key === 'Escape') setRenamingId(null)
-                        }}
-                        className="w-full text-xs font-medium bg-slate-700 border border-pink-500 rounded px-1.5 py-0.5 text-white outline-none"
-                        autoFocus
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                    ) : (
-                      <p className="text-xs font-medium text-white truncate">{work.name}</p>
-                    )}
-                    <div className="flex items-center gap-2 mt-1.5 text-[10px] text-slate-500">
-                      <Clock className="w-3 h-3" />
-                      <span>{formatDate(work.lastOpened)}</span>
-                      <span className="ml-auto">{work.nodeCount} 节点</span>
-                    </div>
-                  </div>
+            {/* 项目统计 */}
+            <div className="flex items-center gap-4 mb-4 text-[11px] text-slate-500">
+              <span className="flex items-center gap-1">
+                <HardDrive className="w-3 h-3" />
+                {works.length} 个项目
+              </span>
+              {searchQuery && (
+                <span>
+                  搜索到 {filteredWorks.length} 个结果
+                </span>
+              )}
+            </div>
 
-                  {/* 菜单按钮 */}
-                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <div className="relative">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setMenuOpenId(menuOpenId === work.id ? null : work.id)
-                        }}
-                        className="p-1 rounded-lg bg-black/50 hover:bg-black/70 text-white transition-colors"
-                      >
-                        <MoreHorizontal className="w-4 h-4" />
-                      </button>
-                      {menuOpenId === work.id && (
-                        <>
-                          <div className="fixed inset-0 z-10" onClick={() => setMenuOpenId(null)} />
-                          <div className="absolute right-0 top-full mt-1 z-20 w-36 bg-slate-800 rounded-lg border border-slate-700 shadow-xl overflow-hidden">
-                            <button
-                              onClick={(e) => { e.stopPropagation(); startRename(work) }}
-                              className="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-300 hover:bg-slate-700 transition-colors"
-                            >
-                              <Edit3 className="w-3.5 h-3.5" />
-                              重命名
-                            </button>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleDuplicate(work) }}
-                              className="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-300 hover:bg-slate-700 transition-colors"
-                            >
-                              <Copy className="w-3.5 h-3.5" />
-                              复制
-                            </button>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleDelete(work.id) }}
-                              className="w-full flex items-center gap-2 px-3 py-2 text-xs text-red-400 hover:bg-slate-700 transition-colors"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                              删除
-                            </button>
-                          </div>
-                        </>
+            {/* 网格视图 */}
+            {viewMode === 'grid' ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4">
+                {filteredWorks.map((work) => (
+                  <div
+                    key={work.id}
+                    className="group relative bg-slate-800/50 rounded-xl border border-slate-700/50 hover:border-pink-500/50 transition-all overflow-hidden cursor-pointer"
+                    onClick={() => {
+                      if (renamingId !== work.id) handleOpenProject(work)
+                    }}
+                  >
+                    {/* 缩略图占位 */}
+                    <div className="aspect-[16/10] bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center">
+                      {work.thumbnail ? (
+                        <img src={work.thumbnail} alt={work.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="flex flex-col items-center gap-1 text-slate-600">
+                          <BookOpen className="w-8 h-8" />
+                          <span className="text-[10px]">{work.nodeCount} 个节点</span>
+                        </div>
                       )}
                     </div>
+
+                    {/* 信息区 */}
+                    <div className="p-3">
+                      {renamingId === work.id ? (
+                        <input
+                          value={renameValue}
+                          onChange={(e) => setRenameValue(e.target.value)}
+                          onBlur={confirmRename}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') confirmRename()
+                            if (e.key === 'Escape') setRenamingId(null)
+                          }}
+                          className="w-full text-xs font-medium bg-slate-700 border border-pink-500 rounded px-1.5 py-0.5 text-white outline-none"
+                          autoFocus
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      ) : (
+                        <p className="text-xs font-medium text-white truncate">{work.name}</p>
+                      )}
+                      <div className="flex items-center gap-2 mt-1.5 text-[10px] text-slate-500">
+                        <Clock className="w-3 h-3" />
+                        <span>{formatDate(work.lastOpened)}</span>
+                        <span className="ml-auto">{work.nodeCount} 节点</span>
+                      </div>
+                    </div>
+
+                    {/* 菜单按钮 */}
+                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="relative">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setMenuOpenId(menuOpenId === work.id ? null : work.id)
+                          }}
+                          className="p-1 rounded-lg bg-black/50 hover:bg-black/70 text-white transition-colors"
+                        >
+                          <MoreHorizontal className="w-4 h-4" />
+                        </button>
+                        {menuOpenId === work.id && (
+                          <>
+                            <div className="fixed inset-0 z-10" onClick={() => setMenuOpenId(null)} />
+                            <div className="absolute right-0 top-full mt-1 z-20 w-36 bg-slate-800 rounded-lg border border-slate-700 shadow-xl overflow-hidden">
+                              <button
+                                onClick={(e) => { e.stopPropagation(); startRename(work) }}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-300 hover:bg-slate-700 transition-colors"
+                              >
+                                <Edit3 className="w-3.5 h-3.5" />
+                                重命名
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleDuplicate(work) }}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-300 hover:bg-slate-700 transition-colors"
+                              >
+                                <Copy className="w-3.5 h-3.5" />
+                                复制
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleDelete(work.id) }}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-red-400 hover:bg-slate-700 transition-colors"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                删除
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              /* 列表视图 */
+              <div className="space-y-1">
+                {filteredWorks.map((work) => (
+                  <div
+                    key={work.id}
+                    className="group flex items-center gap-3 p-3 bg-slate-800/50 rounded-lg border border-slate-700/50 hover:border-pink-500/50 transition-all cursor-pointer"
+                    onClick={() => {
+                      if (renamingId !== work.id) handleOpenProject(work)
+                    }}
+                  >
+                    {/* 图标 */}
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center shrink-0">
+                      {work.thumbnail ? (
+                        <img src={work.thumbnail} alt={work.name} className="w-full h-full object-cover rounded-lg" />
+                      ) : (
+                        <BookOpen className="w-5 h-5 text-slate-500" />
+                      )}
+                    </div>
+
+                    {/* 信息 */}
+                    <div className="flex-1 min-w-0">
+                      {renamingId === work.id ? (
+                        <input
+                          value={renameValue}
+                          onChange={(e) => setRenameValue(e.target.value)}
+                          onBlur={confirmRename}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') confirmRename()
+                            if (e.key === 'Escape') setRenamingId(null)
+                          }}
+                          className="w-full text-xs font-medium bg-slate-700 border border-pink-500 rounded px-1.5 py-0.5 text-white outline-none"
+                          autoFocus
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      ) : (
+                        <p className="text-xs font-medium text-white truncate">{work.name}</p>
+                      )}
+                      <div className="flex items-center gap-3 mt-0.5 text-[10px] text-slate-500">
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {formatDate(work.lastOpened)}
+                        </span>
+                        <span>{work.nodeCount} 节点</span>
+                        <span>{work.edgeCount || 0} 连接</span>
+                        {work.customPath && (
+                          <span className="truncate text-slate-600">{work.customPath}</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 操作菜单 */}
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                      <div className="relative">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setMenuOpenId(menuOpenId === work.id ? null : work.id)
+                          }}
+                          className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-400 transition-colors"
+                        >
+                          <MoreHorizontal className="w-4 h-4" />
+                        </button>
+                        {menuOpenId === work.id && (
+                          <>
+                            <div className="fixed inset-0 z-10" onClick={() => setMenuOpenId(null)} />
+                            <div className="absolute right-0 top-full mt-1 z-20 w-36 bg-slate-800 rounded-lg border border-slate-700 shadow-xl overflow-hidden">
+                              <button
+                                onClick={(e) => { e.stopPropagation(); startRename(work) }}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-300 hover:bg-slate-700 transition-colors"
+                              >
+                                <Edit3 className="w-3.5 h-3.5" />
+                                重命名
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleDuplicate(work) }}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-300 hover:bg-slate-700 transition-colors"
+                              >
+                                <Copy className="w-3.5 h-3.5" />
+                                复制
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleDelete(work.id) }}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-red-400 hover:bg-slate-700 transition-colors"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                删除
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
 
       {/* 底部信息 */}
       <footer className="flex items-center justify-between px-6 py-2 border-t border-slate-800 bg-slate-900/80">
-        <span className="text-[10px] text-slate-600">SubSilicon Editor 1.3.0</span>
+        <span className="text-[10px] text-slate-600">{__APP_NAME__} {__APP_VERSION__}</span>
         <span className="text-[10px] text-slate-600">项目存储在本地数据库中</span>
       </footer>
 

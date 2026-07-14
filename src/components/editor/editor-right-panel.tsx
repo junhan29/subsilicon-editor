@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, memo } from 'react'
 import { shallowEqual } from '@editor/lib/utils'
 import { Settings, Users, Image, Music, ChevronDown, ChevronUp, X, Plus, Edit3, Layers, BarChart3, Trash2, ShieldCheck, GitBranch, MessageSquare, Activity, Lock, Sparkles, Wand2, DollarSign } from 'lucide-react'
+import { showToast } from './toast'
 import { Button } from '@editor/components/ui/button'
 import { LivePreview } from './live-preview'
 import { PropertyPanel } from './property-panel'
@@ -13,6 +14,8 @@ import { AnnotationPanel } from './annotation-panel'
 import { MemoizedWritingStatsPanel } from './writing-stats-panel'
 import { IncomePanel } from './income-panel'
 import { AiPanel } from './ai-panel'
+import { AiStoryAssistPanel } from './ai-story-assist-panel'
+import { AiMediaPanel } from './ai-media-panel'
 import { AnalyticsPanel } from './analytics-panel'
 import { PluginManagerPanel } from './plugin-manager-panel'
 import { generateDefaultAvatar } from '@editor/lib/avatar-utils'
@@ -581,6 +584,22 @@ function EditorRightPanel({
                 <p className="text-[10px] text-slate-600 mt-0.5">JPG / PNG / WebP，支持批量</p>
               </div>
 
+              {/* AI 媒体生成 */}
+              <div className="border border-slate-700 rounded-lg p-3 bg-slate-800/30">
+                <AiMediaPanel
+                  characters={characters}
+                  onImageGenerated={(url, name) => {
+                    const newScene: ComicScene = {
+                      id: `scene-${Date.now()}`,
+                      name: `AI生成-${name.slice(0, 20)}`,
+                      backgroundImage: url,
+                    }
+                    onScenesChange?.([...scenes, newScene])
+                    showToast('success', '已添加到场景库')
+                  }}
+                />
+              </div>
+
               <div className="space-y-2">
                 {scenes.map((scene) => (
                   <div
@@ -774,9 +793,13 @@ function EditorRightPanel({
           </div>}
           
           {activeTab === 'ai' && <div className="flex-1 overflow-y-auto p-0 m-0">
-            <AiPanel
-              onApplyStory={onApplyStory || (() => {})}
-              onAddCharacters={onAddCharacters || (() => {})}
+            <AiStoryAssistPanel
+              nodes={nodes}
+              edges={edges}
+              characters={characters}
+              onApplySuggestion={(nodeType, content) => {
+                showToast('info', `已生成 ${nodeType} 内容，请在画布中添加节点并粘贴`)
+              }}
             />
           </div>}
 

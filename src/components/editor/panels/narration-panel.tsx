@@ -8,6 +8,7 @@ import { Eye } from 'lucide-react'
 import type { BasePanelProps } from './shared-props'
 import { TEXT_ANIMATION_TYPES } from './shared-props'
 import { useDebouncedState } from '@editor/lib/use-debounced-state'
+import { AiAssistButton } from '../ai-assist-button'
 
 export function NarrationPanel({ node, onUpdateNode }: BasePanelProps) {
   const { data, id } = node
@@ -21,7 +22,41 @@ export function NarrationPanel({ node, onUpdateNode }: BasePanelProps) {
   return (
     <>
       <div className="space-y-2">
-        <Label className="text-xs">旁白文本</Label>
+        <div className="flex items-center justify-between">
+          <Label className="text-xs">旁白文本</Label>
+          <div className="flex items-center gap-1">
+            <AiAssistButton
+              mode="polish"
+              context={text}
+              onResult={(result) => {
+                setText(result)
+                onUpdateNode(id, { ...data, text: result })
+              }}
+              size="sm"
+            />
+            <AiAssistButton
+              mode="continue"
+              context={`旁白上下文：${text}`}
+              onResult={(result) => {
+                const newText = text + result
+                setText(newText)
+                onUpdateNode(id, { ...data, text: newText })
+              }}
+              size="sm"
+              label="续写"
+            />
+            <AiAssistButton
+              mode="expand"
+              context={`旁白上下文：${text}`}
+              onResult={(result) => {
+                setText(result)
+                onUpdateNode(id, { ...data, text: result })
+              }}
+              size="sm"
+              label="扩写"
+            />
+          </div>
+        </div>
         <Textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
