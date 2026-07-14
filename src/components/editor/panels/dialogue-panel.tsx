@@ -19,13 +19,13 @@ export function DialoguePanel({ node, characters, variables, assets, scenes, onU
   const sprites = selectedChar?.sprites || []
   const currentEmotion = (data as any).emotion || ''
 
-  const [text, setText] = useDebouncedState(
+  const [text, setText, flushText] = useDebouncedState(
     (data as any).text || '',
     300,
     (value) => onUpdateNode(id, { ...data, text: value })
   )
 
-  const [emotion, setEmotion] = useDebouncedState(
+  const [emotion, setEmotion, flushEmotion] = useDebouncedState(
     (data as any).emotion || '',
     300,
     (value) => onUpdateNode(id, { ...data, emotion: value })
@@ -88,7 +88,6 @@ export function DialoguePanel({ node, characters, variables, assets, scenes, onU
               context={text}
               onResult={(result) => {
                 setText(result)
-                onUpdateNode(id, { ...data, text: result })
               }}
               size="sm"
             />
@@ -108,7 +107,6 @@ export function DialoguePanel({ node, characters, variables, assets, scenes, onU
               context={`角色：${selectedChar?.name || '未指定'}\n当前台词：${text}`}
               onResult={(result) => {
                 setText(result)
-                onUpdateNode(id, { ...data, text: result })
               }}
               size="sm"
               label="扩写"
@@ -118,10 +116,7 @@ export function DialoguePanel({ node, characters, variables, assets, scenes, onU
         <Textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
-          onBlur={() => {
-            const finalValue = text
-            onUpdateNode(id, { ...data, text: finalValue })
-          }}
+          onBlur={() => flushText()}
           placeholder="输入角色台词..."
           className="min-h-[100px] resize-none text-sm"
         />
@@ -132,10 +127,7 @@ export function DialoguePanel({ node, characters, variables, assets, scenes, onU
         <Input
           value={emotion}
           onChange={(e) => setEmotion(e.target.value)}
-          onBlur={() => {
-            const finalValue = emotion
-            onUpdateNode(id, { ...data, emotion: finalValue })
-          }}
+          onBlur={() => flushEmotion()}
           placeholder="如：开心、愤怒、惊讶"
           className="text-sm"
         />

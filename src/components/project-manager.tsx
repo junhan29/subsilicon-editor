@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Plus, FolderOpen, Settings, Trash2, Copy, Edit3, MoreHorizontal, BookOpen, Clock, FileText, Sparkles, RefreshCw, Download, RotateCcw, AlertCircle, CheckCircle2, X, FolderSync, CheckCircle, Search, Grid, List, Star, HardDrive, Hash } from 'lucide-react'
+import { Plus, FolderOpen, Settings, Trash2, Copy, Edit3, MoreHorizontal, BookOpen, Clock, FileText, Sparkles, RefreshCw, Download, RotateCcw, AlertCircle, CheckCircle2, X, FolderSync, CheckCircle, Search, Grid, List, Star, HardDrive, Hash, AlertTriangle } from 'lucide-react'
 import type { StoryGraph } from '@editor/types/editor'
 import { getAllWorks, loadWork, saveWork, deleteWork, generateProjectId, type StoredWork } from '@editor/lib/local-db/work-store'
 
@@ -46,6 +46,10 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings }: 
   
   // 导入项目状态
   const [importing, setImporting] = useState(false)
+
+  // 删除确认对话框状态
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
+  const [deleteConfirmName, setDeleteConfirmName] = useState('')
 
   const loadWorks = useCallback(async () => {
     setLoading(true)
@@ -199,6 +203,8 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings }: 
       }
     } catch (error) {
       console.error('导入项目失败:', error)
+      // 添加错误提示，用户可见
+      alert(`导入项目失败：${error instanceof Error ? error.message : '文件格式不正确或已损坏'}`)
     }
     setImporting(false)
   }
@@ -239,7 +245,14 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings }: 
   const handleDelete = async (id: string) => {
     await deleteWork(id)
     setMenuOpenId(null)
+    setDeleteConfirmId(null)
     loadWorks()
+  }
+
+  const showDeleteConfirm = (work: StoredWork) => {
+    setDeleteConfirmId(work.id)
+    setDeleteConfirmName(work.name)
+    setMenuOpenId(null)
   }
 
   const handleDuplicate = async (work: StoredWork) => {
@@ -252,7 +265,7 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings }: 
       createdAt: now,
       lastOpened: now,
       updatedAt: now,
-      editorData: { ...work.editorData },
+      editorData: JSON.parse(JSON.stringify(work.editorData)), // 深拷贝避免引用共享
     }
     await saveWork(copy)
     setMenuOpenId(null)
@@ -632,12 +645,12 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings }: 
                                 复制
                               </button>
                               <button
-                                onClick={(e) => { e.stopPropagation(); handleDelete(work.id) }}
-                                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-red-400 hover:bg-slate-700 transition-colors"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                                删除
-                              </button>
+                              onClick={(e) => { e.stopPropagation(); showDeleteConfirm(work) }}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-xs text-red-400 hover:bg-slate-700 transition-colors"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              删除
+                            </button>
                             </div>
                           </>
                         )}
@@ -728,12 +741,12 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings }: 
                                 复制
                               </button>
                               <button
-                                onClick={(e) => { e.stopPropagation(); handleDelete(work.id) }}
-                                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-red-400 hover:bg-slate-700 transition-colors"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                                删除
-                              </button>
+                              onClick={(e) => { e.stopPropagation(); showDeleteConfirm(work) }}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-xs text-red-400 hover:bg-slate-700 transition-colors"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              删除
+                            </button>
                             </div>
                           </>
                         )}
@@ -766,7 +779,7 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings }: 
                 <X className="w-4 h-4" />
               </button>
             </div>
-            
+
             <div className="p-4 space-y-4">
               <div className="space-y-2">
                 <label className="text-xs text-slate-400">项目名称 *</label>
@@ -780,7 +793,7 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings }: 
                   onKeyDown={(e) => e.key === 'Enter' && handleConfirmNewProject()}
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <label className="text-xs text-slate-400">存储位置（可选）</label>
                 <div className="flex gap-2">
@@ -809,7 +822,7 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings }: 
                 <p className="text-[10px] text-slate-500">留空则使用默认位置，推荐大多数用户使用默认设置</p>
               </div>
             </div>
-            
+
             <div className="flex justify-end gap-2 px-4 py-3 border-t border-slate-700">
               <button
                 onClick={() => setShowNewProjectDialog(false)}
@@ -829,6 +842,41 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings }: 
                 )}
                 创建并打开
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 删除确认对话框 */}
+      {deleteConfirmId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-slate-800 rounded-xl border border-slate-700 shadow-2xl w-full max-w-sm mx-4">
+            <div className="p-4">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-full bg-red-500/15 flex items-center justify-center">
+                  <AlertTriangle className="w-5 h-5 text-red-400" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-medium text-white">确认删除项目？</h3>
+                  <p className="text-xs text-slate-400 mt-0.5">「{deleteConfirmName}」将被永久删除</p>
+                </div>
+              </div>
+              <p className="text-xs text-slate-500 mb-4 pl-[52px]">此操作无法撤销，项目数据将无法恢复。</p>
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={() => setDeleteConfirmId(null)}
+                  className="px-4 py-2 text-xs text-slate-400 hover:text-white transition-colors"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={() => handleDelete(deleteConfirmId)}
+                  className="flex items-center gap-1.5 px-4 py-2 text-xs bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  确认删除
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -16,9 +16,10 @@ interface AiStoryAssistPanelProps {
 export function AiStoryAssistPanel({ nodes, edges, characters, onApplySuggestion }: AiStoryAssistPanelProps) {
   const [suggestion, setSuggestion] = useState<PlotSuggestion | null>(null)
   const [loading, setLoading] = useState(false)
-  const [context, setContext] = useState('')
+  const [suggestContext, setSuggestContext] = useState('') // 剧情推演的上下文
   const [generatedContent, setGeneratedContent] = useState('')
   const [genLoading, setGenLoading] = useState(false)
+  const [genContext, setGenContext] = useState('') // 内容生成的上下文
   const [selectedNodeType, setSelectedNodeType] = useState('dialogue')
 
   const handleSuggest = async () => {
@@ -30,13 +31,14 @@ export function AiStoryAssistPanel({ nodes, edges, characters, onApplySuggestion
 
     setLoading(true)
     try {
-      const result = await suggestNextPlot(nodes, edges, characters, context)
+      const result = await suggestNextPlot(nodes, edges, characters, suggestContext)
       setSuggestion(result)
       showToast('success', '剧情推演完成')
     } catch (e) {
       showToast('error', '推演失败: ' + (e instanceof Error ? e.message : '未知错误'))
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   const handleGenerateContent = async () => {
@@ -46,20 +48,21 @@ export function AiStoryAssistPanel({ nodes, edges, characters, onApplySuggestion
       return
     }
 
-    if (!context.trim()) {
+    if (!genContext.trim()) {
       showToast('error', '请输入生成要求')
       return
     }
 
     setGenLoading(true)
     try {
-      const result = await generateNodeContent(selectedNodeType, context, characters)
+      const result = await generateNodeContent(selectedNodeType, genContext, characters)
       setGeneratedContent(result)
       showToast('success', '内容生成完成')
     } catch (e) {
       showToast('error', '生成失败: ' + (e instanceof Error ? e.message : '未知错误'))
+    } finally {
+      setGenLoading(false)
     }
-    setGenLoading(false)
   }
 
   return (
@@ -75,8 +78,8 @@ export function AiStoryAssistPanel({ nodes, edges, characters, onApplySuggestion
         </p>
 
         <textarea
-          value={context}
-          onChange={(e) => setContext(e.target.value)}
+          value={suggestContext}
+          onChange={(e) => setSuggestContext(e.target.value)}
           placeholder="输入额外要求（可选）：例如'希望剧情更加悬疑'、'增加感情线'等"
           className="w-full h-16 text-xs rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 resize-none"
         />
@@ -170,8 +173,8 @@ export function AiStoryAssistPanel({ nodes, edges, characters, onApplySuggestion
         </div>
 
         <textarea
-          value={context}
-          onChange={(e) => setContext(e.target.value)}
+          value={genContext}
+          onChange={(e) => setGenContext(e.target.value)}
           placeholder={`描述你要生成的${selectedNodeType === 'dialogue' ? '对话' : selectedNodeType === 'narration' ? '旁白' : '选项'}内容...`}
           className="w-full h-20 text-xs rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 resize-none"
         />
