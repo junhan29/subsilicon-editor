@@ -5,9 +5,8 @@ import { Button } from '@editor/components/ui/button'
 import { Input } from '@editor/components/ui/input'
 import { Label } from '@editor/components/ui/label'
 import { Textarea } from '@editor/components/ui/textarea'
-import { X, Plus, Trash2, Users, ArrowRight, ChevronDown, ChevronRight, Copy, Check, Layers, MessageSquare, Sparkles } from 'lucide-react'
+import { X, Plus, Trash2, Users, ArrowRight, ChevronDown, ChevronRight, Copy, Check, Layers, MessageSquare, Sparkles, Loader2, AlertTriangle } from 'lucide-react'
 import type { StoryNode, StoryCharacter, StoryEdge, StoryVariable, CharacterGender, NodeAnnotation } from '@editor/types/editor'
-import { AiAssistButton } from './ai-assist-button'
 import { enhanceCharacter } from '@editor/lib/ai'
 import { showToast } from './toast'
 import {
@@ -24,6 +23,63 @@ import {
   FEAR_TAGS,
   CHARACTER_CUSTOM_TAGS,
 } from '@editor/constants'
+
+// AI 辅助增强组件（带 loading 状态）
+function CharacterAIEnhance({ char, onUpdateCharacter }: { char: StoryCharacter; onUpdateCharacter: (char: StoryCharacter) => void }) {
+  const [loading, setLoading] = useState<string | null>(null)
+
+  const handleEnhance = async (type: 'background' | 'personality' | 'appearance' | 'speech' | 'full') => {
+    setLoading(type)
+    try {
+      const result = await enhanceCharacter(char, type)
+      if (type === 'background' && result.background) {
+        onUpdateCharacter({ ...char, background: result.background })
+        showToast('success', '背景故事已生成')
+      } else if (type === 'personality' && result.personality) {
+        onUpdateCharacter({ ...char, personality: result.personality })
+        showToast('success', '性格特点已生成')
+      } else if (type === 'appearance' && result.appearance) {
+        onUpdateCharacter({ ...char, appearance: result.appearance })
+        showToast('success', '外貌特征已生成')
+      } else if (type === 'speech' && result.speech) {
+        onUpdateCharacter({ ...char, speech: { ...char.speech, ...result.speech } })
+        showToast('success', '说话风格已生成')
+      } else if (type === 'full') {
+        onUpdateCharacter({ ...char, ...result })
+        showToast('success', '角色设定已完整增强')
+      } else {
+        showToast('error', '生成失败，请重试')
+      }
+    } catch (e) {
+      showToast('error', '生成失败: ' + (e instanceof Error ? e.message : '未知错误'))
+    } finally {
+      setLoading(null)
+    }
+  }
+
+  const buttonClass = "px-2 py-1 text-[10px] rounded bg-amber-500/10 text-amber-600 border border-amber-500/20 hover:bg-amber-500/20 transition-colors disabled:opacity-50 flex items-center gap-1"
+
+  return (
+    <div className="flex flex-wrap gap-1">
+      <button onClick={() => handleEnhance('background')} disabled={!!loading} className={buttonClass}>
+        {loading === 'background' && <Loader2 className="w-2.5 h-2.5 animate-spin" />}
+        生成背景
+      </button>
+      <button onClick={() => handleEnhance('personality')} disabled={!!loading} className={buttonClass}>
+        {loading === 'personality' && <Loader2 className="w-2.5 h-2.5 animate-spin" />}
+        生成性格
+      </button>
+      <button onClick={() => handleEnhance('appearance')} disabled={!!loading} className={buttonClass}>
+        {loading === 'appearance' && <Loader2 className="w-2.5 h-2.5 animate-spin" />}
+        生成外貌
+      </button>
+      <button onClick={() => handleEnhance('full')} disabled={!!loading} className={buttonClass}>
+        {loading === 'full' && <Loader2 className="w-2.5 h-2.5 animate-spin" />}
+        完整增强
+      </button>
+    </div>
+  )
+}
 
 // 引入拆分的面板组件
 import { DialoguePanel } from './panels/dialogue-panel'
@@ -286,6 +342,65 @@ function PropertyPanel({
             <p className="text-[10px] text-muted-foreground">已选 {tags.length}/10</p>
           </div>
 
+          {/* 变量管理 */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs">变量管理</Label>
+              <button
+                onClick={() => {
+                  const newVar: StoryVariable = {
+                    id: `var-${Date.now()}`,
+                    name: `变量${variables.length + 1}`,
+                    type: 'number',
+                    defaultValue: 0,
+                    description: '',
+                  }
+                  onUpdateVariables?.([...variables, newVar])
+                }}
+                className="flex items-center gap-1 px-2 py-1 text-[10px] rounded bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors"
+              >
+                <Plus className="w-3 h-3" />
+                添加变量
+              </button>
+            </div>
+            {variables.length > 0 ? (
+              <div className="space-y-1.5">
+                {variables.map((v) => (
+                  <div key={v.id} className="flex items-center gap-2 p-2 rounded-lg border border-border/60 bg-muted/30">
+                    <Input
+                      value={v.name}
+                      onChange={(e) => onUpdateVariables?.(variables.map((vv) => vv.id === v.id ? { ...vv, name: e.target.value } : vv))}
+                      className="h-6 text-xs w-20" placeholder="变量名"
+                    />
+                    <select
+                      value={v.type}
+                      onChange={(e) => onUpdateVariables?.(variables.map((vv) => vv.id === v.id ? { ...vv, type: e.target.value as 'number' | 'string' | 'boolean' } : vv))}
+                      className="h-6 text-xs rounded-md border border-slate-600 bg-slate-700 px-2 text-white"
+                    >
+                      <option value="number">数字</option>
+                      <option value="string">文本</option>
+                      <option value="boolean">布尔</option>
+                    </select>
+                    <Input
+                      value={String(v.defaultValue ?? '')}
+                      onChange={(e) => onUpdateVariables?.(variables.map((vv) => vv.id === v.id ? { ...vv, defaultValue: v.type === 'number' ? Number(e.target.value) : e.target.value } : vv))}
+                      className="h-6 text-xs flex-1" placeholder="默认值"
+                    />
+                    <button
+                      onClick={() => onUpdateVariables?.(variables.filter((vv) => vv.id !== v.id))}
+                      className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-[10px] text-muted-foreground">暂无变量，点击上方按钮添加</p>
+            )}
+            <p className="text-[10px] text-muted-foreground">变量可在选项节点中设置效果，用于记录好感度等数据</p>
+          </div>
+
           {/* 角色管理部分 */}
           {characters.map((char) => (
             <div key={char.id} className="rounded-lg border border-border/60 bg-background overflow-hidden">
@@ -308,11 +423,154 @@ function PropertyPanel({
               {expandedCharId === char.id && (
                 <div className="px-3 pb-3 space-y-3 border-t border-border/40 pt-3">
                   {/* 基本信息 */}
-                  <div className="space-y-1.5">
+                  <div className="space-y-2">
                     <Label className="text-[10px]">基本信息</Label>
-                    <Input value={char.name}
-                      onChange={(e) => onUpdateCharacter({ ...char, name: e.target.value })}
-                      className="h-7 text-xs" placeholder="姓名" />
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <p className="text-[10px] text-muted-foreground mb-1">姓名</p>
+                        <Input value={char.name}
+                          onChange={(e) => onUpdateCharacter({ ...char, name: e.target.value })}
+                          className="h-7 text-xs" placeholder="角色名称" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-muted-foreground mb-1">性别</p>
+                        <select
+                          value={char.gender || 'unknown'}
+                          onChange={(e) => onUpdateCharacter({ ...char, gender: e.target.value as CharacterGender })}
+                          className="w-full h-7 text-xs rounded-md border border-slate-600 bg-slate-700 px-2 text-white focus:outline-none focus:ring-2 focus:ring-pink-500/50"
+                        >
+                          <option value="male">男</option>
+                          <option value="female">女</option>
+                          <option value="other">其他</option>
+                          <option value="unknown">未设定</option>
+                        </select>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-muted-foreground mb-1">年龄</p>
+                        <Input value={char.age || ''}
+                          onChange={(e) => onUpdateCharacter({ ...char, age: e.target.value })}
+                          className="h-7 text-xs" placeholder="如：18" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-muted-foreground mb-1">职业</p>
+                        <Input value={char.occupation || ''}
+                          onChange={(e) => onUpdateCharacter({ ...char, occupation: e.target.value })}
+                          className="h-7 text-xs" placeholder="如：学生" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 性格特点 */}
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px]">性格特点（点击选择）</Label>
+                    <div className="flex flex-wrap gap-1">
+                      {PERSONALITY_TRAITS.map((trait) => {
+                        const selected = char.personality?.includes(trait)
+                        return (
+                          <button
+                            key={trait}
+                            onClick={() => {
+                              const updated = selected
+                                ? (char.personality || []).filter((t) => t !== trait)
+                                : [...(char.personality || []), trait]
+                              onUpdateCharacter({ ...char, personality: updated })
+                            }}
+                            className={`px-2 py-0.5 text-[10px] rounded-full border transition-colors ${
+                              selected
+                                ? 'bg-primary/10 border-primary/30 text-primary font-medium'
+                                : 'bg-background border-border text-muted-foreground hover:border-border/80'
+                            }`}
+                          >
+                            {trait}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* 外貌特征 */}
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px]">外貌特征（点击选择）</Label>
+                    <div className="flex flex-wrap gap-1">
+                      {APPEARANCE_TAGS.map((tag) => {
+                        const selected = char.appearance?.includes(tag)
+                        return (
+                          <button
+                            key={tag}
+                            onClick={() => {
+                              const updated = selected
+                                ? (char.appearance || []).filter((t) => t !== tag)
+                                : [...(char.appearance || []), tag]
+                              onUpdateCharacter({ ...char, appearance: updated })
+                            }}
+                            className={`px-2 py-0.5 text-[10px] rounded-full border transition-colors ${
+                              selected
+                                ? 'bg-primary/10 border-primary/30 text-primary font-medium'
+                                : 'bg-background border-border text-muted-foreground hover:border-border/80'
+                            }`}
+                          >
+                            {tag}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* 背景故事 */}
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px]">背景故事</Label>
+                    <Textarea
+                      value={char.background || ''}
+                      onChange={(e) => onUpdateCharacter({ ...char, background: e.target.value })}
+                      placeholder="角色的成长经历、重要事件等"
+                      className="min-h-[60px] resize-none text-xs"
+                    />
+                  </div>
+
+                  {/* 说话风格 */}
+                  <div className="space-y-2">
+                    <Label className="text-[10px]">说话风格</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <p className="text-[10px] text-muted-foreground mb-1">语调</p>
+                        <select
+                          value={char.speech?.tone || '温和'}
+                          onChange={(e) => onUpdateCharacter({ ...char, speech: { ...char.speech, tone: e.target.value } })}
+                          className="w-full h-7 text-xs rounded-md border border-slate-600 bg-slate-700 px-2 text-white focus:outline-none focus:ring-2 focus:ring-pink-500/50"
+                        >
+                          {SPEECH_TONES.map((tone) => (
+                            <option key={tone} value={tone}>{tone}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-muted-foreground mb-1">语速</p>
+                        <select
+                          value={char.speech?.rhythm || '正常'}
+                          onChange={(e) => onUpdateCharacter({ ...char, speech: { ...char.speech, rhythm: e.target.value } })}
+                          className="w-full h-7 text-xs rounded-md border border-slate-600 bg-slate-700 px-2 text-white focus:outline-none focus:ring-2 focus:ring-pink-500/50"
+                        >
+                          {SPEECH_RHYTHMS.map((rhythm) => (
+                            <option key={rhythm} value={rhythm}>{rhythm}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-muted-foreground mb-1">口头禅（每行一条）</p>
+                      <Textarea
+                        value={(char.speech?.catchphrases || []).join('\n')}
+                        onChange={(e) => onUpdateCharacter({
+                          ...char,
+                          speech: {
+                            ...char.speech,
+                            catchphrases: e.target.value.split('\n').filter((l) => l.trim())
+                          }
+                        })}
+                        placeholder="如：嘿嘿~&#10;是这样吗？"
+                        className="min-h-[40px] resize-none text-xs"
+                      />
+                    </div>
                   </div>
 
                   {/* AI 增强 */}
@@ -321,42 +579,7 @@ function PropertyPanel({
                       <Sparkles className="w-3 h-3 text-amber-500" />
                       AI 辅助
                     </Label>
-                    <div className="flex flex-wrap gap-1">
-                      <button
-                        onClick={async () => {
-                          const result = await enhanceCharacter(char, 'background')
-                          if (result.background) {
-                            onUpdateCharacter({ ...char, background: result.background })
-                            showToast('success', '背景故事已生成')
-                          }
-                        }}
-                        className="px-2 py-1 text-[10px] rounded bg-amber-500/10 text-amber-600 border border-amber-500/20 hover:bg-amber-500/20 transition-colors"
-                      >
-                        生成背景
-                      </button>
-                      <button
-                        onClick={async () => {
-                          const result = await enhanceCharacter(char, 'personality')
-                          if (result.personality) {
-                            onUpdateCharacter({ ...char, personality: result.personality })
-                            showToast('success', '性格特点已生成')
-                          }
-                        }}
-                        className="px-2 py-1 text-[10px] rounded bg-amber-500/10 text-amber-600 border border-amber-500/20 hover:bg-amber-500/20 transition-colors"
-                      >
-                        生成性格
-                      </button>
-                      <button
-                        onClick={async () => {
-                          const result = await enhanceCharacter(char, 'full')
-                          onUpdateCharacter({ ...char, ...result })
-                          showToast('success', '角色设定已增强')
-                        }}
-                        className="px-2 py-1 text-[10px] rounded bg-amber-500/10 text-amber-600 border border-amber-500/20 hover:bg-amber-500/20 transition-colors"
-                      >
-                        完整增强
-                      </button>
-                    </div>
+                    <CharacterAIEnhance char={char} onUpdateCharacter={onUpdateCharacter} />
                   </div>
 
                   {/* 删除角色 */}

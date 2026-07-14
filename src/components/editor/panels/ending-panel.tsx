@@ -6,17 +6,18 @@ import { Textarea } from '@editor/components/ui/textarea'
 import type { BasePanelProps } from './shared-props'
 import { ENDING_TYPES } from './shared-props'
 import { useDebouncedState } from '@editor/lib/use-debounced-state'
+import { AiAssistButton } from '../ai-assist-button'
 
 export function EndingPanel({ node, onUpdateNode }: BasePanelProps) {
   const { data, id } = node
 
-  const [title, setTitle] = useDebouncedState(
+  const [title, setTitle, flushTitle] = useDebouncedState(
     (data as any).title || '',
     300,
     (value) => onUpdateNode(id, { ...data, title: value })
   )
 
-  const [text, setText] = useDebouncedState(
+  const [text, setText, flushText] = useDebouncedState(
     (data as any).text || '',
     300,
     (value) => onUpdateNode(id, { ...data, text: value })
@@ -29,10 +30,7 @@ export function EndingPanel({ node, onUpdateNode }: BasePanelProps) {
         <Input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          onBlur={() => {
-            const finalValue = title
-            onUpdateNode(id, { ...data, title: finalValue })
-          }}
+          onBlur={() => flushTitle()}
           placeholder="输入结局标题..."
           className="text-sm"
         />
@@ -52,14 +50,28 @@ export function EndingPanel({ node, onUpdateNode }: BasePanelProps) {
       </div>
 
       <div className="space-y-2">
-        <Label className="text-xs">结局描述</Label>
+        <div className="flex items-center justify-between">
+          <Label className="text-xs">结局描述</Label>
+          <div className="flex items-center gap-1">
+            <AiAssistButton
+              mode="polish"
+              context={text}
+              onResult={(result) => setText(result)}
+              size="sm"
+            />
+            <AiAssistButton
+              mode="expand"
+              context={`结局标题：${title}\n当前描述：${text}`}
+              onResult={(result) => setText(result)}
+              size="sm"
+              label="扩写"
+            />
+          </div>
+        </div>
         <Textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
-          onBlur={() => {
-            const finalValue = text
-            onUpdateNode(id, { ...data, text: finalValue })
-          }}
+          onBlur={() => flushText()}
           placeholder="输入结局描述..."
           className="min-h-[100px] resize-none text-sm"
         />

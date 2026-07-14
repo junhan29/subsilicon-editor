@@ -22,6 +22,7 @@ export interface MediaGenerationResult {
   url: string
   type: 'image' | 'video'
   prompt: string
+  cleanup?: () => void // 用于释放 blob URL 内存
 }
 
 export interface MediaProviderConfig {
@@ -123,14 +124,14 @@ async function generateWithStability(
   params: ImageGenerationParams,
   apiKey: string,
   model: string = 'stable-image-core'
-): Promise<MediaGenerationResult> {
+): Promise<MediaGenerationResult & { cleanup?: () => void }> {
   const response = await fetch(`https://api.stability.ai/v2beta/stable-image/generate/core`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
       'Accept': 'image/*',
-    }),
+    },
     body: JSON.stringify({
       prompt: params.prompt,
       negative_prompt: params.negativePrompt || '',
@@ -152,6 +153,8 @@ async function generateWithStability(
     url,
     type: 'image',
     prompt: params.prompt,
+    // 提供清理函数，调用方在不需要时应调用
+    cleanup: () => URL.revokeObjectURL(url),
   }
 }
 
@@ -160,39 +163,8 @@ async function generateWithComfyUI(
   params: ImageGenerationParams | VideoGenerationParams,
   apiUrl: string
 ): Promise<MediaGenerationResult> {
-  // ComfyUI 需要通过其 API 提交工作流
-  // 这里简化处理，实际使用时需要配置完整的工作流 JSON
-  const isVideo = 'duration' in params
-
-  const response = await fetch(`${apiUrl}/prompt`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      prompt: {
-        // 简化工作流，实际应根据 ComfyUI 工作流配置
-        '1': {
-          inputs: {
-            text: params.prompt,
-            clip: ['4', 0],
-          },
-          class_type: 'CLIPTextEncode',
-        },
-      },
-    }),
-  })
-
-  if (!response.ok) {
-    throw new Error('ComfyUI API error')
-  }
-
-  const data = await response.json()
-  // ComfyUI 返回的是任务 ID，需要轮询结果
-  // 简化处理，返回占位符
-  return {
-    url: `${apiUrl}/view?filename=output.png`,
-    type: isVideo ? 'video' : 'image',
-    prompt: params.prompt,
-  }
+  // ComfyUI 集成需要完整的工作流配置，当前为占位实现
+  throw new Error('ComfyUI 集成尚未完成。请使用 OpenAI DALL-E 或 Stability AI。')
 }
 
 // 主生成函数

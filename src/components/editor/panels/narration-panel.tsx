@@ -13,7 +13,7 @@ import { AiAssistButton } from '../ai-assist-button'
 export function NarrationPanel({ node, onUpdateNode }: BasePanelProps) {
   const { data, id } = node
 
-  const [text, setText] = useDebouncedState(
+  const [text, setText, flushText] = useDebouncedState(
     (data as any).text || '',
     300,
     (value) => onUpdateNode(id, { ...data, text: value })
@@ -30,7 +30,6 @@ export function NarrationPanel({ node, onUpdateNode }: BasePanelProps) {
               context={text}
               onResult={(result) => {
                 setText(result)
-                onUpdateNode(id, { ...data, text: result })
               }}
               size="sm"
             />
@@ -38,9 +37,7 @@ export function NarrationPanel({ node, onUpdateNode }: BasePanelProps) {
               mode="continue"
               context={`旁白上下文：${text}`}
               onResult={(result) => {
-                const newText = text + result
-                setText(newText)
-                onUpdateNode(id, { ...data, text: newText })
+                setText(text + result)
               }}
               size="sm"
               label="续写"
@@ -50,7 +47,6 @@ export function NarrationPanel({ node, onUpdateNode }: BasePanelProps) {
               context={`旁白上下文：${text}`}
               onResult={(result) => {
                 setText(result)
-                onUpdateNode(id, { ...data, text: result })
               }}
               size="sm"
               label="扩写"
@@ -60,10 +56,7 @@ export function NarrationPanel({ node, onUpdateNode }: BasePanelProps) {
         <Textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
-          onBlur={() => {
-            const finalValue = text
-            onUpdateNode(id, { ...data, text: finalValue })
-          }}
+          onBlur={() => flushText()}
           placeholder="输入旁白文本..."
           className="min-h-[80px] resize-none text-sm"
         />
