@@ -36,9 +36,9 @@ export function LocalFileInput({
         reader.readAsDataURL(file)
       })
       onChange(base64)
-      setLoading(false)
     } catch {
       setError('文件读取失败')
+    } finally {
       setLoading(false)
     }
   }

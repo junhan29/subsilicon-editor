@@ -70,6 +70,8 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings }: 
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus>('idle')
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null)
   const [downloadProgress, setDownloadProgress] = useState(0)
+  const [updateError, setUpdateError] = useState<string | null>(null)
+  const [isInApplications, setIsInApplications] = useState(true)
   const updateInitRef = useRef(false)
 
   useEffect(() => {
@@ -78,15 +80,28 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings }: 
     const api = window.__electronAPI
     if (!api) return
 
+    api.getAppPath?.().then((path: string) => {
+      if (path && !path.startsWith('/Applications/') && !path.includes('/Applications/')) {
+        setIsInApplications(false)
+      }
+    }).catch(() => {})
+
     const unsubs = [
-      api.onUpdateChecking(() => setUpdateStatus('checking')),
-      api.onUpdateAvailable((info) => {
+      api.onUpdateChecking(() => {
+        setUpdateStatus('checking')
+        setUpdateError(null)
+      }),
+      api.onUpdateAvailable((info: UpdateInfo) => {
         setUpdateStatus('available')
         setUpdateInfo(info)
+        setUpdateError(null)
       }),
       api.onUpdateNotAvailable(() => setUpdateStatus('not-available')),
-      api.onUpdateError(() => setUpdateStatus('error')),
-      api.onUpdateProgress((p) => {
+      api.onUpdateError((message: string) => {
+        setUpdateStatus('error')
+        setUpdateError(message || '更新失败')
+      }),
+      api.onUpdateProgress((p: { percent: number }) => {
         setUpdateStatus('downloading')
         setDownloadProgress(Math.round(p.percent))
       }),
@@ -167,10 +182,11 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings }: 
       
       if (result && result.filePaths && result.filePaths[0]) {
         const filePath = result.filePaths[0]
-        const content = await window.__electronAPI?.readFile(filePath)
-        if (content) {
+        const fileResult = await window.__electronAPI?.readFileAsText?.(filePath)
+        if (fileResult?.success && fileResult.data) {
+          const content = fileResult.data
           let projectData: Partial<StoryGraph> | null = null
-          
+
           // 解析文件内容
           if (filePath.endsWith('.json')) {
             projectData = JSON.parse(content)
@@ -258,6 +274,12 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings }: 
   const handleDuplicate = async (work: StoredWork) => {
     const id = generateProjectId()
     const now = Date.now()
+    let clonedEditorData
+    try {
+      clonedEditorData = JSON.parse(JSON.stringify(work.editorData))
+    } catch {
+      clonedEditorData = work.editorData
+    }
     const copy: StoredWork = {
       ...work,
       id,
@@ -265,7 +287,7 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings }: 
       createdAt: now,
       lastOpened: now,
       updatedAt: now,
-      editorData: JSON.parse(JSON.stringify(work.editorData)), // 深拷贝避免引用共享
+      editorData: clonedEditorData,
     }
     await saveWork(copy)
     setMenuOpenId(null)
@@ -375,17 +397,25 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings }: 
       </header>
 
       {/* 更新通知横幅 */}
-      {(updateStatus === 'available' || updateStatus === 'downloading' || updateStatus === 'downloaded') && updateInfo && (
-        <div className="mx-6 mt-3 mb-0 p-4 rounded-xl bg-gradient-to-r from-amber-500/10 to-amber-600/5 border border-amber-500/20">
+      {(updateStatus === 'available' || updateStatus === 'downloading' || updateStatus === 'downloaded' || updateStatus === 'error') && updateInfo && (
+        <div className={`mx-6 mt-3 mb-0 p-4 rounded-xl border ${
+          updateStatus === 'error'
+            ? 'bg-red-500/10 border-red-500/20'
+            : 'bg-gradient-to-r from-amber-500/10 to-amber-600/5 border-amber-500/20'
+        }`}>
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3 min-w-0">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-                updateStatus === 'downloaded' ? 'bg-green-500/15' : 'bg-amber-500/15'
+                updateStatus === 'downloaded' ? 'bg-green-500/15' :
+                updateStatus === 'error' ? 'bg-red-500/15' :
+                'bg-amber-500/15'
               }`}>
                 {updateStatus === 'downloading' ? (
                   <RefreshCw className="w-4 h-4 text-amber-400 animate-spin" />
                 ) : updateStatus === 'downloaded' ? (
                   <CheckCircle2 className="w-4 h-4 text-green-400" />
+                ) : updateStatus === 'error' ? (
+                  <AlertTriangle className="w-4 h-4 text-red-400" />
                 ) : (
                   <AlertCircle className="w-4 h-4 text-amber-400" />
                 )}
@@ -395,10 +425,19 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings }: 
                   {updateStatus === 'available' && `新版本 v${updateInfo.version} 可用`}
                   {updateStatus === 'downloading' && `正在下载更新 ${downloadProgress}%`}
                   {updateStatus === 'downloaded' && `更新已下载完成`}
+                  {updateStatus === 'error' && `更新失败`}
                 </p>
-                {updateInfo.releaseNotes && (
+                {updateStatus === 'error' && updateError && (
+                  <p className="text-xs text-red-400 mt-0.5 line-clamp-1">{updateError}</p>
+                )}
+                {updateStatus !== 'error' && updateInfo.releaseNotes && (
                   <p className="text-xs text-slate-400 mt-0.5 line-clamp-1">
                     {updateInfo.releaseNotes.split('\n').slice(1, 3).join(' · ').replace(/^##\s*/, '')}
+                  </p>
+                )}
+                {updateStatus === 'downloaded' && !isInApplications && (
+                  <p className="text-xs text-amber-400 mt-0.5">
+                    提示：请将应用移到 Applications 文件夹后再安装
                   </p>
                 )}
               </div>
@@ -427,9 +466,18 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings }: 
                   重启安装
                 </button>
               )}
-              {(updateStatus === 'available' || updateStatus === 'downloaded') && (
+              {updateStatus === 'error' && (
                 <button
-                  onClick={() => { setUpdateStatus('idle'); setUpdateInfo(null) }}
+                  onClick={handleCheckUpdates}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white text-xs font-medium rounded-lg transition-colors"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  重试
+                </button>
+              )}
+              {(updateStatus === 'available' || updateStatus === 'downloaded' || updateStatus === 'error') && (
+                <button
+                  onClick={() => { setUpdateStatus('idle'); setUpdateInfo(null); setUpdateError(null) }}
                   className="p-2 rounded-lg hover:bg-slate-800 text-slate-500 hover:text-slate-300 transition-colors"
                 >
                   <X className="w-4 h-4" />

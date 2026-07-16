@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import { StoryCanvas } from './components/editor/story-canvas'
 import { ProjectManager } from './components/project-manager'
 import { SettingsPage } from './components/settings-page'
+import { PanelWindow } from './components/editor/panel-window'
 import { ErrorBoundary } from './components/error-boundary'
 import { showToast } from './components/editor/toast'
 import { EditorTour, isTourCompleted, markTourCompleted } from './components/editor/onboarding/editor-tour'
@@ -40,9 +41,21 @@ function logError(type: ErrorLogEntry['type'], message: string, stack?: string) 
 }
 
 function App() {
-  const [appMode, setAppMode] = useState<'project-manager' | 'editor' | 'settings'>('project-manager')
+  const [appMode, setAppMode] = useState<'project-manager' | 'editor' | 'settings' | 'panel'>('project-manager')
   const [currentWork, setCurrentWork] = useState<StoredWork | null>(null)
   const [showTour, setShowTour] = useState(false)
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      if (window.location.hash === '#panel') {
+        setAppMode('panel')
+      }
+    }
+
+    handleHashChange()
+    window.addEventListener('hashchange', handleHashChange)
+    return () => window.removeEventListener('hashchange', handleHashChange)
+  }, [])
 
   useEffect(() => {
     const completed = isTourCompleted()
@@ -139,6 +152,9 @@ function App() {
           <SettingsPage
             onBack={() => setAppMode('project-manager')}
           />
+        )}
+        {appMode === 'panel' && (
+          <PanelWindow />
         )}
       </ErrorBoundary>
       <EditorTour

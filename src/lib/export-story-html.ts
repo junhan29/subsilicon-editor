@@ -234,6 +234,8 @@ function buildStoryHTML(encryptedData: string, ivBase64: string, config: StoryEx
     #scene-layer .layer-character { object-fit: contain; }
     #scene-layer .layer-text { font-size: 18px; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,0.8); }
     #scene-layer .layer-effect { pointer-events: none; }
+    #scene-layer .clickable-layer { pointer-events: auto; }
+    #scene-layer .clickable-layer:hover { filter: brightness(1.15); outline: 2px solid #f59e0b; outline-offset: -2px; }
     #story-content { position: relative; z-index: 10; padding: 20px; min-height: 100vh; background: linear-gradient(transparent 0%, rgba(15,23,42,0.9) 30%, rgba(15,23,42,0.98) 70%); }
 
     .node { background: rgba(30,41,59,0.95); border-radius: 12px; padding: 20px; margin-bottom: 16px; border: 1px solid #334155; backdrop-filter: blur(12px); }
@@ -1198,32 +1200,67 @@ function buildStoryHTML(encryptedData: string, ivBase64: string, config: StoryEx
 
       window.__SUBSILICON__ = 'ss-2026-07-03';
 
+      function isVideoUrl(url) {
+        if (!url) return false;
+        return ['.mp4', '.webm', '.mov', '.ogg', '.ogv'].some(function(ext) { return url.endsWith(ext); });
+      }
+
       function renderSceneLayers(puzzleData) {
         if (!puzzleData || !puzzleData.layers) { sceneLayer.innerHTML = ''; return; }
         var html = '';
         var layers = puzzleData.layers.filter(function(l) { return l.visible; }).sort(function(a, b) { return (a.zIndex || 0) - (b.zIndex || 0); });
+        var characters = (graph && graph.characters) || [];
         for (var i = 0; i < layers.length; i++) {
           var l = layers[i];
-          var style = 'left:' + l.x + '%; top:' + l.y + '%; width:' + l.width + '%; height:' + l.height + '%;';
+          var style = 'left:' + l.x + '%; top:' + l.y + '%; width:' + l.width + '%; height:' + (l.height ? l.height + '%' : 'auto') + ';';
           style += 'opacity:' + (l.opacity || 1) + ';';
-          if (l.rotation) style += 'transform:rotate(' + l.rotation + 'deg);';
+          style += 'transform:translate(-50%,-50%) rotate(' + (l.rotation || 0) + 'deg);';
+          if (l.clickable) {
+            style += 'cursor:pointer;pointer-events:auto;';
+          }
           var anim = l.animation && l.animation.type !== 'none' ? l.animation.type : 'fade-in';
+          var cls = l.clickable ? ('clickable-layer ' + anim) : anim;
+          var clickableAttr = l.clickable ? (' data-choice-option="' + (l.choiceOptionId || '') + '"') : '';
+
+          // 角色表情精灵查找
+          var layerUrl = l.url;
+          if (l.type === 'character' && l.characterId) {
+            var char = characters.find(function(c) { return c.id === l.characterId; });
+            if (char && char.sprites) {
+              var sprite = char.sprites.find(function(s) { return s.emotion === l.emotion; }) || char.sprites[0];
+              if (sprite) layerUrl = sprite.url || sprite.image || l.url;
+            }
+          }
+
           if (l.type === 'background') {
-            html += '<div class="layer-bg" style="' + style + '"><img src="' + l.url + '" style="width:100%;height:100%;object-fit:cover;"></div>';
+            html += '<div class="layer-bg" style="' + style + '"><img src="' + layerUrl + '" style="width:100%;height:100%;object-fit:cover;"></div>';
           } else if (l.type === 'image') {
-            html += '<div class="' + anim + '" style="' + style + '"><img src="' + l.url + '" class="layer-image" style="width:100%;height:100%;"></div>';
+            html += '<div class="' + cls + '"' + clickableAttr + ' style="' + style + '"><img src="' + layerUrl + '" class="layer-image" style="width:100%;height:100%;"></div>';
           } else if (l.type === 'character') {
-            html += '<div class="' + anim + '" style="' + style + '"><img src="' + l.url + '" class="layer-character" style="width:100%;height:100%;"></div>';
+            html += '<div class="' + cls + '"' + clickableAttr + ' style="' + style + '"><img src="' + layerUrl + '" class="layer-character" style="width:100%;height:100%;"></div>';
           } else if (l.type === 'text') {
             var textStyle = '';
             if (l.fontSize) textStyle += 'font-size:' + l.fontSize + 'px;';
             if (l.fontColor) textStyle += 'color:' + l.fontColor + ';';
-            html += '<div class="layer-text ' + anim + '" style="' + style + textStyle + '">' + (l.textContent || '') + '</div>';
+            html += '<div class="layer-text ' + cls + '"' + clickableAttr + ' style="' + style + textStyle + '">' + (l.textContent || '') + '</div>';
           } else if (l.type === 'effect') {
-            html += '<div class="layer-effect ' + anim + '" style="' + style + '"><img src="' + l.url + '" style="width:100%;height:100%;"></div>';
+            if (isVideoUrl(layerUrl)) {
+              html += '<div class="layer-effect ' + anim + '" style="' + style + '"><video src="' + layerUrl + '" autoplay loop muted playsinline style="width:100%;height:100%;object-fit:contain;"></video></div>';
+            } else {
+              html += '<div class="layer-effect ' + anim + '" style="' + style + '"><img src="' + layerUrl + '" style="width:100%;height:100%;"></div>';
+            }
           }
         }
         sceneLayer.innerHTML = html;
+        // 为可点击层绑定事件，调用全局选择回调
+        var clickables = sceneLayer.querySelectorAll('[data-choice-option]');
+        clickables.forEach(function(el) {
+          el.addEventListener('click', function(e) {
+            e.stopPropagation();
+            var optId = el.getAttribute('data-choice-option');
+            if (window.__handleSceneChoice) window.__handleSceneChoice(optId);
+          });
+        });
       }
 
       function startStory() {
@@ -1267,6 +1304,7 @@ function buildStoryHTML(encryptedData: string, ivBase64: string, config: StoryEx
           case 'condition': renderCondition(data); break;
           case 'random': renderRandom(data); break;
           case 'scene': renderScene(data); break;
+          case 'unlock': app.innerHTML = '<div class="unlock-node" style="padding:20px;text-align:center;"><h3>' + (data.title || '解锁内容') + '</h3><p>' + (data.description || '') + '</p><p style="color:#f59e0b;">价格: ¥' + (data.price || 1) + '</p><button onclick="window.__subsilicon_unlock && window.__subsilicon_unlock()" style="padding:8px 24px;background:#f59e0b;color:#000;border:none;border-radius:4px;cursor:pointer;">解锁</button></div>'; break;
           default: app.innerHTML = '<div class="node"><p class="node-text">继续阅读...</p></div>';
         }
       }
@@ -1304,18 +1342,69 @@ function buildStoryHTML(encryptedData: string, ivBase64: string, config: StoryEx
       function renderChoice(data) {
         var options = data.options || [];
         var prompt = data.prompt || '你的选择是？';
+        var choiceMode = data.choiceMode || 'text';
 
         var validOptions = options.filter(function(opt) {
           if (!opt.condition) return true;
           try { return evaluateExpression(opt.condition); } catch(e) { return true; }
         });
 
-        var html = '<div class="node node-choice fade-in"><div class="node-title">选择</div><div class="node-text">' + prompt + '</div><div class="choices">';
-        validOptions.forEach(function(opt, i) {
-          html += '<button class="choice-btn" onclick="window.__selectChoice(' + i + ')">' + (opt.text || '选项') + '</button>';
-        });
-        html += '</div></div>';
+        var html = '<div class="node node-choice fade-in"><div class="node-title">选择</div><div class="node-text">' + prompt + '</div>';
+
+        if (choiceMode === 'image') {
+          // 图片选择模式：2列网格卡片
+          html += '<div class="choice-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">';
+          validOptions.forEach(function(opt, i) {
+            html += '<div class="choice-card" data-next="' + (opt.nextNodeId || '') + '" onclick="window.__selectChoice(' + i + ')" style="cursor:pointer;border:1px solid #555;border-radius:8px;overflow:hidden;">';
+            if (opt.image) {
+              html += '<img src="' + opt.image + '" style="width:100%;aspect-ratio:16/9;object-fit:cover;">';
+            }
+            html += '<div style="padding:8px;text-align:center;">' + (opt.text || '选项') + '</div>';
+            html += '</div>';
+          });
+          html += '</div>';
+        } else if (choiceMode === 'scene') {
+          // 场景选择模式：查找场景并渲染可点击层
+          var sceneFound = false;
+          if (data.sceneId && graph.scenes) {
+            var scene = graph.scenes.find(function(s) { return s.id === data.sceneId; });
+            if (scene && scene.puzzleData) {
+              renderSceneLayers(scene.puzzleData);
+              sceneFound = true;
+              html += '<p style="color:#94a3b8;font-size:13px;margin-top:8px;">点击场景中的元素进行选择</p>';
+            }
+          }
+          if (!sceneFound) {
+            // 场景未找到，回退到文本模式
+            html += '<div class="choices">';
+            validOptions.forEach(function(opt, i) {
+              html += '<button class="choice-btn" onclick="window.__selectChoice(' + i + ')">' + (opt.text || '选项') + '</button>';
+            });
+            html += '</div>';
+          }
+        } else {
+          // 文本选择模式（默认）
+          html += '<div class="choices">';
+          validOptions.forEach(function(opt, i) {
+            html += '<button class="choice-btn" onclick="window.__selectChoice(' + i + ')">' + (opt.text || '选项') + '</button>';
+          });
+          html += '</div>';
+        }
+
+        html += '</div>';
         app.innerHTML = html;
+
+        // 场景选择模式下，设置可点击层回调
+        if (choiceMode === 'scene') {
+          window.__handleSceneChoice = function(optId) {
+            for (var i = 0; i < validOptions.length; i++) {
+              if (validOptions[i].id === optId || ('opt-' + i) === optId) {
+                window.__selectChoice(i);
+                return;
+              }
+            }
+          };
+        }
 
         window.__selectChoice = function(index) {
           var opt = validOptions[index];
@@ -1328,6 +1417,12 @@ function buildStoryHTML(encryptedData: string, ivBase64: string, config: StoryEx
             for (var j = 0; j < opt.effects.length; j++) applyVariableEffect(opt.effects[j]);
           }
           if (opt.variableEffect) applyVariableEffect(opt.variableEffect);
+
+          // 优先使用显式指定的 nextNodeId
+          if (opt.nextNodeId) {
+            renderNode(findNode(opt.nextNodeId));
+            return;
+          }
 
           var edges = getEdges(currentNodeId);
           var optId = opt.id || 'opt-' + index;
@@ -1352,13 +1447,22 @@ function buildStoryHTML(encryptedData: string, ivBase64: string, config: StoryEx
       }
 
       function renderCG(data) {
-        if (data.bgm) setBGM(data.bgm);
+        if (data.bgm) setBGM(data.bgm, data.bgmVolume !== undefined ? data.bgmVolume : 1);
         if (data.soundEffect) playSE(data.soundEffect);
 
-        var html = '<div class="node node-cg fade-in"><div class="node-title">' + (data.title || '场景') + '</div>';
+        var html = '<div class="node node-cg fade-in" style="position:relative;"><div class="node-title">' + (data.title || '场景') + '</div>';
         if (data.url) {
-          var mediaClass = data.mediaType === 'video' ? '' : '';
-          html += '<img src="' + data.url + '" style="width:100%;border-radius:8px;margin-bottom:8px;" alt="">';
+          if (data.mediaType === 'video' || isVideoUrl(data.url)) {
+            html += '<video src="' + data.url + '" ' + (data.loop ? 'loop' : '') + ' ' + (data.muted ? 'muted' : '') + ' autoplay playsinline style="width:100%;height:100%;object-fit:' + (data.displayMode || 'contain') + ';border-radius:8px;margin-bottom:8px;"></video>';
+          } else {
+            html += '<img src="' + data.url + '" style="width:100%;border-radius:8px;margin-bottom:8px;" alt="">';
+          }
+          if (data.overlayLayers && data.overlayLayers.length > 0) {
+            var overlays = data.overlayLayers.map(function(layer) {
+              return '<img src="' + layer.url + '" style="position:absolute;left:' + layer.x + '%;top:' + layer.y + '%;width:' + layer.width + '%;transform:translate(-50%,-50%) rotate(' + layer.rotation + 'deg);opacity:' + layer.opacity + ';z-index:' + layer.zIndex + ';pointer-events:none;">';
+            }).join('');
+            html += '<div style="position:absolute;inset:0;">' + overlays + '</div>';
+          }
         }
         html += '<div class="node-text">' + (data.subtitle || '') + '</div></div>';
         autoAdvance(html);

@@ -51,7 +51,11 @@ function CharacterAIEnhance({ char, onUpdateCharacter }: { char: StoryCharacter;
         showToast('error', '生成失败，请重试')
       }
     } catch (e) {
-      showToast('error', '生成失败: ' + (e instanceof Error ? e.message : '未知错误'))
+      if (e instanceof Error && 'needsConfig' in e && (e as { needsConfig: boolean }).needsConfig) {
+        showToast('error', 'AI 未配置，请在设置中配置 API Key 或启动本地 Ollama')
+      } else {
+        showToast('error', '生成失败: ' + (e instanceof Error ? e.message : '未知错误'))
+      }
     } finally {
       setLoading(null)
     }
@@ -324,22 +328,57 @@ function PropertyPanel({
 
           <div className="space-y-2">
             <Label className="text-xs">作品标签</Label>
+            {/* 已选标签 */}
             <div className="flex flex-wrap gap-1.5">
-              {STORY_TAGS.map((tag) => {
-                const active = tags.includes(tag)
-                return (
-                  <button key={tag}
-                    onClick={() => onUpdateTags?.(active ? tags.filter(t => t !== tag) : [...tags, tag])}
-                    className={`px-2 py-0.5 text-[10px] rounded-full border transition-colors ${
-                      active ? 'bg-primary/10 border-primary/30 text-primary font-medium'
-                        : 'bg-background border-border text-muted-foreground hover:border-border/80'
-                    }`}>
-                    {tag}
+              {tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] rounded-full bg-primary/10 border border-primary/30 text-primary font-medium"
+                >
+                  {tag}
+                  <button
+                    onClick={() => onUpdateTags?.(tags.filter((t) => t !== tag))}
+                    className="hover:text-red-500 transition-colors"
+                    title="移除标签"
+                  >
+                    <X className="w-3 h-3" />
                   </button>
-                )
-              })}
+                </span>
+              ))}
             </div>
-            <p className="text-[10px] text-muted-foreground">已选 {tags.length}/10</p>
+            {/* 预设标签 */}
+            <div className="flex flex-wrap gap-1.5">
+              {STORY_TAGS.filter((t) => !tags.includes(t)).map((tag) => (
+                <button
+                  key={tag}
+                  onClick={() => {
+                    if (tags.length >= 10) return
+                    onUpdateTags?.([...tags, tag])
+                  }}
+                  className="px-2 py-0.5 text-[10px] rounded-full border bg-background border-border text-muted-foreground hover:border-primary/30 hover:text-primary transition-colors"
+                >
+                  + {tag}
+                </button>
+              ))}
+            </div>
+            {/* 自定义标签输入 */}
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                placeholder="输入自定义标签，回车添加"
+                className="flex-1 px-2 py-1 text-xs bg-muted border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-primary/50"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const val = e.currentTarget.value.trim()
+                    if (val && !tags.includes(val) && tags.length < 10) {
+                      onUpdateTags?.([...tags, val])
+                      e.currentTarget.value = ''
+                    }
+                  }
+                }}
+              />
+            </div>
+            <p className="text-[10px] text-muted-foreground">已选 {tags.length}/10，支持自定义标签</p>
           </div>
 
           {/* 变量管理 */}
@@ -352,6 +391,7 @@ function PropertyPanel({
                     id: `var-${Date.now()}`,
                     name: `变量${variables.length + 1}`,
                     type: 'number',
+                    initialValue: 0,
                     defaultValue: 0,
                     description: '',
                   }

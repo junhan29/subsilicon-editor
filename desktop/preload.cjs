@@ -2,6 +2,7 @@ const { contextBridge, ipcRenderer } = require('electron')
 
 contextBridge.exposeInMainWorld('__electronAPI', {
   readFile: (path) => ipcRenderer.invoke('readFile', path),
+  readFileAsText: (path) => ipcRenderer.invoke('readFileAsText', path),
   writeFile: (path, data) => ipcRenderer.invoke('writeFile', path, data),
   getFileInfo: (path) => ipcRenderer.invoke('getFileInfo', path),
   openFileDialog: (options) => ipcRenderer.invoke('openFileDialog', options),
@@ -11,6 +12,7 @@ contextBridge.exposeInMainWorld('__electronAPI', {
   copyToProject: (sourcePath, fileName) => ipcRenderer.invoke('copyToProject', sourcePath, fileName),
   getRecentFiles: () => ipcRenderer.invoke('getRecentFiles'),
   getVersion: () => ipcRenderer.invoke('getVersion'),
+  getAppPath: () => ipcRenderer.invoke('getAppPath'),
   minimizeWindow: () => ipcRenderer.send('minimizeWindow'),
   maximizeWindow: () => ipcRenderer.send('maximizeWindow'),
   closeWindow: () => ipcRenderer.send('closeWindow'),
@@ -84,4 +86,23 @@ contextBridge.exposeInMainWorld('__electronAPI', {
   },
   platform: process.platform,
   isElectron: true,
+  openPanelWindow: () => ipcRenderer.send('panel:open'),
+  closePanelWindow: () => ipcRenderer.send('panel:close'),
+  sendPanelMessage: (message) => ipcRenderer.send('panel:sendMessage', message),
+  sendMainMessage: (message) => ipcRenderer.send('main:sendMessage', message),
+  onPanelClosed: (callback) => {
+    const listener = () => callback()
+    ipcRenderer.on('panel:closed', listener)
+    return () => ipcRenderer.removeListener('panel:closed', listener)
+  },
+  onPanelMessage: (callback) => {
+    const listener = (event, message) => callback(message)
+    ipcRenderer.on('panel:message', listener)
+    return () => ipcRenderer.removeListener('panel:message', listener)
+  },
+  onMainMessage: (callback) => {
+    const listener = (event, message) => callback(message)
+    ipcRenderer.on('main:message', listener)
+    return () => ipcRenderer.removeListener('main:message', listener)
+  },
 })

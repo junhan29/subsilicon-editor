@@ -130,7 +130,7 @@ export function saveInstalledPluginIds(ids: string[]): void {
 }
 
 export function installPlugin(pluginId: string): boolean {
-  const manifest = OFFICIAL_PLUGINS.find((p) => p.id === pluginId)
+  const manifest = marketplacePlugins?.find((p) => p.id === pluginId) || OFFICIAL_PLUGINS.find((p) => p.id === pluginId)
   if (!manifest) return false
 
   const installed = getInstalledPluginIds()
@@ -181,4 +181,34 @@ export function getAvailablePlugins(category?: string): PluginManifest[] {
 
 export function getPluginManifest(pluginId: string): PluginManifest | undefined {
   return OFFICIAL_PLUGINS.find((p) => p.id === pluginId)
+}
+
+let marketplacePlugins: PluginManifest[] | null = null
+let marketplaceError: string | null = null
+
+export async function fetchPluginMarketplace(): Promise<{ plugins: PluginManifest[]; error: string | null }> {
+  if (marketplacePlugins) {
+    return { plugins: marketplacePlugins, error: marketplaceError }
+  }
+
+  try {
+    const res = await fetch('https://subsilicon.cn/api/editor/plugins')
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const data = await res.json()
+    if (Array.isArray(data.plugins)) {
+      marketplacePlugins = data.plugins
+      return { plugins: data.plugins, error: null }
+    }
+    throw new Error('Invalid response')
+  } catch (err) {
+    marketplaceError = (err as Error).message
+    // fallback to local hardcoded plugins
+    marketplacePlugins = OFFICIAL_PLUGINS
+    return { plugins: OFFICIAL_PLUGINS, error: null }
+  }
+}
+
+export function clearMarketplaceCache() {
+  marketplacePlugins = null
+  marketplaceError = null
 }

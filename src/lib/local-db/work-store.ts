@@ -11,6 +11,7 @@ export interface WorkMetadata {
   edgeCount: number
   templateId: string
   thumbnail?: string
+  customPath?: string
 }
 
 export interface StoredWork extends WorkMetadata {

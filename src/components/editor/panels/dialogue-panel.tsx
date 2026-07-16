@@ -6,7 +6,8 @@ import { Input } from '@editor/components/ui/input'
 import { Textarea } from '@editor/components/ui/textarea'
 import { Button } from '@editor/components/ui/button'
 import { Slider } from '@editor/components/ui/slider'
-import { Image, Music, Palette, Type, Eye, X } from 'lucide-react'
+import { Image, Music, Type, Eye, X, Move, Square, Sparkles } from 'lucide-react'
+import { Toggle } from '@editor/components/ui/toggle'
 import type { BasePanelProps } from './shared-props'
 import { TEXT_ANIMATION_TYPES, ENTER_ANIMATION_TYPES, SPRITE_POSITION_TYPES, DIALOG_STYLE_TYPES, DIALOG_COLOR_OPTIONS } from './shared-props'
 import { useDebouncedState } from '@editor/lib/use-debounced-state'
@@ -30,6 +31,15 @@ export function DialoguePanel({ node, characters, variables, assets, scenes, onU
     300,
     (value) => onUpdateNode(id, { ...data, emotion: value })
   )
+
+  const [showVisualStyle, setShowVisualStyle] = useState(false)
+
+  const visual = (data as any).visualStyle || {}
+
+  const updateVisual = (patch: Record<string, unknown>) => {
+    const newVisual = { ...visual, ...patch }
+    onUpdateNode(id, { ...data, visualStyle: newVisual })
+  }
 
   return (
     <>
@@ -97,7 +107,6 @@ export function DialoguePanel({ node, characters, variables, assets, scenes, onU
               onResult={(result) => {
                 const newText = text + result
                 setText(newText)
-                onUpdateNode(id, { ...data, text: newText })
               }}
               size="sm"
               label="续写"
@@ -423,6 +432,322 @@ export function DialoguePanel({ node, characters, variables, assets, scenes, onU
             )
           })}
         </div>
+      </div>
+
+      {/* 高级视觉样式 */}
+      <div className="space-y-2 pt-2 border-t border-border/40">
+        <button
+          onClick={() => setShowVisualStyle(!showVisualStyle)}
+          className="w-full flex items-center justify-between text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <span className="flex items-center gap-1.5">
+            <Sparkles className="w-3 h-3" />
+            高级视觉设置
+          </span>
+          {showVisualStyle ? (
+            <span className="text-[10px]">收起</span>
+          ) : (
+            <span className="text-[10px]">展开</span>
+          )}
+        </button>
+
+        {showVisualStyle && (
+          <div className="space-y-3 pt-1">
+            {/* 位置 */}
+            <div className="space-y-1.5">
+              <Label className="text-[10px] flex items-center gap-1">
+                <Move className="w-3 h-3" /> 对话框位置
+              </Label>
+              <div className="grid grid-cols-4 gap-1">
+                {[
+                  { value: 'top', label: '顶部' },
+                  { value: 'center', label: '居中' },
+                  { value: 'bottom', label: '底部' },
+                  { value: 'custom', label: '自定义' },
+                ].map((pos) => (
+                  <button
+                    key={pos.value}
+                    onClick={() => updateVisual({ position: pos.value })}
+                    className={`py-1 px-1 rounded-md text-[10px] font-medium transition-all ${
+                      (visual.position || 'bottom') === pos.value
+                        ? 'bg-pink-500 text-white'
+                        : 'bg-muted hover:bg-muted/80'
+                    }`}
+                  >
+                    {pos.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {visual.position === 'custom' && (
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <div className="flex justify-between text-[10px] text-muted-foreground">
+                    <span>垂直位置</span>
+                    <span>{visual.customY || 50}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="1"
+                    value={visual.customY || 50}
+                    onChange={(e) => updateVisual({ customY: Number(e.target.value) })}
+                    className="w-full accent-pink-500"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <div className="flex justify-between text-[10px] text-muted-foreground">
+                    <span>水平偏移</span>
+                    <span>{visual.customX || 0}px</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="-100"
+                    max="100"
+                    step="5"
+                    value={visual.customX || 0}
+                    onChange={(e) => updateVisual({ customX: Number(e.target.value) })}
+                    className="w-full accent-pink-500"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* 尺寸 */}
+            <div className="space-y-1.5">
+              <Label className="text-[10px] flex items-center gap-1">
+                <Square className="w-3 h-3" /> 对话框尺寸
+              </Label>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <div className="flex justify-between text-[10px] text-muted-foreground">
+                    <span>宽度</span>
+                    <span>{visual.width || 100}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="50"
+                    max="100"
+                    step="5"
+                    value={visual.width || 100}
+                    onChange={(e) => updateVisual({ width: Number(e.target.value) })}
+                    className="w-full accent-pink-500"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <div className="flex justify-between text-[10px] text-muted-foreground">
+                    <span>最大宽度</span>
+                    <span>{visual.maxWidth || 768}px</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="320"
+                    max="1200"
+                    step="20"
+                    value={visual.maxWidth || 768}
+                    onChange={(e) => updateVisual({ maxWidth: Number(e.target.value) })}
+                    className="w-full accent-pink-500"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* 样式 */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <div className="flex justify-between text-[10px] text-muted-foreground">
+                  <span>圆角</span>
+                  <span>{visual.borderRadius || 16}px</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="32"
+                  step="2"
+                  value={visual.borderRadius || 16}
+                  onChange={(e) => updateVisual({ borderRadius: Number(e.target.value) })}
+                  className="w-full accent-pink-500"
+                />
+              </div>
+              <div className="space-y-1">
+                <div className="flex justify-between text-[10px] text-muted-foreground">
+                  <span>透明度</span>
+                  <span>{Math.round((visual.opacity ?? 1) * 100)}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="0.2"
+                  max="1"
+                  step="0.05"
+                  value={visual.opacity ?? 1}
+                  onChange={(e) => updateVisual({ opacity: Number(e.target.value) })}
+                  className="w-full accent-pink-500"
+                />
+              </div>
+            </div>
+
+            {/* 内边距 */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <div className="flex justify-between text-[10px] text-muted-foreground">
+                  <span>水平内边距</span>
+                  <span>{visual.paddingX || 20}px</span>
+                </div>
+                <input
+                  type="range"
+                  min="8"
+                  max="40"
+                  step="2"
+                  value={visual.paddingX || 20}
+                  onChange={(e) => updateVisual({ paddingX: Number(e.target.value) })}
+                  className="w-full accent-pink-500"
+                />
+              </div>
+              <div className="space-y-1">
+                <div className="flex justify-between text-[10px] text-muted-foreground">
+                  <span>垂直内边距</span>
+                  <span>{visual.paddingY || 20}px</span>
+                </div>
+                <input
+                  type="range"
+                  min="8"
+                  max="40"
+                  step="2"
+                  value={visual.paddingY || 20}
+                  onChange={(e) => updateVisual({ paddingY: Number(e.target.value) })}
+                  className="w-full accent-pink-500"
+                />
+              </div>
+            </div>
+
+            {/* 边框与阴影 */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-[10px]">阴影效果</Label>
+                <Toggle
+                  checked={visual.shadow !== false}
+                  onChange={(checked) => updateVisual({ shadow: checked })}
+                  color="bg-pink-500"
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <Label className="text-[10px]">毛玻璃效果</Label>
+                <Toggle
+                  checked={visual.backdropBlur !== false}
+                  onChange={(checked) => updateVisual({ backdropBlur: checked })}
+                  color="bg-pink-500"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <div className="flex justify-between text-[10px] text-muted-foreground">
+                <span>边框粗细</span>
+                <span>{visual.borderWidth || 1}px</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="6"
+                step="1"
+                value={visual.borderWidth || 1}
+                onChange={(e) => updateVisual({ borderWidth: Number(e.target.value) })}
+                className="w-full accent-pink-500"
+              />
+            </div>
+
+            {/* 文本样式 */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <div className="flex justify-between text-[10px] text-muted-foreground">
+                  <span>字号</span>
+                  <span>{visual.fontSize || 16}px</span>
+                </div>
+                <input
+                  type="range"
+                  min="12"
+                  max="24"
+                  step="1"
+                  value={visual.fontSize || 16}
+                  onChange={(e) => updateVisual({ fontSize: Number(e.target.value) })}
+                  className="w-full accent-pink-500"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[10px]">文本对齐</Label>
+                <div className="grid grid-cols-3 gap-1">
+                  {['left', 'center', 'right'].map((align) => (
+                    <button
+                      key={align}
+                      onClick={() => updateVisual({ textAlignment: align })}
+                      className={`py-1 px-1 rounded text-[10px] transition-all ${
+                        (visual.textAlignment || 'left') === align
+                          ? 'bg-pink-500 text-white'
+                          : 'bg-muted hover:bg-muted/80'
+                      }`}
+                    >
+                      {align === 'left' ? '左' : align === 'center' ? '中' : '右'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* 头像设置 */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-[10px]">显示头像</Label>
+                <Toggle
+                  checked={visual.showAvatar !== false}
+                  onChange={(checked) => updateVisual({ showAvatar: checked })}
+                  color="bg-pink-500"
+                />
+              </div>
+              <div className="space-y-1">
+                <div className="flex justify-between text-[10px] text-muted-foreground">
+                  <span>头像大小</span>
+                  <span>{visual.avatarSize || 40}px</span>
+                </div>
+                <input
+                  type="range"
+                  min="24"
+                  max="64"
+                  step="2"
+                  value={visual.avatarSize || 40}
+                  onChange={(e) => updateVisual({ avatarSize: Number(e.target.value) })}
+                  className="w-full accent-pink-500"
+                  disabled={visual.showAvatar === false}
+                />
+              </div>
+            </div>
+
+            {/* 角色名位置 */}
+            <div className="space-y-1">
+              <Label className="text-[10px]">角色名显示位置</Label>
+              <div className="grid grid-cols-3 gap-1">
+                {[
+                  { value: 'top', label: '顶部' },
+                  { value: 'left', label: '左侧' },
+                  { value: 'hidden', label: '隐藏' },
+                ].map((pos) => (
+                  <button
+                    key={pos.value}
+                    onClick={() => updateVisual({ characterNamePosition: pos.value })}
+                    className={`py-1 px-1 rounded text-[10px] transition-all ${
+                      (visual.characterNamePosition || 'top') === pos.value
+                        ? 'bg-pink-500 text-white'
+                        : 'bg-muted hover:bg-muted/80'
+                    }`}
+                  >
+                    {pos.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </>
   )

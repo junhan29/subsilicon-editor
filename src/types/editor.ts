@@ -41,6 +41,10 @@ export interface PuzzleLayer {
   textContent?: string
   fontSize?: number
   fontColor?: string
+  clickable?: boolean
+  choiceOptionId?: string
+  choiceOptionText?: string
+  hoverEffect?: 'highlight' | 'scale' | 'glow' | 'none'
 }
 
 export interface PuzzleScene {
@@ -91,6 +95,31 @@ export interface ComicCharacter {
   voiceUrl?: string
 }
 
+export interface DialogueVisualStyle {
+  position?: 'bottom' | 'top' | 'center' | 'custom'
+  customX?: number
+  customY?: number
+  width?: number
+  height?: number
+  opacity?: number
+  borderRadius?: number
+  paddingX?: number
+  paddingY?: number
+  maxWidth?: number
+  fontSize?: number
+  fontColor?: string
+  backgroundColor?: string
+  borderWidth?: number
+  borderColor?: string
+  shadow?: boolean
+  backdropBlur?: boolean
+  characterNamePosition?: 'top' | 'left' | 'hidden'
+  showAvatar?: boolean
+  avatarSize?: number
+  textAlignment?: 'left' | 'center' | 'right'
+  lineHeight?: number
+}
+
 export interface DialogueData {
   characterId: string
   spriteEmotion?: string
@@ -109,6 +138,33 @@ export interface DialogueData {
   seUrl?: string
   seVolume?: number
   emotion?: string
+  dialogStyle?: string
+  dialogColor?: string
+  dialogOpacity?: number
+  enterAnimation?: string
+  visualStyle?: DialogueVisualStyle
+}
+
+export interface NarrationVisualStyle {
+  position?: 'bottom' | 'top' | 'center' | 'custom'
+  customX?: number
+  customY?: number
+  width?: number
+  maxWidth?: number
+  opacity?: number
+  borderRadius?: number
+  paddingX?: number
+  paddingY?: number
+  backgroundColor?: string
+  borderWidth?: number
+  borderColor?: string
+  shadow?: boolean
+  backdropBlur?: boolean
+  fontSize?: number
+  fontColor?: string
+  textAlignment?: 'left' | 'center' | 'right'
+  lineHeight?: number
+  italic?: boolean
 }
 
 export interface NarrationData {
@@ -119,12 +175,16 @@ export interface NarrationData {
   backgroundColor?: string
   bgm?: string
   bgmVolume?: number
+  visualStyle?: NarrationVisualStyle
 }
 
 export interface ChoiceOption {
   id: string
   text: string
   icon?: string
+  image?: string
+  imagePosition?: 'top' | 'left' | 'background'
+  clickableLayerId?: string
   condition?: string
   nextNodeId?: string
   effects?: {
@@ -139,10 +199,40 @@ export interface ChoiceOption {
   }
 }
 
+export interface ChoiceVisualStyle {
+  position?: 'bottom' | 'top' | 'center' | 'custom'
+  customX?: number
+  customY?: number
+  width?: number
+  maxWidth?: number
+  opacity?: number
+  borderRadius?: number
+  padding?: number
+  gap?: number
+  backgroundColor?: string
+  borderWidth?: number
+  borderColor?: string
+  shadow?: boolean
+  backdropBlur?: boolean
+  optionHeight?: number
+  optionFontSize?: number
+  optionTextColor?: string
+  optionBgColor?: string
+  optionHoverBgColor?: string
+  optionBorderColor?: string
+  optionAlignment?: 'left' | 'center' | 'right'
+  showLetter?: boolean
+  promptText?: string
+  promptPosition?: 'top' | 'bottom'
+}
+
 export interface ChoiceData {
   prompt?: string
   options: ChoiceOption[]
   defaultNext?: string
+  visualStyle?: ChoiceVisualStyle
+  choiceMode?: 'text' | 'image' | 'scene'
+  sceneId?: string
 }
 
 export type TransitionType =
@@ -174,12 +264,26 @@ export interface EndingData {
 
 export type CgMediaType = 'image' | 'video'
 
+export interface CgOverlayLayer {
+  id: string
+  url: string
+  name?: string
+  x: number
+  y: number
+  width: number
+  height?: number
+  opacity: number
+  rotation: number
+  zIndex: number
+}
+
 export interface CgData {
   mediaType: CgMediaType
   url: string
+  localFile?: string
   title?: string
   subtitle?: string
-  duration?: number           // 0 表示点击继续
+  duration?: number
   canSkip?: boolean
   transitionIn?: TransitionType
   transitionOut?: TransitionType
@@ -189,9 +293,29 @@ export interface CgData {
   soundEffect?: string
   letterbox?: boolean
   displayMode?: 'contain' | 'cover' | 'fill' | 'custom'
-  customWidth?: number    // 百分比 (10-100)
-  customHeight?: number   // 百分比 (10-100)
-  objectPosition?: string // CSS object-position 值，如 'center top'
+  customWidth?: number
+  customHeight?: number
+  objectPosition?: string
+  startTime?: number
+  endTime?: number
+  loop?: boolean
+  loopStartTime?: number
+  loopEndTime?: number
+  playbackRate?: number
+  muted?: boolean
+  showControls?: boolean
+  fillColor?: string
+  x?: number
+  y?: number
+  width?: number
+  height?: number
+  opacity?: number
+  rotation?: number
+  borderRadius?: number
+  shadow?: boolean
+  borderWidth?: number
+  borderColor?: string
+  overlayLayers?: CgOverlayLayer[]
 }
 
 export interface SceneData {
@@ -392,9 +516,44 @@ export interface StoryCharacter {
 }
 
 export interface StoryVariable {
+  id: string
   name: string
   initialValue: string | number | boolean
+  defaultValue: string | number | boolean
   type: 'string' | 'number' | 'boolean'
+  description?: string
+}
+
+export interface UnlockData {
+  title?: string
+  description?: string
+  price?: number
+  paymentMethod?: 'free' | 'wechat_qr' | 'alipay_qr' | 'contact'
+  qrCodeUrl?: string
+  contactInfo?: string
+  contactMessage?: string
+}
+
+export interface JumpData {
+  targetNodeId?: string
+  label?: string
+  expression?: string
+}
+
+export interface GatherData {
+  label?: string
+}
+
+export interface ConditionData {
+  expression?: string
+  conditionGroups?: unknown[]
+  trueLabel?: string
+  falseLabel?: string
+}
+
+export interface RandomData {
+  label?: string
+  options?: { id: string; label: string; weight: number; nextNodeId?: string }[]
 }
 
 export interface StoryNode {

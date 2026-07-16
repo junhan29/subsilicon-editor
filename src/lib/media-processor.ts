@@ -11,16 +11,25 @@ export async function generateThumbnail(
       canvas.height = img.height * ratio
       const ctx = canvas.getContext('2d')
       if (!ctx) {
+        URL.revokeObjectURL(img.src)
         reject(new Error('无法创建 Canvas 上下文'))
         return
       }
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
       canvas.toBlob(blob => {
-        if (blob) resolve(blob)
-        else reject(new Error('缩略图生成失败'))
+        if (blob) {
+          URL.revokeObjectURL(img.src)
+          resolve(blob)
+        } else {
+          URL.revokeObjectURL(img.src)
+          reject(new Error('缩略图生成失败'))
+        }
       }, 'image/webp', 0.8)
     }
-    img.onerror = () => reject(new Error('图片加载失败'))
+    img.onerror = () => {
+      URL.revokeObjectURL(img.src)
+      reject(new Error('图片加载失败'))
+    }
     img.src = URL.createObjectURL(file)
   })
 }
@@ -34,31 +43,36 @@ function blobToDataURL(blob: Blob): Promise<string> {
   })
 }
 
-async function compressToWebP(blob: Blob, quality: number = 0.6): Promise<Blob> {
-  return new Promise((resolve, reject) => {
-    const img = new Image()
-    img.onload = () => {
-      const canvas = document.createElement('canvas')
-      canvas.width = img.width
-      canvas.height = img.height
-      const ctx = canvas.getContext('2d')
-      if (!ctx) {
-        reject(new Error('无法创建 Canvas 上下文'))
-        return
-      }
-      ctx.drawImage(img, 0, 0)
-      canvas.toBlob(
-        (compressed) => {
-          if (compressed) resolve(compressed)
-          else reject(new Error('压缩失败'))
-        },
-        'image/webp',
-        quality
-      )
+async function compressToWebP(blob: Blob, maxSizeKB: number = 500): Promise<Blob> {
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image()
+    image.onload = () => {
+      URL.revokeObjectURL(image.src)
+      resolve(image)
     }
-    img.onerror = () => reject(new Error('图片加载失败'))
-    img.src = URL.createObjectURL(blob)
+    image.onerror = () => {
+      URL.revokeObjectURL(image.src)
+      reject(new Error('图片加载失败'))
+    }
+    image.src = URL.createObjectURL(blob)
   })
+
+  const canvas = document.createElement('canvas')
+  canvas.width = img.width
+  canvas.height = img.height
+  const ctx = canvas.getContext('2d')
+  if (!ctx) {
+    throw new Error('无法创建 Canvas 上下文')
+  }
+  ctx.drawImage(img, 0, 0)
+
+  let quality = 0.8
+  let result = await new Promise<Blob>(resolve => canvas.toBlob(b => resolve(b!), 'image/webp', quality))
+  while (result.size > maxSizeKB * 1024 && quality > 0.1) {
+    quality -= 0.2
+    result = await new Promise<Blob>(resolve => canvas.toBlob(b => resolve(b!), 'image/webp', quality))
+  }
+  return result
 }
 
 // 优化图片用于内联嵌入
@@ -71,7 +85,7 @@ export async function optimizeImageForEmbed(
     return { dataUrl, exceeded: false }
   }
   // 压缩为 WebP
-  const compressed = await compressToWebP(blob, 0.6)
+  const compressed = await compressToWebP(blob, maxSizeKB)
   const dataUrl = await blobToDataURL(compressed)
   return { dataUrl, exceeded: true }
 }
@@ -85,7 +99,7 @@ export async function generateVideoThumbnail(file: File): Promise<string> {
     video.playsInline = true
 
     video.onloadeddata = () => {
-      video.currentTime = 1
+      video.currentTime = Math.min(1, video.duration / 2 || 0.1)
     }
 
     video.onseeked = () => {
@@ -135,7 +149,7 @@ export async function handleVideoImport(file: File): Promise<{
   name: string
   path?: string
 }> {
-  const maxVideoSize = 50 * 1024 * 1024 // 50MB
+  const maxVideoSize = 200 * 1024 * 1024 // 200MB
 
   if (file.size < maxVideoSize) {
     const thumb = await generateVideoThumbnail(file)

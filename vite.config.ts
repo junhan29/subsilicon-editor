@@ -24,8 +24,7 @@ export default defineConfig({
     cssCodeSplit: true,
     rollupOptions: {
       input: {
-        main: resolve(__dirname, 'index.html'),
-        web: resolve(__dirname, 'web.html'),
+        index: resolve(__dirname, 'index.html'),
       },
       output: {
         manualChunks: {

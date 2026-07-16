@@ -59,10 +59,13 @@ export function AssetPanel({ characters, onAddLayer }: AssetPanelProps) {
 
   const renderContent = () => {
     switch (activeCategory) {
-      case 'background':
+      case 'background': {
+        const filteredAssets = searchQuery.trim()
+          ? PRESET_BACKGROUNDS.filter((a) => a.name.toLowerCase().includes(searchQuery.toLowerCase()))
+          : PRESET_BACKGROUNDS
         return (
           <div className="grid grid-cols-2 gap-2">
-            {PRESET_BACKGROUNDS.map((item) => (
+            {filteredAssets.map((item) => (
               <div
                 key={item.name}
                 draggable
@@ -79,11 +82,15 @@ export function AssetPanel({ characters, onAddLayer }: AssetPanelProps) {
             ))}
           </div>
         )
+      }
 
-      case 'item':
+      case 'item': {
+        const filteredAssets = searchQuery.trim()
+          ? PRESET_ITEMS.filter((a) => a.name.toLowerCase().includes(searchQuery.toLowerCase()))
+          : PRESET_ITEMS
         return (
           <div className="grid grid-cols-3 gap-2">
-            {PRESET_ITEMS.map((item) => (
+            {filteredAssets.map((item) => (
               <div
                 key={item.name}
                 draggable
@@ -99,8 +106,12 @@ export function AssetPanel({ characters, onAddLayer }: AssetPanelProps) {
             ))}
           </div>
         )
+      }
 
-      case 'character':
+      case 'character': {
+        const filteredAssets = searchQuery.trim()
+          ? characters.filter((a) => a.name.toLowerCase().includes(searchQuery.toLowerCase()))
+          : characters
         return (
           <div className="space-y-2">
             {characters.length === 0 ? (
@@ -110,7 +121,7 @@ export function AssetPanel({ characters, onAddLayer }: AssetPanelProps) {
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-2">
-                {characters.map((char) => (
+                {filteredAssets.map((char) => (
                   <div
                     key={char.id}
                     draggable
@@ -132,11 +143,15 @@ export function AssetPanel({ characters, onAddLayer }: AssetPanelProps) {
             )}
           </div>
         )
+      }
 
-      case 'effect':
+      case 'effect': {
+        const filteredAssets = searchQuery.trim()
+          ? PRESET_EFFECTS.filter((a) => a.name.toLowerCase().includes(searchQuery.toLowerCase()))
+          : PRESET_EFFECTS
         return (
           <div className="grid grid-cols-2 gap-2">
-            {PRESET_EFFECTS.map((item) => (
+            {filteredAssets.map((item) => (
               <div
                 key={item.name}
                 draggable
@@ -152,11 +167,12 @@ export function AssetPanel({ characters, onAddLayer }: AssetPanelProps) {
             ))}
           </div>
         )
+      }
 
       case 'upload':
         return (
           <div className="space-y-3">
-            <div className="border-2 border-dashed border-slate-700 rounded-lg p-4 text-center hover:border-pink-500/50 transition-colors cursor-pointer">
+            <label className="block border-2 border-dashed border-slate-700 rounded-lg p-4 text-center hover:border-pink-500/50 transition-colors cursor-pointer">
               <Upload className="w-6 h-6 text-slate-500 mx-auto mb-2" />
               <p className="text-xs text-slate-400">点击或拖拽上传图片</p>
               <p className="text-[10px] text-slate-600 mt-1">支持 JPG/PNG/WebP</p>
@@ -169,13 +185,17 @@ export function AssetPanel({ characters, onAddLayer }: AssetPanelProps) {
                   const files = e.target.files
                   if (files) {
                     Array.from(files).forEach((file) => {
-                      const url = URL.createObjectURL(file)
-                      onAddLayer('image', { name: file.name, url })
+                      const reader = new FileReader()
+                      reader.onload = () => {
+                        const url = reader.result as string
+                        onAddLayer('image', { name: file.name, url })
+                      }
+                      reader.readAsDataURL(file)
                     })
                   }
                 }}
               />
-            </div>
+            </label>
             <p className="text-[10px] text-slate-600 text-center">
               上传的图片会自动添加到场景中
             </p>

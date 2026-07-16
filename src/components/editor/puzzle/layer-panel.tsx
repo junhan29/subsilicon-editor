@@ -1,6 +1,6 @@
 'use client'
 
-import { Eye, EyeOff, Trash2, ChevronUp, ChevronDown, Lock, Unlock } from 'lucide-react'
+import { Eye, EyeOff, Trash2, ChevronUp, ChevronDown } from 'lucide-react'
 import type { PuzzleLayer, PuzzleScene, StoryCharacter } from '@editor/types/editor'
 import { useState, memo } from 'react'
 
@@ -130,7 +130,7 @@ export function LayerPanel({
         </div>
       )}
 
-      {selectedLayer && expandedSection === 'layers' && (
+      {selectedLayer && (
         <div className="border-t border-slate-800 p-3 space-y-3 max-h-[60%] overflow-y-auto">
           <div className="text-[11px] font-medium text-pink-400">属性</div>
 
@@ -308,6 +308,58 @@ export function LayerPanel({
               <option value="bounce">弹跳</option>
             </select>
           </div>
+
+          {selectedLayer.type !== 'background' && (
+            <div className="space-y-2 pt-2 border-t border-slate-800">
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] text-slate-400">交互选项</label>
+                <button
+                  type="button"
+                  onClick={() => onUpdateLayer(selectedLayer.id, { clickable: !selectedLayer.clickable })}
+                  className={`relative w-8 h-4 rounded-full transition-colors ${
+                    selectedLayer.clickable ? 'bg-pink-500' : 'bg-slate-700'
+                  }`}
+                >
+                  <span
+                    className={`absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white transition-transform ${
+                      selectedLayer.clickable ? 'translate-x-4' : ''
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {selectedLayer.clickable && (
+                <div className="space-y-2 pl-1">
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-slate-400">选项文本</label>
+                    <input
+                      type="text"
+                      value={selectedLayer.choiceOptionText || ''}
+                      onChange={(e) => onUpdateLayer(selectedLayer.id, { choiceOptionText: e.target.value })}
+                      placeholder="例如：打开箱子"
+                      className="w-full px-2 py-1 text-xs bg-slate-800 border border-slate-700 rounded text-white focus:outline-none focus:border-pink-500"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-slate-400">悬停效果</label>
+                    <select
+                      value={selectedLayer.hoverEffect || 'highlight'}
+                      onChange={(e) => onUpdateLayer(selectedLayer.id, {
+                        hoverEffect: e.target.value as 'highlight' | 'scale' | 'glow' | 'none',
+                      })}
+                      className="w-full px-2 py-1 text-xs bg-slate-800 border border-slate-700 rounded text-white focus:outline-none focus:border-pink-500"
+                    >
+                      <option value="highlight">高亮</option>
+                      <option value="scale">放大</option>
+                      <option value="glow">发光</option>
+                      <option value="none">无</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

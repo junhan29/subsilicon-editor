@@ -8,6 +8,7 @@ interface RuntimeSceneRendererProps {
   characters?: StoryCharacter[]
   className?: string
   animate?: boolean
+  onLayerClick?: (layerId: string, optionId?: string) => void
 }
 
 export function RuntimeSceneRenderer({
@@ -15,6 +16,7 @@ export function RuntimeSceneRenderer({
   characters = [],
   className = '',
   animate = true,
+  onLayerClick,
 }: RuntimeSceneRendererProps) {
   const sortedLayers = [...scene.layers].sort((a, b) => a.zIndex - b.zIndex)
 
@@ -24,7 +26,13 @@ export function RuntimeSceneRenderer({
       style={{ aspectRatio: `${scene.width}/${scene.height}` }}
     >
       {sortedLayers.map((layer) => (
-        <AnimatedLayer key={layer.id} layer={layer} characters={characters} animate={animate} />
+        <AnimatedLayer
+          key={layer.id}
+          layer={layer}
+          characters={characters}
+          animate={animate}
+          onLayerClick={onLayerClick}
+        />
       ))}
     </div>
   )
@@ -34,10 +42,12 @@ function AnimatedLayer({
   layer,
   characters,
   animate,
+  onLayerClick,
 }: {
   layer: PuzzleLayer
   characters: StoryCharacter[]
   animate: boolean
+  onLayerClick?: (layerId: string, optionId?: string) => void
 }) {
   const [entered, setEntered] = useState(!animate)
 
@@ -52,7 +62,7 @@ function AnimatedLayer({
     }
     const timer = setTimeout(() => setEntered(true), layer.animation?.delay || 0)
     return () => clearTimeout(timer)
-  }, [layer.id, layer.animation, animate])
+  }, [layer.id, layer.animation?.type, layer.animation?.duration, animate])
 
   if (!layer.visible) return null
 
@@ -109,9 +119,35 @@ function AnimatedLayer({
         animationDuration: `${animDuration}ms`,
       }
 
+  const clickable = layer.clickable === true
+  const hoverEffect = layer.hoverEffect || 'none'
+
+  const hoverClass = clickable
+    ? hoverEffect === 'highlight'
+      ? 'hover:brightness-125'
+      : hoverEffect === 'scale'
+        ? 'hover:scale-105 transition-transform'
+        : hoverEffect === 'glow'
+          ? 'hover:drop-shadow-[0_0_8px_rgba(236,72,153,0.8)]'
+          : ''
+    : ''
+
+  if (clickable) {
+    style.cursor = 'pointer'
+  }
+
+  const handleClick = clickable
+    ? (e: React.MouseEvent) => {
+        e.stopPropagation()
+        onLayerClick?.(layer.id, layer.choiceOptionId)
+      }
+    : undefined
+
+  const layerClass = `${animClass} ${hoverClass}`.trim()
+
   if (layer.type === 'text') {
     return (
-      <div style={style} className={animClass}>
+      <div style={style} className={layerClass} onClick={handleClick}>
         <div
           style={{
             fontSize: layer.fontSize || 16,
@@ -126,9 +162,10 @@ function AnimatedLayer({
     )
   }
 
-  if (layer.type === 'effect' && layer.url.endsWith('.mp4')) {
+  const isVideo = layer.url?.endsWith('.mp4') || layer.url?.endsWith('.webm') || layer.url?.endsWith('.mov') || layer.url?.endsWith('.ogg') || layer.url?.endsWith('.ogv')
+  if (layer.type === 'effect' && isVideo) {
     return (
-      <div style={style} className={animClass}>
+      <div style={style} className={layerClass} onClick={handleClick}>
         <video
           src={layer.url}
           className="w-full h-full object-contain"
@@ -142,7 +179,7 @@ function AnimatedLayer({
   }
 
   return (
-    <div style={style} className={animClass}>
+    <div style={style} className={layerClass} onClick={handleClick}>
       <img
         src={getImageUrl()}
         alt={layer.name}

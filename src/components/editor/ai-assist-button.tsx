@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Sparkles, Loader2, Wand2, PenLine, ArrowRight, Lightbulb, Image, Video } from 'lucide-react'
 import { showToast } from './toast'
+import { AiSettingsDialog } from './ai-settings-dialog'
 import { isAiAvailable, callAi } from '@editor/lib/ai'
 
 export type AiAssistMode = 'polish' | 'continue' | 'generate' | 'expand' | 'suggest' | 'image' | 'video'
@@ -68,11 +69,13 @@ const MODE_CONFIG: Record<AiAssistMode, {
 
 export function AiAssistButton({ mode, context, onResult, className = '', size = 'sm', label }: AiAssistButtonProps) {
   const [loading, setLoading] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
   const config = MODE_CONFIG[mode]
 
   const handleClick = async () => {
     const available = await isAiAvailable()
     if (!available) {
+      setShowSettings(true)
       showToast('error', 'AI 未配置，请先在 AI 设置中配置 API')
       return
     }
@@ -99,7 +102,12 @@ export function AiAssistButton({ mode, context, onResult, className = '', size =
       onResult(result.trim())
       showToast('success', `${config.label}完成`)
     } catch (e) {
-      showToast('error', `${config.label}失败: ${e instanceof Error ? e.message : '未知错误'}`)
+      if (e instanceof Error && 'needsConfig' in e && (e as { needsConfig: boolean }).needsConfig) {
+        setShowSettings(true)
+        showToast('error', 'AI 未配置，请先设置 API Key 或启动本地 Ollama')
+      } else {
+        showToast('error', `${config.label}失败: ${e instanceof Error ? e.message : '未知错误'}`)
+      }
     } finally {
       setLoading(false)
     }
@@ -110,14 +118,21 @@ export function AiAssistButton({ mode, context, onResult, className = '', size =
     : 'px-3 py-1.5 text-xs'
 
   return (
-    <button
-      onClick={handleClick}
-      disabled={loading}
-      title={config.tooltip}
-      className={`inline-flex items-center gap-1 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 transition-colors disabled:opacity-50 ${sizeClasses} ${className}`}
-    >
-      {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : config.icon}
-      {label || config.label}
-    </button>
+    <>
+      <button
+        onClick={handleClick}
+        disabled={loading}
+        title={config.tooltip}
+        className={`inline-flex items-center gap-1 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 transition-colors disabled:opacity-50 ${sizeClasses} ${className}`}
+      >
+        {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : config.icon}
+        {label || config.label}
+      </button>
+
+      <AiSettingsDialog
+        open={showSettings}
+        onClose={() => setShowSettings(false)}
+      />
+    </>
   )
 }

@@ -59,7 +59,7 @@ export function generateCharacterPrompt(character: StoryCharacter): string {
 // 从场景信息生成 prompt
 export function generateScenePrompt(scene: ComicScene, characters: StoryCharacter[]): string {
   const charPrompts = characters.map(generateCharacterPrompt).join('; ')
-  return `${scene.name}, ${scene.description || ''}, featuring: ${charPrompts}`
+  return `${scene.name}, ${scene.style || ''}, featuring: ${charPrompts}`
 }
 
 // 构建带有一致性角色的图片生成 prompt
@@ -167,6 +167,42 @@ async function generateWithComfyUI(
   throw new Error('ComfyUI 集成尚未完成。请使用 OpenAI DALL-E 或 Stability AI。')
 }
 
+// 调用 OpenAI 兼容接口生成图片（用于 wan/custom 等供应商）
+async function generateWithOpenAICompatible(
+  params: ImageGenerationParams,
+  apiUrl: string,
+  apiKey: string,
+  model: string = 'dall-e-3'
+): Promise<MediaGenerationResult> {
+  const baseUrl = apiUrl.replace(/\/+$/, '')
+  const response = await fetch(`${baseUrl}/images/generations`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      prompt: params.prompt,
+      n: 1,
+      size: `${params.width || 1024}x${params.height || 1024}`,
+      response_format: 'url',
+    }),
+  })
+
+  if (!response.ok) {
+    const error = await response.text()
+    throw new Error(`API error: ${error}`)
+  }
+
+  const data = await response.json()
+  return {
+    url: data.data?.[0]?.url || data.url || '',
+    type: 'image',
+    prompt: params.prompt,
+  }
+}
+
 // 主生成函数
 export async function generateMedia(
   params: ImageGenerationParams | VideoGenerationParams,
@@ -179,6 +215,12 @@ export async function generateMedia(
       return generateWithStability(params as ImageGenerationParams, provider.apiKey, provider.model)
     case 'comfyui':
       return generateWithComfyUI(params, provider.apiUrl || 'http://localhost:8188')
+    case 'wan':
+    case 'custom':
+      if (provider.apiUrl && provider.apiKey) {
+        return generateWithOpenAICompatible(params as ImageGenerationParams, provider.apiUrl, provider.apiKey, provider.model)
+      }
+      throw new Error(`${provider.type} 供应商需要配置 apiUrl 和 apiKey`)
     default:
       throw new Error(`Unsupported provider type: ${provider.type}`)
   }

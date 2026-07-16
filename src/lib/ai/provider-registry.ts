@@ -42,6 +42,14 @@ function refreshProviders() {
   )
 }
 
+export class AiConfigNeededError extends Error {
+  needsConfig = true
+  constructor() {
+    super('请先配置 AI 服务商或启动本地 Ollama')
+    this.name = 'AiConfigNeededError'
+  }
+}
+
 export function getAiConfig(): AiConfig | null {
   if (!cachedConfig) {
     refreshProviders()
@@ -93,7 +101,7 @@ export async function callAi(options: AiRequestOptions, _config?: AiConfig | nul
   if (lastError) {
     throw lastError
   }
-  throw new Error('请先配置 AI 服务商或启动本地 Ollama')
+  throw new AiConfigNeededError()
 }
 
 export function getAvailableProviders(): AiProvider[] {
@@ -143,7 +151,7 @@ export async function callAiStream(options: AiRequestOptions, _config?: AiConfig
   if (lastError) {
     throw lastError
   }
-  throw new Error('请先配置 AI 服务商或启动本地 Ollama')
+  throw new AiConfigNeededError()
 }
 
 async function collectStream(stream: AsyncGenerator<string, void, unknown>): Promise<string> {

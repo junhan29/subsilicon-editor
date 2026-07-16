@@ -9,7 +9,7 @@ export interface AiConfig {
 export interface AiProviderConfig {
   id: string
   name: string
-  provider: 'openai' | 'anthropic' | 'deepseek' | 'google' | 'custom'
+  provider: 'openai' | 'anthropic' | 'deepseek' | 'google' | 'baidu' | 'alibaba' | 'doubao' | 'zhipu' | 'moonshot' | 'custom'
   apiKey: string
   apiUrl?: string
   model: string

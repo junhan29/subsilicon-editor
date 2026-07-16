@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useCallback, useEffect, memo } from 'react'
-import { shallowEqual } from '@editor/lib/utils'
 import { Settings, Users, Image, Music, ChevronDown, ChevronUp, X, Plus, Edit3, Layers, BarChart3, Trash2, ShieldCheck, GitBranch, MessageSquare, Activity, Lock, Sparkles, Wand2, DollarSign } from 'lucide-react'
 import { showToast } from './toast'
 import { Button } from '@editor/components/ui/button'
@@ -563,19 +562,31 @@ function EditorRightPanel({
                   accept="image/*"
                   multiple
                   className="absolute inset-0 opacity-0 cursor-pointer"
-                  onChange={(e) => {
+                  onChange={async (e) => {
                     const files = e.target.files
                     if (files) {
-                      Array.from(files).forEach((file) => {
-                        const url = URL.createObjectURL(file)
+                      const fileArray = Array.from(files)
+                      const newScenes: ComicScene[] = []
+                      for (let i = 0; i < fileArray.length; i++) {
+                        const file = fileArray[i]
+                        if (file.size > 10 * 1024 * 1024) {
+                          showToast('error', `${file.name} 超过 10MB，已跳过`)
+                          continue
+                        }
+                        const base64 = await new Promise<string>((resolve, reject) => {
+                          const reader = new FileReader()
+                          reader.onload = () => resolve(reader.result as string)
+                          reader.onerror = reject
+                          reader.readAsDataURL(file)
+                        })
                         const name = file.name.replace(/\.[^.]+$/, '')
-                        const newScene: ComicScene = {
+                        newScenes.push({
                           id: `scene-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
                           name,
-                          backgroundImage: url,
-                        }
-                        onScenesChange?.([...scenes, newScene])
-                      })
+                          backgroundImage: base64,
+                        })
+                      }
+                      onScenesChange?.([...scenes, ...newScenes])
                     }
                   }}
                 />
@@ -656,20 +667,33 @@ function EditorRightPanel({
                   accept="audio/*"
                   multiple
                   className="absolute inset-0 opacity-0 cursor-pointer"
-                  onChange={(e) => {
+                  onChange={async (e) => {
                     const files = e.target.files
                     if (files) {
-                      Array.from(files).forEach((file) => {
-                        const url = URL.createObjectURL(file)
+                      const fileArray = Array.from(files)
+                      const newAudios: ComicAudio[] = []
+                      for (let i = 0; i < fileArray.length; i++) {
+                        const file = fileArray[i]
+                        if (file.size > 50 * 1024 * 1024) {
+                          showToast('error', `${file.name} 超过 50MB，已跳过`)
+                          continue
+                        }
+                        const base64 = await new Promise<string>((resolve, reject) => {
+                          const reader = new FileReader()
+                          reader.onload = () => resolve(reader.result as string)
+                          reader.onerror = reject
+                          reader.readAsDataURL(file)
+                        })
                         const name = file.name.replace(/\.[^.]+$/, '')
-                        const newAudio: ComicAudio = {
+                        newAudios.push({
                           id: `audio-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
                           name,
-                          url,
+                          url: base64,
                           type: audioType,
-                        }
-                        onAudiosChange?.([...audios, newAudio])
-                      })
+                          loop: audioType === 'bgm',
+                        })
+                      }
+                      onAudiosChange?.([...audios, ...newAudios])
                     }
                   }}
                 />
@@ -714,7 +738,7 @@ function EditorRightPanel({
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium text-white truncate">{audio.name}</p>
-                      <p className="text-[10px] text-slate-500 truncate">{audio.url?.startsWith('blob:') ? '本地文件' : '在线'}</p>
+                      <p className="text-[10px] text-slate-500 truncate">{audio.url?.startsWith('data:') ? '本地文件' : '在线'}</p>
                     </div>
                     <button
                       onClick={() => deleteAudio(audio.id)}
@@ -828,23 +852,13 @@ function EditorRightPanel({
   )
 }
 
-function areEditorRightPanelPropsEqual(
-  prevProps: EditorRightPanelProps,
-  nextProps: EditorRightPanelProps
-): boolean {
-  if (prevProps.selectedNode?.id !== nextProps.selectedNode?.id) return false
-  if (prevProps.selectedEdge?.id !== nextProps.selectedEdge?.id) return false
-  if (prevProps.characters.length !== nextProps.characters.length) return false
-  if (prevProps.scenes?.length !== nextProps.scenes?.length) return false
-  if (prevProps.audios?.length !== nextProps.audios?.length) return false
-  if (prevProps.variables?.length !== nextProps.variables?.length) return false
-  if (prevProps.nodes.length !== nextProps.nodes.length) return false
-  if (prevProps.activeTab !== nextProps.activeTab) return false
-  if (prevProps.versions?.length !== nextProps.versions?.length) return false
-  if (prevProps.annotations !== nextProps.annotations) return false
-  if (prevProps.annotationAuthor !== nextProps.annotationAuthor) return false
-  if (prevProps.workId !== nextProps.workId) return false
-  return true
+function areEditorRightPanelPropsEqual(prev: EditorRightPanelProps, next: EditorRightPanelProps) {
+  return prev.nodes === next.nodes &&
+         prev.scenes === next.scenes &&
+         prev.audios === next.audios &&
+         prev.variables === next.variables &&
+         prev.selectedNode === next.selectedNode &&
+         prev.selectedEdge === next.selectedEdge
 }
 
 export const MemoizedEditorRightPanel = memo(EditorRightPanel, areEditorRightPanelPropsEqual)

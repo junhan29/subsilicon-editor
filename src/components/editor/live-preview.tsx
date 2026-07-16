@@ -19,6 +19,9 @@ interface LivePreviewProps {
 
 const DEFAULT_BG = 'https://picsum.photos/seed/studio/800/600'
 
+const fontSizeClass: Record<string, string> = { '14px': 'text-sm', '16px': 'text-base', '18px': 'text-lg', '20px': 'text-xl', '24px': 'text-2xl', base: 'text-base' }
+const lineHeightClass: Record<string, string> = { relaxed: 'leading-relaxed', normal: 'leading-normal', tight: 'leading-tight' }
+
 function LivePreview({
   nodes,
   characters,
@@ -52,7 +55,7 @@ function LivePreview({
   }, [])
 
   const dialogueNodes = useMemo(() => {
-    return nodes.filter((n) => n.type === 'dialogue' || n.type === 'choice' || n.type === 'narration' || n.type === 'ending' || n.type === 'cg')
+    return nodes.filter((n) => n.type === 'dialogue' || n.type === 'choice' || n.type === 'narration' || n.type === 'ending' || n.type === 'cg' || n.type === 'condition' || n.type === 'random' || n.type === 'jump' || n.type === 'gather' || n.type === 'unlock')
   }, [nodes])
 
   const currentNode = dialogueNodes[currentIndex] || null
@@ -188,11 +191,13 @@ function LivePreview({
     let delay: number
     if (currentNode.type === 'cg') {
       const d = currentNode.data as any
-      delay = d.duration && d.duration > 0 ? d.duration : 3000
+      delay = d.duration !== undefined && d.duration > 0 ? d.duration : (d.duration === 0 ? 0 : 3000)
     } else {
       const text = (currentNode.data as any)?.text || ''
       delay = Math.max(1500, text.length * 60)
     }
+
+    if (delay === 0) return
 
     const timer = setTimeout(() => {
       if (currentIndex < dialogueNodes.length - 1) {
@@ -232,6 +237,7 @@ function LivePreview({
   }, [isPlaying, currentIndex, dialogueNodes.length])
 
   const handleSceneClick = () => {
+    if (currentNode?.type === 'choice') return
     if (isTyping) {
       const text = (currentNode?.data as any)?.text || ''
       setDisplayText(text)
@@ -240,6 +246,20 @@ function LivePreview({
       goNext()
     }
   }
+
+  const handleChoice = useCallback((opt: any) => {
+    if (!opt) return
+    if (opt.nextNodeId) {
+      const idx = dialogueNodes.findIndex((n) => n.id === opt.nextNodeId)
+      if (idx !== -1) {
+        setCurrentIndex(idx)
+        setCharacterEntering(true)
+        setTimeout(() => { if (mountedRef.current) setCharacterEntering(false) }, 500)
+        return
+      }
+    }
+    goNext()
+  }, [dialogueNodes, goNext])
 
   const renderCharacter = () => {
     if (!currentNode || currentNode.type !== 'dialogue') return null
@@ -278,6 +298,110 @@ function LivePreview({
     )
   }
 
+  const videoRef = useRef<HTMLVideoElement | null>(null)
+
+  useEffect(() => {
+    if (!videoRef.current || currentNode?.type !== 'cg') return
+    const d = currentNode.data as any
+    if (d.mediaType !== 'video') return
+
+    const video = videoRef.current
+
+    const handleLoadedMetadata = () => {
+      if (d.startTime && d.startTime > 0) {
+        video.currentTime = d.startTime
+      }
+      if (d.playbackRate && d.playbackRate !== 1) {
+        video.playbackRate = d.playbackRate
+      }
+    }
+
+    const handleTimeUpdate = () => {
+      if (d.endTime && d.endTime > 0 && video.currentTime >= d.endTime) {
+        if (d.loop) {
+          video.currentTime = d.loopStartTime || d.startTime || 0
+        } else {
+          video.pause()
+          if (d.duration !== undefined && d.duration !== 0) {
+            goNext()
+          }
+        }
+      }
+      if (d.loop && d.loopEndTime && video.currentTime >= d.loopEndTime) {
+        video.currentTime = d.loopStartTime || d.startTime || 0
+      }
+    }
+
+    video.addEventListener('loadedmetadata', handleLoadedMetadata)
+    video.addEventListener('timeupdate', handleTimeUpdate)
+
+    return () => {
+      video.removeEventListener('loadedmetadata', handleLoadedMetadata)
+      video.removeEventListener('timeupdate', handleTimeUpdate)
+    }
+  }, [currentNode, goNext, isMuted])
+
+  const getDialoguePositionStyle = (visual: any): React.CSSProperties => {
+    if (!visual) return {}
+    const style: React.CSSProperties = {}
+    const pos = visual.position || 'bottom'
+
+    if (pos === 'top') {
+      style.top = '1rem'
+      style.bottom = 'auto'
+    } else if (pos === 'center') {
+      style.top = '50%'
+      style.bottom = 'auto'
+      style.transform = 'translateY(-50%)'
+    } else if (pos === 'custom') {
+      style.top = 'auto'
+      style.bottom = 'auto'
+      if (visual.customY !== undefined) {
+        style.top = `${visual.customY}%`
+      } else {
+        style.bottom = '1rem'
+      }
+      if (visual.customX !== undefined) {
+        style.left = '50%'
+        style.transform = `translateX(calc(-50% + ${visual.customX}px))`
+      }
+    } else {
+      style.bottom = '1rem'
+    }
+
+    if (visual.opacity !== undefined) {
+      style.opacity = visual.opacity
+    }
+
+    return style
+  }
+
+  const getDialogueBoxStyle = (visual: any, baseColor?: string): React.CSSProperties => {
+    if (!visual) return {}
+    const style: React.CSSProperties = {}
+
+    if (visual.width) style.width = `${visual.width}%`
+    if (visual.maxWidth) style.maxWidth = `${visual.maxWidth}px`
+    if (visual.borderRadius !== undefined) style.borderRadius = `${visual.borderRadius}px`
+    if (visual.backgroundColor) style.backgroundColor = visual.backgroundColor
+    if (visual.borderWidth !== undefined) style.borderWidth = `${visual.borderWidth}px`
+    if (visual.borderColor) style.borderColor = visual.borderColor
+    if (visual.shadow) style.boxShadow = '0 20px 60px rgba(0,0,0,0.5)'
+    if (visual.backdropBlur === false) {
+      style.backdropFilter = 'none'
+      ;(style as any).WebkitBackdropFilter = 'none'
+    }
+    if (baseColor) {
+      style.borderTopColor = baseColor
+      style.borderTopWidth = '3px'
+    }
+    if (visual.paddingX !== undefined || visual.paddingY !== undefined) {
+      style.padding = `${visual.paddingY || 20}px ${visual.paddingX || 20}px`
+    }
+
+    return style
+  }
+
   const renderDialogueBox = () => {
     if (!currentNode) return null
 
@@ -286,15 +410,33 @@ function LivePreview({
       const name = getCharacterName(charId)
       const color = getCharacterColor(charId)
       const avatar = getCharacterAvatar(charId)
+      const visual = (currentNode.data as any)?.visualStyle
+
+      const positionStyle = getDialoguePositionStyle(visual)
+      const boxStyle = getDialogueBoxStyle(visual, color)
+      const showAvatar = visual?.showAvatar !== false
+      const avatarSize = visual?.avatarSize || 40
+      const textAlignment = visual?.textAlignment || 'left'
+      const fontSize = visual?.fontSize ? `${visual.fontSize}px` : 'base'
+      const fontColor = visual?.fontColor || 'white'
+      const lineHeight = visual?.lineHeight || 'relaxed'
+      const namePos = visual?.characterNamePosition || 'top'
 
       return (
-        <div className="absolute bottom-0 left-0 right-0 p-4">
+        <div className="absolute left-0 right-0 px-4 flex justify-center" style={positionStyle}>
           <div
-            className="bg-slate-900/95 backdrop-blur-md rounded-2xl border border-slate-700 shadow-2xl overflow-hidden"
-            style={{ borderTopColor: color, borderTopWidth: '3px' }}
+            className="bg-slate-900/95 backdrop-blur-md rounded-2xl border border-slate-700 shadow-2xl overflow-hidden w-full max-w-2xl"
+            style={boxStyle}
           >
-            <div className="flex items-center gap-3 px-5 pt-4 pb-2">
-              <img src={avatar} alt={name} className="w-10 h-10 rounded-full border-2 object-cover" style={{ borderColor: color }} />
+            <div className={`flex items-center gap-3 px-5 pt-4 pb-2 ${namePos === 'hidden' ? 'hidden' : ''}`}>
+              {showAvatar && (
+                <img
+                  src={avatar}
+                  alt={name}
+                  className="rounded-full border-2 object-cover"
+                  style={{ width: `${avatarSize}px`, height: `${avatarSize}px`, borderColor: color }}
+                />
+              )}
               <span className="font-bold text-white text-sm">{name}</span>
               {(currentNode.data as any)?.emotion && (
                 <span className="text-xs text-slate-400 bg-slate-800 px-2 py-0.5 rounded-full">
@@ -303,7 +445,14 @@ function LivePreview({
               )}
             </div>
             <div className="px-5 pb-5 pt-1">
-              <p className="text-white text-base leading-relaxed min-h-[3rem]">
+              <p
+                className={`text-white ${fontSizeClass[fontSize] || 'text-base'} ${lineHeightClass[lineHeight] || 'leading-relaxed'} min-h-[3rem]`}
+                style={{
+                  color: fontColor,
+                  textAlign: textAlignment as any,
+                  fontSize: typeof fontSize === 'string' && fontSize.endsWith('px') ? fontSize : undefined,
+                }}
+              >
                 {displayText}
                 {isTyping && <span className="inline-block w-2 h-4 bg-pink-500 ml-1 animate-pulse" />}
               </p>
@@ -317,10 +466,31 @@ function LivePreview({
     }
 
     if (currentNode.type === 'narration') {
+      const visual = (currentNode.data as any)?.visualStyle
+      const positionStyle = getDialoguePositionStyle(visual)
+      const boxStyle = getDialogueBoxStyle(visual)
+      const fontSize = visual?.fontSize ? `${visual.fontSize}px` : 'base'
+      const fontColor = visual?.fontColor || '#e2e8f0'
+      const textAlignment = visual?.textAlignment || 'center'
+      const italic = visual?.italic !== false
+
       return (
-        <div className="absolute bottom-0 left-0 right-0 p-4">
-          <div className="bg-black/80 backdrop-blur-md rounded-2xl border border-slate-600 shadow-2xl px-6 py-5">
-            <p className="text-slate-200 text-base leading-relaxed text-center italic min-h-[3rem]">
+        <div className="absolute left-0 right-0 px-4 flex justify-center" style={positionStyle}>
+          <div
+            className="bg-black/80 backdrop-blur-md rounded-2xl border border-slate-600 shadow-2xl px-6 py-5 w-full max-w-2xl"
+            style={{
+              ...boxStyle,
+              backgroundColor: visual?.backgroundColor || 'rgba(0,0,0,0.8)',
+            }}
+          >
+            <p
+              className={`text-slate-200 ${fontSizeClass[fontSize] || 'text-base'} leading-relaxed text-center ${italic ? 'italic' : ''} min-h-[3rem]`}
+              style={{
+                color: fontColor,
+                textAlign: textAlignment as any,
+                fontSize: typeof fontSize === 'string' && fontSize.endsWith('px') ? fontSize : undefined,
+              }}
+            >
               {displayText}
               {isTyping && <span className="inline-block w-2 h-4 bg-slate-400 ml-1 animate-pulse" />}
             </p>
@@ -332,22 +502,256 @@ function LivePreview({
     if (currentNode.type === 'choice') {
       const options = (currentNode.data as any)?.options || []
       const prompt = (currentNode.data as any)?.prompt || '你的选择是？'
+      const visual = (currentNode.data as any)?.visualStyle
+      const choiceMode = (currentNode.data as any)?.choiceMode || 'text'
+
+      const positionStyle = getDialoguePositionStyle(visual)
+      const boxStyle = getDialogueBoxStyle(visual)
+      const promptPosition = visual?.promptPosition || 'top'
+      const promptText = visual?.promptText || prompt
+
+      // 场景选择模式：渲染可点击的拼图场景图层
+      if (choiceMode === 'scene') {
+        const sceneId = (currentNode.data as any)?.sceneId
+        const scene = sceneId ? scenes.find((s) => s.id === sceneId) : null
+
+        if (!scene || !scene.puzzleData) {
+          return (
+            <div className="absolute left-0 right-0 px-4 flex justify-center" style={positionStyle}>
+              <div
+                className="bg-slate-900/95 backdrop-blur-md rounded-2xl border border-slate-700 shadow-2xl p-5 w-full max-w-2xl"
+                style={boxStyle}
+              >
+                <p className="text-center text-slate-300 text-sm mb-4">{promptText}</p>
+                <p className="text-center text-slate-500 text-sm py-6">未找到场景数据</p>
+              </div>
+            </div>
+          )
+        }
+
+        const sortedLayers = [...scene.puzzleData.layers].sort((a, b) => a.zIndex - b.zIndex)
+
+        return (
+          <div className="absolute inset-0 z-10">
+            <div className="absolute top-4 left-0 right-0 px-4 flex justify-center z-20 pointer-events-none">
+              <div className="bg-slate-900/80 backdrop-blur-md rounded-xl border border-slate-700 shadow-2xl px-4 py-2">
+                <p className="text-center text-slate-200 text-sm">{promptText}</p>
+              </div>
+            </div>
+            <div className="absolute inset-0">
+              {sortedLayers.map((layer: any) => {
+                if (!layer.visible) return null
+
+                const matchingOption = options.find((o: any) => o.clickableLayerId === layer.id)
+                const isClickable = layer.clickable === true || !!matchingOption
+                const isBg = layer.type === 'background'
+
+                const layerStyle: React.CSSProperties = isBg
+                  ? { position: 'absolute', inset: 0, zIndex: layer.zIndex, opacity: layer.opacity }
+                  : {
+                      position: 'absolute',
+                      left: `${layer.x}%`,
+                      top: `${layer.y}%`,
+                      width: layer.width ? `${layer.width}%` : 'auto',
+                      height: layer.height ? `${layer.height}%` : 'auto',
+                      transform: `translate(-50%, -50%) rotate(${layer.rotation}deg)`,
+                      transformOrigin: 'center center',
+                      zIndex: layer.zIndex,
+                      opacity: layer.opacity,
+                    }
+
+                const hoverEffect = layer.hoverEffect || 'none'
+                const hoverClass = isClickable
+                  ? hoverEffect === 'highlight'
+                    ? 'hover:brightness-125 transition-all'
+                    : hoverEffect === 'scale'
+                      ? 'hover:scale-105 transition-transform'
+                      : hoverEffect === 'glow'
+                        ? 'hover:drop-shadow-[0_0_15px_rgba(236,72,153,0.8)] transition-all'
+                        : 'transition-all'
+                  : ''
+
+                if (layer.type === 'text') {
+                  return (
+                    <div key={layer.id} style={layerStyle} className={hoverClass}>
+                      <div
+                        style={{
+                          fontSize: layer.fontSize || 16,
+                          color: layer.fontColor || '#ffffff',
+                          whiteSpace: 'pre-wrap',
+                          textShadow: '0 2px 8px rgba(0,0,0,0.8)',
+                        }}
+                      >
+                        {layer.textContent || ''}
+                      </div>
+                    </div>
+                  )
+                }
+
+                const imageUrl =
+                  layer.type === 'character' && layer.characterId
+                    ? (() => {
+                        const char = characters.find((c) => c.id === layer.characterId)
+                        const sprite = char?.sprites?.find((s) => s.emotion === layer.emotion)
+                        return sprite?.url || sprite?.image || layer.url
+                      })()
+                    : layer.url
+
+                return (
+                  <div
+                    key={layer.id}
+                    className={`${isClickable ? 'cursor-pointer' : ''} ${hoverClass}`}
+                    style={layerStyle}
+                    onClick={isClickable && matchingOption ? () => handleChoice(matchingOption) : undefined}
+                  >
+                    <img
+                      src={imageUrl}
+                      alt={layer.name}
+                      className={isBg ? 'w-full h-full object-cover' : 'max-w-full max-h-full object-contain'}
+                      draggable={false}
+                    />
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )
+      }
+
+      // 图片选择模式：渲染为图片卡片网格
+      if (choiceMode === 'image') {
+        return (
+          <div className="absolute left-0 right-0 px-4 flex justify-center" style={positionStyle}>
+            <div
+              className="bg-slate-900/95 backdrop-blur-md rounded-2xl border border-slate-700 shadow-2xl p-5 w-full max-w-2xl"
+              style={boxStyle}
+            >
+              {promptPosition === 'top' && (
+                <p className="text-center text-slate-300 text-sm mb-4">{promptText}</p>
+              )}
+              <div className="grid grid-cols-2 gap-3">
+                {options.map((opt: any, idx: number) => {
+                  const imagePosition = opt.imagePosition || 'top'
+                  const img = opt.image
+
+                  if (imagePosition === 'background') {
+                    return (
+                      <button
+                        key={opt.id || idx}
+                        onClick={() => handleChoice(opt)}
+                        className="relative rounded-xl border border-slate-700 overflow-hidden hover:border-pink-500 transition-all aspect-video"
+                      >
+                        {img && (
+                          <img src={img} alt={opt.text} className="absolute inset-0 w-full h-full object-cover" draggable={false} />
+                        )}
+                        <div className="absolute inset-0 bg-black/40" />
+                        <div className="absolute inset-0 flex items-center justify-center p-3">
+                          <span className="text-white font-bold text-sm drop-shadow-lg text-center">{opt.text}</span>
+                        </div>
+                      </button>
+                    )
+                  }
+
+                  if (imagePosition === 'left') {
+                    return (
+                      <button
+                        key={opt.id || idx}
+                        onClick={() => handleChoice(opt)}
+                        className="flex w-full rounded-xl border border-slate-700 overflow-hidden hover:border-pink-500 transition-all"
+                      >
+                        {img && (
+                          <div className="w-1/3 relative bg-slate-800">
+                            <img src={img} alt={opt.text} className="absolute inset-0 w-full h-full object-cover" draggable={false} />
+                          </div>
+                        )}
+                        <div className="w-2/3 flex items-center p-3 bg-slate-800/80">
+                          <span className="text-white text-sm text-left">{opt.text}</span>
+                        </div>
+                      </button>
+                    )
+                  }
+
+                  // 默认 'top'：图片在上，文字在下
+                  return (
+                    <button
+                      key={opt.id || idx}
+                      onClick={() => handleChoice(opt)}
+                      className="rounded-xl border border-slate-700 overflow-hidden hover:border-pink-500 transition-all text-left"
+                    >
+                      {img && (
+                        <div className="aspect-video w-full overflow-hidden bg-slate-800">
+                          <img src={img} alt={opt.text} className="w-full h-full object-cover" draggable={false} />
+                        </div>
+                      )}
+                      <div className="p-3 bg-slate-800/80">
+                        <span className="text-white text-sm">{opt.text}</span>
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+              {promptPosition === 'bottom' && (
+                <p className="text-center text-slate-300 text-sm mt-4">{promptText}</p>
+              )}
+            </div>
+          </div>
+        )
+      }
+
+      // 文本选择模式（默认，保持原有渲染）
+      const showLetter = visual?.showLetter !== false
+      const optionHeight = visual?.optionHeight ? `${visual.optionHeight}px` : 'auto'
+      const optionFontSize = visual?.optionFontSize ? `${visual.optionFontSize}px` : 'sm'
+      const optionTextColor = visual?.optionTextColor || 'white'
+      const optionBgColor = visual?.optionBgColor || 'rgba(30, 41, 59, 0.8)'
+      const optionHoverBgColor = visual?.optionHoverBgColor || 'rgba(236, 72, 153, 0.2)'
+      const optionBorderColor = visual?.optionBorderColor || '#475569'
+      const optionHoverBorderColor = visual?.optionHoverBorderColor || '#ec4899'
+      const optionAlignment = visual?.optionAlignment || 'left'
+      const gap = visual?.gap !== undefined ? `${visual.gap}px` : '0.5rem'
 
       return (
-        <div className="absolute bottom-0 left-0 right-0 p-4">
-          <div className="bg-slate-900/95 backdrop-blur-md rounded-2xl border border-slate-700 shadow-2xl p-5">
-            <p className="text-center text-slate-300 text-sm mb-4">{prompt}</p>
-            <div className="space-y-2">
+        <div className="absolute left-0 right-0 px-4 flex justify-center" style={positionStyle}>
+          <div
+            className="bg-slate-900/95 backdrop-blur-md rounded-2xl border border-slate-700 shadow-2xl p-5 w-full max-w-2xl"
+            style={boxStyle}
+          >
+            {promptPosition === 'top' && (
+              <p className="text-center text-slate-300 text-sm mb-4">{promptText}</p>
+            )}
+            <div className="space-y-2" style={{ gap }}>
               {options.map((opt: any, idx: number) => (
                 <button
                   key={opt.id || idx}
-                  className="w-full text-left px-4 py-3 rounded-xl bg-slate-800/80 hover:bg-pink-500/20 border border-slate-600 hover:border-pink-500 text-white text-sm transition-all group"
+                  onClick={() => handleChoice(opt)}
+                  className="w-full text-left px-4 py-3 rounded-xl border transition-all group"
+                  style={{
+                    height: optionHeight,
+                    fontSize: typeof optionFontSize === 'string' && optionFontSize.endsWith('px') ? optionFontSize : undefined,
+                    color: optionTextColor,
+                    backgroundColor: optionBgColor,
+                    borderColor: optionBorderColor,
+                    textAlign: optionAlignment as any,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = optionHoverBgColor
+                    e.currentTarget.style.borderColor = optionHoverBorderColor
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = optionBgColor
+                    e.currentTarget.style.borderColor = optionBorderColor
+                  }}
                 >
-                  <span className="text-pink-400 font-bold mr-2">{String.fromCharCode(65 + idx)}.</span>
+                  {showLetter && (
+                    <span className="text-pink-400 font-bold mr-2">{String.fromCharCode(65 + idx)}.</span>
+                  )}
                   {opt.text}
                 </button>
               ))}
             </div>
+            {promptPosition === 'bottom' && (
+              <p className="text-center text-slate-300 text-sm mt-4">{promptText}</p>
+            )}
           </div>
         </div>
       )
@@ -360,7 +764,21 @@ function LivePreview({
       const displayMode: 'contain' | 'cover' | 'fill' | 'custom' = d.displayMode || 'contain'
       const objectPosition: string = d.objectPosition || 'center'
 
-      // 根据显示模式构建 className 与 style
+      const hasTransform = d.x !== undefined || d.y !== undefined || d.opacity !== undefined || d.rotation !== undefined
+
+      const cgContainerStyle: React.CSSProperties = {
+        backgroundColor: d.fillColor || '#000',
+      }
+
+      const mediaWrapperStyle: React.CSSProperties = {}
+      if (hasTransform) {
+        if (d.x !== undefined) mediaWrapperStyle.left = `calc(50% + ${d.x}px)`
+        if (d.y !== undefined) mediaWrapperStyle.top = `calc(50% + ${d.y}px)`
+        if (d.opacity !== undefined) mediaWrapperStyle.opacity = d.opacity
+        if (d.rotation !== undefined) mediaWrapperStyle.transform = `translate(-50%, -50%) rotate(${d.rotation}deg)`
+        mediaWrapperStyle.position = 'absolute'
+      }
+
       const isCustom = displayMode === 'custom'
       const mediaClassName = isCustom
         ? 'object-contain'
@@ -369,54 +787,92 @@ function LivePreview({
           : displayMode === 'fill'
             ? 'w-full h-full object-fill'
             : 'w-full h-full object-contain'
-      const mediaStyle = isCustom
+
+      const mediaStyle: React.CSSProperties = isCustom
         ? {
             width: `${d.customWidth || 100}%`,
             height: `${d.customHeight || 100}%`,
-            position: 'absolute' as const,
+            position: 'absolute',
             left: '50%',
             top: '50%',
             transform: 'translate(-50%, -50%)',
             objectPosition,
+            borderRadius: d.borderRadius ? `${d.borderRadius}px` : undefined,
+            borderWidth: d.borderWidth ? `${d.borderWidth}px` : undefined,
+            borderColor: d.borderColor || undefined,
+            borderStyle: d.borderWidth ? 'solid' : undefined,
+            boxShadow: d.shadow ? '0 20px 60px rgba(0,0,0,0.6)' : undefined,
           }
-        : { objectPosition }
+        : {
+            objectPosition,
+            borderRadius: d.borderRadius ? `${d.borderRadius}px` : undefined,
+            borderWidth: d.borderWidth ? `${d.borderWidth}px` : undefined,
+            borderColor: d.borderColor || undefined,
+            borderStyle: d.borderWidth ? 'solid' : undefined,
+            boxShadow: d.shadow ? '0 20px 60px rgba(0,0,0,0.6)' : undefined,
+          }
 
       return (
-        <div className="absolute inset-0 z-10 bg-black">
-          {isVideo ? (
-            <video
-              src={d.url}
-              className={mediaClassName}
-              style={mediaStyle}
-              autoPlay
-              muted={isMuted}
-              loop={false}
-              playsInline
-              onEnded={() => {
-                if (d.duration === 0) return
-                goNext()
-              }}
-            />
-          ) : (
-            d.url && (
-              <img
+        <div className="absolute inset-0 z-10" style={cgContainerStyle}>
+          <div style={hasTransform ? mediaWrapperStyle : {}} className={hasTransform ? '' : 'w-full h-full'}>
+            {isVideo ? (
+              <video
+                ref={videoRef}
                 src={d.url}
-                alt={d.title || 'CG'}
                 className={mediaClassName}
                 style={mediaStyle}
+                autoPlay
+                muted={d.muted !== undefined ? d.muted : isMuted}
+                loop={d.loop || false}
+                playsInline
+                controls={d.showControls || false}
+                onEnded={() => {
+                  if (d.duration === 0) return
+                  if (!d.loop) goNext()
+                }}
               />
-            )
+            ) : (
+              d.url && (
+                <img
+                  src={d.url}
+                  alt={d.title || 'CG'}
+                  className={mediaClassName}
+                  style={mediaStyle}
+                />
+              )
+            )}
+          </div>
+
+          {d.overlayLayers && d.overlayLayers.length > 0 && (
+            d.overlayLayers.map((layer: any) => (
+              <img
+                key={layer.id}
+                src={layer.url}
+                alt={layer.name || ''}
+                draggable={false}
+                className="absolute pointer-events-none"
+                style={{
+                  left: `${layer.x}%`,
+                  top: `${layer.y}%`,
+                  width: `${layer.width}%`,
+                  height: layer.height ? `${layer.height}%` : 'auto',
+                  transform: `translate(-50%, -50%) rotate(${layer.rotation}deg)`,
+                  opacity: layer.opacity,
+                  zIndex: layer.zIndex,
+                }}
+              />
+            ))
           )}
 
           {hasLetterbox && (
             <>
-              <div className="absolute top-0 left-0 right-0 h-[8%] bg-black" />
-              <div className="absolute bottom-0 left-0 right-0 h-[8%] bg-black" />
+              <div className="absolute top-0 left-0 right-0 h-[8%] bg-black pointer-events-none" />
+              <div className="absolute bottom-0 left-0 right-0 h-[8%] bg-black pointer-events-none" />
             </>
           )}
 
           {(d.title || d.subtitle) && (
-            <div className="absolute bottom-[12%] left-0 right-0 text-center px-6">
+            <div className="absolute bottom-[12%] left-0 right-0 text-center px-6 pointer-events-none">
               {d.title && (
                 <h3 className="text-white text-xl font-bold drop-shadow-lg mb-1">
                   {d.title}
@@ -429,13 +885,13 @@ function LivePreview({
           )}
 
           {d.canSkip !== false && d.duration === 0 && (
-            <div className="absolute bottom-3 right-4 text-xs text-white/60">
+            <div className="absolute bottom-3 right-4 text-xs text-white/60 pointer-events-none">
               点击继续 ▼
             </div>
           )}
 
           {d.canSkip === false && (
-            <div className="absolute bottom-3 right-4 text-xs text-white/40">
+            <div className="absolute bottom-3 right-4 text-xs text-white/40 pointer-events-none">
               不可跳过
             </div>
           )}
@@ -608,16 +1064,12 @@ function LivePreview({
   )
 }
 
-function areLivePreviewPropsEqual(
-  prevProps: LivePreviewProps,
-  nextProps: LivePreviewProps
-): boolean {
-  if (prevProps.selectedNodeId !== nextProps.selectedNodeId) return false
-  if (prevProps.nodes.length !== nextProps.nodes.length) return false
-  if (prevProps.characters.length !== nextProps.characters.length) return false
-  if (prevProps.scenes?.length !== nextProps.scenes?.length) return false
-  if (prevProps.audios?.length !== nextProps.audios?.length) return false
-  return true
+function areLivePreviewPropsEqual(prev: LivePreviewProps, next: LivePreviewProps) {
+  return prev.nodes === next.nodes &&
+         prev.characters === next.characters &&
+         prev.scenes === next.scenes &&
+         prev.audios === next.audios &&
+         prev.selectedNodeId === next.selectedNodeId
 }
 
 export const MemoizedLivePreview = memo(LivePreview, areLivePreviewPropsEqual)

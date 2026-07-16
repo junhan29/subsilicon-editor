@@ -26,10 +26,12 @@ const STYLE_OPTIONS = [
   { value: '3d', label: '3D', desc: '三维渲染风格' },
 ]
 
-const PROVIDER_OPTIONS = [
+const PROVIDER_OPTIONS: Array<{ value: 'openai' | 'stability' | 'comfyui' | 'wan' | 'custom'; label: string; desc: string }> = [
   { value: 'openai', label: 'OpenAI DALL-E', desc: '高质量图片生成' },
   { value: 'stability', label: 'Stability AI', desc: '专业级图像生成' },
   { value: 'comfyui', label: 'ComfyUI', desc: '本地/远程 ComfyUI' },
+  { value: 'wan', label: 'Wan AI', desc: '万相视频生成' },
+  { value: 'custom', label: '自定义', desc: '兼容 OpenAI 格式' },
 ]
 
 export function AiMediaPanel({ characters, onImageGenerated }: AiMediaPanelProps) {
@@ -74,7 +76,11 @@ export function AiMediaPanel({ characters, onImageGenerated }: AiMediaPanelProps
       onImageGenerated?.(result.url, prompt)
       showToast('success', `${mediaType === 'image' ? '图片' : '视频'}生成完成`)
     } catch (e) {
-      showToast('error', '生成失败: ' + (e instanceof Error ? e.message : '未知错误'))
+      if (e instanceof Error && 'needsConfig' in e && (e as { needsConfig: boolean }).needsConfig) {
+        showToast('error', 'AI 未配置，请在设置中配置 API Key 或启动本地 Ollama')
+      } else {
+        showToast('error', '生成失败: ' + (e instanceof Error ? e.message : '未知错误'))
+      }
     }
     setGenerating(false)
   }

@@ -15,7 +15,7 @@ export function UnlockPanel({ node, onUpdateNode }: BasePanelProps) {
       <div className="space-y-2">
         <Label className="text-xs">解锁标题</Label>
         <Input
-          value={(data as any).title || (data as any).nodeTitle || ''}
+          value={(data as any).title || ''}
           onChange={(e) => onUpdateNode(id, { ...data, title: e.target.value })}
           placeholder="解锁内容"
           className="text-sm"
@@ -26,7 +26,7 @@ export function UnlockPanel({ node, onUpdateNode }: BasePanelProps) {
         <Label className="text-xs">解锁价格（元）</Label>
         <Input
           type="number"
-          value={(data as any).price || (data as any).amount || 1}
+          value={(data as any).price || 1}
           onChange={(e) => onUpdateNode(id, { ...data, price: Number(e.target.value) })}
           className="text-sm"
           min={1}

@@ -1,5 +1,6 @@
 'use client'
 
+import { useRef } from 'react'
 import { Label } from '@editor/components/ui/label'
 import { Input } from '@editor/components/ui/input'
 import { Textarea } from '@editor/components/ui/textarea'
@@ -19,6 +20,9 @@ export function NarrationPanel({ node, onUpdateNode }: BasePanelProps) {
     (value) => onUpdateNode(id, { ...data, text: value })
   )
 
+  const textRef = useRef(text)
+  textRef.current = text
+
   return (
     <>
       <div className="space-y-2">
@@ -37,7 +41,7 @@ export function NarrationPanel({ node, onUpdateNode }: BasePanelProps) {
               mode="continue"
               context={`旁白上下文：${text}`}
               onResult={(result) => {
-                setText(text + result)
+                setText(textRef.current + result)
               }}
               size="sm"
               label="续写"

@@ -1,10 +1,11 @@
-declare const __APP_VERSION__: string
-declare const __APP_NAME__: string
-
 declare global {
+  const __APP_VERSION__: string
+  const __APP_NAME__: string
+
   interface Window {
     __electronAPI?: {
       readFile: (path: string) => Promise<{ success: boolean; data?: number[]; error?: string }>
+      readFileAsText: (path: string) => Promise<{ success: boolean; data?: string; error?: string }>
       writeFile: (path: string, data: number[]) => Promise<{ success: boolean; error?: string }>
       getFileInfo: (path: string) => Promise<{
         success: boolean;
@@ -14,14 +15,18 @@ declare global {
         error?: string;
       }>
       openFileDialog: (options?: {
+        title?: string;
         filters?: Array<{ name: string; extensions: string[] }>;
-      }) => Promise<{ success: boolean; path?: string; error?: string }>
+        properties?: string[];
+      }) => Promise<{ success: boolean; path?: string; filePaths?: string[]; error?: string }>
       saveFileDialog: (options?: {
+        title?: string;
         defaultPath?: string;
         filters?: Array<{ name: string; extensions: string[] }>;
       }) => Promise<{ success: boolean; path?: string; error?: string }>
       openFolderDialog: () => Promise<{ success: boolean; path?: string; error?: string }>
       getProjectPath: () => Promise<{ success: boolean; path?: string }>
+      getAppPath: () => Promise<string>
       copyToProject: (sourcePath: string, fileName: string) => Promise<{ success: boolean; path?: string; error?: string }>
       getRecentFiles: () => Promise<{ success: boolean; files?: string[] }>
       getVersion: () => Promise<{ success: boolean; version?: string }>

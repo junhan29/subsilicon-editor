@@ -279,7 +279,7 @@ export function DirectoryUploadDialog({
         if (failCount === 0) {
           showToast('success', `已成功发布到 ${successCount} 个平台`)
         } else if (successCount > 0) {
-          showToast('warning', `发布完成：${successCount} 个成功，${failCount} 个失败`)
+          showToast('info', `发布完成：${successCount} 个成功，${failCount} 个失败`)
         } else {
           showToast('error', `发布失败：全部 ${failCount} 个平台均失败`)
         }

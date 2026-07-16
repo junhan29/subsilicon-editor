@@ -10,6 +10,7 @@ const isLinux = process.platform === 'linux'
 
 let mainWindow: BrowserWindow | null = null
 let splashWindow: BrowserWindow | null = null
+let panelWindow: BrowserWindow | null = null
 let tray: Tray | null = null
 let recentFiles: string[] = []
 
@@ -398,6 +399,69 @@ function loadWindowState(): { width?: number; height?: number; x?: number; y?: n
   return {}
 }
 
+function createPanelWindow(): void {
+  if (!mainWindow) return
+  const mainBounds = mainWindow.getBounds()
+  const panelWidth = 560
+  const panelHeight = Math.min(mainBounds.height, 800)
+
+  panelWindow = new BrowserWindow({
+    title: `${APP_NAME} - 管理面板`,
+    width: panelWidth,
+    height: panelHeight,
+    x: mainBounds.x + mainBounds.width + 10,
+    y: mainBounds.y,
+    frame: isLinux ? true : false,
+    transparent: false,
+    show: false,
+    icon: nativeImage.createFromPath(resolve(__dirname, '../build/icon.png')),
+    webPreferences: {
+      preload: resolve(__dirname, 'preload.cjs'),
+      nodeIntegration: false,
+      contextIsolation: true,
+      sandbox: false,
+    },
+    backgroundColor: '#1a1410',
+    titleBarStyle: isMac ? 'hiddenInset' : undefined,
+  })
+
+  panelWindow.setMenuBarVisibility(false)
+  if (typeof panelWindow.setTitleBarOverlay === 'function') {
+    try {
+      panelWindow.setTitleBarOverlay({
+        color: '#1a1410',
+        symbolColor: '#ffffff',
+      })
+    } catch {}
+  }
+
+  try {
+    if (isDev) {
+      const devUrl = process.env.ELECTRON_START_URL || 'http://localhost:5173'
+      panelWindow.loadURL(`${devUrl}#panel`)
+    } else {
+      const prodFile = resolve(__dirname, '../dist/index.html')
+      panelWindow.loadFile(prodFile, { hash: 'panel' })
+    }
+  } catch (err) {
+    console.error('[Panel] 加载失败:', err)
+  }
+
+  panelWindow.once('ready-to-show', () => {
+    panelWindow?.show()
+    panelWindow?.focus()
+  })
+
+  panelWindow.on('closed', () => {
+    panelWindow = null
+    mainWindow?.webContents.send('panel:closed')
+  })
+
+  panelWindow.webContents.on('will-navigate', (e) => {
+    e.preventDefault()
+  })
+}
+
 function saveWindowState(window: BrowserWindow): void {
   const path = join(getProjectDir(), 'window-state.json')
   const bounds = window.getBounds()
@@ -729,6 +793,27 @@ function setupIPC(): void {
 
   ipcMain.on('update:install', () => {
     autoUpdater.quitAndInstall(false, true)
+  })
+
+  ipcMain.on('panel:open', () => {
+    if (!panelWindow) {
+      createPanelWindow()
+    } else {
+      panelWindow.show()
+      panelWindow.focus()
+    }
+  })
+
+  ipcMain.on('panel:close', () => {
+    panelWindow?.close()
+  })
+
+  ipcMain.on('panel:sendMessage', (_, message) => {
+    panelWindow?.webContents.send('panel:message', message)
+  })
+
+  ipcMain.on('main:sendMessage', (_, message) => {
+    mainWindow?.webContents.send('main:message', message)
   })
 }
 

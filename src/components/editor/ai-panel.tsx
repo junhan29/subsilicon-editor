@@ -28,8 +28,12 @@ const GENRES = [
 
 export function AiPanel({ onApplyStory, onAddCharacters }: AiPanelProps) {
   const [aiEnabled, setAiEnabled] = useState(() => {
-    const saved = localStorage.getItem('subsilicon_ai_config')
-    return saved ? JSON.parse(saved).enabled ?? false : false
+    try {
+      const saved = localStorage.getItem('subsilicon_ai_config')
+      return saved ? JSON.parse(saved).enabled ?? false : false
+    } catch {
+      return false
+    }
   })
   const [showSettings, setShowSettings] = useState(false)
 
@@ -73,7 +77,12 @@ export function AiPanel({ onApplyStory, onAddCharacters }: AiPanelProps) {
       setGeneratedStory(result)
       showToast('success', '故事生成完成')
     } catch (e) {
-      showToast('error', '生成失败: ' + (e instanceof Error ? e.message : '未知错误'))
+      if (e instanceof Error && 'needsConfig' in e && (e as { needsConfig: boolean }).needsConfig) {
+        setShowSettings(true)
+        showToast('error', 'AI 未配置，请先设置 API Key 或启动本地 Ollama')
+      } else {
+        showToast('error', '生成失败: ' + (e instanceof Error ? e.message : '未知错误'))
+      }
     }
     setIsGenerating(false)
   }
@@ -86,7 +95,12 @@ export function AiPanel({ onApplyStory, onAddCharacters }: AiPanelProps) {
       setGeneratedCharacter(result.character)
       showToast('success', '角色生成完成')
     } catch (e) {
-      showToast('error', '生成失败: ' + (e instanceof Error ? e.message : '未知错误'))
+      if (e instanceof Error && 'needsConfig' in e && (e as { needsConfig: boolean }).needsConfig) {
+        setShowSettings(true)
+        showToast('error', 'AI 未配置，请先设置 API Key 或启动本地 Ollama')
+      } else {
+        showToast('error', '生成失败: ' + (e instanceof Error ? e.message : '未知错误'))
+      }
     }
     setIsGenerating(false)
   }

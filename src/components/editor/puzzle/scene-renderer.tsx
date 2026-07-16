@@ -6,7 +6,7 @@ import type { PuzzleLayer, PuzzleScene } from '@editor/types/editor'
 interface SceneRendererProps {
   scene: PuzzleScene
   selectedLayerId?: string | null
-  onLayerClick?: (layerId: string) => void
+  onLayerClick?: (layerId: string, optionId?: string) => void
   interactive?: boolean
   className?: string
 }

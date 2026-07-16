@@ -50,7 +50,7 @@ export function VariablePanel({ variables = [], onUpdateVariables }: VariablePan
     const ext = v as ExtendedVariable
     const cat = ext.category || '系统'
     if (!acc[cat]) acc[cat] = []
-    acc[cat].push({ ...ext, id: ext.name }) // 使用 name 作为 id
+    acc[cat].push({ ...ext, id: ext.id || ext.name })
     return acc
   }, {} as Record<string, ExtendedVariable[]>)
 
@@ -75,26 +75,30 @@ export function VariablePanel({ variables = [], onUpdateVariables }: VariablePan
     }
 
     const newVar: StoryVariable = {
+      id: `var-${Date.now()}`,
       name: newVarName.trim(),
       type: newVarType,
       initialValue,
+      defaultValue: initialValue,
     }
 
-    onUpdateVariables?.([...variables, newVar])
+    const extVar = { ...newVar, category: newVarCategory }
+    onUpdateVariables?.([...variables, extVar])
     setNewVarName('')
     setNewVarInitial('')
     setNewVarType('string')
+    setNewVarCategory('剧情进度')
     setShowAddForm(false)
   }, [newVarName, newVarType, newVarInitial, newVarCategory, variables, onUpdateVariables])
 
-  const handleDeleteVariable = useCallback((name: string) => {
-    onUpdateVariables?.(variables.filter((v) => v.name !== name))
+  const handleDeleteVariable = useCallback((id: string) => {
+    onUpdateVariables?.(variables.filter((v) => (v.id || v.name) !== id))
   }, [variables, onUpdateVariables])
 
-  const handleUpdateVariable = useCallback((name: string, updates: Partial<ExtendedVariable>) => {
+  const handleUpdateVariable = useCallback((id: string, updates: Partial<ExtendedVariable>) => {
     onUpdateVariables?.(
       variables.map((v) =>
-        v.name === name ? { ...v, ...updates } : v
+        (v.id || v.name) === id ? { ...v, ...updates } : v
       )
     )
     setEditingId(null)

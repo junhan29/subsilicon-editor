@@ -36,19 +36,19 @@ function makeGroup(
 }
 
 const numberVars: StoryVariable[] = [
-  { name: 'a', type: 'number', initialValue: 0 },
-  { name: 'b', type: 'number', initialValue: 0 },
-  { name: 'c', type: 'number', initialValue: 0 },
-  { name: 'd', type: 'number', initialValue: 0 },
+  { id: 'a', name: 'a', type: 'number', initialValue: 0, defaultValue: 0 },
+  { id: 'b', name: 'b', type: 'number', initialValue: 0, defaultValue: 0 },
+  { id: 'c', name: 'c', type: 'number', initialValue: 0, defaultValue: 0 },
+  { id: 'd', name: 'd', type: 'number', initialValue: 0, defaultValue: 0 },
 ]
 
 const stringVars: StoryVariable[] = [
-  { name: 'name', type: 'string', initialValue: '' },
-  { name: 'tags', type: 'string', initialValue: '' },
+  { id: 'name', name: 'name', type: 'string', initialValue: '', defaultValue: '' },
+  { id: 'tags', name: 'tags', type: 'string', initialValue: '', defaultValue: '' },
 ]
 
 const boolVars: StoryVariable[] = [
-  { name: 'flag', type: 'boolean', initialValue: false },
+  { id: 'flag', name: 'flag', type: 'boolean', initialValue: false, defaultValue: false },
 ]
 
 describe('buildExpression 基本场景', () => {

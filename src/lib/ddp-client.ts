@@ -76,6 +76,7 @@ export interface DDPSource {
   type: 'official' | 'personal' | 'community'
   submitToken?: string
   enabled: boolean
+  builtin?: boolean
 }
 
 export interface DDPListParams {
@@ -104,6 +105,7 @@ const defaultSources: DDPSource[] = [
     url: 'https://subsilicon.cn/api',
     type: 'official',
     enabled: true,
+    builtin: true,
   },
 ]
 
@@ -124,11 +126,10 @@ export function saveDdpSources(sources: DDPSource[]): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(sources))
 }
 
-export function addDdpSource(source: Omit<DDPSource, 'id' | 'enabled'> & { enabled?: boolean }): DDPSource {
+export function addDdpSource(source: Omit<DDPSource, 'enabled'> & { enabled?: boolean }): DDPSource {
   const sources = listDdpSources()
   const newSource: DDPSource = {
     ...source,
-    id: source.id || `ddp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
     enabled: source.enabled ?? true,
   }
   sources.push(newSource)

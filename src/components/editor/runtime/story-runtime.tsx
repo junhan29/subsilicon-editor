@@ -48,7 +48,7 @@ export function StoryRuntime({ storyGraph, workId }: StoryRuntimeProps) {
         recordAction({
           type: 'ending',
           nodeId: currentNodeId,
-          endingType: (currentNode.data as any)?.type || 'neutral',
+          endingType: (currentNode.data as any)?.endingType || 'neutral',
         })
       }
     }

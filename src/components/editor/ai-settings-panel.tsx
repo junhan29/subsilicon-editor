@@ -97,6 +97,72 @@ const PROVIDER_INFO: Record<string, {
       '复制 API 密钥并粘贴到下方'
     ]
   },
+  baidu: {
+    name: '百度文心',
+    website: 'https://qianfan.cloud.baidu.com',
+    apiUrl: 'https://qianfan.baidubce.com/v2',
+    defaultModel: 'ernie-4.0-turbo-8k',
+    price: '按量付费',
+    features: ['ERNIE 4.0', '文心一言', '中文优化', '多模态'],
+    setupGuide: [
+      '访问 https://qianfan.cloud.baidu.com 注册账号',
+      '创建应用',
+      '获取 API Key 和 Secret Key',
+      '粘贴到下方输入框'
+    ]
+  },
+  alibaba: {
+    name: '阿里通义',
+    website: 'https://bailian.console.aliyun.com',
+    apiUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    defaultModel: 'qwen-plus',
+    price: '按量付费',
+    features: ['Qwen-Plus', 'Qwen-Max', '中文优化', '长文本'],
+    setupGuide: [
+      '访问阿里云百炼 https://bailian.console.aliyun.com',
+      '创建 API Key',
+      '复制密钥并粘贴到下方'
+    ]
+  },
+  doubao: {
+    name: '字节豆包',
+    website: 'https://console.volcengine.com/ark',
+    apiUrl: 'https://ark.cn-beijing.volces.com/api/v3',
+    defaultModel: 'doubao-pro-32k',
+    price: '按量付费',
+    features: ['Doubao-Pro', 'Doubao-Lite', '中文优化', '高性价比'],
+    setupGuide: [
+      '访问火山方舟 https://console.volcengine.com/ark',
+      '创建推理接入点',
+      '获取 API Key 并粘贴到下方'
+    ]
+  },
+  zhipu: {
+    name: '智谱AI',
+    website: 'https://open.bigmodel.cn',
+    apiUrl: 'https://open.bigmodel.cn/api/paas/v4',
+    defaultModel: 'glm-4-plus',
+    price: '按量付费',
+    features: ['GLM-4-Plus', 'GLM-4-Flash', '中文优化', '工具调用'],
+    setupGuide: [
+      '访问智谱开放平台 https://open.bigmodel.cn',
+      '创建 API Key',
+      '复制密钥并粘贴到下方'
+    ]
+  },
+  moonshot: {
+    name: '月之暗面',
+    website: 'https://platform.moonshot.cn',
+    apiUrl: 'https://api.moonshot.cn/v1',
+    defaultModel: 'moonshot-v1-8k',
+    price: '按量付费',
+    features: ['Moonshot-V1', '长文本处理', '中文优化', 'Kimi'],
+    setupGuide: [
+      '访问 Moonshot 开放平台 https://platform.moonshot.cn',
+      '创建 API Key',
+      '复制密钥并粘贴到下方'
+    ]
+  },
   custom: {
     name: '自定义',
     website: '',
@@ -162,13 +228,17 @@ export function AiSettingsPanel({ enabled: initialEnabled, onChange }: AiSetting
 
   useEffect(() => {
     if (ollamaRunning) {
-      loadInstalledModels()
+      loadInstalledModels().catch(() => {})
     }
   }, [ollamaRunning])
 
   const checkOllamaStatus = async () => {
-    const running = await isOllamaRunning()
-    setOllamaRunning(running)
+    try {
+      const running = await isOllamaRunning()
+      setOllamaRunning(running)
+    } catch {
+      setOllamaRunning(false)
+    }
   }
 
   const loadInstalledModels = async () => {
@@ -235,21 +305,21 @@ export function AiSettingsPanel({ enabled: initialEnabled, onChange }: AiSetting
       autoPolish,
       autoPolishStyle,
     }
-    
+
     if (enabled && apiKey) {
       const newProvider: AiProviderConfig = {
         id: Date.now().toString(),
         name: PROVIDER_INFO[selectedProvider].name,
-        provider: selectedProvider as any,
+        provider: selectedProvider as AiProviderConfig['provider'],
         apiKey,
         apiUrl: apiUrl || PROVIDER_INFO[selectedProvider].apiUrl,
         model,
         enabled: true,
       }
       newConfig.providers = [...providers.filter(p => p.provider !== selectedProvider), newProvider]
-      localStorage.setItem('subsilicon_ai_config', JSON.stringify(newConfig))
     }
-    
+
+    localStorage.setItem('subsilicon_ai_config', JSON.stringify(newConfig))
     onChange(newConfig)
     showToast('success', 'AI 设置已保存')
   }

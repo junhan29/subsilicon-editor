@@ -95,21 +95,23 @@ function DiscoverDialog({ open, onClose }: DiscoverDialogProps) {
       showToast('error', '请填写名称和 URL')
       return
     }
+    const trimmedUrl = newSource.url.trim()
     try {
-      const url = newSource.url.trim()
-      newSource.url = url.toString()
-      addDdpSource({
-        name: newSource.name.trim(),
-        url: newSource.url.trim(),
-        type: newSource.type,
-      })
-      setNewSource({ name: '', url: '', type: 'community' })
-      setShowAddSource(false)
-      loadSources()
-      showToast('success', '已添加名录源')
+      new URL(trimmedUrl)
     } catch {
       showToast('error', 'URL 格式不正确')
+      return
     }
+    addDdpSource({
+      id: `ddp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      name: newSource.name.trim(),
+      url: trimmedUrl,
+      type: newSource.type,
+    })
+    setNewSource({ name: '', url: '', type: 'community' })
+    setShowAddSource(false)
+    loadSources()
+    showToast('success', '已添加名录源')
   }, [newSource, loadSources])
 
   const allTags = useMemo(() => {
@@ -373,7 +375,7 @@ function DiscoverDialog({ open, onClose }: DiscoverDialogProps) {
                       />
                       <div className="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500" />
                     </label>
-                    {!source.builtin !== false && (
+                    {!source.builtin && (
                       <button
                         onClick={() => {
                           removeDdpSource(source.id)

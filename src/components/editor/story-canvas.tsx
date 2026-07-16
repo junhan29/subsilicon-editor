@@ -36,6 +36,8 @@ import { GroupNode } from './nodes/group-node'
 import { EditorSidebar } from './editor-sidebar'
 import { EditorRightPanel } from './editor-right-panel'
 import { EmptyCanvasGuide } from './onboarding/empty-canvas-guide'
+import { HelpMenu } from './onboarding/help-menu'
+import { ShortcutsModal } from './onboarding/shortcuts-modal'
 import { showToast, useToast, ToastContainer } from './toast'
 import { A11yAnnouncer, useA11yAnnouncer } from './a11y-announcer'
 import { HistoryStore, createSnapshot, type StoryGraphSnapshot, type HistoryActionType } from '@editor/lib/history-store'
@@ -152,6 +154,8 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
   const [loginState, setLoginState] = useState(0) // 用于刷新登录状态
   // 作品发现
   const [showDiscover, setShowDiscover] = useState(false)
+  // 快捷键提示弹窗
+  const [showShortcutsModal, setShowShortcutsModal] = useState(false)
   // 预览状态
   const [showPreview, setShowPreview] = useState(false)
   const [historyState, setHistoryState] = useState({ canUndo: false, canRedo: false })
@@ -465,6 +469,10 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
     annotations,
     monetization: monetization ?? undefined,
   }), [title, templateId, characters, variables, nodes, edges, tags, groups, annotations, monetization])
+
+  // 使用 ref 持有最新 graph，供 beforeunload / unmount 同步保存使用
+  const graphRef = useRef(graph)
+  graphRef.current = graph
 
   // 通知外部数据变化（节流 200ms 避免拖拽时高频触发）
   const graphChangeTimerRef = useRef<number | null>(null)
@@ -1209,11 +1217,27 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
     announce(`${nodeTypeLabels[nodeType || ''] || '节点'}已删除`)
   }, [nodes, setNodes, setEdges, pushHistory, announce])
 
+  const saveGraph = useCallback(() => {
+    onSave(graphRef.current)
+  }, [onSave])
+
   const handleSave = useCallback(() => {
-    onSave(graph)
+    saveGraph()
     showToast('success', '作品已保存')
     announce('作品已保存')
-  }, [onSave, graph, announce])
+  }, [saveGraph, announce])
+
+  // 窗口关闭前与组件卸载时立即保存，避免防抖导致的数据丢失
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      saveGraph()
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      saveGraph()
+    }
+  }, [saveGraph])
 
   const handleSaveVersion = useCallback(
     (name: string, description: string) => {
@@ -1467,6 +1491,21 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
     setSelectedEdgeId(null)
   }, [])
 
+  // 双击节点：聚焦到节点并打开属性面板
+  const handleNodeDoubleClick = useCallback((_event: React.MouseEvent, node: Node) => {
+    if (node.type === 'group') return
+    setSelectedNodeIds([node.id])
+    setSelectedGroupId(null)
+    setSelectedEdgeId(null)
+    setRightPanelTab('properties')
+    // 聚焦到节点位置
+    fitView({
+      nodes: [{ id: node.id }],
+      padding: 0.3,
+      duration: 400,
+    })
+  }, [fitView])
+
   const handleEdgeClick = useCallback((_: React.MouseEvent, edge: Edge) => {
     setSelectedEdgeId(edge.id)
     setSelectedNodeIds([])
@@ -1598,6 +1637,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
           onNodeClick={handleNodeClick}
+          onNodeDoubleClick={handleNodeDoubleClick}
           onEdgeClick={handleEdgeClick}
           onPaneClick={handlePaneClick}
           onSelectionChange={handleSelectionChange}
@@ -1742,6 +1782,8 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
             account={getCreatorAccount()}
             onOpenAccount={() => { setCreatorCenterTab('account'); setShowCreatorCenter(true) }}
             onBack={onBack}
+            onStartTour={handleStartTour}
+            onShowShortcuts={() => setShowShortcutsModal(true)}
           />
         )}
 
@@ -1757,17 +1799,24 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
         )}
 
         {/* 分组选中工具栏 */}
-        {selectedGroupId && !isMultiSelect && (
-          <GroupToolbar
-            group={groups.find((g) => g.id === selectedGroupId)!}
-            onToggleCollapse={() => toggleGroupCollapse(selectedGroupId)}
-            onRename={(name) => renameGroup(selectedGroupId, name)}
-            onColorChange={(color) => changeGroupColor(selectedGroupId, color)}
-            onUngroup={() => deleteGroup(selectedGroupId, true)}
-            onDelete={() => deleteGroup(selectedGroupId, false)}
-            onClose={() => setSelectedGroupId(null)}
-          />
-        )}
+        {selectedGroupId && !isMultiSelect && (() => {
+          const selectedGroup = groups.find((g) => g.id === selectedGroupId)
+          if (!selectedGroup) {
+            setSelectedGroupId(null)
+            return null
+          }
+          return (
+            <GroupToolbar
+              group={selectedGroup}
+              onToggleCollapse={() => toggleGroupCollapse(selectedGroupId)}
+              onRename={(name) => renameGroup(selectedGroupId, name)}
+              onColorChange={(color) => changeGroupColor(selectedGroupId, color)}
+              onUngroup={() => deleteGroup(selectedGroupId, true)}
+              onDelete={() => deleteGroup(selectedGroupId, false)}
+              onClose={() => setSelectedGroupId(null)}
+            />
+          )
+        })()}
       </div>
 
       {/* 右侧：属性面板（可通过 P 键切换显隐） */}
@@ -1875,6 +1924,12 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
         open={showDiscover}
         onClose={() => setShowDiscover(false)}
       />
+
+      {/* 快捷键提示 */}
+      <ShortcutsModal
+        open={showShortcutsModal}
+        onClose={() => setShowShortcutsModal(false)}
+      />
     </div>
   )
 }
@@ -1938,9 +1993,11 @@ interface UndoRedoButtonsProps {
   account?: { displayName: string; email: string } | null
   onOpenAccount?: () => void
   onBack?: () => void
+  onStartTour?: () => void
+  onShowShortcuts?: () => void
 }
 
-const UndoRedoButtons = memo(function UndoRedoButtons({ canUndo, canRedo, onUndo, onRedo, onPreview, onExport, onDirectoryUpload, onDiscover, loggedIn, account, onOpenAccount, onBack }: UndoRedoButtonsProps) {
+const UndoRedoButtons = memo(function UndoRedoButtons({ canUndo, canRedo, onUndo, onRedo, onPreview, onExport, onDirectoryUpload, onDiscover, loggedIn, account, onOpenAccount, onBack, onStartTour, onShowShortcuts }: UndoRedoButtonsProps) {
   return (
     <div className="absolute top-4 right-4 flex items-center gap-1 bg-card/90 backdrop-blur border rounded-lg px-2 py-1 shadow-sm z-10">
       {onBack && (
@@ -2047,6 +2104,15 @@ const UndoRedoButtons = memo(function UndoRedoButtons({ canUndo, canRedo, onUndo
       >
         <Redo2 className="w-4 h-4" />
       </button>
+      {onStartTour && onShowShortcuts && (
+        <>
+          <span className="w-px h-4 bg-border" />
+          <HelpMenu
+            onStartTour={onStartTour}
+            onShowShortcuts={onShowShortcuts}
+          />
+        </>
+      )}
     </div>
   )
 })

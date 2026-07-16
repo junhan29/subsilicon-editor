@@ -81,8 +81,9 @@ export function PuzzleCanvas({
       const rect = canvasRef.current?.getBoundingClientRect()
       if (!rect || !selectedLayerId) return
 
-      const dx = ((e.clientX - dragStart.x) / rect.width) * 100
-      const dy = ((e.clientY - dragStart.y) / rect.height) * 100
+      const scale = zoom / 100
+      const dx = ((e.clientX - dragStart.x) / (rect.width * scale)) * 100
+      const dy = ((e.clientY - dragStart.y) / (rect.height * scale)) * 100
 
       onUpdateLayer(selectedLayerId, {
         x: Math.max(0, Math.min(100, dragStart.layerX + dx)),
@@ -101,7 +102,7 @@ export function PuzzleCanvas({
       window.removeEventListener('mousemove', handleMouseMove)
       window.removeEventListener('mouseup', handleMouseUp)
     }
-  }, [isDragging, dragStart, selectedLayerId, onUpdateLayer])
+  }, [isDragging, dragStart, selectedLayerId, onUpdateLayer, zoom])
 
   const selectedLayer = scene.layers.find((l) => l.id === selectedLayerId)
 
@@ -171,13 +172,18 @@ export function PuzzleCanvas({
                   key={layer.id}
                   className={`absolute inset-0 cursor-pointer ${
                     selectedLayerId === layer.id ? 'ring-2 ring-pink-500 ring-inset' : ''
-                  }`}
+                  } ${layer.clickable ? 'border-2 border-dashed border-pink-500' : ''}`}
                   style={{ zIndex: layer.zIndex, opacity: layer.opacity }}
                   onClick={(e) => {
                     e.stopPropagation()
                     onSelectLayer(layer.id)
                   }}
                 >
+                  {layer.clickable && (
+                    <div className="absolute -top-2 -right-2 z-10 px-1 py-0.5 text-[9px] font-medium text-white bg-pink-500 rounded shadow-md pointer-events-none">
+                      点击
+                    </div>
+                  )}
                   <img
                     src={layer.url}
                     alt={layer.name}
@@ -195,7 +201,9 @@ export function PuzzleCanvas({
                   key={layer.id}
                   className={`absolute cursor-move select-none ${
                     selectedLayerId === layer.id ? 'ring-2 ring-pink-500' : ''
-                  } ${!layer.visible ? 'opacity-30' : ''}`}
+                  } ${!layer.visible ? 'opacity-30' : ''} ${
+                    layer.clickable ? 'border-2 border-dashed border-pink-500' : ''
+                  }`}
                   style={{
                     left: `${layer.x}%`,
                     top: `${layer.y}%`,
@@ -208,6 +216,11 @@ export function PuzzleCanvas({
                   }}
                   onMouseDown={(e) => handleLayerMouseDown(e, layer.id)}
                 >
+                  {layer.clickable && (
+                    <div className="absolute -top-2 -right-2 z-10 px-1 py-0.5 text-[9px] font-medium text-white bg-pink-500 rounded shadow-md pointer-events-none">
+                      点击
+                    </div>
+                  )}
                   {layer.type === 'text' ? (
                     <div
                       style={{

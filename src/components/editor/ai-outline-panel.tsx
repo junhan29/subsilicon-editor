@@ -6,6 +6,7 @@ import { Button } from '@editor/components/ui/button'
 import { generateOutline, isAiAvailable, getAiConfig, type AiOutlineResult, type OutlineScene } from '@editor/lib/ai-service'
 import { streamGenerateOutlineParsed, type StreamCallbacks } from '@editor/lib/ai'
 import { showToast } from './toast'
+import { AiSettingsDialog } from './ai-settings-dialog'
 
 interface AiOutlinePanelProps {
   onApplyOutline?: (outline: AiOutlineResult) => void
@@ -31,6 +32,7 @@ export function AiOutlinePanel({ onApplyOutline }: AiOutlinePanelProps) {
   const [expandedScene, setExpandedScene] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [streamingText, setStreamingText] = useState('')
+  const [showSettings, setShowSettings] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
 
   const handleGenerate = useCallback(async () => {
@@ -53,7 +55,12 @@ export function AiOutlinePanel({ onApplyOutline }: AiOutlinePanelProps) {
       setResult(outline)
       showToast('success', '大纲生成成功')
     } catch (error) {
-      showToast('error', (error as Error).message)
+      if (error instanceof Error && 'needsConfig' in error && (error as { needsConfig: boolean }).needsConfig) {
+        setShowSettings(true)
+        showToast('error', 'AI 未配置，请先设置 API Key 或启动本地 Ollama')
+      } else {
+        showToast('error', (error as Error).message)
+      }
     } finally {
       setLoading(false)
     }
@@ -97,7 +104,12 @@ export function AiOutlinePanel({ onApplyOutline }: AiOutlinePanelProps) {
 
       setResult(outline)
     } catch (error) {
-      showToast('error', (error as Error).message)
+      if (error instanceof Error && 'needsConfig' in error && (error as { needsConfig: boolean }).needsConfig) {
+        setShowSettings(true)
+        showToast('error', 'AI 未配置，请先设置 API Key 或启动本地 Ollama')
+      } else {
+        showToast('error', (error as Error).message)
+      }
     } finally {
       setLoading(false)
     }
@@ -347,6 +359,11 @@ export function AiOutlinePanel({ onApplyOutline }: AiOutlinePanelProps) {
           <li>• 生成的大纲可以作为创作起点，自由修改</li>
         </ul>
       </div>
+
+      <AiSettingsDialog
+        open={showSettings}
+        onClose={() => setShowSettings(false)}
+      />
     </div>
   )
 }

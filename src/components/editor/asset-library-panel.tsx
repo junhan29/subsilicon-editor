@@ -6,6 +6,7 @@ import {
   X,
   ImageIcon,
   Music,
+  Video,
   Check,
   ExternalLink,
   AlertCircle,
@@ -69,6 +70,7 @@ const CATEGORY_TABS: { key: FilterCategory; label: string }[] = [
   { key: 'background', label: '背景图' },
   { key: 'character', label: '角色立绘' },
   { key: 'audio', label: '音效' },
+  { key: 'video', label: '视频' },
 ]
 
 const PANEL_TABS: { key: PanelTab; label: string; icon: typeof ImageIcon }[] = [
@@ -97,6 +99,7 @@ function AssetLibraryPanelImpl({ selectedNode, onInsertAsset }: AssetLibraryPane
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const editInputRef = useRef<HTMLInputElement>(null)
+  const blobUrlRef = useRef<string | null>(null)
 
   const loadMyAssets = useCallback(async () => {
     setIsLoading(true)
@@ -249,19 +252,22 @@ function AssetLibraryPanelImpl({ selectedNode, onInsertAsset }: AssetLibraryPane
 
   const handleMyAssetClick = useCallback(
     (asset: StoredAsset) => {
+      if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current)
       const url = URL.createObjectURL(asset.blob)
+      blobUrlRef.current = url
+      const isVideo = asset.type.startsWith('video/')
       const isAudio = asset.type.startsWith('audio/')
       const libAsset: LibraryAsset = {
         id: asset.hash,
         name: asset.name,
-        category: isAudio ? 'audio' : 'background',
+        category: isVideo ? 'video' : isAudio ? 'audio' : 'background',
         license: 'free',
         thumbnailUrl: '',
         fullUrl: url,
         tags: [],
         description: '本地素材',
         source: '本地',
-        fileType: isAudio ? 'audio' : 'image',
+        fileType: isVideo ? 'video' : isAudio ? 'audio' : 'image',
       }
       setPreviewAsset(libAsset)
     },
@@ -522,6 +528,7 @@ interface AssetCardProps {
 const AssetCard = memo(function AssetCard({ asset, onClick }: AssetCardProps) {
   const handleClick = useCallback(() => onClick(asset), [asset, onClick])
   const isAudio = asset.fileType === 'audio' || asset.category === 'audio'
+  const isVideoAsset = asset.fileType === 'video' || asset.category === 'video'
   const licenseStyle = LICENSE_STYLES[asset.license] || LICENSE_STYLES.free
 
   return (
@@ -531,17 +538,25 @@ const AssetCard = memo(function AssetCard({ asset, onClick }: AssetCardProps) {
       title={asset.name}
     >
       <div className="aspect-square bg-muted/40 relative overflow-hidden">
-        {isAudio || !asset.thumbnailUrl ? (
+        {isAudio ? (
           <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-purple-900/30 to-slate-900/40">
             <Music className="w-5 h-5 text-purple-400/70" />
           </div>
-        ) : (
+        ) : asset.thumbnailUrl ? (
           <img
             src={asset.thumbnailUrl}
             alt={asset.name}
             loading="lazy"
             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-200"
           />
+        ) : isVideoAsset ? (
+          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-blue-900/30 to-slate-900/40">
+            <Video className="w-5 h-5 text-blue-400/70" />
+          </div>
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-slate-900/30 to-slate-900/40">
+            <ImageIcon className="w-5 h-5 text-muted-foreground/70" />
+          </div>
         )}
         <div className="absolute top-0.5 left-0.5">
           <span className={`inline-block px-1 py-px rounded-sm text-[8px] font-medium leading-tight border ${licenseStyle}`}>
@@ -618,7 +633,7 @@ const MyAssetItem = memo(function MyAssetItem({
         {isAudio ? (
           <Music className="w-4 h-4 text-purple-400/70" />
         ) : isVideo ? (
-          <ImageIcon className="w-4 h-4 text-blue-400/70" />
+          <Video className="w-4 h-4 text-blue-400/70" />
         ) : thumbUrl ? (
           <img src={thumbUrl} alt={asset.name} className="w-full h-full object-cover" />
         ) : (
@@ -674,6 +689,7 @@ interface AssetPreviewModalProps {
 
 function AssetPreviewModal({ asset, selectedNode, onClose, onInsert }: AssetPreviewModalProps) {
   const isAudio = asset.fileType === 'audio' || asset.category === 'audio'
+  const isVideo = asset.fileType === 'video' || asset.category === 'video'
   const licenseStyle = LICENSE_STYLES[asset.license] || LICENSE_STYLES.free
   const hasUrl = Boolean(asset.fullUrl)
 
@@ -688,10 +704,15 @@ function AssetPreviewModal({ asset, selectedNode, onClose, onInsert }: AssetPrev
       if (!characterId) return '请选中一个有角色的对话节点'
       return '将作为新立绘添加到当前对话节点的角色'
     }
+    if (asset.category === 'video') {
+      return '可作为CG视频插入到当前节点'
+    }
     return '可插入到当前节点'
   }, [selectedNode, hasUrl, asset.category])
 
-  const canInsert = Boolean(selectedNode) && hasUrl
+  const canInsert = Boolean(selectedNode) && hasUrl && (
+    asset.category !== 'character' || Boolean((selectedNode?.data as any)?.characterId)
+  )
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
@@ -712,7 +733,13 @@ function AssetPreviewModal({ asset, selectedNode, onClose, onInsert }: AssetPrev
       >
         <div className="flex items-center justify-between px-4 py-3 border-b">
           <h3 className="text-sm font-medium flex items-center gap-2">
-            {isAudio ? <Music className="w-4 h-4 text-purple-400" /> : <ImageIcon className="w-4 h-4 text-blue-400" />}
+            {isAudio ? (
+              <Music className="w-4 h-4 text-purple-400" />
+            ) : isVideo ? (
+              <span className="w-4 h-4 flex items-center justify-center text-purple-400">🎬</span>
+            ) : (
+              <ImageIcon className="w-4 h-4 text-blue-400" />
+            )}
             素材详情
           </h3>
           <button
@@ -728,9 +755,16 @@ function AssetPreviewModal({ asset, selectedNode, onClose, onInsert }: AssetPrev
           {isAudio || !asset.fullUrl ? (
             <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
               <Music className="w-16 h-16 mb-3 opacity-40" />
-              <p className="text-xs">音频素材占位</p>
-              <p className="text-[10px] mt-1">需自行上传音频文件</p>
+              <p className="text-xs">音频素材</p>
+              <p className="text-[10px] mt-1">点击插入按钮使用</p>
             </div>
+          ) : isVideo ? (
+            <video
+              src={asset.fullUrl}
+              className="max-w-full max-h-[320px] object-contain"
+              controls
+              muted
+            />
           ) : (
             <img
               src={asset.fullUrl}

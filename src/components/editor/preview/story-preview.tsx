@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { X, Play, ChevronRight, RotateCcw, Star, Lock, CheckCircle2, Music, Volume2, VolumeX, Settings, Save, FolderOpen, Trash2, Clock, Keyboard, SkipForward, Merge, GitBranch, Coins } from 'lucide-react'
 import { Button } from '@editor/components/ui/button'
+import { RuntimeSceneRenderer } from '../puzzle/runtime-scene-renderer'
 import type { StoryNode, StoryEdge, StoryCharacter, StoryGraph } from '@editor/types/editor'
 import { AudioManager, createAudioManager } from '@editor/lib/audio-manager'
 import { SaveManager, formatSaveDate, loadSaveSlots, saveSaveSlots, createSaveSlot } from '@editor/lib/save-manager'
@@ -425,7 +426,7 @@ export function StoryPreview({ graph, open, onClose }: StoryPreviewProps) {
   const hasOutgoingEdges = graph.edges.some((e) => e.source === state.currentNodeId)
 
   useEffect(() => {
-    if (currentNode?.type === 'ending') {
+    if (currentNode?.type === 'random' || currentNode?.type === 'jump') {
       const timer = setTimeout(() => {
         continueStory()
       }, 300)
@@ -546,6 +547,49 @@ export function StoryPreview({ graph, open, onClose }: StoryPreviewProps) {
     return graph.characters.find((c) => c.id === characterId)
   }
 
+  const videoRef = useRef<HTMLVideoElement | null>(null)
+
+  useEffect(() => {
+    if (!videoRef.current || currentNode?.type !== 'cg') return
+    const d = currentNode.data as any
+    if (d.mediaType !== 'video') return
+
+    const video = videoRef.current
+
+    const handleLoadedMetadata = () => {
+      if (d.startTime && d.startTime > 0) {
+        video.currentTime = d.startTime
+      }
+      if (d.playbackRate && d.playbackRate !== 1) {
+        video.playbackRate = d.playbackRate
+      }
+    }
+
+    const handleTimeUpdate = () => {
+      if (d.endTime && d.endTime > 0 && video.currentTime >= d.endTime) {
+        if (d.loop) {
+          video.currentTime = d.loopStartTime || d.startTime || 0
+        } else {
+          video.pause()
+          if (d.duration !== 0) {
+            continueStory()
+          }
+        }
+      }
+      if (d.loop && d.loopEndTime && video.currentTime >= d.loopEndTime) {
+        video.currentTime = d.loopStartTime || d.startTime || 0
+      }
+    }
+
+    video.addEventListener('loadedmetadata', handleLoadedMetadata)
+    video.addEventListener('timeupdate', handleTimeUpdate)
+
+    return () => {
+      video.removeEventListener('loadedmetadata', handleLoadedMetadata)
+      video.removeEventListener('timeupdate', handleTimeUpdate)
+    }
+  }, [currentNode, continueStory])
+
   const renderNodeContent = () => {
     if (!currentNode) return null
 
@@ -606,13 +650,184 @@ export function StoryPreview({ graph, open, onClose }: StoryPreviewProps) {
           }
           return true
         })
+        const choiceMode: 'text' | 'image' | 'scene' = data.choiceMode || 'text'
+        const optionHasConnection = (opt: any) =>
+          graph.edges.some((e) => e.source === currentNode.id && e.sourceHandle === opt.id)
+        const emptyHint = (
+          <p className="text-sm text-muted-foreground text-center py-4">
+            此节点尚未配置选项
+          </p>
+        )
+
+        // 场景选择模式：渲染可点击的拼图场景
+        if (choiceMode === 'scene' && data.sceneId && graph.scenes) {
+          const scene = graph.scenes.find((s: any) => s.id === data.sceneId)
+          if (scene && !scene.puzzleData) {
+            return (
+              <div className={`space-y-4 ${bgImage ? 'bg-card/95 backdrop-blur-sm rounded-2xl p-6 shadow-xl' : ''}`}>
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  场景数据不完整，请重新选择
+                </p>
+              </div>
+            )
+          }
+          if (scene?.puzzleData) {
+            // 建立 clickableLayerId -> option 映射
+            const layerOptionMap = new Map<string, any>()
+            visibleOptions.forEach((opt: any) => {
+              if (opt.clickableLayerId) layerOptionMap.set(opt.clickableLayerId, opt)
+            })
+            const clickableLayers = scene.puzzleData.layers.filter(
+              (l: any) => l.clickable && layerOptionMap.has(l.id)
+            )
+            return (
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground text-center">请做出选择：</p>
+                <div className="relative w-full rounded-xl overflow-hidden border shadow-xl bg-black">
+                  <RuntimeSceneRenderer
+                    scene={scene.puzzleData}
+                    characters={graph.characters}
+                    animate={false}
+                  />
+                  {clickableLayers.map((layer: any) => {
+                    const opt = layerOptionMap.get(layer.id)
+                    const hasConnection = optionHasConnection(opt)
+                    const isBg = layer.type === 'background'
+                    const overlayStyle: React.CSSProperties = isBg
+                      ? { position: 'absolute', inset: 0, zIndex: layer.zIndex }
+                      : {
+                          position: 'absolute',
+                          left: `${layer.x}%`,
+                          top: `${layer.y}%`,
+                          width: layer.width ? `${layer.width}%` : 'auto',
+                          height: layer.height ? `${layer.height}%` : 'auto',
+                          transform: `translate(-50%, -50%) rotate(${layer.rotation || 0}deg)`,
+                          transformOrigin: 'center center',
+                          zIndex: layer.zIndex,
+                        }
+                    return (
+                      <div
+                        key={layer.id}
+                        style={overlayStyle}
+                        onClick={() => hasConnection && handleChoice(opt.id)}
+                        className={`absolute ring-1 ring-inset ring-primary/40 transition-all hover:ring-2 hover:ring-primary/80 hover:bg-primary/10 ${
+                          hasConnection ? 'cursor-pointer' : 'opacity-50 cursor-not-allowed'
+                        }`}
+                        title={opt.text}
+                      >
+                        {opt.text && (
+                          <span className="absolute bottom-1 left-1/2 -translate-x-1/2 text-[10px] text-white bg-black/60 px-2 py-0.5 rounded whitespace-nowrap pointer-events-none">
+                            {opt.text}
+                          </span>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+                {clickableLayers.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center">
+                    场景中暂无可点击区域
+                  </p>
+                )}
+                {visibleOptions.length === 0 && emptyHint}
+              </div>
+            )
+          }
+        }
+
+        // 图片选择模式：2 列图片卡片网格
+        if (choiceMode === 'image') {
+          return (
+            <div className={`space-y-3 ${bgImage ? 'bg-card/95 backdrop-blur-sm rounded-2xl p-6 shadow-xl' : ''}`}>
+              <p className="text-sm text-muted-foreground mb-4">请做出选择：</p>
+              {visibleOptions.length === 0 ? (
+                emptyHint
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  {visibleOptions.map((opt: any, i: number) => {
+                    const hasConnection = optionHasConnection(opt)
+                    const imagePosition: 'top' | 'left' | 'background' = opt.imagePosition || 'top'
+                    return (
+                      <button
+                        key={opt.id || i}
+                        type="button"
+                        disabled={!hasConnection}
+                        onClick={() => handleChoice(opt.id || `opt-${i}`)}
+                        className={`group relative overflow-hidden rounded-xl border text-left transition-all ${
+                          hasConnection
+                            ? 'border-border hover:border-primary hover:shadow-lg cursor-pointer'
+                            : 'border-border opacity-50 cursor-not-allowed'
+                        }`}
+                      >
+                        {opt.image ? (
+                          imagePosition === 'background' ? (
+                            <>
+                              <img
+                                src={opt.image}
+                                alt={opt.text}
+                                className="absolute inset-0 w-full h-full object-cover"
+                                draggable={false}
+                              />
+                              <div className="absolute inset-0 bg-black/40" />
+                              <div className="relative z-10 p-3 min-h-[5rem] flex items-end">
+                                <span className="text-sm font-medium text-white drop-shadow break-words">{opt.text}</span>
+                              </div>
+                              {!hasConnection && (
+                                <Lock className="absolute top-2 right-2 w-3 h-3 text-white/80 z-10" />
+                              )}
+                            </>
+                          ) : imagePosition === 'left' ? (
+                            <div className="flex items-stretch">
+                              <img
+                                src={opt.image}
+                                alt={opt.text}
+                                className="w-20 h-20 object-cover shrink-0"
+                                draggable={false}
+                              />
+                              <div className="flex-1 min-w-0 p-3 flex items-center">
+                                <span className="text-sm font-medium break-words">{opt.text}</span>
+                              </div>
+                              {!hasConnection && (
+                                <Lock className="w-3 h-3 m-2 text-muted-foreground self-start shrink-0" />
+                              )}
+                            </div>
+                          ) : (
+                            <div className="flex flex-col">
+                              <div className="w-full h-28 bg-muted overflow-hidden">
+                                <img
+                                  src={opt.image}
+                                  alt={opt.text}
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                                  draggable={false}
+                                />
+                              </div>
+                              <div className="p-2.5 flex items-center justify-between gap-2">
+                                <span className="text-sm font-medium break-words">{opt.text}</span>
+                                {!hasConnection && <Lock className="w-3 h-3 shrink-0 text-muted-foreground" />}
+                              </div>
+                            </div>
+                          )
+                        ) : (
+                          <div className="p-3 flex items-center justify-between gap-2 min-h-[3rem]">
+                            <span className="text-sm font-medium break-words">{opt.text}</span>
+                            {!hasConnection && <Lock className="w-3 h-3 shrink-0 text-muted-foreground" />}
+                          </div>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )
+        }
+
+        // 文本选择模式（默认）
         return (
           <div className={`space-y-3 ${bgImage ? 'bg-card/95 backdrop-blur-sm rounded-2xl p-6 shadow-xl' : ''}`}>
             <p className="text-sm text-muted-foreground mb-4">请做出选择：</p>
             {visibleOptions.map((opt: any, i: number) => {
-              const hasConnection = graph.edges.some(
-                (e) => e.source === currentNode.id && e.sourceHandle === opt.id
-              )
+              const hasConnection = optionHasConnection(opt)
               return (
                 <Button
                   key={opt.id || i}
@@ -631,11 +846,7 @@ export function StoryPreview({ graph, open, onClose }: StoryPreviewProps) {
                 </Button>
               )
             })}
-            {visibleOptions.length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                此节点尚未配置选项
-              </p>
-            )}
+            {visibleOptions.length === 0 && emptyHint}
           </div>
         )
       }
@@ -665,30 +876,113 @@ export function StoryPreview({ graph, open, onClose }: StoryPreviewProps) {
       case 'cg':
         const isVideo = data.mediaType === 'video'
         const hasLetterbox = data.letterbox !== false
+        const displayMode: 'contain' | 'cover' | 'fill' | 'custom' = data.displayMode || 'contain'
+        const objectPosition: string = data.objectPosition || 'center'
+
+        const isCustom = displayMode === 'custom'
+        const mediaClassName = isCustom
+          ? 'object-contain'
+          : displayMode === 'cover'
+            ? 'w-full h-full object-cover'
+            : displayMode === 'fill'
+              ? 'w-full h-full object-fill'
+              : 'w-full h-full object-contain'
+
+        const mediaStyle: React.CSSProperties = isCustom
+          ? {
+              width: `${data.customWidth || 100}%`,
+              height: `${data.customHeight || 100}%`,
+              position: 'absolute',
+              left: '50%',
+              top: '50%',
+              transform: 'translate(-50%, -50%)',
+              objectPosition,
+              borderRadius: data.borderRadius ? `${data.borderRadius}px` : undefined,
+              borderWidth: data.borderWidth ? `${data.borderWidth}px` : undefined,
+              borderColor: data.borderColor || undefined,
+              borderStyle: data.borderWidth ? 'solid' : undefined,
+              boxShadow: data.shadow ? '0 20px 60px rgba(0,0,0,0.6)' : undefined,
+            }
+          : {
+              objectPosition,
+              borderRadius: data.borderRadius ? `${data.borderRadius}px` : undefined,
+              borderWidth: data.borderWidth ? `${data.borderWidth}px` : undefined,
+              borderColor: data.borderColor || undefined,
+              borderStyle: data.borderWidth ? 'solid' : undefined,
+              boxShadow: data.shadow ? '0 20px 60px rgba(0,0,0,0.6)' : undefined,
+            }
+
+        const hasTransform = data.x !== undefined || data.y !== undefined || data.opacity !== undefined || data.rotation !== undefined
+
+        const wrapperStyle: React.CSSProperties = {}
+        if (hasTransform) {
+          if (data.x !== undefined) wrapperStyle.left = `calc(50% + ${data.x}px)`
+          if (data.y !== undefined) wrapperStyle.top = `calc(50% + ${data.y}px)`
+          if (data.opacity !== undefined) wrapperStyle.opacity = data.opacity
+          if (data.rotation !== undefined) wrapperStyle.transform = `translate(-50%, -50%) rotate(${data.rotation}deg)`
+          wrapperStyle.position = 'absolute' as const
+        }
+
         return (
-          <div className="w-full bg-black rounded-xl overflow-hidden shadow-2xl border border-black">
+          <div
+            className="w-full rounded-xl overflow-hidden shadow-2xl border"
+            style={{ backgroundColor: data.fillColor || '#000', borderColor: data.fillColor || '#000' }}
+          >
             <div className="relative aspect-video">
-              {isVideo ? (
-                data.url ? (
-                  <video src={data.url} className="w-full h-full object-contain" controls playsInline />
+              <div style={hasTransform ? wrapperStyle : {}} className={hasTransform ? '' : 'w-full h-full'}>
+                {isVideo ? (
+                  data.url ? (
+                    <video
+                      ref={videoRef}
+                      src={data.url}
+                      className={mediaClassName}
+                      style={mediaStyle}
+                      autoPlay
+                      muted={data.muted !== undefined ? data.muted : false}
+                      loop={data.loop || false}
+                      playsInline
+                      controls={data.showControls || false}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">
+                      未设置 CG 资源
+                    </div>
+                  )
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">
-                    未设置 CG 资源
-                  </div>
-                )
-              ) : (
-                data.url ? (
-                  <img src={data.url} alt={data.title || 'CG'} className="w-full h-full object-contain" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">
-                    未设置 CG 资源
-                  </div>
-                )
+                  data.url ? (
+                    <img src={data.url} alt={data.title || 'CG'} className={mediaClassName} style={mediaStyle} />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">
+                      未设置 CG 资源
+                    </div>
+                  )
+                )}
+              </div>
+              {data.overlayLayers && data.overlayLayers.length > 0 && (
+                data.overlayLayers.map((layer: any) => (
+                  <img
+                    key={layer.id}
+                    src={layer.url}
+                    alt={layer.name || ''}
+                    draggable={false}
+                    className="absolute pointer-events-none max-w-full max-h-full object-contain"
+                    style={{
+                      left: `${layer.x}%`,
+                      top: `${layer.y}%`,
+                      width: layer.width ? `${layer.width}%` : 'auto',
+                      height: layer.height ? `${layer.height}%` : 'auto',
+                      transform: `translate(-50%, -50%) rotate(${layer.rotation || 0}deg)`,
+                      transformOrigin: 'center center',
+                      opacity: typeof layer.opacity === 'number' ? layer.opacity : 1,
+                      zIndex: layer.zIndex ?? 1,
+                    }}
+                  />
+                ))
               )}
               {hasLetterbox && (
                 <>
-                  <div className="absolute top-0 left-0 right-0 h-[6%] bg-black" />
-                  <div className="absolute bottom-0 left-0 right-0 h-[6%] bg-black" />
+                  <div className="absolute top-0 left-0 right-0 h-[6%] bg-black pointer-events-none" />
+                  <div className="absolute bottom-0 left-0 right-0 h-[6%] bg-black pointer-events-none" />
                 </>
               )}
             </div>
@@ -748,15 +1042,35 @@ export function StoryPreview({ graph, open, onClose }: StoryPreviewProps) {
               <Lock className="w-8 h-8 text-amber-500" />
             </div>
             <div>
-              <h3 className="text-lg font-bold mb-2">{data.nodeTitle || '解锁内容'}</h3>
+              <h3 className="text-lg font-bold mb-2">{data.title || data.nodeTitle || '解锁内容'}</h3>
               {data.description && (
                 <p className="text-sm text-muted-foreground mb-4">{data.description}</p>
               )}
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/10 text-amber-600">
                 <Coins className="w-4 h-4" />
-                <span className="font-medium">{data.amount || 1} 次解锁</span>
+                <span className="font-medium">{data.price || data.amount || 1} 次解锁</span>
               </div>
             </div>
+          </div>
+        )
+
+      case 'random':
+        return (
+          <div className={`text-center py-8 ${bgImage ? 'bg-card/90 backdrop-blur-sm rounded-2xl shadow-xl' : ''}`}>
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-purple-500/10 flex items-center justify-center">
+              <GitBranch className="w-8 h-8 text-purple-500" />
+            </div>
+            <p className="text-lg font-medium">随机跳转中...</p>
+          </div>
+        )
+
+      case 'jump':
+        return (
+          <div className={`text-center py-8 ${bgImage ? 'bg-card/90 backdrop-blur-sm rounded-2xl shadow-xl' : ''}`}>
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-blue-500/10 flex items-center justify-center">
+              <SkipForward className="w-8 h-8 text-blue-500" />
+            </div>
+            <p className="text-lg font-medium">跳转中...</p>
           </div>
         )
 

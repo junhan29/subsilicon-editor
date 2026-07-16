@@ -119,6 +119,16 @@ export class OpenAiCompatibleProvider extends BaseAiProvider {
         return 'https://api.anthropic.com/v1'
       case 'google':
         return 'https://generativelanguage.googleapis.com/v1'
+      case 'baidu':
+        return 'https://qianfan.baidubce.com/v2'
+      case 'alibaba':
+        return 'https://dashscope.aliyuncs.com/compatible-mode/v1'
+      case 'doubao':
+        return 'https://ark.cn-beijing.volces.com/api/v3'
+      case 'zhipu':
+        return 'https://open.bigmodel.cn/api/paas/v4'
+      case 'moonshot':
+        return 'https://api.moonshot.cn/v1'
       default:
         return 'https://api.openai.com/v1'
     }

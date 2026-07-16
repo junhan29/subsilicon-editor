@@ -1,5 +1,5 @@
 import type { StoryGraph } from '@editor/types/editor'
-import type { MonetizationConfig, HTMLMonetizationConfig } from '@editor/lib/work-monetization'
+import type { MonetizationConfig, HTMLMonetizationConfig, PreGeneratedCode } from '@editor/lib/work-monetization'
 import {
   hashSeedKey,
   UNLOCK_STATE_KEY_PREFIX,
@@ -138,9 +138,37 @@ function encodeBase64UTF8(text: string): string {
   return btoa(unescape(encodeURIComponent(text)))
 }
 
+function hexToBytes(hex: string): Uint8Array {
+  const bytes = new Uint8Array(hex.length / 2)
+  for (let i = 0; i < hex.length; i += 2) {
+    bytes[i / 2] = parseInt(hex.slice(i, i + 2), 16)
+  }
+  return bytes
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = ''
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i])
+  }
+  return btoa(binary)
+}
+
+function xorEncrypt(text: string, keyHex: string): string {
+  const encoder = new TextEncoder()
+  const textBytes = encoder.encode(text)
+  const keyBytes = hexToBytes(keyHex)
+  const result = new Uint8Array(textBytes.length)
+  for (let i = 0; i < textBytes.length; i++) {
+    result[i] = textBytes[i] ^ keyBytes[i % keyBytes.length]
+  }
+  return bytesToBase64(result)
+}
+
 export function encryptPaidContent(
   graph: StoryGraph,
-  monetization: MonetizationConfig
+  monetization: MonetizationConfig,
+  seedKeyHash?: string
 ): StoryGraph {
   const newGraph: StoryGraph = JSON.parse(JSON.stringify(graph))
 
@@ -163,7 +191,7 @@ export function encryptPaidContent(
     for (const field of sensitiveFields) {
       const value = data[field]
       if (typeof value === 'string' && value && !value.startsWith(ENC_PREFIX)) {
-        data[field] = ENC_PREFIX + encodeBase64UTF8(value)
+        data[field] = ENC_PREFIX + (seedKeyHash ? xorEncrypt(value, seedKeyHash) : encodeBase64UTF8(value))
       }
     }
 
@@ -175,7 +203,7 @@ export function encryptPaidContent(
           const optRecord = opt as Record<string, unknown>
           const textValue = optRecord.text
           if (typeof textValue === 'string' && textValue && !textValue.startsWith(ENC_PREFIX)) {
-            optRecord.text = ENC_PREFIX + encodeBase64UTF8(textValue)
+            optRecord.text = ENC_PREFIX + (seedKeyHash ? xorEncrypt(textValue, seedKeyHash) : encodeBase64UTF8(textValue))
           }
         }
       }
@@ -285,12 +313,43 @@ function buildHTMLTemplate(params: {
       var UNLOCK_PREFIX = '${UNLOCK_CODE_PREFIX}';
       var REQ_PREFIX = '${UNLOCK_REQUEST_PREFIX}';
 
+      function hexToBytes(hex) {
+        var bytes = new Uint8Array(hex.length / 2);
+        for (var i = 0; i < hex.length; i += 2) {
+          bytes[i / 2] = parseInt(hex.slice(i, i + 2), 16);
+        }
+        return bytes;
+      }
+
+      function base64ToBytes(base64) {
+        var binary = atob(base64);
+        var bytes = new Uint8Array(binary.length);
+        for (var i = 0; i < binary.length; i++) {
+          bytes[i] = binary.charCodeAt(i);
+        }
+        return bytes;
+      }
+
       function decryptField(value) {
         if (typeof value !== 'string') return value;
         if (value.indexOf('${ENC_PREFIX}') !== 0) return value;
         try {
           var encoded = value.slice(${ENC_PREFIX.length});
-          return decodeURIComponent(escape(atob(encoded)));
+          var keyHex = monetization && monetization.seedKeyHash ? monetization.seedKeyHash : '';
+          if (!keyHex) {
+            return decodeURIComponent(escape(atob(encoded)));
+          }
+          var cipherBytes = base64ToBytes(encoded);
+          var keyBytes = hexToBytes(keyHex);
+          var result = new Uint8Array(cipherBytes.length);
+          for (var i = 0; i < cipherBytes.length; i++) {
+            result[i] = cipherBytes[i] ^ keyBytes[i % keyBytes.length];
+          }
+          var decrypted = '';
+          for (var i = 0; i < result.length; i++) {
+            decrypted += String.fromCharCode(result[i]);
+          }
+          return decodeURIComponent(escape(decrypted));
         } catch (e) {
           return '[内容已加密]';
         }
@@ -451,6 +510,90 @@ function buildHTMLTemplate(params: {
           paywallHTML += '<button class="paywall-btn" onclick="verifyUnlockPlatform()">解锁</button>';
           paywallHTML += '<p id="unlock-result-platform" class="paywall-hidden"></p>';
           paywallHTML += '</div>';
+        }
+
+        // 离线解锁码模式
+        if (monetization.paymentMethod === 'offline') {
+          paywallHTML += '<div class="paywall-divider"></div>';
+          paywallHTML += '<p class="paywall-section-title">输入解锁码</p>';
+          paywallHTML += '<input type="text" class="paywall-input" id="offline-unlock-input" placeholder="输入解锁码" />';
+          paywallHTML += '<button class="paywall-btn" onclick="verifyOfflineUnlock()">验证解锁码</button>';
+          paywallHTML += '<p id="offline-unlock-result" class="paywall-hidden"></p>';
+        }
+
+        // 多渠道模式
+        if (monetization.paymentMethod === 'multi') {
+          var manualChannels = (monetization.multiChannel && monetization.multiChannel.manualChannels) || [];
+          var thirdPartyChannels = (monetization.multiChannel && monetization.multiChannel.thirdPartyChannels) || [];
+          var multiTabs = [];
+
+          manualChannels.forEach(function(ch, i) {
+            var label = ch.label || (ch.type === 'wechat' ? '微信' : ch.type === 'alipay' ? '支付宝' : ch.type === 'stripe' ? 'Stripe' : ch.type === 'paypal' ? 'PayPal' : '扫码支付');
+            multiTabs.push({ id: 'manual-' + i, label: label });
+          });
+          thirdPartyChannels.forEach(function(ch, i) {
+            var label = ch.label || (ch.platform === 'afdian' ? '爱发电' : ch.platform === 'mianbaoduo' ? '面包多' : ch.platform === 'patreon' ? 'Patreon' : ch.platform === 'ko-fi' ? 'Ko-fi' : '第三方平台');
+            multiTabs.push({ id: 'third-' + i, label: label });
+          });
+
+          if (multiTabs.length > 0) {
+            paywallHTML += '<div class="paywall-tabs">';
+            multiTabs.forEach(function(t, i) {
+              paywallHTML += '<button class="paywall-tab ' + (i === 0 ? 'active' : '') + '" onclick="switchPaywallTabMulti(\'' + t.id + '\', this)">' + t.label + '</button>';
+            });
+            paywallHTML += '</div>';
+          }
+
+          manualChannels.forEach(function(ch, i) {
+            var isFirst = i === 0 && thirdPartyChannels.length === 0;
+            var displayStyle = isFirst ? '' : 'display:none;';
+            paywallHTML += '<div id="paywall-multi-manual-' + i + '" style="' + displayStyle + '">';
+            paywallHTML += '<div class="paywall-divider"></div>';
+            paywallHTML += '<p class="paywall-section-title">' + (ch.label || '扫码支付') + '</p>';
+            if (ch.qrCode) {
+              paywallHTML += '<div class="paywall-qr-container"><img src="' + ch.qrCode + '" alt="收款码" /></div>';
+            }
+            if (ch.contact) {
+              paywallHTML += '<p class="paywall-contact">联系方式：' + ch.contact + '</p>';
+            }
+            paywallHTML += '<div class="paywall-divider"></div>';
+            paywallHTML += '<p class="paywall-section-title">支付凭证</p>';
+            paywallHTML += '<input type="text" class="paywall-input" id="payment-proof-multi-manual-' + i + '" placeholder="支付单号后 6 位" maxlength="6" />';
+            paywallHTML += '<button class="paywall-btn" onclick="generateRequestCodeMulti(\'manual\', ' + i + ')">生成解锁凭证</button>';
+            paywallHTML += '<div id="request-code-display-multi-manual-' + i + '" class="paywall-hidden"><div class="paywall-code-display" id="request-code-value-multi-manual-' + i + '"></div><button class="paywall-btn paywall-btn-secondary" onclick="copyRequestCodeMulti(\'manual\', ' + i + ')">复制凭证</button></div>';
+            paywallHTML += '<div class="paywall-divider"></div>';
+            paywallHTML += '<p class="paywall-section-title">解锁码</p>';
+            paywallHTML += '<input type="text" class="paywall-input" id="unlock-code-input-multi-manual-' + i + '" placeholder="粘贴收到的解锁码" />';
+            paywallHTML += '<button class="paywall-btn" onclick="verifyUnlockMulti(\'manual\', ' + i + ')">解锁</button>';
+            paywallHTML += '<p id="unlock-result-multi-manual-' + i + '" class="paywall-hidden"></p>';
+            paywallHTML += '</div>';
+          });
+
+          thirdPartyChannels.forEach(function(ch, i) {
+            var isFirst = i === 0 && manualChannels.length === 0;
+            var displayStyle = isFirst ? '' : 'display:none;';
+            paywallHTML += '<div id="paywall-multi-third-' + i + '" style="' + displayStyle + '">';
+            paywallHTML += '<div class="paywall-divider"></div>';
+            paywallHTML += '<p class="paywall-section-title">' + (ch.label || '前往平台购买') + '</p>';
+            if (ch.link) {
+              var platformLabel = ch.platform === 'afdian' ? '前往爱发电' : ch.platform === 'mianbaoduo' ? '前往面包多' : '前往购买';
+              paywallHTML += '<a href="' + ch.link + '" target="_blank" class="paywall-platform-btn">' + platformLabel + '</a>';
+            }
+            if (ch.creatorName) {
+              paywallHTML += '<p class="paywall-contact">创作者：' + ch.creatorName + '</p>';
+            }
+            paywallHTML += '<div class="paywall-divider"></div>';
+            paywallHTML += '<p class="paywall-section-title">支付凭证</p>';
+            paywallHTML += '<input type="text" class="paywall-input" id="payment-proof-multi-third-' + i + '" placeholder="平台订单号后 6 位" maxlength="6" />';
+            paywallHTML += '<button class="paywall-btn" onclick="generateRequestCodeMulti(\'third\', ' + i + ')">生成解锁凭证</button>';
+            paywallHTML += '<div id="request-code-display-multi-third-' + i + '" class="paywall-hidden"><div class="paywall-code-display" id="request-code-value-multi-third-' + i + '"></div><button class="paywall-btn paywall-btn-secondary" onclick="copyRequestCodeMulti(\'third\', ' + i + ')">复制凭证</button></div>';
+            paywallHTML += '<div class="paywall-divider"></div>';
+            paywallHTML += '<p class="paywall-section-title">解锁码</p>';
+            paywallHTML += '<input type="text" class="paywall-input" id="unlock-code-input-multi-third-' + i + '" placeholder="粘贴收到的解锁码" />';
+            paywallHTML += '<button class="paywall-btn" onclick="verifyUnlockMulti(\'third\', ' + i + ')">解锁</button>';
+            paywallHTML += '<p id="unlock-result-multi-third-' + i + '" class="paywall-hidden"></p>';
+            paywallHTML += '</div>';
+          });
         }
 
         // OPVP 自动验证（开放支付验证协议）
@@ -782,6 +925,145 @@ function buildHTMLTemplate(params: {
         }
       };
 
+      // 离线解锁码验证
+      window.verifyOfflineUnlock = function() {
+        var input = document.getElementById('offline-unlock-input');
+        var code = input ? input.value.trim() : '';
+        var resultEl = document.getElementById('offline-unlock-result');
+
+        if (!code) {
+          if (resultEl) {
+            resultEl.textContent = '请输入解锁码';
+            resultEl.className = 'paywall-error-msg';
+            resultEl.style.display = 'block';
+          }
+          return;
+        }
+
+        var codes = monetization.preGeneratedCodes || [];
+        var match = codes.find(function(c) { return c.code === code && !c.usedAt; });
+
+        if (match) {
+          match.usedAt = Date.now();
+          saveUnlockState(window.__currentPaidNodeId, window.__currentChapterId);
+          if (resultEl) {
+            resultEl.textContent = '解锁成功！';
+            resultEl.className = 'paywall-success-msg';
+            resultEl.style.display = 'block';
+          }
+          setTimeout(function() {
+            hidePaywall();
+            renderNode(findNode(window.__currentPaidNodeId));
+          }, 1000);
+        } else {
+          if (resultEl) {
+            resultEl.textContent = '解锁码无效或已被使用';
+            resultEl.className = 'paywall-error-msg';
+            resultEl.style.display = 'block';
+          }
+        }
+      };
+
+      // 多渠道 Tab 切换
+      window.switchPaywallTabMulti = function(tabId, btn) {
+        var tabs = document.querySelectorAll('.paywall-tab');
+        tabs.forEach(function(t) { t.classList.remove('active'); });
+        if (btn) btn.classList.add('active');
+
+        document.querySelectorAll('[id^="paywall-multi-"]').forEach(function(el) {
+          el.style.display = 'none';
+        });
+        var target = document.getElementById('paywall-multi-' + tabId);
+        if (target) target.style.display = 'block';
+      };
+
+      // 多渠道生成解锁凭证
+      window.generateRequestCodeMulti = async function(type, index) {
+        var suffix = type + '-' + index;
+        var proofInput = document.getElementById('payment-proof-multi-' + suffix);
+        var proof = proofInput ? proofInput.value.trim() : '';
+
+        if (!proof || proof.length < 6) {
+          alert('请输入支付单号后 6 位');
+          return;
+        }
+
+        try {
+          var fingerprint = await generateFingerprint();
+          var timestamp = Math.floor(Date.now() / 60000) * 60000;
+          var message = monetization.workId + '|' + proof + '|' + fingerprint + '|' + timestamp;
+          var signature = await simpleHash(message);
+          var requestCode = REQ_PREFIX + signature.slice(0, 8).toUpperCase();
+
+          var display = document.getElementById('request-code-display-multi-' + suffix);
+          var valueEl = document.getElementById('request-code-value-multi-' + suffix);
+          if (valueEl) valueEl.textContent = requestCode;
+          if (display) display.classList.remove('paywall-hidden');
+
+          window['__lastRequestCodeMulti_' + suffix] = requestCode;
+        } catch (e) {
+          alert('生成失败：' + e.message);
+        }
+      };
+
+      // 多渠道复制凭证
+      window.copyRequestCodeMulti = function(type, index) {
+        var suffix = type + '-' + index;
+        var valueEl = document.getElementById('request-code-value-multi-' + suffix);
+        var code = valueEl ? valueEl.textContent : '';
+        if (!code) return;
+        navigator.clipboard.writeText(code).then(function() {
+          alert('已复制到剪贴板');
+        }).catch(function() {
+          var textarea = document.createElement('textarea');
+          textarea.value = code;
+          document.body.appendChild(textarea);
+          textarea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textarea);
+          alert('已复制到剪贴板');
+        });
+      };
+
+      // 多渠道验证解锁码
+      window.verifyUnlockMulti = async function(type, index) {
+        var suffix = type + '-' + index;
+        var codeInput = document.getElementById('unlock-code-input-multi-' + suffix);
+        var code = codeInput ? codeInput.value.trim() : '';
+        var resultEl = document.getElementById('unlock-result-multi-' + suffix);
+        var requestCode = window['__lastRequestCodeMulti_' + suffix];
+
+        if (!requestCode) {
+          if (resultEl) {
+            resultEl.textContent = '请先生成解锁凭证';
+            resultEl.className = 'paywall-error-msg';
+            resultEl.style.display = 'block';
+          }
+          return;
+        }
+
+        var valid = await verifyUnlockCodeBinding(code, requestCode, monetization.workId);
+
+        if (valid) {
+          saveUnlockState(window.__currentPaidNodeId, window.__currentChapterId);
+          if (resultEl) {
+            resultEl.textContent = '解锁成功！';
+            resultEl.className = 'paywall-success-msg';
+            resultEl.style.display = 'block';
+          }
+          setTimeout(function() {
+            hidePaywall();
+            renderNode(findNode(window.__currentPaidNodeId));
+          }, 1000);
+        } else {
+          if (resultEl) {
+            resultEl.textContent = '解锁码无效或与凭证不匹配';
+            resultEl.className = 'paywall-error-msg';
+            resultEl.style.display = 'block';
+          }
+        }
+      };
+
       function findNode(id) {
         return graph.nodes.find(function(n) { return n.id === id; });
       }
@@ -1024,9 +1306,11 @@ export async function exportToHTML(
   // 素材内嵌：将 blob: URL 转为 data URL
   let processedGraph = await embedAssets(graph)
 
-  // 付费内容加密：将付费节点文本 Base64 编码
+  // 付费内容加密：使用 seedKeyHash 对付费节点文本进行 XOR 加密
+  let seedKeyHash = ''
   if (monetization && monetization.enabled && monetization.seedKey) {
-    processedGraph = encryptPaidContent(processedGraph, monetization)
+    seedKeyHash = monetization.seedKeyHash || await hashSeedKey(monetization.seedKey)
+    processedGraph = encryptPaidContent(processedGraph, monetization, seedKeyHash)
   }
 
   // 安全转义 JSON（防止 </script> 注入）
@@ -1039,7 +1323,6 @@ export async function exportToHTML(
 
   let htmlMonetization: HTMLMonetizationConfig | undefined = undefined
   if (monetization && monetization.enabled && monetization.seedKey) {
-    const seedKeyHash = await hashSeedKey(monetization.seedKey)
     htmlMonetization = {
       workId: monetization.workId,
       seedKeyHash,
@@ -1056,6 +1339,7 @@ export async function exportToHTML(
       thirdParty: monetization.thirdParty,
       multiChannel: monetization.multiChannel,
       granularity: monetization.granularity,
+      preGeneratedCodes: (monetization as MonetizationConfig & { preGeneratedCodes?: PreGeneratedCode[] }).preGeneratedCodes,
       opvp: (monetization as MonetizationConfig & { opvp?: HTMLMonetizationConfig['opvp'] }).opvp,
     }
   }

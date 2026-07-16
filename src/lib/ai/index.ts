@@ -9,6 +9,7 @@ export {
   getAvailableProviders,
   refreshAiConfig,
   resetAiRegistry,
+  AiConfigNeededError,
 } from './provider-registry'
 
 export { polishText, layoutText, continueText } from './services/text-service'

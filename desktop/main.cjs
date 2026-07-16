@@ -2,11 +2,18 @@ const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron')
 const { autoUpdater } = require('electron-updater')
 const path = require('path')
 const fs = require('fs')
-const { Readable } = require('stream')
 
 const isDev = process.env.NODE_ENV === 'development'
 const isMac = process.platform === 'darwin'
 const isWin = process.platform === 'win32'
+
+// 全局异常兜底，防止未捕获异常导致主进程崩溃
+process.on('uncaughtException', (error) => {
+  console.error('[Main] Uncaught Exception:', error)
+})
+process.on('unhandledRejection', (reason) => {
+  console.error('[Main] Unhandled Rejection:', reason)
+})
 
 let mainWindow = null
 
@@ -122,6 +129,15 @@ ipcMain.handle('readFile', async (event, filePath) => {
   }
 })
 
+ipcMain.handle('readFileAsText', async (event, filePath) => {
+  try {
+    const data = fs.readFileSync(filePath, 'utf-8')
+    return { success: true, data }
+  } catch (error) {
+    return { success: false, error: error.message }
+  }
+})
+
 ipcMain.handle('writeFile', async (event, filePath, data) => {
   try {
     fs.writeFileSync(filePath, Buffer.from(data))
@@ -147,8 +163,9 @@ ipcMain.handle('getFileInfo', async (event, filePath) => {
 
 ipcMain.handle('openFileDialog', async (event, options = {}) => {
   try {
+    const properties = options.properties || ['openFile']
     const result = await dialog.showOpenDialog(mainWindow, {
-      properties: ['openFile'],
+      properties,
       filters: options.filters || [],
     })
 
@@ -156,7 +173,7 @@ ipcMain.handle('openFileDialog', async (event, options = {}) => {
       return { success: false }
     }
 
-    return { success: true, path: result.filePaths[0] }
+    return { success: true, path: result.filePaths[0], filePaths: result.filePaths }
   } catch (error) {
     return { success: false, error: error.message }
   }
@@ -271,11 +288,14 @@ function setupAutoUpdate() {
   autoUpdater.setFeedURL({
     provider: 'generic',
     url: 'https://subsilicon.cn/releases',
-    channel: 'latest',
   })
 
   autoUpdater.autoDownload = false
   autoUpdater.autoInstallOnAppQuit = true
+
+  autoUpdater.on('before-quit-for-update', () => {
+    console.log('[AutoUpdater] 即将退出以安装更新')
+  })
 
   autoUpdater.on('checking-for-update', () => {
     mainWindow?.webContents.send('update-checking')
@@ -307,6 +327,7 @@ function setupAutoUpdate() {
   })
 
   autoUpdater.on('update-downloaded', () => {
+    console.log('[AutoUpdater] 更新下载完成，等待用户安装')
     mainWindow?.webContents.send('update-downloaded')
   })
 }
@@ -331,9 +352,19 @@ ipcMain.on('downloadUpdate', () => {
   })
 })
 
+ipcMain.handle('getAppPath', () => {
+  return app.getAppPath()
+})
+
 ipcMain.on('installUpdate', () => {
   if (isDev) return
-  autoUpdater.quitAndInstall(false, true)
+  console.log('[AutoUpdater] 用户触发安装，准备退出并安装')
+  try {
+    autoUpdater.quitAndInstall(true, true)
+  } catch (err) {
+    console.error('[AutoUpdater] 安装失败:', err)
+    mainWindow?.webContents.send('update-error', err.message)
+  }
 })
 
 ipcMain.on('openExternal', (event, url) => {
