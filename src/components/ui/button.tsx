@@ -27,7 +27,7 @@ const buttonVariants = cva(
         ghost: 'hover:bg-ochre-50 hover:text-ochre-800 text-foreground',
         /* 链接按钮 */
         link: 'text-ochre-600 underline-offset-4 hover:underline',
-        /* 硅基科技风 - 用于AI相关功能 */
+        /* 硅基科技风 - 用于创境相关功能 */
         silicon:
           'bg-gradient-to-r from-silicon-600 to-silicon-500 text-white shadow-soft-md shadow-silicon-500/20 hover:shadow-soft-lg hover:shadow-silicon-500/30 hover:brightness-110 border border-silicon-400/30 btn-stroke',
         /* 艺术家手绘风 - 用于创作相关 */

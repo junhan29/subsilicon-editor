@@ -13,7 +13,7 @@ export class OpenAiCompatibleProvider extends BaseAiProvider {
   }
 
   isAvailable(): boolean {
-    return !!this.config.apiKey && this.config.enabled
+    return !!this.config.apiKey && this.config.enabled && !!this.config.model
   }
 
   async generate(options: AiRequestOptions): Promise<string> {

@@ -10,6 +10,7 @@ import {
   X,
   ChevronRight,
   PanelLeft,
+  MessageSquare,
   Edit3,
   PanelRight,
 } from 'lucide-react'
@@ -21,7 +22,7 @@ interface EmptyCanvasGuideProps {
 }
 
 interface GuideStep {
-  id: 'sidebar' | 'canvas' | 'panel'
+  id: 'sidebar' | 'ai' | 'canvas' | 'panel'
   title: string
   description: string
   hint: string
@@ -32,25 +33,33 @@ interface GuideStep {
 const GUIDE_STEPS: GuideStep[] = [
   {
     id: 'sidebar',
-    title: '从左侧拖拽节点开始',
-    description: '左侧面板包含对话、选择、结局等各种故事节点。把它们拖到中间画布上，就能搭建故事结构。',
+    title: '从左侧节点库开始',
+    description: '左侧面板包含对话、选择、结局等各种故事节点。把它们拖到右侧画布上，就能搭建故事结构。',
     hint: '← 看向左侧节点库',
     icon: <PanelLeft className="w-5 h-5" />,
     direction: 'left',
   },
   {
-    id: 'canvas',
-    title: '双击节点编辑内容',
-    description: '在画布上双击节点可进入编辑状态，拖动节点可调整位置。从节点底部圆点拖到下一个节点顶部即可创建连线。',
-    hint: '看这里 — 中间画布',
-    icon: <Edit3 className="w-5 h-5" />,
+    id: 'ai',
+    title: '在中间与 AI 协作',
+    description: '中间是创境 AI 面板，用自然语言描述你想要的剧情、角色或节点，AI 会自动生成并应用到画布。',
+    hint: '中间 AI 面板',
+    icon: <MessageSquare className="w-5 h-5" />,
     direction: 'center',
   },
   {
+    id: 'canvas',
+    title: '在右侧画布直接操作',
+    description: '右侧是主画布，可直接拖拽节点、双击编辑、从节点底部圆点连线。拖拽右栏左边缘可放大画布，或点击全屏按钮进入纯手动画布模式。',
+    hint: '右侧主画布',
+    icon: <Edit3 className="w-5 h-5" />,
+    direction: 'right',
+  },
+  {
     id: 'panel',
-    title: '在右侧面板设置属性',
-    description: '选中节点后，右侧面板会出现该节点的详细属性 — 对话台词、选项分支、付费金额等都可以在这里编辑。',
-    hint: '看向右侧属性面板 →',
+    title: '在属性面板精调细节',
+    description: '选中节点后，右栏内的属性面板会出现详细设置 — 对话台词、选项分支、付费金额等都可以在这里编辑。',
+    hint: '右栏内属性面板',
     icon: <PanelRight className="w-5 h-5" />,
     direction: 'right',
   },
@@ -78,7 +87,9 @@ function isEmptyGuideCompleted(): boolean {
 function markEmptyGuideCompleted(): void {
   try {
     localStorage.setItem(EMPTY_GUIDE_COMPLETED_KEY, 'true')
-  } catch {}
+  } catch {
+    // 忽略写入失败（隐私模式 / 存储配额超限）
+  }
 }
 
 export function EmptyCanvasGuide({ onQuickAdd, onStartTour }: EmptyCanvasGuideProps) {

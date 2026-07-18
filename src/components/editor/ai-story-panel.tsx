@@ -85,7 +85,7 @@ export function AiStoryPanel({ onApplyStory, onAddCharacters }: AiStoryPanelProp
     } catch (error) {
       if (error instanceof Error && 'needsConfig' in error && (error as { needsConfig: boolean }).needsConfig) {
         setShowSettings(true)
-        showToast('error', 'AI 未配置，请先设置 API Key 或启动本地 Ollama')
+        showToast('error', '创境未配置，请先设置 API Key 或启动本地 Ollama')
       } else {
         showToast('error', (error as Error).message)
       }
@@ -114,7 +114,7 @@ export function AiStoryPanel({ onApplyStory, onAddCharacters }: AiStoryPanelProp
     } catch (error) {
       if (error instanceof Error && 'needsConfig' in error && (error as { needsConfig: boolean }).needsConfig) {
         setShowSettings(true)
-        showToast('error', 'AI 未配置，请先设置 API Key 或启动本地 Ollama')
+        showToast('error', '创境未配置，请先设置 API Key 或启动本地 Ollama')
       } else {
         showToast('error', (error as Error).message)
       }
@@ -144,7 +144,7 @@ export function AiStoryPanel({ onApplyStory, onAddCharacters }: AiStoryPanelProp
     } catch (error) {
       if (error instanceof Error && 'needsConfig' in error && (error as { needsConfig: boolean }).needsConfig) {
         setShowSettings(true)
-        showToast('error', 'AI 未配置，请先设置 API Key 或启动本地 Ollama')
+        showToast('error', '创境未配置，请先设置 API Key 或启动本地 Ollama')
       } else {
         showToast('error', (error as Error).message)
       }
@@ -170,7 +170,7 @@ export function AiStoryPanel({ onApplyStory, onAddCharacters }: AiStoryPanelProp
     } catch (error) {
       if (error instanceof Error && 'needsConfig' in error && (error as { needsConfig: boolean }).needsConfig) {
         setShowSettings(true)
-        showToast('error', 'AI 未配置，请先设置 API Key 或启动本地 Ollama')
+        showToast('error', '创境未配置，请先设置 API Key 或启动本地 Ollama')
       } else {
         showToast('error', (error as Error).message)
       }
@@ -189,9 +189,9 @@ export function AiStoryPanel({ onApplyStory, onAddCharacters }: AiStoryPanelProp
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-lg">
           <Sparkles className="w-5 h-5 text-amber-400" />
-          AI 叙事生成
+          创境叙事生成
         </CardTitle>
-        <CardDescription>让 AI 帮你生成故事骨架，专注细节打磨</CardDescription>
+        <CardDescription>让创境帮你生成故事骨架，专注细节打磨</CardDescription>
       </CardHeader>
 
       <Tabs value={tab} onValueChange={setTab} className="flex-1 min-h-0">

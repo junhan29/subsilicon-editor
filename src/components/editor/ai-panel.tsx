@@ -79,7 +79,7 @@ export function AiPanel({ onApplyStory, onAddCharacters }: AiPanelProps) {
     } catch (e) {
       if (e instanceof Error && 'needsConfig' in e && (e as { needsConfig: boolean }).needsConfig) {
         setShowSettings(true)
-        showToast('error', 'AI 未配置，请先设置 API Key 或启动本地 Ollama')
+        showToast('error', '创境未配置，请先设置 API Key 或启动本地 Ollama')
       } else {
         showToast('error', '生成失败: ' + (e instanceof Error ? e.message : '未知错误'))
       }
@@ -97,7 +97,7 @@ export function AiPanel({ onApplyStory, onAddCharacters }: AiPanelProps) {
     } catch (e) {
       if (e instanceof Error && 'needsConfig' in e && (e as { needsConfig: boolean }).needsConfig) {
         setShowSettings(true)
-        showToast('error', 'AI 未配置，请先设置 API Key 或启动本地 Ollama')
+        showToast('error', '创境未配置，请先设置 API Key 或启动本地 Ollama')
       } else {
         showToast('error', '生成失败: ' + (e instanceof Error ? e.message : '未知错误'))
       }
@@ -123,12 +123,12 @@ export function AiPanel({ onApplyStory, onAddCharacters }: AiPanelProps) {
   return (
     <>
       <div className="h-full flex flex-col">
-        {/* AI 状态与跳转设置 */}
+        {/* 创境状态与跳转设置 */}
         <div className="flex items-center justify-between px-2 py-1.5 bg-slate-900 border-b border-slate-800">
           <div className="flex items-center gap-1.5">
             <Sparkles className="w-3.5 h-3.5 text-pink-400" />
             <span className="text-xs text-white">
-              {aiEnabled ? 'AI 已启用' : 'AI 未配置'}
+              {aiEnabled ? '创境已启用' : '创境未配置'}
             </span>
           </div>
           <button
@@ -145,9 +145,9 @@ export function AiPanel({ onApplyStory, onAddCharacters }: AiPanelProps) {
         {!aiEnabled && (
           <div className="flex-1 flex flex-col items-center justify-center p-4 text-center">
             <AlertCircle className="w-8 h-8 text-slate-500 mb-3" />
-            <p className="text-xs text-slate-400 mb-2">AI 功能未启用</p>
+            <p className="text-xs text-slate-400 mb-2">创境功能未启用</p>
             <p className="text-[10px] text-slate-500 mb-3">
-              请在设置中配置 AI 服务商和 API Key
+              请在设置中配置创境服务商和 API Key
             </p>
             <button
               onClick={() => setShowSettings(true)}
@@ -159,7 +159,7 @@ export function AiPanel({ onApplyStory, onAddCharacters }: AiPanelProps) {
           </div>
         )}
 
-        {/* AI 创作面板 */}
+        {/* 创境创作面板 */}
         {aiEnabled && (
           <div className="flex-1 overflow-y-auto p-3 space-y-4">
             <div className="space-y-3">
@@ -270,7 +270,7 @@ export function AiPanel({ onApplyStory, onAddCharacters }: AiPanelProps) {
         )}
       </div>
 
-      {/* AI 设置对话框 */}
+      {/* 创境设置对话框 */}
       <AiSettingsDialog
         open={showSettings}
         onClose={() => setShowSettings(false)}

@@ -41,7 +41,7 @@ export function AiOutlinePanel({ onApplyOutline }: AiOutlinePanelProps) {
       return
     }
     if (!isAiAvailable()) {
-      showToast('error', '请先配置 AI 服务商')
+      showToast('error', '请先配置创境服务商')
       return
     }
 
@@ -57,7 +57,7 @@ export function AiOutlinePanel({ onApplyOutline }: AiOutlinePanelProps) {
     } catch (error) {
       if (error instanceof Error && 'needsConfig' in error && (error as { needsConfig: boolean }).needsConfig) {
         setShowSettings(true)
-        showToast('error', 'AI 未配置，请先设置 API Key 或启动本地 Ollama')
+        showToast('error', '创境未配置，请先设置 API Key 或启动本地 Ollama')
       } else {
         showToast('error', (error as Error).message)
       }
@@ -72,7 +72,7 @@ export function AiOutlinePanel({ onApplyOutline }: AiOutlinePanelProps) {
       return
     }
     if (!isAiAvailable()) {
-      showToast('error', '请先配置 AI 服务商')
+      showToast('error', '请先配置创境服务商')
       return
     }
 
@@ -106,7 +106,7 @@ export function AiOutlinePanel({ onApplyOutline }: AiOutlinePanelProps) {
     } catch (error) {
       if (error instanceof Error && 'needsConfig' in error && (error as { needsConfig: boolean }).needsConfig) {
         setShowSettings(true)
-        showToast('error', 'AI 未配置，请先设置 API Key 或启动本地 Ollama')
+        showToast('error', '创境未配置，请先设置 API Key 或启动本地 Ollama')
       } else {
         showToast('error', (error as Error).message)
       }
@@ -137,7 +137,7 @@ export function AiOutlinePanel({ onApplyOutline }: AiOutlinePanelProps) {
     <div className="space-y-4">
       <div className="flex items-center gap-2">
         <Sparkles className="w-5 h-5 text-amber-500" />
-        <h3 className="font-medium">AI 剧情大纲生成</h3>
+        <h3 className="font-medium">创境剧情大纲生成</h3>
       </div>
 
       <div className="p-4 bg-muted/30 rounded-xl space-y-4">
@@ -354,7 +354,7 @@ export function AiOutlinePanel({ onApplyOutline }: AiOutlinePanelProps) {
         <p className="font-medium mb-1">使用提示：</p>
         <ul className="space-y-1">
           <li>• 主题描述越详细，生成的大纲越精准</li>
-          <li>• 选择合适的类型有助于 AI 把握风格</li>
+          <li>• 选择合适的类型有助于创境把握风格</li>
           <li>• 场景数量建议 3-7 个，保证故事完整性</li>
           <li>• 生成的大纲可以作为创作起点，自由修改</li>
         </ul>

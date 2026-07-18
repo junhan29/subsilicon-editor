@@ -108,7 +108,7 @@ export function ChoicePanel({ node, variables, scenes, onUpdateNode }: BasePanel
               commitOptions(newOptions)
             }}
             size="sm"
-            label="AI生成选项"
+            label="创境生成选项"
           />
         </div>
         <div className="space-y-2.5">

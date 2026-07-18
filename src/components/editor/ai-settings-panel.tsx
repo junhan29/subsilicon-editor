@@ -12,6 +12,7 @@ import { Badge } from '@editor/components/ui/badge'
 import { showToast } from './toast'
 import { AiOutlinePanel } from './ai-outline-panel'
 import type { AiConfig, AiProviderConfig } from '@editor/types/ai'
+import { getModelsForProvider, getDefaultModel } from '@editor/lib/ai/model-presets'
 import {
   isOllamaRunning,
   listInstalledModels,
@@ -34,7 +35,6 @@ const PROVIDER_INFO: Record<string, {
   name: string
   website: string
   apiUrl: string
-  defaultModel: string
   price: string
   features: string[]
   setupGuide: string[]
@@ -43,9 +43,8 @@ const PROVIDER_INFO: Record<string, {
     name: 'OpenAI',
     website: 'https://platform.openai.com',
     apiUrl: 'https://api.openai.com/v1',
-    defaultModel: 'gpt-4o-mini',
     price: '$0.15/百万token',
-    features: ['GPT-4o', 'GPT-4o-mini', 'DALL·E 3', '语音识别'],
+    features: ['GPT-4o', 'GPT-4.1', 'o4-mini', 'o3'],
     setupGuide: [
       '访问 https://platform.openai.com 注册账号',
       '登录后进入 API Keys 页面',
@@ -58,9 +57,8 @@ const PROVIDER_INFO: Record<string, {
     name: 'Anthropic',
     website: 'https://console.anthropic.com',
     apiUrl: 'https://api.anthropic.com/v1',
-    defaultModel: 'claude-3-sonnet-20240229',
     price: '$0.30/百万token',
-    features: ['Claude 3.5 Sonnet', 'Claude 3 Opus', '长文本处理'],
+    features: ['Claude 4 Opus', 'Claude 4 Sonnet', 'Claude 3.5 Sonnet', '长文本处理'],
     setupGuide: [
       '访问 https://console.anthropic.com 注册账号',
       '登录后进入 API Keys 页面',
@@ -73,9 +71,8 @@ const PROVIDER_INFO: Record<string, {
     name: 'DeepSeek',
     website: 'https://platform.deepseek.com',
     apiUrl: 'https://api.deepseek.com/v1',
-    defaultModel: 'deepseek-chat',
     price: '¥1/百万token',
-    features: ['DeepSeek-V3', 'DeepSeek-R1', '中文优化', '高性价比'],
+    features: ['DeepSeek V3', 'DeepSeek R1', '中文优化', '高性价比'],
     setupGuide: [
       '访问 https://platform.deepseek.com 注册账号',
       '登录后进入 API Keys 页面',
@@ -87,9 +84,8 @@ const PROVIDER_INFO: Record<string, {
     name: 'Google AI',
     website: 'https://aistudio.google.com',
     apiUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
-    defaultModel: 'gemini-2.0-flash',
     price: '$0.10/百万token',
-    features: ['Gemini 2.0 Flash', 'Gemini 2.5 Pro', '多模态', '长上下文'],
+    features: ['Gemini 2.5 Flash', 'Gemini 2.5 Pro', '多模态', '长上下文'],
     setupGuide: [
       '访问 https://aistudio.google.com 注册账号',
       '登录后点击 Get API Key',
@@ -101,9 +97,8 @@ const PROVIDER_INFO: Record<string, {
     name: '百度文心',
     website: 'https://qianfan.cloud.baidu.com',
     apiUrl: 'https://qianfan.baidubce.com/v2',
-    defaultModel: 'ernie-4.0-turbo-8k',
     price: '按量付费',
-    features: ['ERNIE 4.0', '文心一言', '中文优化', '多模态'],
+    features: ['ERNIE 4.5', 'ERNIE 4.0', '中文优化', '多模态'],
     setupGuide: [
       '访问 https://qianfan.cloud.baidu.com 注册账号',
       '创建应用',
@@ -115,9 +110,8 @@ const PROVIDER_INFO: Record<string, {
     name: '阿里通义',
     website: 'https://bailian.console.aliyun.com',
     apiUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-    defaultModel: 'qwen-plus',
     price: '按量付费',
-    features: ['Qwen-Plus', 'Qwen-Max', '中文优化', '长文本'],
+    features: ['Qwen3 235B', 'Qwen Max', '中文优化', '长文本'],
     setupGuide: [
       '访问阿里云百炼 https://bailian.console.aliyun.com',
       '创建 API Key',
@@ -128,9 +122,8 @@ const PROVIDER_INFO: Record<string, {
     name: '字节豆包',
     website: 'https://console.volcengine.com/ark',
     apiUrl: 'https://ark.cn-beijing.volces.com/api/v3',
-    defaultModel: 'doubao-pro-32k',
     price: '按量付费',
-    features: ['Doubao-Pro', 'Doubao-Lite', '中文优化', '高性价比'],
+    features: ['豆包 1.5 Pro', '豆包 Lite', '中文优化', '高性价比'],
     setupGuide: [
       '访问火山方舟 https://console.volcengine.com/ark',
       '创建推理接入点',
@@ -141,9 +134,8 @@ const PROVIDER_INFO: Record<string, {
     name: '智谱AI',
     website: 'https://open.bigmodel.cn',
     apiUrl: 'https://open.bigmodel.cn/api/paas/v4',
-    defaultModel: 'glm-4-plus',
     price: '按量付费',
-    features: ['GLM-4-Plus', 'GLM-4-Flash', '中文优化', '工具调用'],
+    features: ['GLM-4 Plus', 'GLM-4 Flash', '中文优化', '工具调用'],
     setupGuide: [
       '访问智谱开放平台 https://open.bigmodel.cn',
       '创建 API Key',
@@ -154,9 +146,8 @@ const PROVIDER_INFO: Record<string, {
     name: '月之暗面',
     website: 'https://platform.moonshot.cn',
     apiUrl: 'https://api.moonshot.cn/v1',
-    defaultModel: 'moonshot-v1-8k',
     price: '按量付费',
-    features: ['Moonshot-V1', '长文本处理', '中文优化', 'Kimi'],
+    features: ['Kimi Latest', 'Moonshot V1', '长文本处理', '中文优化'],
     setupGuide: [
       '访问 Moonshot 开放平台 https://platform.moonshot.cn',
       '创建 API Key',
@@ -167,7 +158,6 @@ const PROVIDER_INFO: Record<string, {
     name: '自定义',
     website: '',
     apiUrl: '',
-    defaultModel: 'gpt-4',
     price: '自定义',
     features: ['兼容 OpenAI 格式', '私有化部署'],
     setupGuide: [
@@ -216,7 +206,7 @@ export function AiSettingsPanel({ enabled: initialEnabled, onChange }: AiSetting
     const info = PROVIDER_INFO[selectedProvider]
     if (info) {
       setApiUrl(info.apiUrl)
-      setModel(info.defaultModel)
+      setModel(getDefaultModel(selectedProvider))
     }
   }, [selectedProvider])
 
@@ -321,7 +311,7 @@ export function AiSettingsPanel({ enabled: initialEnabled, onChange }: AiSetting
 
     localStorage.setItem('subsilicon_ai_config', JSON.stringify(newConfig))
     onChange(newConfig)
-    showToast('success', 'AI 设置已保存')
+    showToast('success', '创境设置已保存')
   }
 
   const handleTestConnection = async () => {
@@ -398,8 +388,8 @@ export function AiSettingsPanel({ enabled: initialEnabled, onChange }: AiSetting
         <div className="flex items-center gap-3">
           <Sparkles className="w-5 h-5 text-amber-500" />
           <div>
-            <p className="font-medium">AI 辅助创作</p>
-            <p className="text-xs text-muted-foreground">润色、排版、续写等 AI 功能</p>
+            <p className="font-medium">创境辅助创作</p>
+            <p className="text-xs text-muted-foreground">润色、排版、续写等创境功能</p>
           </div>
         </div>
         <Toggle
@@ -419,7 +409,7 @@ export function AiSettingsPanel({ enabled: initialEnabled, onChange }: AiSetting
             >
               <div className="flex items-center gap-2">
                 <Globe className="w-4 h-4" />
-                <span className="font-medium">选择 AI 服务商</span>
+                <span className="font-medium">选择创境服务商</span>
               </div>
               {expandedSection === 'providers' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </button>
@@ -520,13 +510,27 @@ export function AiSettingsPanel({ enabled: initialEnabled, onChange }: AiSetting
                   {/* 模型选择 */}
                   <div>
                     <label className="text-sm font-medium mb-1 block">模型名称</label>
-                    <input
-                      type="text"
-                      value={model}
-                      onChange={(e) => setModel(e.target.value)}
-                      placeholder="gpt-4o-mini"
-                      className="w-full px-3 py-2 bg-muted border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    />
+                    {selectedProvider === 'custom' ? (
+                      <input
+                        type="text"
+                        value={model}
+                        onChange={(e) => setModel(e.target.value)}
+                        placeholder="gpt-4o-mini"
+                        className="w-full px-3 py-2 bg-muted border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      />
+                    ) : (
+                      <select
+                        value={model}
+                        onChange={(e) => setModel(e.target.value)}
+                        className="w-full px-3 py-2 bg-muted border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      >
+                        {getModelsForProvider(selectedProvider).map((m) => (
+                          <option key={m.id} value={m.id}>
+                            {m.name}{m.recommended ? ' (推荐)' : ''}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                   </div>
                 </div>
 
@@ -646,7 +650,7 @@ export function AiSettingsPanel({ enabled: initialEnabled, onChange }: AiSetting
             )}
           </div>
 
-          {/* AI 大纲生成 */}
+          {/* 创境大纲生成 */}
           <div className="border border-border rounded-xl overflow-hidden">
             <button
               onClick={() => setExpandedSection(expandedSection === 'outline' ? '' : 'outline')}
@@ -853,7 +857,7 @@ export function AiSettingsPanel({ enabled: initialEnabled, onChange }: AiSetting
             className="w-full bg-amber-500 hover:bg-amber-600 text-white"
           >
             <Sparkles className="w-4 h-4 mr-2" />
-            保存 AI 设置
+            保存创境设置
           </Button>
 
           {/* 提示 */}
@@ -861,7 +865,7 @@ export function AiSettingsPanel({ enabled: initialEnabled, onChange }: AiSetting
             <p className="font-medium mb-1">注意事项：</p>
             <ul className="space-y-1">
               <li>• API 密钥由您自行管理，平台不会存储或使用您的密钥</li>
-              <li>• 使用 AI 功能会产生 API 费用，由服务商直接收取</li>
+              <li>• 使用创境功能会产生 API 费用，由服务商直接收取</li>
               <li>• 建议从按量付费开始，根据使用情况调整</li>
               <li>• 密钥丢失后无法找回，请妥善保管在密码管理器中</li>
             </ul>

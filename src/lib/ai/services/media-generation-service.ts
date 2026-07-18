@@ -226,14 +226,14 @@ export async function generateMedia(
   }
 }
 
-// 使用 AI 优化 prompt
+// 使用创境优化 prompt
 export async function optimizePrompt(
   basePrompt: string,
   type: 'image' | 'video',
   style?: string,
   config?: AiConfig | null
 ): Promise<string> {
-  const systemPrompt = `你是一位专业的 AI 绘画/视频提示词工程师。请将用户的简单描述转化为高质量的英文提示词。
+  const systemPrompt = `你是一位专业的创境绘画/视频提示词工程师。请将用户的简单描述转化为高质量的英文提示词。
 
 要求：
 1. 使用英文输出

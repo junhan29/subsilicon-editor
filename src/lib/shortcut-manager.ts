@@ -51,7 +51,9 @@ const DEFAULT_BINDINGS: ShortcutBinding[] = [
   { id: 'ungroup', action: '取消分组', description: '取消当前分组（保留节点）', defaultKeys: ['Ctrl', 'Shift', 'G'], category: 'edit', icon: 'Ungroup' },
 
   { id: 'toggleSidebar', action: '切换左侧栏', description: '显示或隐藏左侧节点面板', defaultKeys: ['B'], category: 'view', icon: 'PanelLeft' },
-  { id: 'toggleRightPanel', action: '切换右侧栏', description: '显示或隐藏右侧属性面板', defaultKeys: ['P'], category: 'view', icon: 'PanelRight' },
+  { id: 'toggleRightPanel', action: '切换属性面板', description: '显示或隐藏右栏内属性面板', defaultKeys: ['P'], category: 'view', icon: 'PanelRight' },
+  { id: 'toggleAiPanel', action: '切换 AI 面板', description: '显示或隐藏中间 AI 创境面板', defaultKeys: ['Ctrl', 'Shift', 'A'], category: 'view', icon: 'MessageSquare' },
+  { id: 'toggleRightFullscreen', action: '画布全屏', description: '将右栏画布展开或退出全屏', defaultKeys: [], category: 'view', icon: 'Maximize' },
   { id: 'togglePreview', action: '切换预览', description: '打开或关闭预览模式', defaultKeys: ['Ctrl', 'P'], category: 'view', icon: 'Eye' },
   { id: 'toggleMinimap', action: '切换小地图', description: '显示或隐藏小地图', defaultKeys: ['M'], category: 'view', icon: 'Map' },
   { id: 'qualityCheck', action: '质量检测', description: '打开质量检测面板', defaultKeys: ['Q'], category: 'view', icon: 'ShieldCheck' },
@@ -107,6 +109,7 @@ export function saveCustomBindings(config: ShortcutConfig): void {
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(config))
   } catch {
+    // 忽略写入失败（隐私模式 / 存储配额超限）
   }
 }
 
@@ -115,6 +118,7 @@ export function resetBindings(): void {
   try {
     window.localStorage.removeItem(STORAGE_KEY)
   } catch {
+    // 忽略写入失败（隐私模式 / 存储配额超限）
   }
 }
 

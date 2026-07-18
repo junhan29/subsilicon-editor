@@ -1,10 +1,8 @@
 'use client'
 
-import { useState, useCallback, useEffect, memo } from 'react'
-import { Settings, Users, Image, Music, ChevronDown, ChevronUp, X, Plus, Edit3, Layers, BarChart3, Trash2, ShieldCheck, GitBranch, MessageSquare, Activity, Lock, Sparkles, Wand2, DollarSign } from 'lucide-react'
+import { useState, useCallback, memo } from 'react'
+import { Settings, Users, Image, Music, ChevronLeft, ChevronRight, X, Plus, Edit3, Layers, BarChart3, GitBranch, MessageSquare, Activity, DollarSign } from 'lucide-react'
 import { showToast } from './toast'
-import { Button } from '@editor/components/ui/button'
-import { LivePreview } from './live-preview'
 import { PropertyPanel } from './property-panel'
 import { PuzzleEditor } from './puzzle/puzzle-editor'
 import { VariablePanel } from './editor-right-panel/variable-panel'
@@ -12,8 +10,6 @@ import { VersionPanel } from './version-panel'
 import { AnnotationPanel } from './annotation-panel'
 import { MemoizedWritingStatsPanel } from './writing-stats-panel'
 import { IncomePanel } from './income-panel'
-import { AiPanel } from './ai-panel'
-import { AiStoryAssistPanel } from './ai-story-assist-panel'
 import { AiMediaPanel } from './ai-media-panel'
 import { AnalyticsPanel } from './analytics-panel'
 import { PluginManagerPanel } from './plugin-manager-panel'
@@ -56,6 +52,8 @@ interface EditorRightPanelProps {
   onAudiosChange?: (audios: ComicAudio[]) => void
   onApplyStory?: (nodes: StoryNode[], edges: StoryEdge[], characters: StoryCharacter[], title: string) => void
   onAddCharacters?: (characters: StoryCharacter[]) => void
+  onAddNode?: (type: string, position: { x: number; y: number }, data: Record<string, unknown>) => string | undefined
+  onAddEdge?: (source: string, target: string) => string | undefined
   versions?: VersionSnapshot[]
   currentGraph?: StoryGraphSnapshot
   onSaveVersion?: (name: string, description: string) => void
@@ -71,6 +69,43 @@ interface EditorRightPanelProps {
   monetization?: MonetizationConfig | null
   onMonetizationChange?: (config: MonetizationConfig) => void
   workId?: string
+  collapsed?: boolean
+  onToggleCollapse?: () => void
+}
+
+// VS Code 风格标签按钮组件
+interface TabButtonProps {
+  icon: React.FC<{ className?: string }>
+  label: string
+  tab: string
+  activeTab: string
+  onSelect: (tab: string) => void
+  badge?: number
+  className?: string
+}
+
+function TabButton({ icon: Icon, label, tab, activeTab, onSelect, badge, className = '' }: TabButtonProps) {
+  const isActive = activeTab === tab
+  return (
+    <button
+      onClick={() => onSelect(tab)}
+      data-active={isActive}
+      title={label || tab}
+      className={`flex items-center gap-1.5 px-3 py-2 text-[11px] font-medium whitespace-nowrap transition-colors shrink-0 ${
+        isActive
+          ? 'bg-slate-800 text-white border-b-2 border-amber-500'
+          : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 border-b-2 border-transparent'
+      } ${className}`}
+    >
+      <Icon className="w-3.5 h-3.5" />
+      {label}
+      {badge !== undefined && (
+        <span className="inline-flex items-center justify-center min-w-[14px] h-3.5 px-1 text-[9px] font-semibold rounded-full bg-blue-500/80 text-white">
+          {badge}
+        </span>
+      )}
+    </button>
+  )
 }
 
 function EditorRightPanel({
@@ -105,6 +140,8 @@ function EditorRightPanel({
   onAudiosChange,
   onApplyStory,
   onAddCharacters,
+  onAddNode,
+  onAddEdge,
   versions = [],
   currentGraph,
   onSaveVersion,
@@ -120,10 +157,10 @@ function EditorRightPanel({
   monetization,
   onMonetizationChange,
   workId = generateWorkId(),
+  collapsed,
+  onToggleCollapse,
 }: EditorRightPanelProps) {
-  const [previewCollapsed, setPreviewCollapsed] = useState(false)
   const [internalActiveTab, setInternalActiveTab] = useState('properties')
-  const [tabGroup, setTabGroup] = useState<'edit' | 'manage'>('edit')
   const activeTab = activeTabProp ?? internalActiveTab
   const setActiveTab = (tab: string) => {
     if (onTabChange) {
@@ -202,203 +239,53 @@ function EditorRightPanel({
     setShowPuzzleEditor(true)
   }, [sceneName, sceneImage, scenes, onScenesChange])
 
+  if (collapsed) {
+    return (
+      <div className="w-8 h-full bg-slate-900 border-l border-slate-800 flex flex-col items-center py-2 gap-2 shrink-0">
+        <button
+          onClick={onToggleCollapse}
+          className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
+          title="展开属性面板"
+        >
+          <ChevronLeft className="w-3.5 h-3.5" />
+        </button>
+        <div className="w-4 h-px bg-slate-700" />
+        <TabButton icon={Settings} label="" tab="properties" activeTab={activeTab} onSelect={setActiveTab} />
+        <TabButton icon={Users} label="" tab="characters" activeTab={activeTab} onSelect={setActiveTab} />
+        <TabButton icon={Image} label="" tab="scenes" activeTab={activeTab} onSelect={setActiveTab} />
+        <TabButton icon={GitBranch} label="" tab="versions" activeTab={activeTab} onSelect={setActiveTab} />
+        <TabButton icon={MessageSquare} label="" tab="annotations" activeTab={activeTab} onSelect={setActiveTab}
+          badge={annotations.length > 0 ? annotations.length : undefined} />
+      </div>
+    )
+  }
+
   return (
-    <div role="region" aria-label="右侧属性面板" className="w-[360px] flex flex-col bg-slate-800 border-l border-slate-700 h-full">
-      {!previewCollapsed ? (
-        <div className="h-[40%] min-h-[220px] relative border-b border-slate-700 bg-slate-900">
-          <LivePreview
-            nodes={nodes}
-            characters={characters}
-            scenes={scenes}
-            audios={audios}
-            selectedNodeId={selectedNode?.id || null}
-            onNodeSelect={onNodeSelect}
-          />
+    <div role="region" aria-label="右侧属性面板" className="w-[300px] flex flex-col bg-slate-800 border-l border-slate-700 h-full">
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* VS Code 风格标签栏：单行紧凑标签，图标+文字 */}
+        <div className="flex items-center border-b border-slate-800 bg-slate-900 overflow-x-auto scrollbar-none shrink-0">
+          <TabButton icon={Settings} label="属性" tab="properties" activeTab={activeTab} onSelect={setActiveTab} />
+          <TabButton icon={Users} label="角色" tab="characters" activeTab={activeTab} onSelect={setActiveTab} />
+          <TabButton icon={Image} label="场景" tab="scenes" activeTab={activeTab} onSelect={setActiveTab} />
+          <TabButton icon={Music} label="音频" tab="audio" activeTab={activeTab} onSelect={setActiveTab} />
+          <TabButton icon={BarChart3} label="变量" tab="variables" activeTab={activeTab} onSelect={setActiveTab} />
+          <div className="w-px h-5 bg-slate-700 mx-1 shrink-0" />
+          <TabButton icon={GitBranch} label="版本" tab="versions" activeTab={activeTab} onSelect={setActiveTab} />
+          <TabButton icon={MessageSquare} label="批注" tab="annotations" activeTab={activeTab} onSelect={setActiveTab}
+            badge={annotations.length > 0 ? annotations.length : undefined} />
+          <TabButton icon={Activity} label="统计" tab="stats" activeTab={activeTab} onSelect={setActiveTab} />
+          <TabButton icon={DollarSign} label="收益" tab="income" activeTab={activeTab} onSelect={setActiveTab} />
+          <TabButton icon={BarChart3} label="分析" tab="analytics" activeTab={activeTab} onSelect={setActiveTab} />
+          <TabButton icon={Layers} label="插件" tab="plugins" activeTab={activeTab} onSelect={setActiveTab} />
           <button
-            onClick={() => setPreviewCollapsed(true)}
-            className="absolute -bottom-3 left-1/2 -translate-x-1/2 z-10 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white rounded-full border border-slate-600 p-0.5 transition-colors"
-            title="收起预览"
+            onClick={onToggleCollapse}
+            className="ml-auto mr-1 p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white transition-colors shrink-0"
+            title="收起属性面板"
           >
-            <ChevronDown className="w-4 h-4" />
+            <ChevronRight className="w-3.5 h-3.5" />
           </button>
         </div>
-      ) : (
-        <button
-          onClick={() => setPreviewCollapsed(false)}
-          className="w-full py-2 bg-slate-700/50 hover:bg-slate-700 text-slate-300 hover:text-white text-xs flex items-center justify-center gap-1 border-b border-slate-600 transition-colors"
-        >
-          <ChevronUp className="w-3.5 h-3.5" />
-          展开预览
-        </button>
-      )}
-
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="flex flex-col h-full">
-          <div className="flex items-center gap-1 px-2 py-1.5 bg-slate-900 border-b border-slate-800">
-            <button
-              onClick={() => { setTabGroup('edit'); setActiveTab('properties') }}
-              className={`flex-1 py-1.5 text-xs rounded-md transition-colors ${
-                tabGroup === 'edit' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              编辑
-            </button>
-            <button
-              onClick={() => { setTabGroup('manage'); setActiveTab('versions') }}
-              className={`flex-1 py-1.5 text-xs rounded-md transition-colors ${
-                tabGroup === 'manage' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              管理
-            </button>
-          </div>
-          <div className="w-full flex flex-wrap border-b border-slate-800 bg-slate-900">
-            {tabGroup === 'edit' && (
-              <>
-                <button
-                  onClick={() => setActiveTab('properties')}
-                  className={`flex items-center px-4 py-2.5 text-xs transition-colors ${
-                    activeTab === 'properties'
-                      ? 'bg-slate-800 text-white'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-                  }`}
-                >
-                  <Settings className="w-3.5 h-3.5 mr-1.5" />
-                  属性
-                </button>
-                <button
-                  onClick={() => setActiveTab('characters')}
-                  className={`flex items-center px-4 py-2.5 text-xs transition-colors ${
-                    activeTab === 'characters'
-                      ? 'bg-slate-800 text-white'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-                  }`}
-                >
-                  <Users className="w-3.5 h-3.5 mr-1.5" />
-                  角色
-                </button>
-                <button
-                  onClick={() => setActiveTab('scenes')}
-                  className={`flex items-center px-4 py-2.5 text-xs transition-colors ${
-                    activeTab === 'scenes'
-                      ? 'bg-slate-800 text-white'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-                  }`}
-                >
-                  <Image className="w-3.5 h-3.5 mr-1.5" />
-                  场景
-                </button>
-                <button
-                  onClick={() => setActiveTab('audio')}
-                  className={`flex items-center px-4 py-2.5 text-xs transition-colors ${
-                    activeTab === 'audio'
-                      ? 'bg-slate-800 text-white'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-                  }`}
-                >
-                  <Music className="w-3.5 h-3.5 mr-1.5" />
-                  音频
-                </button>
-                <button
-                  onClick={() => setActiveTab('variables')}
-                  className={`flex items-center px-4 py-2.5 text-xs transition-colors ${
-                    activeTab === 'variables'
-                      ? 'bg-slate-800 text-white'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-                  }`}
-                >
-                  <BarChart3 className="w-3.5 h-3.5 mr-1.5" />
-                  变量
-                </button>
-              </>
-            )}
-            {tabGroup === 'manage' && (
-              <>
-                <button
-                  onClick={() => setActiveTab('versions')}
-                  className={`flex items-center px-4 py-2.5 text-xs transition-colors ${
-                    activeTab === 'versions'
-                      ? 'bg-slate-800 text-white'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-                  }`}
-                >
-                  <GitBranch className="w-3.5 h-3.5 mr-1.5" />
-                  版本
-                </button>
-                <button
-                  onClick={() => setActiveTab('annotations')}
-                  className={`flex items-center px-4 py-2.5 text-xs transition-colors relative ${
-                    activeTab === 'annotations'
-                      ? 'bg-slate-800 text-white'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-                  }`}
-                >
-                  <MessageSquare className="w-3.5 h-3.5 mr-1.5" />
-                  批注
-                  {annotations.length > 0 && (
-                    <span className="ml-1 inline-flex items-center justify-center min-w-[16px] h-4 px-1 text-[9px] font-semibold rounded-full bg-blue-500/80 text-white">
-                      {annotations.length}
-                    </span>
-                  )}
-                </button>
-                <button
-                  onClick={() => setActiveTab('stats')}
-                  className={`flex items-center px-4 py-2.5 text-xs transition-colors ${
-                    activeTab === 'stats'
-                      ? 'bg-slate-800 text-white'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-                  }`}
-                >
-                  <Activity className="w-3.5 h-3.5 mr-1.5" />
-                  统计
-                </button>
-                <button
-                  onClick={() => setActiveTab('income')}
-                  className={`flex items-center px-4 py-2.5 text-xs transition-colors ${
-                    activeTab === 'income'
-                      ? 'bg-slate-800 text-white'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-                  }`}
-                >
-                  <DollarSign className="w-3.5 h-3.5 mr-1.5" />
-                  收益
-                </button>
-                <button
-                  onClick={() => setActiveTab('ai')}
-                  className={`flex items-center px-4 py-2.5 text-xs transition-colors ${
-                    activeTab === 'ai'
-                      ? 'bg-slate-800 text-white'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-                  }`}
-                >
-                  <Sparkles className="w-3.5 h-3.5 mr-1.5" />
-                  AI
-                </button>
-                <button
-                  onClick={() => setActiveTab('analytics')}
-                  className={`flex items-center px-4 py-2.5 text-xs transition-colors ${
-                    activeTab === 'analytics'
-                      ? 'bg-slate-800 text-white'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-                  }`}
-                >
-                  <BarChart3 className="w-3.5 h-3.5 mr-1.5" />
-                  分析
-                </button>
-                <button
-                  onClick={() => setActiveTab('plugins')}
-                  className={`flex items-center px-4 py-2.5 text-xs transition-colors ${
-                    activeTab === 'plugins'
-                      ? 'bg-slate-800 text-white'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-                  }`}
-                >
-                  <Layers className="w-3.5 h-3.5 mr-1.5" />
-                  插件
-                </button>
-              </>
-            )}
-          </div>
 
           {activeTab === 'properties' && <div className="flex-1 overflow-y-auto p-0">
             <PropertyPanel
@@ -595,14 +482,14 @@ function EditorRightPanel({
                 <p className="text-[10px] text-slate-600 mt-0.5">JPG / PNG / WebP，支持批量</p>
               </div>
 
-              {/* AI 媒体生成 */}
+              {/* 创境媒体生成 */}
               <div className="border border-slate-700 rounded-lg p-3 bg-slate-800/30">
                 <AiMediaPanel
                   characters={characters}
                   onImageGenerated={(url, name) => {
                     const newScene: ComicScene = {
                       id: `scene-${Date.now()}`,
-                      name: `AI生成-${name.slice(0, 20)}`,
+                      name: `创境生成-${name.slice(0, 20)}`,
                       backgroundImage: url,
                     }
                     onScenesChange?.([...scenes, newScene])
@@ -816,17 +703,6 @@ function EditorRightPanel({
             />
           </div>}
           
-          {activeTab === 'ai' && <div className="flex-1 overflow-y-auto p-0 m-0">
-            <AiStoryAssistPanel
-              nodes={nodes}
-              edges={edges}
-              characters={characters}
-              onApplySuggestion={(nodeType, content) => {
-                showToast('info', `已生成 ${nodeType} 内容，请在画布中添加节点并粘贴`)
-              }}
-            />
-          </div>}
-
           {activeTab === 'analytics' && <div className="flex-1 overflow-hidden p-0 m-0">
             <AnalyticsPanel />
           </div>}
@@ -835,7 +711,6 @@ function EditorRightPanel({
             <PluginManagerPanel />
           </div>}
         </div>
-      </div>
 
       {showPuzzleEditor && editingScene && (
         <PuzzleEditor

@@ -13,7 +13,7 @@ interface FeatureItem {
 const FEATURES: FeatureItem[] = [
   { key: 'fileSystem', label: '本地文件访问', description: '打开/保存本地 .story 文件' },
   { key: 'autoUpdate', label: '自动更新', description: '自动检测并安装应用更新' },
-  { key: 'localAI', label: '本地 AI 模型', description: '使用 Ollama 运行本地大模型' },
+  { key: 'localAI', label: '本地模型', description: '使用 Ollama 运行本地大模型' },
   { key: 'nativeDialogs', label: '原生对话框', description: '系统文件选择器和消息框' },
   { key: 'performanceMonitor', label: '性能监控', description: '内存和 CPU 使用监控' },
 ]
@@ -132,7 +132,7 @@ export function FeatureSupportPanel() {
             <div className="text-xs text-amber-600">
               <p className="font-medium mb-1">建议使用桌面版</p>
               <p className="text-[10px]">
-                桌面版支持完整的文件系统访问和本地 AI 模型功能
+                桌面版支持完整的文件系统访问和本地模型功能
               </p>
             </div>
           </div>

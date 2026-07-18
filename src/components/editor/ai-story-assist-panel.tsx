@@ -25,7 +25,7 @@ export function AiStoryAssistPanel({ nodes, edges, characters, onApplySuggestion
   const handleSuggest = async () => {
     const available = await isAiAvailable()
     if (!available) {
-      showToast('error', 'AI 未配置，请先在 AI 设置中配置 API')
+      showToast('error', '创境未配置，请先在创境设置中配置 API')
       return
     }
 
@@ -44,7 +44,7 @@ export function AiStoryAssistPanel({ nodes, edges, characters, onApplySuggestion
   const handleGenerateContent = async () => {
     const available = await isAiAvailable()
     if (!available) {
-      showToast('error', 'AI 未配置，请先在 AI 设置中配置 API')
+      showToast('error', '创境未配置，请先在创境设置中配置 API')
       return
     }
 
@@ -74,7 +74,7 @@ export function AiStoryAssistPanel({ nodes, edges, characters, onApplySuggestion
           <h3 className="text-sm font-medium text-white">剧情智能推演</h3>
         </div>
         <p className="text-[11px] text-slate-400">
-          基于当前 {nodes.length} 个节点和 {characters.length} 个角色，AI 将建议后续剧情发展。
+          基于当前 {nodes.length} 个节点和 {characters.length} 个角色，创境将建议后续剧情发展。
         </p>
 
         <textarea

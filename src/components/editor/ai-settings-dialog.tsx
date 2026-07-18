@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { X, Key, Globe, Cpu, CheckCircle2, Loader2, ExternalLink } from 'lucide-react'
 import { showToast } from './toast'
+import { refreshAiConfig } from '@editor/lib/ai'
+import { getModelsForProvider, getDefaultModel } from '@editor/lib/ai/model-presets'
 
 interface AiSettingsDialogProps {
   open: boolean
@@ -21,12 +23,27 @@ const PROVIDER_INFO: Record<string, {
   name: string
   website: string
   apiUrl: string
-  defaultModel: string
 }> = {
-  openai: { name: 'OpenAI', website: 'https://platform.openai.com', apiUrl: 'https://api.openai.com/v1', defaultModel: 'gpt-4o-mini' },
-  anthropic: { name: 'Anthropic', website: 'https://console.anthropic.com', apiUrl: 'https://api.anthropic.com', defaultModel: 'claude-3-5-haiku-latest' },
-  deepseek: { name: 'DeepSeek', website: 'https://platform.deepseek.com', apiUrl: 'https://api.deepseek.com', defaultModel: 'deepseek-chat' },
-  google: { name: 'Google AI', website: 'https://aistudio.google.com', apiUrl: 'https://generativelanguage.googleapis.com/v1beta', defaultModel: 'gemini-2.0-flash' },
+  openai: {
+    name: 'OpenAI',
+    website: 'https://platform.openai.com',
+    apiUrl: 'https://api.openai.com/v1',
+  },
+  anthropic: {
+    name: 'Anthropic',
+    website: 'https://console.anthropic.com',
+    apiUrl: 'https://api.anthropic.com/v1',
+  },
+  deepseek: {
+    name: 'DeepSeek',
+    website: 'https://platform.deepseek.com',
+    apiUrl: 'https://api.deepseek.com/v1',
+  },
+  google: {
+    name: 'Google AI',
+    website: 'https://aistudio.google.com',
+    apiUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
+  },
 }
 
 export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
@@ -63,7 +80,7 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
       ...prev,
       provider,
       apiUrl: info.apiUrl,
-      model: info.defaultModel,
+      model: getDefaultModel(provider),
     }))
     setTestResult(null)
   }
@@ -89,7 +106,8 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
   const handleSave = () => {
     const config = { ...aiConfig, enabled: aiEnabled }
     localStorage.setItem('subsilicon_ai_config', JSON.stringify(config))
-    showToast('success', 'AI 设置已保存')
+    refreshAiConfig()
+    showToast('success', '创境设置已保存')
     onClose()
   }
 
@@ -104,7 +122,7 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
         <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700">
           <div className="flex items-center gap-2">
             <Cpu className="w-4 h-4 text-pink-400" />
-            <h3 className="text-sm font-semibold text-white">AI 服务设置</h3>
+            <h3 className="text-sm font-semibold text-white">创境服务设置</h3>
           </div>
           <button
             onClick={onClose}
@@ -119,8 +137,8 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
           {/* Enable Toggle */}
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-white">启用 AI</p>
-              <p className="text-[10px] text-slate-500">开启后将使用 AI 辅助创作</p>
+              <p className="text-xs font-medium text-white">启用创境</p>
+              <p className="text-[10px] text-slate-500">开启后将使用创境辅助创作</p>
             </div>
             <button
               onClick={() => setAiEnabled(!aiEnabled)}
@@ -204,15 +222,19 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
 
               {/* Model */}
               <div className="space-y-1.5">
-                <label className="text-xs text-slate-400">模型名称</label>
-                <input
+                <label className="text-xs text-slate-400">模型</label>
+                <select
                   value={aiConfig.model}
-                  onChange={(e) => {
-                    setAiConfig((prev) => ({ ...prev, model: e.target.value }))
-                    setTestResult(null)
-                  }}
+                  onChange={(e) => setAiConfig((prev) => ({ ...prev, model: e.target.value }))}
                   className="w-full h-8 text-xs rounded border border-slate-600 bg-slate-700 px-2 text-white"
-                />
+                >
+                  {getModelsForProvider(aiConfig.provider).map((m) => (
+                    <option key={m.id} value={m.id}>{m.name}</option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-slate-500">
+                  切换服务商后模型会自动更新为推荐型号
+                </p>
               </div>
 
               {/* Test Connection */}

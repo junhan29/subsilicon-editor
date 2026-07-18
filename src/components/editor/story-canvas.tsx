@@ -18,9 +18,11 @@ import {
   type Edge as RFEdge,
   type NodeChange,
 } from '@xyflow/react'
-import { Undo2, Redo2, Trash2, X, Copy, ShieldCheck, Layers, ChevronDown, ChevronRight, Pencil, Download, MessageSquare, Lock, Crown, Upload, Play, ArrowLeft, Globe } from 'lucide-react'
+import { Undo2, Redo2, Trash2, X, Copy, ShieldCheck, Layers, ChevronDown, ChevronRight, Pencil, Download, MessageSquare, Lock, Crown, Upload, Play, ArrowLeft, Globe, Maximize2, Minimize2, PanelRight } from 'lucide-react'
 import clsx from 'clsx'
 import CustomEdge from './custom-edge'
+import { ResizableSplitter } from './resizable-splitter'
+import { useEditorCanvasStore } from '@editor/stores/editor-canvas-store'
 import '@xyflow/react/dist/style.css'
 import { DialogueNode } from './nodes/dialogue-node'
 import { ChoiceNode } from './nodes/choice-node'
@@ -35,6 +37,7 @@ import { NarrationNode } from './nodes/narration-node'
 import { GroupNode } from './nodes/group-node'
 import { EditorSidebar } from './editor-sidebar'
 import { EditorRightPanel } from './editor-right-panel'
+import { AiChatPanel } from './ai-chat-panel'
 import { EmptyCanvasGuide } from './onboarding/empty-canvas-guide'
 import { HelpMenu } from './onboarding/help-menu'
 import { ShortcutsModal } from './onboarding/shortcuts-modal'
@@ -167,9 +170,21 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
   const [monetization, setMonetization] = useState<MonetizationConfig | null>(initialGraph?.monetization || null)
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; nodeId: string } | null>(null)
   const [annotationDialog, setAnnotationDialog] = useState<{ nodeId: string } | null>(null)
-  // 视图切换状态
-  const [sidebarVisible, setSidebarVisible] = useState(true)
-  const [rightPanelVisible, setRightPanelVisible] = useState(true)
+  // 三栏布局状态（来自全局 Store，支持持久化）
+  const {
+    leftPanelWidth,
+    leftPanelVisible,
+    aiPanelWidth,
+    aiPanelVisible,
+    rightFullscreen,
+    rightInnerPropsVisible,
+    setLeftPanelWidth,
+    setLeftPanelVisible,
+    setAiPanelWidth,
+    setAiPanelVisible,
+    setRightFullscreen,
+    setRightInnerPropsVisible,
+  } = useEditorCanvasStore()
   // 主题状态（订阅变化以触发重渲染）
   const [currentTheme, setCurrentTheme] = useState<Theme>('dark')
   const annotationAuthor = useMemo(() => getAnnotationAuthor(), [])
@@ -1045,22 +1060,36 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
         return
       }
 
-      // 视图类：切换侧边栏 / 右侧栏 / 主题
+      // 视图类：切换侧边栏 / 右侧属性面板 / AI 面板 / 主题
       if (matchShortcut(e, 'toggleSidebar')) {
         e.preventDefault()
-        setSidebarVisible((v) => !v)
+        setLeftPanelVisible(!leftPanelVisible)
         return
       }
 
       if (matchShortcut(e, 'toggleRightPanel')) {
         e.preventDefault()
-        setRightPanelVisible((v) => !v)
+        setRightInnerPropsVisible(!rightInnerPropsVisible)
         return
       }
 
       if (matchShortcut(e, 'toggleTheme')) {
         e.preventDefault()
         handleToggleTheme()
+        return
+      }
+
+      // AI 面板显隐
+      if (e.key === 'a' && (e.metaKey || e.ctrlKey) && e.shiftKey && !e.altKey) {
+        e.preventDefault()
+        setAiPanelVisible(!aiPanelVisible)
+        return
+      }
+
+      // 退出右栏全屏
+      if (e.key === 'Escape' && rightFullscreen) {
+        e.preventDefault()
+        setRightFullscreen(false)
         return
       }
 
@@ -1176,6 +1205,14 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
     handleToggleTheme,
     setNodes,
     throttledPushHistory,
+    leftPanelVisible,
+    setLeftPanelVisible,
+    rightInnerPropsVisible,
+    setRightInnerPropsVisible,
+    aiPanelVisible,
+    setAiPanelVisible,
+    rightFullscreen,
+    setRightFullscreen,
   ])
 
   const updateNodeData = useCallback((nodeId: string, data: Partial<StoryNode['data']>) => {
@@ -1574,33 +1611,122 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
     onStartTour?.()
   }, [onStartTour])
 
+  // 统一三栏工作区：左栏节点库 + 中栏 AI 对话 + 右栏画布工作区
+  const handleToggleAiPanel = useCallback(() => {
+    setAiPanelVisible(!aiPanelVisible)
+  }, [aiPanelVisible, setAiPanelVisible])
+
+  const handleToggleLeftPanel = useCallback(() => {
+    setLeftPanelVisible(!leftPanelVisible)
+  }, [leftPanelVisible, setLeftPanelVisible])
+
+  const handleToggleRightInnerPanel = useCallback(() => {
+    setRightInnerPropsVisible(!rightInnerPropsVisible)
+  }, [rightInnerPropsVisible, setRightInnerPropsVisible])
+
+  const handleToggleRightFullscreen = useCallback(() => {
+    setRightFullscreen(!rightFullscreen)
+  }, [rightFullscreen, setRightFullscreen])
+
   return (
-    <div className="flex h-[calc(100vh-52px)]">
-      {/* 左侧：可拖拽节点面板（可通过 B 键切换显隐） */}
-      {sidebarVisible && (
-        <EditorSidebar
-          onQuickAdd={addNodeAtCenter}
-          outline={outlineText}
-          onOutlineChange={setOutlineText}
-          selectedNodes={selectedNodes}
-          selectedEdges={edges.filter(
-            (e) => selectedNodeIds.includes(e.source) && selectedNodeIds.includes(e.target)
-          ) as StoryEdge[]}
-          selectedNode={selectedNode || null}
-          onInsertTemplate={insertTemplate}
-          onGenerateNodesFromOutline={handleGenerateNodesFromOutline}
-          onGenerateOutlineFromNodes={handleGenerateOutlineFromNodes}
-          onInsertAsset={handleInsertAsset}
+    <div className="flex h-[calc(100vh-52px)] overflow-hidden">
+      {/* 左侧：节点库（可通过 B 键切换显隐） */}
+      {leftPanelVisible && (
+        <div
+          className="shrink-0 flex flex-col h-full"
+          style={{ width: leftPanelWidth }}
+        >
+          <EditorSidebar
+            onQuickAdd={addNodeAtCenter}
+            outline={outlineText}
+            onOutlineChange={setOutlineText}
+            selectedNodes={selectedNodes}
+            selectedEdges={edges.filter(
+              (e) => selectedNodeIds.includes(e.source) && selectedNodeIds.includes(e.target)
+            ) as StoryEdge[]}
+            selectedNode={selectedNode || null}
+            onInsertTemplate={insertTemplate}
+            onGenerateNodesFromOutline={handleGenerateNodesFromOutline}
+            onGenerateOutlineFromNodes={handleGenerateOutlineFromNodes}
+            onInsertAsset={handleInsertAsset}
+            collapsed={false}
+            onToggleCollapse={handleToggleLeftPanel}
+          />
+        </div>
+      )}
+      {leftPanelVisible && (
+        <ResizableSplitter
+          onResize={(delta) => setLeftPanelWidth(Math.max(180, Math.min(400, leftPanelWidth + delta)))}
+          aria-label="调整左侧面板宽度"
         />
       )}
 
-      {/* 中间：React Flow 画布 */}
-      <div
-        ref={canvasRef}
-        role="region"
-        aria-label="故事节点编辑器画布"
-        aria-describedby="canvas-description"
-        className={`flex-1 relative transition-colors ${isDraggingOver ? 'ring-2 ring-inset ring-primary/30 bg-primary/[0.02]' : ''}`}
+      {/* 中栏：AI 创境对话（可通过 Ctrl+Shift+A 切换显隐） */}
+      {aiPanelVisible && !rightFullscreen && (
+        <div
+          className="shrink-0 flex flex-col h-full"
+          style={{ width: aiPanelWidth }}
+        >
+          <AiChatPanel
+            nodes={nodes as StoryNode[]}
+            edges={edges as StoryEdge[]}
+            characters={characters}
+            scenes={scenesRef.current}
+            onUpdateNode={updateNodeData}
+            onDeleteNode={deleteNode}
+            onUpdateEdge={updateEdgeData}
+            onDeleteEdge={handleDeleteEdge}
+            onAddNode={(type, position, data) => {
+              const id = `${type}-${Date.now()}`
+              const newNode = {
+                id,
+                type: type as StoryNode['type'],
+                position,
+                data: { ...createNodeData(type), ...data } as StoryNode['data'],
+              }
+              setNodes((nds) => [...nds, newNode as StoryNode])
+              pushHistory('ADD_NODE', `创境添加 ${nodeTypeLabels[type] || type} 节点`)
+              return id
+            }}
+            onAddEdge={(source, target) => {
+              const connection = { source, target, sourceHandle: null, targetHandle: null }
+              let edgeId = ''
+              setEdges((eds) => {
+                const newEdges = addEdge(connection, eds)
+                edgeId = newEdges[newEdges.length - 1]?.id || ''
+                return newEdges as StoryEdge[]
+              })
+              pushHistory('ADD_EDGE', '创境创建连线')
+              return edgeId
+            }}
+            onNodeSelect={handleNodeSelect}
+            collapsed={false}
+            onToggleCollapse={handleToggleAiPanel}
+          />
+        </div>
+      )}
+      {aiPanelVisible && !rightFullscreen && (
+        <ResizableSplitter
+          onResize={(delta) => setAiPanelWidth(Math.max(280, Math.min(600, aiPanelWidth + delta)))}
+          snapThreshold={120}
+          onSnap={(direction) => {
+            if (direction === 'left') {
+              setRightFullscreen(true)
+            }
+          }}
+          aria-label="调整 AI 面板宽度"
+        />
+      )}
+
+      {/* 右栏：画布工作区（可全屏） */}
+      <div className="flex-1 flex min-w-0 h-full overflow-hidden">
+        {/* 中间：React Flow 画布 */}
+        <div
+          ref={canvasRef}
+          role="region"
+          aria-label="故事节点编辑器画布"
+          aria-describedby="canvas-description"
+          className={`flex-1 relative min-w-0 transition-colors ${isDraggingOver ? 'ring-2 ring-inset ring-primary/30 bg-primary/[0.02]' : ''}`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
@@ -1745,6 +1871,15 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
               <Upload className="w-4 h-4" />
               <span className="text-xs font-medium">创作者中心</span>
             </button>
+            <span className="w-px h-4 bg-border" />
+            <button
+              onClick={handleToggleAiPanel}
+              className="flex items-center gap-1.5 px-2 py-1 rounded transition-colors bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 hover:text-amber-300"
+              title="切换 AI 创境面板 (Ctrl+Shift+A)"
+            >
+              <MessageSquare className="w-4 h-4" />
+              <span className="text-xs font-medium">AI 面板</span>
+            </button>
           </div>
         )}
 
@@ -1784,6 +1919,12 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
             onBack={onBack}
             onStartTour={handleStartTour}
             onShowShortcuts={() => setShowShortcutsModal(true)}
+            onToggleAiPanel={handleToggleAiPanel}
+            onToggleRightInnerPanel={handleToggleRightInnerPanel}
+            onToggleRightFullscreen={handleToggleRightFullscreen}
+            aiPanelVisible={aiPanelVisible}
+            rightInnerPropsVisible={rightInnerPropsVisible}
+            rightFullscreen={rightFullscreen}
           />
         )}
 
@@ -1819,8 +1960,8 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
         })()}
       </div>
 
-      {/* 右侧：属性面板（可通过 P 键切换显隐） */}
-      {rightPanelVisible && (
+      {/* 右栏内部：属性面板（可通过 P 键切换显隐） */}
+      {rightInnerPropsVisible && (
         <EditorRightPanel
           selectedNode={selectedNode || null}
           selectedEdge={selectedEdge || null}
@@ -1864,13 +2005,15 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
           onOpenAnnotationDialog={(nodeId) => setAnnotationDialog({ nodeId })}
           graph={graph}
           workId={workId}
+          collapsed={false}
+          onToggleCollapse={handleToggleRightInnerPanel}
           onApplyStory={(newNodes, newEdges, newChars, newTitle) => {
             setNodes(newNodes)
             setEdges(newEdges)
             setCharacters(newChars)
             setTitle(newTitle)
             setSelectedNodeIds(newNodes.map((n) => n.id))
-            pushHistory('BATCH', `应用 AI 生成故事「${newTitle}」`)
+            pushHistory('BATCH', `应用创境生成故事「${newTitle}」`)
             showToast('success', `故事「${newTitle}」已应用到画布`)
             setTimeout(() => {
               fitView({ padding: 0.3, duration: 500 })
@@ -1879,8 +2022,33 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
           onAddCharacters={(newChars) => {
             newChars.forEach((char) => addCharacter(char))
           }}
+          onAddNode={(type, position, data) => {
+            const id = `${type}-${Date.now()}`
+            const newNode = {
+              id,
+              type: type as StoryNode['type'],
+              position,
+              data: { ...createNodeData(type), ...data } as StoryNode['data'],
+            }
+            setNodes((nds) => [...nds, newNode as StoryNode])
+            setSelectedNodeIds([id])
+            pushHistory('ADD_NODE', `创境添加 ${nodeTypeLabels[type] || type} 节点`)
+            return id
+          }}
+          onAddEdge={(source, target) => {
+            const connection = { source, target, sourceHandle: null, targetHandle: null }
+            let edgeId = ''
+            setEdges((eds) => {
+              const newEdges = addEdge(connection, eds)
+              edgeId = newEdges[newEdges.length - 1]?.id || ''
+              return newEdges as StoryEdge[]
+            })
+            pushHistory('ADD_EDGE', '创境创建连线')
+            return edgeId
+          }}
         />
       )}
+    </div>
 
       <ToastContainerPortal />
 
@@ -1995,9 +2163,15 @@ interface UndoRedoButtonsProps {
   onBack?: () => void
   onStartTour?: () => void
   onShowShortcuts?: () => void
+  onToggleAiPanel?: () => void
+  onToggleRightInnerPanel?: () => void
+  onToggleRightFullscreen?: () => void
+  aiPanelVisible?: boolean
+  rightInnerPropsVisible?: boolean
+  rightFullscreen?: boolean
 }
 
-const UndoRedoButtons = memo(function UndoRedoButtons({ canUndo, canRedo, onUndo, onRedo, onPreview, onExport, onDirectoryUpload, onDiscover, loggedIn, account, onOpenAccount, onBack, onStartTour, onShowShortcuts }: UndoRedoButtonsProps) {
+const UndoRedoButtons = memo(function UndoRedoButtons({ canUndo, canRedo, onUndo, onRedo, onPreview, onExport, onDirectoryUpload, onDiscover, loggedIn, account, onOpenAccount, onBack, onStartTour, onShowShortcuts, onToggleAiPanel, onToggleRightInnerPanel, onToggleRightFullscreen, aiPanelVisible, rightInnerPropsVisible, rightFullscreen }: UndoRedoButtonsProps) {
   return (
     <div className="absolute top-4 right-4 flex items-center gap-1 bg-card/90 backdrop-blur border rounded-lg px-2 py-1 shadow-sm z-10">
       {onBack && (
@@ -2009,6 +2183,52 @@ const UndoRedoButtons = memo(function UndoRedoButtons({ canUndo, canRedo, onUndo
           >
             <ArrowLeft className="w-4 h-4" />
             <span className="text-xs font-medium hidden sm:inline">项目</span>
+          </button>
+          <span className="w-px h-4 bg-border" />
+        </>
+      )}
+      {/* 布局切换按钮 */}
+      {onToggleAiPanel && (
+        <>
+          <button
+            onClick={onToggleAiPanel}
+            className={clsx(
+              'flex items-center gap-1.5 px-2 py-1 rounded transition-colors text-xs',
+              aiPanelVisible
+                ? 'bg-amber-500/10 text-amber-400 hover:bg-amber-500/20'
+                : 'hover:bg-slate-700 text-slate-400 hover:text-white'
+            )}
+            title="切换 AI 创境面板 (Ctrl+Shift+A)"
+          >
+            <MessageSquare className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">AI</span>
+          </button>
+        </>
+      )}
+      {onToggleRightInnerPanel && (
+        <>
+          <button
+            onClick={onToggleRightInnerPanel}
+            className={clsx(
+              'flex items-center gap-1.5 px-2 py-1 rounded transition-colors text-xs',
+              rightInnerPropsVisible
+                ? 'bg-slate-700 text-white'
+                : 'hover:bg-slate-700 text-slate-400 hover:text-white'
+            )}
+            title="切换属性面板 (P)"
+          >
+            <PanelRight className="w-3.5 h-3.5" />
+          </button>
+        </>
+      )}
+      {onToggleRightFullscreen && (
+        <>
+          <button
+            onClick={onToggleRightFullscreen}
+            className="flex items-center gap-1.5 px-2 py-1 rounded transition-colors hover:bg-slate-700 text-slate-400 hover:text-white text-xs"
+            title={rightFullscreen ? '退出全屏画布 (Esc)' : '全屏画布'}
+          >
+            {rightFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
           </button>
           <span className="w-px h-4 bg-border" />
         </>

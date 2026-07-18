@@ -1,8 +1,29 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 import type { StoryNode, StoryEdge, StoryCharacter, StoryVariable, ComicScene, ComicAudio, NodeGroup, NodeAnnotation } from '@editor/types/editor'
 import type { MonetizationConfig } from '@editor/lib/work-monetization'
 import type { VersionSnapshot } from '@editor/lib/version-store'
 import type { StoryGraphSnapshot } from '@editor/lib/history-store'
+
+const LAYOUT_STORAGE_KEY = 'subsilicon_editor_layout_v1'
+
+export interface PanelLayoutState {
+  leftPanelWidth: number
+  leftPanelVisible: boolean
+  aiPanelWidth: number
+  aiPanelVisible: boolean
+  rightFullscreen: boolean
+  rightInnerPropsVisible: boolean
+}
+
+export const DEFAULT_PANEL_LAYOUT: PanelLayoutState = {
+  leftPanelWidth: 240,
+  leftPanelVisible: true,
+  aiPanelWidth: 400,
+  aiPanelVisible: true,
+  rightFullscreen: false,
+  rightInnerPropsVisible: true,
+}
 
 /**
  * 编辑器画布全局状态 Store
@@ -11,7 +32,7 @@ import type { StoryGraphSnapshot } from '@editor/lib/history-store'
  * 右侧面板和各子面板可以直接从 Store 读取状态，不需要逐层传递。
  */
 
-interface EditorCanvasState {
+interface EditorCanvasState extends PanelLayoutState {
   // === 选中状态 ===
   selectedNodeIds: string[]
   selectedEdgeId: string | null
@@ -58,6 +79,15 @@ interface EditorCanvasState {
   setTags: (tags: string[]) => void
   setWorkId: (id: string | undefined) => void
 
+  // 布局 Actions
+  setLeftPanelWidth: (width: number) => void
+  setLeftPanelVisible: (visible: boolean) => void
+  setAiPanelWidth: (width: number) => void
+  setAiPanelVisible: (visible: boolean) => void
+  setRightFullscreen: (fullscreen: boolean) => void
+  setRightInnerPropsVisible: (visible: boolean) => void
+  resetLayout: () => void
+
   // 注入操作回调
   injectCallbacks: (callbacks: {
     onUpdateNode?: (nodeId: string, data: Partial<StoryNode['data']>) => void
@@ -89,51 +119,78 @@ interface EditorCanvasState {
   edgeSelect: (edgeId: string) => void
 }
 
-export const useEditorCanvasStore = create<EditorCanvasState>((set, get) => ({
-  // === 初始状态 ===
-  selectedNodeIds: [],
-  selectedEdgeId: null,
-  selectedGroupId: null,
-  selectedNode: null,
-  selectedEdge: null,
+export const useEditorCanvasStore = create<EditorCanvasState>()(
+  persist(
+    (set, get) => ({
+      // === 初始状态 ===
+      selectedNodeIds: [],
+      selectedEdgeId: null,
+      selectedGroupId: null,
+      selectedNode: null,
+      selectedEdge: null,
 
-  activeTab: 'properties',
-  sidebarVisible: true,
-  rightPanelVisible: true,
+      activeTab: 'properties',
+      sidebarVisible: true,
+      rightPanelVisible: true,
 
-  title: '未命名故事',
-  tags: [],
-  workId: undefined,
+      title: '未命名故事',
+      tags: [],
+      workId: undefined,
 
-  // === Actions ===
-  setSelectedNodeIds: (ids) => set({ selectedNodeIds: ids }),
-  setSelectedEdgeId: (id) => set({ selectedEdgeId: id }),
-  setSelectedGroupId: (id) => set({ selectedGroupId: id }),
-  setSelectedNode: (node) => set({ selectedNode: node }),
-  setSelectedEdge: (edge) => set({ selectedEdge: edge }),
-  setActiveTab: (tab) => set({ activeTab: tab }),
-  setSidebarVisible: (visible) => set({ sidebarVisible: visible }),
-  setRightPanelVisible: (visible) => set({ rightPanelVisible: visible }),
-  setTitle: (title) => set({ title }),
-  setTags: (tags) => set({ tags }),
-  setWorkId: (id) => set({ workId: id }),
+      // === 布局状态 ===
+      ...DEFAULT_PANEL_LAYOUT,
 
-  injectCallbacks: (callbacks) => set(callbacks as any),
+      // === Actions ===
+      setSelectedNodeIds: (ids) => set({ selectedNodeIds: ids }),
+      setSelectedEdgeId: (id) => set({ selectedEdgeId: id }),
+      setSelectedGroupId: (id) => set({ selectedGroupId: id }),
+      setSelectedNode: (node) => set({ selectedNode: node }),
+      setSelectedEdge: (edge) => set({ selectedEdge: edge }),
+      setActiveTab: (tab) => set({ activeTab: tab }),
+      setSidebarVisible: (visible) => set({ sidebarVisible: visible }),
+      setRightPanelVisible: (visible) => set({ rightPanelVisible: visible }),
+      setTitle: (title) => set({ title }),
+      setTags: (tags) => set({ tags }),
+      setWorkId: (id) => set({ workId: id }),
 
-  // === 代理操作 ===
-  updateNode: (nodeId, data) => get()._onUpdateNode?.(nodeId, data),
-  deleteNode: (nodeId) => get()._onDeleteNode?.(nodeId),
-  updateEdge: (edgeId, data) => get()._onUpdateEdge?.(edgeId, data),
-  deleteEdge: (edgeId) => get()._onDeleteEdge?.(edgeId),
-  addCharacter: (character) => get()._onAddCharacter?.(character),
-  updateCharacter: (character) => get()._onUpdateCharacter?.(character),
-  deleteCharacter: (characterId) => get()._onDeleteCharacter?.(characterId),
-  updateTitle: (title) => get()._onUpdateTitle?.(title),
-  updateTags: (tags) => get()._onUpdateTags?.(tags),
-  updateVariables: (variables) => get()._onUpdateVariables?.(variables),
-  nodeSelect: (nodeId) => get()._onNodeSelect?.(nodeId),
-  edgeSelect: (edgeId) => get()._onEdgeSelect?.(edgeId),
-}))
+      // 布局 Actions
+      setLeftPanelWidth: (width) => set({ leftPanelWidth: width }),
+      setLeftPanelVisible: (visible) => set({ leftPanelVisible: visible }),
+      setAiPanelWidth: (width) => set({ aiPanelWidth: width }),
+      setAiPanelVisible: (visible) => set({ aiPanelVisible: visible }),
+      setRightFullscreen: (fullscreen) => set({ rightFullscreen: fullscreen }),
+      setRightInnerPropsVisible: (visible) => set({ rightInnerPropsVisible: visible }),
+      resetLayout: () => set({ ...DEFAULT_PANEL_LAYOUT }),
+
+      injectCallbacks: (callbacks) => set(callbacks as any),
+
+      // === 代理操作 ===
+      updateNode: (nodeId, data) => get()._onUpdateNode?.(nodeId, data),
+      deleteNode: (nodeId) => get()._onDeleteNode?.(nodeId),
+      updateEdge: (edgeId, data) => get()._onUpdateEdge?.(edgeId, data),
+      deleteEdge: (edgeId) => get()._onDeleteEdge?.(edgeId),
+      addCharacter: (character) => get()._onAddCharacter?.(character),
+      updateCharacter: (character) => get()._onUpdateCharacter?.(character),
+      deleteCharacter: (characterId) => get()._onDeleteCharacter?.(characterId),
+      updateTitle: (title) => get()._onUpdateTitle?.(title),
+      updateTags: (tags) => get()._onUpdateTags?.(tags),
+      updateVariables: (variables) => get()._onUpdateVariables?.(variables),
+      nodeSelect: (nodeId) => get()._onNodeSelect?.(nodeId),
+      edgeSelect: (edgeId) => get()._onEdgeSelect?.(edgeId),
+    }),
+    {
+      name: LAYOUT_STORAGE_KEY,
+      partialize: (state) => ({
+        leftPanelWidth: state.leftPanelWidth,
+        leftPanelVisible: state.leftPanelVisible,
+        aiPanelWidth: state.aiPanelWidth,
+        aiPanelVisible: state.aiPanelVisible,
+        rightFullscreen: state.rightFullscreen,
+        rightInnerPropsVisible: state.rightInnerPropsVisible,
+      }),
+    }
+  )
+)
 
 /**
  * 编辑器数据状态 Store

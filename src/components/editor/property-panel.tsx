@@ -24,7 +24,7 @@ import {
   CHARACTER_CUSTOM_TAGS,
 } from '@editor/constants'
 
-// AI 辅助增强组件（带 loading 状态）
+// 创境辅助增强组件（带 loading 状态）
 function CharacterAIEnhance({ char, onUpdateCharacter }: { char: StoryCharacter; onUpdateCharacter: (char: StoryCharacter) => void }) {
   const [loading, setLoading] = useState<string | null>(null)
 
@@ -52,7 +52,7 @@ function CharacterAIEnhance({ char, onUpdateCharacter }: { char: StoryCharacter;
       }
     } catch (e) {
       if (e instanceof Error && 'needsConfig' in e && (e as { needsConfig: boolean }).needsConfig) {
-        showToast('error', 'AI 未配置，请在设置中配置 API Key 或启动本地 Ollama')
+        showToast('error', '创境未配置，请在设置中配置 API Key 或启动本地 Ollama')
       } else {
         showToast('error', '生成失败: ' + (e instanceof Error ? e.message : '未知错误'))
       }
@@ -613,11 +613,11 @@ function PropertyPanel({
                     </div>
                   </div>
 
-                  {/* AI 增强 */}
+                  {/* 创境增强 */}
                   <div className="space-y-1.5">
                     <Label className="text-[10px] flex items-center gap-1">
                       <Sparkles className="w-3 h-3 text-amber-500" />
-                      AI 辅助
+                      创境辅助
                     </Label>
                     <CharacterAIEnhance char={char} onUpdateCharacter={onUpdateCharacter} />
                   </div>

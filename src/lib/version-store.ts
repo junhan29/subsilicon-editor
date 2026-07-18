@@ -39,7 +39,10 @@ export interface VersionDiff {
 }
 
 export const VERSION_STORAGE_KEY = 'subsilicon-versions'
+export const AUTO_SAVE_KEY_PREFIX = 'subsilicon-autosave'
 const MAX_VERSIONS = 30
+const AUTO_SAVE_INTERVAL = 5 * 60 * 1000 // 5分钟自动保存
+const MAX_AUTO_SAVES = 10 // 最多保留 10 个自动存档
 
 interface SnapshotNode {
   id: string
@@ -402,5 +405,113 @@ export function compareVersions(
       removedCount,
       modifiedCount,
     },
+  }
+}
+
+// ====== 自动存档 ======
+
+export interface AutoSaveEntry {
+  id: string
+  name: string
+  createdAt: number
+  graph: StoryGraphSnapshot
+}
+
+export function getAutoSaveKey(workId: string): string {
+  return `${AUTO_SAVE_KEY_PREFIX}-${workId}`
+}
+
+/** 自动保存当前画布状态 */
+export function autoSaveVersion(
+  workId: string,
+  graph: StoryGraphSnapshot
+): AutoSaveEntry | null {
+  if (!isBrowser()) return null
+  try {
+    const key = getAutoSaveKey(workId)
+    const raw = window.localStorage.getItem(key)
+    const entries: AutoSaveEntry[] = raw ? JSON.parse(raw) : []
+
+    const entry: AutoSaveEntry = {
+      id: `auto-${Date.now()}`,
+      name: `自动存档 - ${new Date().toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}`,
+      createdAt: Date.now(),
+      graph: createSnapshot(graph),
+    }
+
+    entries.push(entry)
+    if (entries.length > MAX_AUTO_SAVES) {
+      entries.splice(0, entries.length - MAX_AUTO_SAVES)
+    }
+
+    window.localStorage.setItem(key, JSON.stringify(entries))
+    return entry
+  } catch {
+    return null
+  }
+}
+
+/** 获取自动存档列表 */
+export function getAutoSaves(workId: string): AutoSaveEntry[] {
+  if (!isBrowser()) return []
+  try {
+    const raw = window.localStorage.getItem(getAutoSaveKey(workId))
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return []
+    return parsed as AutoSaveEntry[]
+  } catch {
+    return []
+  }
+}
+
+/** 清除自动存档 */
+export function clearAutoSaves(workId: string): void {
+  if (!isBrowser()) return
+  window.localStorage.removeItem(getAutoSaveKey(workId))
+}
+
+// ====== 导出/导入 ======
+
+/** 将所有版本导出为 JSON 文件 */
+export function exportVersionsToFile(versions: VersionSnapshot[]): void {
+  if (!isBrowser()) return
+  const data = JSON.stringify(versions, null, 2)
+  const blob = new Blob([data], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `subsilicon-versions-${new Date().toISOString().slice(0, 10)}.json`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+/** 从 JSON 文件导入版本（合并模式） */
+export function importVersionsFromFile(jsonStr: string): { imported: number; skipped: number } {
+  if (!isBrowser()) return { imported: 0, skipped: 0 }
+  try {
+    const parsed = JSON.parse(jsonStr)
+    if (!Array.isArray(parsed)) throw new Error('Invalid format')
+
+    const incoming = parsed.filter(validateSnapshotShape) as VersionSnapshot[]
+    const existing = loadVersions()
+    const existingIds = new Set(existing.map((v) => v.id))
+
+    let imported = 0
+    let skipped = 0
+    for (const v of incoming) {
+      if (existingIds.has(v.id)) {
+        skipped++
+        continue
+      }
+      existing.push(v)
+      existingIds.add(v.id)
+      imported++
+    }
+
+    persistVersions(existing)
+    return { imported, skipped }
+  } catch {
+    return { imported: 0, skipped: 0 }
   }
 }
