@@ -1,4 +1,5 @@
 import type { StoryNode, StoryEdge, StoryCharacter, ComicScene } from '@editor/types/editor'
+import type { StoredAsset, AssetAnnotation } from '@editor/lib/local-db'
 
 const NODE_TYPE_LABELS: Record<string, string> = {
   dialogue: '对话',
@@ -67,11 +68,27 @@ function serializeScene(scene: ComicScene): string {
   return `- ${scene.name} (ID: ${scene.id})${scene.style ? `: ${scene.style}` : ''}${scene.backgroundImage ? `, 背景: ${scene.backgroundImage}` : ''}`
 }
 
+function serializeAnnotatedAsset(asset: StoredAsset, index: number, charMap: Map<string, string>): string {
+  const a = asset.annotation || {} as AssetAnnotation
+  const charName = a.characterId ? (charMap.get(a.characterId) || a.characterId) : ''
+  const parts: string[] = [`素材#${index} (hash: ${asset.hash.slice(0, 12)})`]
+  parts.push(`文件: ${asset.name}`)
+  parts.push(`类型: ${asset.type.startsWith('image/') ? '图片' : asset.type.startsWith('video/') ? '视频' : asset.type.startsWith('audio/') ? '音频' : asset.type}`)
+  if (charName) parts.push(`角色: ${charName}`)
+  if (a.emotion) parts.push(`情绪: ${a.emotion}`)
+  if (a.sceneTag) parts.push(`场景: ${a.sceneTag}`)
+  if (a.usageType) parts.push(`用途: ${a.usageType}`)
+  if (a.description) parts.push(`描述: ${a.description}`)
+  if (a.tags?.length) parts.push(`标签: ${a.tags.join(', ')}`)
+  return `- ${parts.join(', ')}`
+}
+
 export function serializeGraphContext(
   nodes: StoryNode[],
   edges: StoryEdge[],
   characters: StoryCharacter[],
-  scenes: ComicScene[]
+  scenes: ComicScene[],
+  annotatedAssets?: StoredAsset[]
 ): string {
   const parts: string[] = []
 
@@ -120,6 +137,18 @@ export function serializeGraphContext(
     parts.push(`### 场景列表`)
     for (const scene of scenes) {
       parts.push(serializeScene(scene))
+    }
+    parts.push('')
+  }
+
+  // 素材库（仅含有标注的素材，供 AI 调度）
+  const annotated = (annotatedAssets || []).filter((a) => a.annotation)
+  if (annotated.length > 0) {
+    const charMap = new Map(characters.map((c) => [c.id, c.name]))
+    parts.push(`### 已标注素材库（可用 bindAsset 调度）`)
+    parts.push(`共 ${annotated.length} 个已标注素材。使用 bindAsset 操作时，通过 hash 前 12 位引用素材。`)
+    for (let i = 0; i < annotated.length; i++) {
+      parts.push(serializeAnnotatedAsset(annotated[i], i, charMap))
     }
     parts.push('')
   }

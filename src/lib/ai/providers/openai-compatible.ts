@@ -1,5 +1,10 @@
 import type { AiProviderConfig, AiRequestOptions } from '../types'
 import { BaseAiProvider } from './base'
+import {
+  buildChatCompletionRequest,
+  parseRemoteCompletionResponse,
+  runStrictConnectivityTest,
+} from '../request-builder'
 
 export class OpenAiCompatibleProvider extends BaseAiProvider {
   readonly type = 'remote' as const
@@ -16,64 +21,78 @@ export class OpenAiCompatibleProvider extends BaseAiProvider {
     return !!this.config.apiKey && this.config.enabled && !!this.config.model
   }
 
-  async generate(options: AiRequestOptions): Promise<string> {
-    const apiUrl = this.config.apiUrl || this.getDefaultApiUrl()
+  /** 严格同源连通性测试（与业务调用共用请求构建 / 解析逻辑） */
+  async testConnectivity(): Promise<{
+    ok: boolean
+    status: number
+    latencyMs: number
+    error?: string
+    content?: string
+  }> {
+    return runStrictConnectivityTest(this.config)
+  }
 
-    const response = await fetch(`${apiUrl}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.config.apiKey}`,
-      },
-      body: JSON.stringify({
-        model: this.config.model,
-        messages: [
-          { role: 'system', content: options.systemPrompt },
-          { role: 'user', content: options.userPrompt },
-        ],
-        temperature: options.temperature ?? 0.7,
-        max_tokens: options.maxTokens ?? 2000,
-      }),
+  async generate(options: AiRequestOptions): Promise<string> {
+    const req = buildChatCompletionRequest(this.config, options)
+    const response = await fetch(req.url, {
+      method: req.method,
+      headers: req.headers,
+      body: req.body,
     })
 
-    if (!response.ok) {
-      throw new Error(`Remote API error: ${response.status}`)
+    const text = await response.text()
+    let data: unknown = null
+    try {
+      data = text ? JSON.parse(text) : null
+    } catch {
+      if (!response.ok) throw new Error(`Remote API error: ${response.status} ${text.slice(0, 200)}`)
     }
 
-    const data = await response.json()
-    return data.choices?.[0]?.message?.content || ''
+    if (!response.ok) {
+      const msg =
+        data && typeof data === 'object' && (data as { error?: { message?: string } }).error?.message
+          ? String((data as { error: { message: string } }).error.message)
+          : `Remote API error: ${response.status}`
+      throw new Error(msg)
+    }
+    return parseRemoteCompletionResponse(data).content
   }
 
   async *generateStream(options: AiRequestOptions): AsyncGenerator<string, void, unknown> {
-    const apiUrl = this.config.apiUrl || this.getDefaultApiUrl()
-
-    const response = await fetch(`${apiUrl}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.config.apiKey}`,
-      },
-      body: JSON.stringify({
-        model: this.config.model,
-        messages: [
-          { role: 'system', content: options.systemPrompt },
-          { role: 'user', content: options.userPrompt },
-        ],
-        temperature: options.temperature ?? 0.7,
-        max_tokens: options.maxTokens ?? 2000,
-        stream: true,
-      }),
+    const req = buildChatCompletionRequest(this.config, options, { stream: true })
+    const response = await fetch(req.url, {
+      method: req.method,
+      headers: req.headers,
+      body: req.body,
     })
 
+    const text = await response.text()
     if (!response.ok) {
-      throw new Error(`Remote API error: ${response.status}`)
+      let msg = `Remote API error: ${response.status}`
+      try {
+        const data = text ? JSON.parse(text) : null
+        if (data && typeof data === 'object' && (data as { error?: { message?: string } }).error?.message) {
+          msg = String((data as { error: { message: string } }).error.message)
+        }
+      } catch { /* ignore */ }
+      throw new Error(msg)
     }
 
-    const reader = response.body?.getReader()
-    if (!reader) {
-      throw new Error('Response body is not readable')
-    }
+    // 某些实现（非流式的 mock 或 stream=false 时）直接返回完整 JSON
+    try {
+      const parsed = text ? JSON.parse(text) : null
+      const staticText = parseRemoteCompletionResponse(parsed).content
+      if (staticText) {
+        for (let i = 0; i < staticText.length; i += 3) {
+          yield staticText.slice(i, i + 3)
+          await new Promise((r) => setTimeout(r, 10))
+        }
+        return
+      }
+    } catch { /* ignore, 正常 SSE 流 */ }
 
+    // 将 text 重新作为 SSE 流逐行解析
+    const reader = new Blob([text]).stream().getReader()
     const decoder = new TextDecoder()
     let buffer = ''
 
@@ -88,17 +107,14 @@ export class OpenAiCompatibleProvider extends BaseAiProvider {
 
         for (const line of lines) {
           const trimmed = line.trim()
-          if (!trimmed || !trimmed.startsWith('data: ')) continue
-
-          const data = trimmed.slice(6)
-          if (data === '[DONE]') return
+          if (!trimmed) continue
+          const dataLine = trimmed.startsWith('data: ') ? trimmed.slice(6) : trimmed
+          if (dataLine === '[DONE]') return
 
           try {
-            const parsed = JSON.parse(data)
-            const content = parsed.choices?.[0]?.delta?.content
-            if (content) {
-              yield content
-            }
+            const parsed = JSON.parse(dataLine)
+            const content = parseRemoteCompletionResponse(parsed).content
+            if (content) yield content
           } catch {
             // 忽略解析错误
           }
@@ -106,31 +122,6 @@ export class OpenAiCompatibleProvider extends BaseAiProvider {
       }
     } finally {
       reader.releaseLock()
-    }
-  }
-
-  private getDefaultApiUrl(): string {
-    switch (this.config.provider) {
-      case 'openai':
-        return 'https://api.openai.com/v1'
-      case 'deepseek':
-        return 'https://api.deepseek.com/v1'
-      case 'anthropic':
-        return 'https://api.anthropic.com/v1'
-      case 'google':
-        return 'https://generativelanguage.googleapis.com/v1'
-      case 'baidu':
-        return 'https://qianfan.baidubce.com/v2'
-      case 'alibaba':
-        return 'https://dashscope.aliyuncs.com/compatible-mode/v1'
-      case 'doubao':
-        return 'https://ark.cn-beijing.volces.com/api/v3'
-      case 'zhipu':
-        return 'https://open.bigmodel.cn/api/paas/v4'
-      case 'moonshot':
-        return 'https://api.moonshot.cn/v1'
-      default:
-        return 'https://api.openai.com/v1'
     }
   }
 }

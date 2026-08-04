@@ -51,6 +51,30 @@ declare global {
       onAbout: (callback: () => void) => () => void
       platform: string
       isElectron: boolean
+      openPanelWindow: () => void
+      closePanelWindow: () => void
+      sendPanelMessage: (message: unknown) => void
+      sendMainMessage: (message: unknown) => void
+      onPanelClosed: (callback: () => void) => () => void
+      onPanelMessage: (callback: (message: unknown) => void) => () => void
+      onMainMessage: (callback: (message: unknown) => void) => () => void
+      /** 独立游戏软件打包：在壳目录执行 electron-builder */
+      desktopBuild: (payload: {
+        shellDir: string
+        platforms?: Array<'win' | 'mac' | 'linux' | 'current'>
+        workTitle?: string
+        logChannel?: string
+      }) => Promise<{
+        success: boolean
+        error?: string
+        outputDir?: string
+        outputs?: Array<{ name: string; path: string; size: number; type: string }>
+      }>
+      /** 监听桌面打包进度日志；返回 remove listener */
+      onDesktopBuildLog: (
+        logChannel: string,
+        callback: (payload: { level: 'info' | 'warn' | 'error'; msg: string }) => void
+      ) => () => void
     }
   }
 }

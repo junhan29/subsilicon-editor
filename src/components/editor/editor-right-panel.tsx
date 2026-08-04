@@ -69,8 +69,6 @@ interface EditorRightPanelProps {
   monetization?: MonetizationConfig | null
   onMonetizationChange?: (config: MonetizationConfig) => void
   workId?: string
-  collapsed?: boolean
-  onToggleCollapse?: () => void
 }
 
 // VS Code 风格标签按钮组件
@@ -157,8 +155,6 @@ function EditorRightPanel({
   monetization,
   onMonetizationChange,
   workId = generateWorkId(),
-  collapsed,
-  onToggleCollapse,
 }: EditorRightPanelProps) {
   const [internalActiveTab, setInternalActiveTab] = useState('properties')
   const activeTab = activeTabProp ?? internalActiveTab
@@ -239,27 +235,6 @@ function EditorRightPanel({
     setShowPuzzleEditor(true)
   }, [sceneName, sceneImage, scenes, onScenesChange])
 
-  if (collapsed) {
-    return (
-      <div className="w-8 h-full bg-slate-900 border-l border-slate-800 flex flex-col items-center py-2 gap-2 shrink-0">
-        <button
-          onClick={onToggleCollapse}
-          className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
-          title="展开属性面板"
-        >
-          <ChevronLeft className="w-3.5 h-3.5" />
-        </button>
-        <div className="w-4 h-px bg-slate-700" />
-        <TabButton icon={Settings} label="" tab="properties" activeTab={activeTab} onSelect={setActiveTab} />
-        <TabButton icon={Users} label="" tab="characters" activeTab={activeTab} onSelect={setActiveTab} />
-        <TabButton icon={Image} label="" tab="scenes" activeTab={activeTab} onSelect={setActiveTab} />
-        <TabButton icon={GitBranch} label="" tab="versions" activeTab={activeTab} onSelect={setActiveTab} />
-        <TabButton icon={MessageSquare} label="" tab="annotations" activeTab={activeTab} onSelect={setActiveTab}
-          badge={annotations.length > 0 ? annotations.length : undefined} />
-      </div>
-    )
-  }
-
   return (
     <div role="region" aria-label="右侧属性面板" className="w-[300px] flex flex-col bg-slate-800 border-l border-slate-700 h-full">
       <div className="flex-1 flex flex-col overflow-hidden">
@@ -278,13 +253,6 @@ function EditorRightPanel({
           <TabButton icon={DollarSign} label="收益" tab="income" activeTab={activeTab} onSelect={setActiveTab} />
           <TabButton icon={BarChart3} label="分析" tab="analytics" activeTab={activeTab} onSelect={setActiveTab} />
           <TabButton icon={Layers} label="插件" tab="plugins" activeTab={activeTab} onSelect={setActiveTab} />
-          <button
-            onClick={onToggleCollapse}
-            className="ml-auto mr-1 p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white transition-colors shrink-0"
-            title="收起属性面板"
-          >
-            <ChevronRight className="w-3.5 h-3.5" />
-          </button>
         </div>
 
           {activeTab === 'properties' && <div className="flex-1 overflow-y-auto p-0">
@@ -312,6 +280,7 @@ function EditorRightPanel({
               annotations={annotations.filter((a) => a.nodeId === selectedNode?.id)}
               onAddAnnotation={(nodeId) => onOpenAnnotationDialog?.(nodeId)}
               onViewAnnotations={() => setActiveTab('annotations')}
+              graph={graph}
             />
           </div>}
 

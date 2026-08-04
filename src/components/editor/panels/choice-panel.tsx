@@ -7,6 +7,7 @@ import { Button } from '@editor/components/ui/button'
 import { Plus, X, Image as ImageIcon, Upload, Layers } from 'lucide-react'
 import type { BasePanelProps } from './shared-props'
 import { AiAssistButton } from '../ai-assist-button'
+import { NodeVideoBindingSection } from '../node-video-binding'
 
 const CHOICE_MODES: { value: 'text' | 'image' | 'scene'; label: string; icon: any }[] = [
   { value: 'text', label: '文本选择', icon: null },
@@ -158,6 +159,7 @@ export function ChoicePanel({ node, variables, scenes, onUpdateNode }: BasePanel
           </Button>
         </div>
       </div>
+      <NodeVideoBindingSection node={node} onUpdateNode={onUpdateNode} />
     </>
   )
 }

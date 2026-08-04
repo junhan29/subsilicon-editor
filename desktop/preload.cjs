@@ -105,4 +105,13 @@ contextBridge.exposeInMainWorld('__electronAPI', {
     ipcRenderer.on('main:message', listener)
     return () => ipcRenderer.removeListener('main:message', listener)
   },
+
+  /** 独立游戏软件打包：生成壳目录后调用此 IPC 触发 electron-builder */
+  desktopBuild: (payload) => ipcRenderer.invoke('desktop:build', payload),
+  /** 监听打包进度日志（build 时需传入相同 logChannel 名） */
+  onDesktopBuildLog: (logChannel, callback) => {
+    const listener = (_e, payload) => callback(payload)
+    ipcRenderer.on(logChannel, listener)
+    return () => ipcRenderer.removeListener(logChannel, listener)
+  },
 })

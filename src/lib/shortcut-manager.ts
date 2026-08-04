@@ -52,7 +52,7 @@ const DEFAULT_BINDINGS: ShortcutBinding[] = [
 
   { id: 'toggleSidebar', action: '切换左侧栏', description: '显示或隐藏左侧节点面板', defaultKeys: ['B'], category: 'view', icon: 'PanelLeft' },
   { id: 'toggleRightPanel', action: '切换属性面板', description: '显示或隐藏右栏内属性面板', defaultKeys: ['P'], category: 'view', icon: 'PanelRight' },
-  { id: 'toggleAiPanel', action: '切换 AI 面板', description: '显示或隐藏中间 AI 创境面板', defaultKeys: ['Ctrl', 'Shift', 'A'], category: 'view', icon: 'MessageSquare' },
+  { id: 'toggleAiPanel', action: '切换 AI 面板', description: '显示或隐藏 AI 创境面板 (Ctrl+K)', defaultKeys: ['Ctrl', 'K'], category: 'view', icon: 'MessageSquare' },
   { id: 'toggleRightFullscreen', action: '画布全屏', description: '将右栏画布展开或退出全屏', defaultKeys: [], category: 'view', icon: 'Maximize' },
   { id: 'togglePreview', action: '切换预览', description: '打开或关闭预览模式', defaultKeys: ['Ctrl', 'P'], category: 'view', icon: 'Eye' },
   { id: 'toggleMinimap', action: '切换小地图', description: '显示或隐藏小地图', defaultKeys: ['M'], category: 'view', icon: 'Map' },

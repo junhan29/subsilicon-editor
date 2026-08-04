@@ -34,7 +34,7 @@ import { loadTemplates, saveTemplate, deleteTemplate, getOfficialTemplates, crea
 import { parseOutline, generateNodesFromOutline } from '@editor/lib/outline-parser'
 import { showToast } from './toast'
 import { AssetLibraryPanel } from './asset-library-panel'
-import type { NodeTemplate, StoryNode, StoryEdge } from '@editor/types/editor'
+import type { NodeTemplate, StoryNode, StoryEdge, StoryCharacter } from '@editor/types/editor'
 import type { LibraryAsset } from '@editor/lib/asset-library'
 
 export interface SidebarNodeType {
@@ -121,8 +121,7 @@ interface EditorSidebarProps {
   onGenerateNodesFromOutline?: (outlineText: string) => void
   onGenerateOutlineFromNodes?: () => string | undefined
   onInsertAsset?: (asset: LibraryAsset) => void
-  collapsed?: boolean
-  onToggleCollapse?: () => void
+  characters?: StoryCharacter[]
 }
 
 function EditorSidebar({
@@ -136,8 +135,7 @@ function EditorSidebar({
   onGenerateNodesFromOutline,
   onGenerateOutlineFromNodes,
   onInsertAsset,
-  collapsed,
-  onToggleCollapse,
+  characters = [],
 }: EditorSidebarProps) {
   useReactFlow()
   const [activeTab, setActiveTab] = useState<TabKey>('nodes')
@@ -292,31 +290,6 @@ function EditorSidebar({
     { key: 'assets' as TabKey, label: '素材', icon: <Library className="w-3.5 h-3.5" /> },
   ]
 
-  if (collapsed) {
-    return (
-      <div className="w-10 border-r bg-card flex flex-col shrink-0 items-center py-2 gap-2">
-        <button
-          onClick={onToggleCollapse}
-          className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-          title="展开左侧面板"
-        >
-          <ChevronRight className="w-4 h-4" />
-        </button>
-        <div className="w-5 h-px bg-border" />
-        {NODE_TYPES.slice(0, 6).map((node) => (
-          <button
-            key={node.type}
-            onClick={() => onQuickAdd(node.type)}
-            className="p-1.5 rounded hover:bg-muted transition-colors"
-            title={`添加${node.label}节点`}
-          >
-            {node.icon}
-          </button>
-        ))}
-      </div>
-    )
-  }
-
   return (
     <div role="region" aria-label="左侧工具栏" className="min-w-0 border-r bg-card flex flex-col shrink-0">
       <div className="px-2 pt-2 pb-0 border-b flex items-center justify-between">
@@ -342,13 +315,6 @@ function EditorSidebar({
             </button>
           ))}
         </div>
-        <button
-          onClick={onToggleCollapse}
-          className="ml-1 p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors shrink-0"
-          title="收起左侧面板"
-        >
-          <ChevronLeft className="w-3.5 h-3.5" />
-        </button>
       </div>
 
       {activeTab === 'nodes' && (
@@ -594,6 +560,7 @@ function EditorSidebar({
         <AssetLibraryPanel
           selectedNode={selectedNode}
           onInsertAsset={onInsertAsset}
+          characters={characters}
         />
       )}
 

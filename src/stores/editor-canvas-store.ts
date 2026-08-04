@@ -5,24 +5,20 @@ import type { MonetizationConfig } from '@editor/lib/work-monetization'
 import type { VersionSnapshot } from '@editor/lib/version-store'
 import type { StoryGraphSnapshot } from '@editor/lib/history-store'
 
-const LAYOUT_STORAGE_KEY = 'subsilicon_editor_layout_v1'
+const LAYOUT_STORAGE_KEY = 'subsilicon_layout_v2'
 
 export interface PanelLayoutState {
-  leftPanelWidth: number
-  leftPanelVisible: boolean
-  aiPanelWidth: number
-  aiPanelVisible: boolean
-  rightFullscreen: boolean
-  rightInnerPropsVisible: boolean
+  activeLeftActivity: string | null
+  activeRightActivity: string | null
+  aiPanelMode: 'hidden' | 'floating' | 'pinned'
+  sidePanelWidth: number
 }
 
 export const DEFAULT_PANEL_LAYOUT: PanelLayoutState = {
-  leftPanelWidth: 240,
-  leftPanelVisible: true,
-  aiPanelWidth: 400,
-  aiPanelVisible: true,
-  rightFullscreen: false,
-  rightInnerPropsVisible: true,
+  activeLeftActivity: null,
+  activeRightActivity: null,
+  aiPanelMode: 'hidden',
+  sidePanelWidth: 256,
 }
 
 /**
@@ -80,12 +76,10 @@ interface EditorCanvasState extends PanelLayoutState {
   setWorkId: (id: string | undefined) => void
 
   // 布局 Actions
-  setLeftPanelWidth: (width: number) => void
-  setLeftPanelVisible: (visible: boolean) => void
-  setAiPanelWidth: (width: number) => void
-  setAiPanelVisible: (visible: boolean) => void
-  setRightFullscreen: (fullscreen: boolean) => void
-  setRightInnerPropsVisible: (visible: boolean) => void
+  setActiveLeftActivity: (activity: string | null) => void
+  setActiveRightActivity: (activity: string | null) => void
+  setAiPanelMode: (mode: 'hidden' | 'floating' | 'pinned') => void
+  setSidePanelWidth: (width: number) => void
   resetLayout: () => void
 
   // 注入操作回调
@@ -154,12 +148,10 @@ export const useEditorCanvasStore = create<EditorCanvasState>()(
       setWorkId: (id) => set({ workId: id }),
 
       // 布局 Actions
-      setLeftPanelWidth: (width) => set({ leftPanelWidth: width }),
-      setLeftPanelVisible: (visible) => set({ leftPanelVisible: visible }),
-      setAiPanelWidth: (width) => set({ aiPanelWidth: width }),
-      setAiPanelVisible: (visible) => set({ aiPanelVisible: visible }),
-      setRightFullscreen: (fullscreen) => set({ rightFullscreen: fullscreen }),
-      setRightInnerPropsVisible: (visible) => set({ rightInnerPropsVisible: visible }),
+      setActiveLeftActivity: (activity) => set({ activeLeftActivity: activity }),
+      setActiveRightActivity: (activity) => set({ activeRightActivity: activity }),
+      setAiPanelMode: (mode) => set({ aiPanelMode: mode }),
+      setSidePanelWidth: (width) => set({ sidePanelWidth: width }),
       resetLayout: () => set({ ...DEFAULT_PANEL_LAYOUT }),
 
       injectCallbacks: (callbacks) => set(callbacks as any),
@@ -181,12 +173,10 @@ export const useEditorCanvasStore = create<EditorCanvasState>()(
     {
       name: LAYOUT_STORAGE_KEY,
       partialize: (state) => ({
-        leftPanelWidth: state.leftPanelWidth,
-        leftPanelVisible: state.leftPanelVisible,
-        aiPanelWidth: state.aiPanelWidth,
-        aiPanelVisible: state.aiPanelVisible,
-        rightFullscreen: state.rightFullscreen,
-        rightInnerPropsVisible: state.rightInnerPropsVisible,
+        activeLeftActivity: state.activeLeftActivity,
+        activeRightActivity: state.activeRightActivity,
+        aiPanelMode: state.aiPanelMode,
+        sidePanelWidth: state.sidePanelWidth,
       }),
     }
   )

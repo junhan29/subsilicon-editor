@@ -120,6 +120,96 @@ app.on('before-quit', () => {
   }
 })
 
+/**
+ * 独立游戏软件导出：在指定壳目录执行 electron-builder 打包。
+ * 由 Renderer 进程生成壳目录后调用，结果通过 event channel 流式返回进度。
+ */
+ipcMain.handle('desktop:build', async (event, payload) => {
+  const { shellDir, platforms = ['current'], workTitle = 'SubSilicon 作品', logChannel } = payload || {}
+  const log = (level, msg) => {
+    if (logChannel) event.sender.send(logChannel, { level, msg })
+  }
+  log('info', `[desktop:build] 开始打包：${shellDir} (${platforms.join(',')})`)
+
+  try {
+    // 动态查找 electron-builder
+    let builderCli
+    const candidates = [
+      path.join(__dirname, '..', 'node_modules', 'electron-builder', 'out', 'cli', 'cli.js'),
+      path.join(__dirname, '..', 'node_modules', '.bin', 'electron-builder'),
+    ]
+    for (const c of candidates) {
+      try {
+        if (fs.existsSync(c)) { builderCli = c; break }
+      } catch { /* ignore */ }
+    }
+    if (!builderCli) {
+      return { success: false, error: '未找到 electron-builder，编辑器损坏或缺少 node_modules' }
+    }
+
+    // 解析目标平台（electron-builder --mac --win --linux 语法）
+    const flags = []
+    const current = process.platform
+    if (platforms.includes('current')) {
+      if (current === 'darwin') flags.push('--mac')
+      else if (current === 'win32') flags.push('--win')
+      else flags.push('--linux')
+    } else {
+      if (platforms.includes('mac')) flags.push('--mac')
+      if (platforms.includes('win')) flags.push('--win')
+      if (platforms.includes('linux')) flags.push('--linux')
+    }
+    if (flags.length === 0) flags.push('--dir') // no flags = 仅生成目录，不打包
+    flags.push('--publish', 'never')
+
+    log('info', `[desktop:build] electron-builder 命令：node ${builderCli} ${flags.join(' ')}  (cwd=${shellDir})`)
+
+    const { spawn } = require('node:child_process')
+    return await new Promise((resolve) => {
+      const child = spawn(
+        process.execPath,
+        [builderCli, ...flags],
+        { cwd: shellDir, env: process.env, stdio: ['ignore', 'pipe', 'pipe'] }
+      )
+      child.stdout.on('data', (buf) => log('info', String(buf).replace(/\n$/, '')))
+      child.stderr.on('data', (buf) => log('warn', String(buf).replace(/\n$/, '')))
+      child.on('error', (err) => {
+        log('error', `子进程错误：${err.message}`)
+        resolve({ success: false, error: err.message })
+      })
+      child.on('close', (code) => {
+        log('info', `[desktop:build] electron-builder 退出码 ${code}`)
+        const outputDir = path.join(shellDir, 'dist')
+        const outputs = []
+        try {
+          if (fs.existsSync(outputDir)) {
+            for (const f of fs.readdirSync(outputDir)) {
+              const fp = path.join(outputDir, f)
+              const st = fs.statSync(fp)
+              if (st.isFile()) {
+                outputs.push({
+                  name: f,
+                  path: fp,
+                  size: st.size,
+                  type: (path.extname(f) || '').slice(1).toLowerCase(),
+                })
+              }
+            }
+          }
+        } catch (e) { /* ignore */ }
+
+        if (code === 0) {
+          resolve({ success: true, outputDir, outputs })
+        } else {
+          resolve({ success: false, error: `electron-builder 退出码 ${code}`, outputDir, outputs })
+        }
+      })
+    })
+  } catch (e) {
+    return { success: false, error: e && e.message ? e.message : String(e) }
+  }
+})
+
 ipcMain.handle('readFile', async (event, filePath) => {
   try {
     const data = fs.readFileSync(filePath)

@@ -18,10 +18,9 @@ import {
   type Edge as RFEdge,
   type NodeChange,
 } from '@xyflow/react'
-import { Undo2, Redo2, Trash2, X, Copy, ShieldCheck, Layers, ChevronDown, ChevronRight, Pencil, Download, MessageSquare, Lock, Crown, Upload, Play, ArrowLeft, Globe, Maximize2, Minimize2, PanelRight } from 'lucide-react'
+import { X, ShieldCheck, MessageSquare, PanelRight, Workflow, Image, Search, Settings, User, BarChart3, GitBranch, Bot } from 'lucide-react'
 import clsx from 'clsx'
 import CustomEdge from './custom-edge'
-import { ResizableSplitter } from './resizable-splitter'
 import { useEditorCanvasStore } from '@editor/stores/editor-canvas-store'
 import '@xyflow/react/dist/style.css'
 import { DialogueNode } from './nodes/dialogue-node'
@@ -38,6 +37,14 @@ import { GroupNode } from './nodes/group-node'
 import { EditorSidebar } from './editor-sidebar'
 import { EditorRightPanel } from './editor-right-panel'
 import { AiChatPanel } from './ai-chat-panel'
+import { AssetLibraryPanel } from './asset-library-panel'
+import { VersionPanel } from './version-panel'
+import { MemoizedWritingStatsPanel } from './writing-stats-panel'
+import { AiSettingsDialog } from './ai-settings-dialog'
+import { ActivityBar, type ActivityBarItem } from './activity-bar'
+import { TopToolbar } from './top-toolbar'
+import { AiFloatingButton } from './ai-floating-button'
+import { AiPanelFlyout } from './ai-panel-flyout'
 import { EmptyCanvasGuide } from './onboarding/empty-canvas-guide'
 import { HelpMenu } from './onboarding/help-menu'
 import { ShortcutsModal } from './onboarding/shortcuts-modal'
@@ -64,9 +71,7 @@ import type { MonetizationConfig } from '@editor/lib/work-monetization'
 import { GROUP_COLORS } from '@editor/types/editor'
 import { parseOutline, generateNodesFromOutline, generateOutlineFromNodes } from '@editor/lib/outline-parser'
 import type { LibraryAsset } from '@editor/lib/asset-library'
-import { getCurrentEdition, isDesktop } from '@editor/lib/editor-versions'
-import { getAccount, isLoggedIn } from '@editor/lib/local-account-store'
-import { isLoggedIn as isCreatorLoggedIn, getCurrentAccount as getCreatorAccount, ensureCreatorServiceInit } from '@editor/lib/creator-service'
+import { ensureCreatorServiceInit } from '@editor/lib/creator-service'
 import {
   loadAnnotations,
   saveAnnotations,
@@ -80,7 +85,7 @@ import {
 } from '@editor/lib/annotation-store'
 import { AnnotationMarkerProvider, withAnnotationMarker } from './annotation-marker'
 import { matchShortcut } from '@editor/lib/shortcut-manager'
-import { toggleTheme, getCurrentTheme, initTheme, type Theme, subscribeTheme } from '@editor/lib/theme-manager'
+import { toggleTheme, initTheme, type Theme, subscribeTheme } from '@editor/lib/theme-manager'
 import { startSession, endSession, recordAction, estimateWordCount } from '@editor/lib/writing-stats'
 
 // 为所有节点类型包裹批注标记
@@ -161,6 +166,8 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
   const [showShortcutsModal, setShowShortcutsModal] = useState(false)
   // 预览状态
   const [showPreview, setShowPreview] = useState(false)
+  // AI 设置弹窗
+  const [showAiSettings, setShowAiSettings] = useState(false)
   const [historyState, setHistoryState] = useState({ canUndo: false, canRedo: false })
   const [rightPanelTab, setRightPanelTab] = useState('properties')
   const [outlineText, setOutlineText] = useState('')
@@ -172,19 +179,33 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
   const [annotationDialog, setAnnotationDialog] = useState<{ nodeId: string } | null>(null)
   // 三栏布局状态（来自全局 Store，支持持久化）
   const {
-    leftPanelWidth,
-    leftPanelVisible,
-    aiPanelWidth,
-    aiPanelVisible,
-    rightFullscreen,
-    rightInnerPropsVisible,
-    setLeftPanelWidth,
-    setLeftPanelVisible,
-    setAiPanelWidth,
-    setAiPanelVisible,
-    setRightFullscreen,
-    setRightInnerPropsVisible,
+    activeLeftActivity,
+    activeRightActivity,
+    aiPanelMode,
+    setActiveLeftActivity,
+    setActiveRightActivity,
+    setAiPanelMode,
   } = useEditorCanvasStore()
+
+  // Activity Bar items
+  const LEFT_ACTIVITY_ITEMS: ActivityBarItem[] = [
+    { id: 'nodes', icon: <Workflow className="h-4 w-4" />, label: '节点库' },
+    { id: 'assets', icon: <Image className="h-4 w-4" />, label: '资源库' },
+    { id: 'search', icon: <Search className="h-4 w-4" />, label: '搜索节点' },
+  ]
+
+  const LEFT_BOTTOM_ITEMS: ActivityBarItem[] = [
+    { id: 'settings', icon: <Settings className="h-4 w-4" />, label: '设置' },
+    { id: 'account', icon: <User className="h-4 w-4" />, label: '账户' },
+  ]
+
+  const RIGHT_ACTIVITY_ITEMS: ActivityBarItem[] = [
+    { id: 'properties', icon: <PanelRight className="h-4 w-4" />, label: '属性' },
+    { id: 'ai-chat', icon: <Bot className="h-4 w-4" />, label: 'AI 对话' },
+    { id: 'versions', icon: <GitBranch className="h-4 w-4" />, label: '版本' },
+    { id: 'stats', icon: <BarChart3 className="h-4 w-4" />, label: '统计' },
+  ]
+
   // 主题状态（订阅变化以触发重渲染）
   const [currentTheme, setCurrentTheme] = useState<Theme>('dark')
   const annotationAuthor = useMemo(() => getAnnotationAuthor(), [])
@@ -1063,13 +1084,13 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
       // 视图类：切换侧边栏 / 右侧属性面板 / AI 面板 / 主题
       if (matchShortcut(e, 'toggleSidebar')) {
         e.preventDefault()
-        setLeftPanelVisible(!leftPanelVisible)
+        setActiveLeftActivity(activeLeftActivity === 'nodes' ? null : 'nodes')
         return
       }
 
       if (matchShortcut(e, 'toggleRightPanel')) {
         e.preventDefault()
-        setRightInnerPropsVisible(!rightInnerPropsVisible)
+        setActiveRightActivity(activeRightActivity === 'properties' ? null : 'properties')
         return
       }
 
@@ -1080,16 +1101,9 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
       }
 
       // AI 面板显隐
-      if (e.key === 'a' && (e.metaKey || e.ctrlKey) && e.shiftKey && !e.altKey) {
+      if (matchShortcut(e, 'toggleAiPanel')) {
         e.preventDefault()
-        setAiPanelVisible(!aiPanelVisible)
-        return
-      }
-
-      // 退出右栏全屏
-      if (e.key === 'Escape' && rightFullscreen) {
-        e.preventDefault()
-        setRightFullscreen(false)
+        setAiPanelMode(aiPanelMode === 'hidden' ? 'floating' : 'hidden')
         return
       }
 
@@ -1205,14 +1219,12 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
     handleToggleTheme,
     setNodes,
     throttledPushHistory,
-    leftPanelVisible,
-    setLeftPanelVisible,
-    rightInnerPropsVisible,
-    setRightInnerPropsVisible,
-    aiPanelVisible,
-    setAiPanelVisible,
-    rightFullscreen,
-    setRightFullscreen,
+    activeLeftActivity,
+    activeRightActivity,
+    aiPanelMode,
+    setActiveLeftActivity,
+    setActiveRightActivity,
+    setAiPanelMode,
   ])
 
   const updateNodeData = useCallback((nodeId: string, data: Partial<StoryNode['data']>) => {
@@ -1611,457 +1623,518 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
     onStartTour?.()
   }, [onStartTour])
 
-  // 统一三栏工作区：左栏节点库 + 中栏 AI 对话 + 右栏画布工作区
+  // AI 浮动面板切换
   const handleToggleAiPanel = useCallback(() => {
-    setAiPanelVisible(!aiPanelVisible)
-  }, [aiPanelVisible, setAiPanelVisible])
+    setAiPanelMode(aiPanelMode === 'hidden' ? 'floating' : 'hidden')
+  }, [aiPanelMode, setAiPanelMode])
 
-  const handleToggleLeftPanel = useCallback(() => {
-    setLeftPanelVisible(!leftPanelVisible)
-  }, [leftPanelVisible, setLeftPanelVisible])
-
-  const handleToggleRightInnerPanel = useCallback(() => {
-    setRightInnerPropsVisible(!rightInnerPropsVisible)
-  }, [rightInnerPropsVisible, setRightInnerPropsVisible])
-
-  const handleToggleRightFullscreen = useCallback(() => {
-    setRightFullscreen(!rightFullscreen)
-  }, [rightFullscreen, setRightFullscreen])
+  // AiChatPanel 共享元素 —— 右侧栏和浮动面板复用同一实例的 props 配置
+  const aiChatPanelElement = (
+    <AiChatPanel
+      nodes={nodes as StoryNode[]}
+      edges={edges as StoryEdge[]}
+      characters={characters}
+      scenes={scenesRef.current}
+      onUpdateNode={updateNodeData}
+      onDeleteNode={deleteNode}
+      onUpdateEdge={updateEdgeData}
+      onDeleteEdge={handleDeleteEdge}
+      onAddNode={(type, position, data) => {
+        const id = `${type}-${Date.now()}`
+        const newNode = {
+          id,
+          type: type as StoryNode['type'],
+          position,
+          data: { ...createNodeData(type), ...data } as StoryNode['data'],
+        }
+        setNodes((nds) => [...nds, newNode as StoryNode])
+        setSelectedNodeIds([id])
+        pushHistory('ADD_NODE', `AI 对话添加 ${type} 节点`)
+        return id
+      }}
+      onAddEdge={(source, target) => {
+        const connection = { source, target, sourceHandle: null, targetHandle: null }
+        let edgeId = ''
+        setEdges((eds) => {
+          const newEdges = addEdge(connection, eds)
+          edgeId = newEdges[newEdges.length - 1]?.id || ''
+          return newEdges as StoryEdge[]
+        })
+        pushHistory('ADD_EDGE', `AI 对话连接 ${source} → ${target}`)
+        return edgeId
+      }}
+      onNodeSelect={handleNodeSelect}
+      onAddCharacter={(char) => {
+        addCharacter(char)
+        showToast('success', `角色「${char.name}」已创建`)
+      }}
+      onBindAsset={async (nodeId, assetHash, usageType) => {
+        try {
+          const { getAllAssets } = await import('@editor/lib/local-db')
+          const all = await getAllAssets()
+          const asset = all.find((a) => a.hash.startsWith(assetHash) || a.hash === assetHash)
+          if (!asset) return false
+          const url = URL.createObjectURL(asset.blob)
+          const node = nodes.find((n) => n.id === nodeId) as StoryNode | undefined
+          if (!node) return false
+          const ann = asset.annotation
+          const ut = usageType || ann?.usageType
+          if (ut === 'background' || (!ut && asset.type.startsWith('image/') && node.type === 'narration')) {
+            updateNodeData(nodeId, { backgroundImage: url })
+          } else if (ut === 'cg' || (!ut && node.type === 'cg')) {
+            updateNodeData(nodeId, {
+              url,
+              mediaType: asset.type.startsWith('video/') ? 'video' : 'image',
+            } as Record<string, unknown>)
+          } else if (asset.type.startsWith('audio/')) {
+            updateNodeData(nodeId, { bgm: url } as Record<string, unknown>)
+          } else {
+            updateNodeData(nodeId, { backgroundImage: url } as Record<string, unknown>)
+          }
+          pushHistory('UPDATE_NODE', `AI 对话绑定素材到 ${nodeId}`)
+          showToast('success', `素材「${asset.name}」已绑定到节点`)
+          return true
+        } catch {
+          return false
+        }
+      }}
+      onSaveWork={() => {
+        saveGraph()
+        showToast('success', '作品已保存')
+      }}
+      onExportWork={() => setShowExportDialog(true)}
+      onPreviewWork={() => setShowPreview(true)}
+      onUndo={undo}
+      onRedo={redo}
+    />
+  )
 
   return (
-    <div className="flex h-[calc(100vh-52px)] overflow-hidden">
-      {/* 左侧：节点库（可通过 B 键切换显隐） */}
-      {leftPanelVisible && (
-        <div
-          className="shrink-0 flex flex-col h-full"
-          style={{ width: leftPanelWidth }}
-        >
-          <EditorSidebar
-            onQuickAdd={addNodeAtCenter}
-            outline={outlineText}
-            onOutlineChange={setOutlineText}
-            selectedNodes={selectedNodes}
-            selectedEdges={edges.filter(
-              (e) => selectedNodeIds.includes(e.source) && selectedNodeIds.includes(e.target)
-            ) as StoryEdge[]}
-            selectedNode={selectedNode || null}
-            onInsertTemplate={insertTemplate}
-            onGenerateNodesFromOutline={handleGenerateNodesFromOutline}
-            onGenerateOutlineFromNodes={handleGenerateOutlineFromNodes}
-            onInsertAsset={handleInsertAsset}
-            collapsed={false}
-            onToggleCollapse={handleToggleLeftPanel}
-          />
-        </div>
-      )}
-      {leftPanelVisible && (
-        <ResizableSplitter
-          onResize={(delta) => setLeftPanelWidth(Math.max(180, Math.min(400, leftPanelWidth + delta)))}
-          aria-label="调整左侧面板宽度"
+    <div className="flex h-screen flex-col overflow-hidden bg-background">
+      {/* Top Toolbar */}
+      <TopToolbar
+        title={title}
+        canUndo={historyState.canUndo}
+        canRedo={historyState.canRedo}
+        onUndo={undo}
+        onRedo={redo}
+        onPreview={() => setShowPreview(true)}
+        onExport={() => setShowExportDialog(true)}
+        onToggleAiPanel={handleToggleAiPanel}
+        aiPanelVisible={aiPanelMode !== 'hidden'}
+        onBack={onBack}
+      />
+
+      {/* Main content area: Activity Bars + Canvas */}
+      <div className="flex flex-1 overflow-hidden relative">
+        {/* Left Activity Bar */}
+        <ActivityBar
+          side="left"
+          items={LEFT_ACTIVITY_ITEMS}
+          activeItem={activeLeftActivity}
+          onItemClick={setActiveLeftActivity}
+          bottomItems={LEFT_BOTTOM_ITEMS}
         />
-      )}
 
-      {/* 中栏：AI 创境对话（可通过 Ctrl+Shift+A 切换显隐） */}
-      {aiPanelVisible && !rightFullscreen && (
-        <div
-          className="shrink-0 flex flex-col h-full"
-          style={{ width: aiPanelWidth }}
-        >
-          <AiChatPanel
-            nodes={nodes as StoryNode[]}
-            edges={edges as StoryEdge[]}
-            characters={characters}
-            scenes={scenesRef.current}
-            onUpdateNode={updateNodeData}
-            onDeleteNode={deleteNode}
-            onUpdateEdge={updateEdgeData}
-            onDeleteEdge={handleDeleteEdge}
-            onAddNode={(type, position, data) => {
-              const id = `${type}-${Date.now()}`
-              const newNode = {
-                id,
-                type: type as StoryNode['type'],
-                position,
-                data: { ...createNodeData(type), ...data } as StoryNode['data'],
-              }
-              setNodes((nds) => [...nds, newNode as StoryNode])
-              pushHistory('ADD_NODE', `创境添加 ${nodeTypeLabels[type] || type} 节点`)
-              return id
-            }}
-            onAddEdge={(source, target) => {
-              const connection = { source, target, sourceHandle: null, targetHandle: null }
-              let edgeId = ''
-              setEdges((eds) => {
-                const newEdges = addEdge(connection, eds)
-                edgeId = newEdges[newEdges.length - 1]?.id || ''
-                return newEdges as StoryEdge[]
-              })
-              pushHistory('ADD_EDGE', '创境创建连线')
-              return edgeId
-            }}
-            onNodeSelect={handleNodeSelect}
-            collapsed={false}
-            onToggleCollapse={handleToggleAiPanel}
-          />
-        </div>
-      )}
-      {aiPanelVisible && !rightFullscreen && (
-        <ResizableSplitter
-          onResize={(delta) => setAiPanelWidth(Math.max(280, Math.min(600, aiPanelWidth + delta)))}
-          snapThreshold={120}
-          onSnap={(direction) => {
-            if (direction === 'left') {
-              setRightFullscreen(true)
-            }
-          }}
-          aria-label="调整 AI 面板宽度"
-        />
-      )}
-
-      {/* 右栏：画布工作区（可全屏） */}
-      <div className="flex-1 flex min-w-0 h-full overflow-hidden">
-        {/* 中间：React Flow 画布 */}
-        <div
-          ref={canvasRef}
-          role="region"
-          aria-label="故事节点编辑器画布"
-          aria-describedby="canvas-description"
-          className={`flex-1 relative min-w-0 transition-colors ${isDraggingOver ? 'ring-2 ring-inset ring-primary/30 bg-primary/[0.02]' : ''}`}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        onContextMenu={(e) => {
-          // 允许节点右键菜单，但阻止画布右键默认行为
-          if (e.target === e.currentTarget) e.preventDefault()
-        }}
-      >
-        <span
-          id="canvas-description"
-          style={{
-            position: 'absolute',
-            width: '1px',
-            height: '1px',
-            padding: '0',
-            margin: '-1px',
-            overflow: 'hidden',
-            clip: 'rect(0, 0, 0, 0)',
-            whiteSpace: 'nowrap',
-            border: '0',
-          }}
-        >
-          使用鼠标拖拽节点，滚轮缩放画布，空格拖拽平移。支持键盘快捷键操作。
-        </span>
-        <AnnotationMarkerProvider value={annotationContextValue}>
-        <ReactFlow
-          nodes={visibleNodes}
-          edges={edges}
-          onNodesChange={handleNodesChange as any}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          onNodeDrag={handleNodeDrag}
-          onNodeDragStop={handleNodeDragStop}
-          nodeTypes={nodeTypes}
-          edgeTypes={edgeTypes}
-          onNodeClick={handleNodeClick}
-          onNodeDoubleClick={handleNodeDoubleClick}
-          onEdgeClick={handleEdgeClick}
-          onPaneClick={handlePaneClick}
-          onSelectionChange={handleSelectionChange}
-          onNodeContextMenu={handleNodeContextMenu}
-          selectionOnDrag={perfConfig.selectNodesOnDrag}
-          multiSelectionKeyCode={['Shift']}
-          defaultViewport={{ x: 0, y: 0, zoom: 1 }}
-          minZoom={0.15}
-          maxZoom={2.5}
-          fitView={false}
-          nodesDraggable={true}
-          nodesConnectable={true}
-          elementsSelectable={true}
-          panOnDrag={perfConfig.panOnDrag}
-          selectNodesOnDrag={perfConfig.selectNodesOnDrag}
-          elevateEdgesOnSelect={perfConfig.elevateEdgesOnSelect}
-          elevateNodesOnSelect={perfConfig.elevateNodesOnSelect}
-          deleteKeyCode={null}
-          className={isEmpty ? 'opacity-0 pointer-events-none' : ''}
-          onlyRenderVisibleElements={true}
-          panOnScroll={true}
-          zoomOnScroll={true}
-          zoomOnPinch={true}
-          zoomOnDoubleClick={true}
-        >
-          <Background gap={12} size={1} />
-          <Controls showZoom={true} showFitView={true} showInteractive={false} />
-          {alignmentEnabled && (
-            <AlignmentLines ref={alignmentLinesRef} enabled={alignmentEnabled} />
-          )}
-          {perfConfig.miniMapVisible && (
-            <MiniMap
-              className="!bg-card !border !border-border"
-              nodeStrokeWidth={3}
-              pannable={perfConfig.miniMapPannable}
-              zoomable={perfConfig.miniMapZoomable}
-              maskColor="rgba(0,0,0,0.08)"
-              style={{ width: 200, height: 150 }}
-            />
-          )}
-        </ReactFlow>
-        </AnnotationMarkerProvider>
-
-        {/* 右键菜单：节点操作 */}
-        {contextMenu && (
-          <NodeContextMenu
-            x={contextMenu.x}
-            y={contextMenu.y}
-            nodeId={contextMenu.nodeId}
-            annotationCount={annotationsMap.get(contextMenu.nodeId)?.length || 0}
-            onAddAnnotation={() => {
-              setAnnotationDialog({ nodeId: contextMenu.nodeId })
-              setContextMenu(null)
-            }}
-            onViewAnnotations={() => {
-              setSelectedNodeIds([contextMenu.nodeId])
-              setRightPanelTab('annotations')
-              setContextMenu(null)
-            }}
-            onClose={() => setContextMenu(null)}
-          />
-        )}
-
-        {/* 添加批注弹窗 */}
-        {annotationDialog && (
-          <AnnotationDialog
-            nodeId={annotationDialog.nodeId}
-            defaultAuthor={annotationAuthor}
-            onSubmit={handleAddAnnotation}
-            onClose={() => setAnnotationDialog(null)}
-          />
-        )}
-
-        {/* 空画布引导 */}
-        {isEmpty && (
-          <EmptyCanvasGuide
-            onQuickAdd={addNodeAtCenter}
-            onStartTour={handleStartTour}
-          />
-        )}
-
-        {/* 创作者中心入口（空画布时右上角单独显示） */}
-        {isEmpty && (
-          <div className="absolute top-4 right-4 flex items-center gap-1 bg-card/90 backdrop-blur border rounded-lg px-2 py-1 shadow-sm z-10">
-            {isCreatorLoggedIn() && getCreatorAccount() ? (
-              <span className="flex items-center gap-1.5 px-2 py-1 text-xs text-emerald-400" title={getCreatorAccount()!.email}>
-                <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                <span className="font-medium">{getCreatorAccount()!.displayName}</span>
+        {/* Left panel overlay (when activity item active) */}
+        {activeLeftActivity && (
+          <div
+            className="absolute left-11 top-0 bottom-0 z-30 w-64 border-r border-border bg-card shadow-lg overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-border px-3 py-2 shrink-0">
+              <span className="text-xs font-semibold text-foreground">
+                {[...LEFT_ACTIVITY_ITEMS, ...LEFT_BOTTOM_ITEMS].find((i) => i.id === activeLeftActivity)?.label}
               </span>
-            ) : (
               <button
-                onClick={() => { setCreatorCenterTab('account'); setShowCreatorCenter(true) }}
-                className="flex items-center gap-1.5 px-2 py-1 rounded transition-colors hover:bg-muted text-muted-foreground hover:text-foreground text-xs"
-                title="创作者中心 - 登录/注册账号"
+                onClick={() => setActiveLeftActivity(null)}
+                className="rounded p-0.5 text-muted-foreground hover:text-foreground transition-colors"
               >
-                登录
+                <X className="h-3.5 w-3.5" />
               </button>
-            )}
-            <span className="w-px h-4 bg-border" />
-            <button
-              onClick={() => { setCreatorCenterTab('publish'); setShowCreatorCenter(true) }}
-              className="flex items-center gap-1.5 px-2 py-1 rounded transition-colors hover:bg-amber-500/10 text-foreground hover:text-amber-400"
-              title="创作者中心 - 管理平台、发布作品"
-            >
-              <Upload className="w-4 h-4" />
-              <span className="text-xs font-medium">创作者中心</span>
-            </button>
-            <span className="w-px h-4 bg-border" />
-            <button
-              onClick={handleToggleAiPanel}
-              className="flex items-center gap-1.5 px-2 py-1 rounded transition-colors bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 hover:text-amber-300"
-              title="切换 AI 创境面板 (Ctrl+Shift+A)"
-            >
-              <MessageSquare className="w-4 h-4" />
-              <span className="text-xs font-medium">AI 面板</span>
-            </button>
-          </div>
-        )}
-
-        {/* 拖拽提示遮罩 */}
-        {isDraggingOver && (
-          <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-20">
-            <div className="bg-primary/90 text-primary-foreground px-6 py-3 rounded-xl shadow-lg text-sm font-medium">
-              释放以添加节点
+            </div>
+            <div className="flex-1 min-h-0 overflow-y-auto">
+              {activeLeftActivity === 'nodes' && (
+                <EditorSidebar
+                  onQuickAdd={addNodeAtCenter}
+                  outline={outlineText}
+                  onOutlineChange={setOutlineText}
+                  selectedNodes={selectedNodes}
+                  selectedEdges={edges.filter(
+                    (e) => selectedNodeIds.includes(e.source) && selectedNodeIds.includes(e.target)
+                  ) as StoryEdge[]}
+                  selectedNode={selectedNode || null}
+                  onInsertTemplate={insertTemplate}
+                  onGenerateNodesFromOutline={handleGenerateNodesFromOutline}
+                  onGenerateOutlineFromNodes={handleGenerateOutlineFromNodes}
+                  onInsertAsset={handleInsertAsset}
+                  characters={characters}
+                />
+              )}
+              {activeLeftActivity === 'assets' && (
+                <AssetLibraryPanel
+                  selectedNode={selectedNode || null}
+                  onInsertAsset={handleInsertAsset}
+                  characters={characters}
+                />
+              )}
+              {activeLeftActivity === 'search' && (
+                <NodeSearch
+                  nodes={nodes as StoryNode[]}
+                  characters={characters}
+                  open={true}
+                  onClose={() => setActiveLeftActivity(null)}
+                  onReplaceNode={handleReplaceNode}
+                />
+              )}
+              {activeLeftActivity === 'settings' && (
+                <div className="p-3 space-y-2">
+                  <button
+                    onClick={() => { setShowAiSettings(true); setActiveLeftActivity(null) }}
+                    className="w-full text-left text-xs text-foreground hover:bg-muted rounded px-2 py-1.5 transition-colors"
+                  >
+                    创境（AI）设置
+                  </button>
+                  <button
+                    onClick={() => { setShowShortcutsModal(true); setActiveLeftActivity(null) }}
+                    className="w-full text-left text-xs text-foreground hover:bg-muted rounded px-2 py-1.5 transition-colors"
+                  >
+                    快捷键说明
+                  </button>
+                  <button
+                    onClick={() => { onStartTour?.(); setActiveLeftActivity(null) }}
+                    className="w-full text-left text-xs text-foreground hover:bg-muted rounded px-2 py-1.5 transition-colors"
+                  >
+                    新手引导
+                  </button>
+                </div>
+              )}
+              {activeLeftActivity === 'account' && (
+                <div className="p-3 space-y-2">
+                  <button
+                    onClick={() => { setShowCreatorCenter(true); setCreatorCenterTab('account'); setActiveLeftActivity(null) }}
+                    className="w-full text-left text-xs text-foreground hover:bg-muted rounded px-2 py-1.5 transition-colors"
+                  >
+                    创作者中心
+                  </button>
+                  <button
+                    onClick={() => { setShowCreatorCenter(true); setCreatorCenterTab('publish'); setActiveLeftActivity(null) }}
+                    className="w-full text-left text-xs text-foreground hover:bg-muted rounded px-2 py-1.5 transition-colors"
+                  >
+                    发布管理
+                  </button>
+                  <button
+                    onClick={() => { setShowCreatorCenter(true); setCreatorCenterTab('platforms'); setActiveLeftActivity(null) }}
+                    className="w-full text-left text-xs text-foreground hover:bg-muted rounded px-2 py-1.5 transition-colors"
+                  >
+                    平台绑定
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}
 
-        {/* 底部状态栏 */}
-        {!isEmpty && (
-          <StatusBar
-            nodeCount={nodes.length}
-            edgeCount={edges.length}
-            completionPercent={completionPercent}
-            onStatsClick={() => setRightPanelTab('stats')}
-          />
-        )}
+        {/* Canvas - main work area */}
+        <div
+          ref={canvasRef}
+          role="region"
+          aria-label="故事节点编辑器画布"
+          className="flex-1 relative min-w-0 bg-background overflow-hidden"
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onContextMenu={(e) => {
+            if (e.target === e.currentTarget) e.preventDefault()
+          }}
+          onClick={() => {
+            // Auto-close floating AI panel when clicking canvas
+            if (aiPanelMode === 'floating') {
+              setAiPanelMode('hidden')
+            }
+          }}
+        >
+          <AnnotationMarkerProvider value={annotationContextValue}>
+            <ReactFlow
+              nodes={visibleNodes}
+              edges={edges}
+              onNodesChange={handleNodesChange as any}
+              onEdgesChange={onEdgesChange}
+              onConnect={onConnect}
+              onNodeDrag={handleNodeDrag}
+              onNodeDragStop={handleNodeDragStop}
+              nodeTypes={nodeTypes}
+              edgeTypes={edgeTypes}
+              onNodeClick={handleNodeClick}
+              onNodeDoubleClick={handleNodeDoubleClick}
+              onEdgeClick={handleEdgeClick}
+              onPaneClick={handlePaneClick}
+              onSelectionChange={handleSelectionChange}
+              onNodeContextMenu={handleNodeContextMenu}
+              selectionOnDrag={perfConfig.selectNodesOnDrag}
+              multiSelectionKeyCode={['Shift']}
+              defaultViewport={{ x: 0, y: 0, zoom: 1 }}
+              minZoom={0.15}
+              maxZoom={2.5}
+              fitView={false}
+              nodesDraggable={true}
+              nodesConnectable={true}
+              elementsSelectable={true}
+              panOnDrag={perfConfig.panOnDrag}
+              selectNodesOnDrag={perfConfig.selectNodesOnDrag}
+              elevateEdgesOnSelect={perfConfig.elevateEdgesOnSelect}
+              elevateNodesOnSelect={perfConfig.elevateNodesOnSelect}
+              deleteKeyCode={null}
+              className={isEmpty ? 'opacity-0 pointer-events-none' : ''}
+              onlyRenderVisibleElements={true}
+              panOnScroll={true}
+              zoomOnScroll={true}
+              zoomOnPinch={true}
+              zoomOnDoubleClick={true}
+            >
+              <Background gap={12} size={1} />
+              <Controls showZoom={true} showFitView={true} showInteractive={false} />
+              {alignmentEnabled && (
+                <AlignmentLines ref={alignmentLinesRef} enabled={alignmentEnabled} />
+              )}
+              {perfConfig.miniMapVisible && (
+                <MiniMap
+                  className="!bg-card !border !border-border"
+                  nodeStrokeWidth={3}
+                  pannable={perfConfig.miniMapPannable}
+                  zoomable={perfConfig.miniMapZoomable}
+                  maskColor="rgba(0,0,0,0.08)"
+                  style={{ width: 200, height: 150 }}
+                />
+              )}
+            </ReactFlow>
+          </AnnotationMarkerProvider>
 
-        {/* 撤销/重做按钮 */}
-        {!isEmpty && (
-          <UndoRedoButtons
-            canUndo={historyState.canUndo}
-            canRedo={historyState.canRedo}
-            onUndo={undo}
-            onRedo={redo}
-            onPreview={() => setShowPreview(true)}
-            onExport={() => setShowExportDialog(true)}
-            onDirectoryUpload={() => { setCreatorCenterTab('publish'); setShowCreatorCenter(true) }}
-            onDiscover={() => setShowDiscover(true)}
-            loggedIn={isCreatorLoggedIn()}
-            account={getCreatorAccount()}
-            onOpenAccount={() => { setCreatorCenterTab('account'); setShowCreatorCenter(true) }}
-            onBack={onBack}
-            onStartTour={handleStartTour}
-            onShowShortcuts={() => setShowShortcutsModal(true)}
-            onToggleAiPanel={handleToggleAiPanel}
-            onToggleRightInnerPanel={handleToggleRightInnerPanel}
-            onToggleRightFullscreen={handleToggleRightFullscreen}
-            aiPanelVisible={aiPanelVisible}
-            rightInnerPropsVisible={rightInnerPropsVisible}
-            rightFullscreen={rightFullscreen}
-          />
-        )}
-
-        {/* 多选浮动工具栏 */}
-        {isMultiSelect && (
-          <MultiSelectToolbar
-            selectedCount={selectedNodeIds.length}
-            onCopy={copySelectedNodes}
-            onDelete={deleteSelectedNodes}
-            onCancel={() => setSelectedNodeIds([])}
-            onCreateGroup={createGroupFromSelection}
-          />
-        )}
-
-        {/* 分组选中工具栏 */}
-        {selectedGroupId && !isMultiSelect && (() => {
-          const selectedGroup = groups.find((g) => g.id === selectedGroupId)
-          if (!selectedGroup) {
-            setSelectedGroupId(null)
-            return null
-          }
-          return (
-            <GroupToolbar
-              group={selectedGroup}
-              onToggleCollapse={() => toggleGroupCollapse(selectedGroupId)}
-              onRename={(name) => renameGroup(selectedGroupId, name)}
-              onColorChange={(color) => changeGroupColor(selectedGroupId, color)}
-              onUngroup={() => deleteGroup(selectedGroupId, true)}
-              onDelete={() => deleteGroup(selectedGroupId, false)}
-              onClose={() => setSelectedGroupId(null)}
+          {/* Context menu */}
+          {contextMenu && (
+            <NodeContextMenu
+              x={contextMenu.x}
+              y={contextMenu.y}
+              nodeId={contextMenu.nodeId}
+              annotationCount={annotationsMap.get(contextMenu.nodeId)?.length || 0}
+              onAddAnnotation={() => {
+                setAnnotationDialog({ nodeId: contextMenu.nodeId })
+                setContextMenu(null)
+              }}
+              onViewAnnotations={() => {
+                setSelectedNodeIds([contextMenu.nodeId])
+                setRightPanelTab('annotations')
+                setContextMenu(null)
+              }}
+              onClose={() => setContextMenu(null)}
             />
-          )
-        })()}
+          )}
+
+          {/* Annotation dialog */}
+          {annotationDialog && (
+            <AnnotationDialog
+              nodeId={annotationDialog.nodeId}
+              defaultAuthor={annotationAuthor}
+              onSubmit={handleAddAnnotation}
+              onClose={() => setAnnotationDialog(null)}
+            />
+          )}
+
+          {/* Empty canvas guide */}
+          {isEmpty && (
+            <EmptyCanvasGuide
+              onQuickAdd={addNodeAtCenter}
+              onStartTour={handleStartTour}
+            />
+          )}
+
+          {/* Drag overlay */}
+          {isDraggingOver && (
+            <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-20">
+              <div className="bg-primary/90 text-primary-foreground px-6 py-3 rounded-xl shadow-lg text-sm font-medium">
+                释放以添加节点
+              </div>
+            </div>
+          )}
+
+          {/* Bottom status bar */}
+          {!isEmpty && (
+            <StatusBar
+              nodeCount={nodes.length}
+              edgeCount={edges.length}
+              completionPercent={completionPercent}
+              onStatsClick={() => setActiveRightActivity('stats')}
+            />
+          )}
+        </div>
+
+        {/* Right Activity Bar */}
+        <ActivityBar
+          side="right"
+          items={RIGHT_ACTIVITY_ITEMS}
+          activeItem={activeRightActivity}
+          onItemClick={setActiveRightActivity}
+        />
+
+        {/* Right panel overlay */}
+        {activeRightActivity && (
+          <div
+            className="absolute right-11 top-0 bottom-0 z-30 w-72 border-l border-border bg-card shadow-lg overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-border px-3 py-2 shrink-0">
+              <span className="text-xs font-semibold text-foreground">
+                {RIGHT_ACTIVITY_ITEMS.find((i) => i.id === activeRightActivity)?.label}
+              </span>
+              <button
+                onClick={() => setActiveRightActivity(null)}
+                className="rounded p-0.5 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+            <div className={`flex-1 min-h-0 ${activeRightActivity === 'ai-chat' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
+              {activeRightActivity === 'properties' && (
+                <EditorRightPanel
+                  selectedNode={selectedNode || null}
+                  selectedEdge={selectedEdge || null}
+                  selectedNodeCount={selectedNodeIds.length}
+                  characters={characters}
+                  tags={tags}
+                  title={title}
+                  assets={assetsRef.current}
+                  variables={variables}
+                  scenes={scenesRef.current}
+                  audios={audioRef.current}
+                  nodes={nodes as StoryNode[]}
+                  edges={edges as StoryEdge[]}
+                  activeTab={rightPanelTab}
+                  onTabChange={setRightPanelTab}
+                  onUpdateNode={updateNodeData}
+                  onDeleteNode={deleteNode}
+                  onUpdateEdge={updateEdgeData}
+                  onDeleteEdge={handleDeleteEdge}
+                  onAddCharacter={addCharacter}
+                  onUpdateCharacter={updateCharacter}
+                  onDeleteCharacter={deleteCharacter}
+                  onUpdateTitle={setTitle}
+                  onUpdateTags={setTags}
+                  onUpdateVariables={setVariables}
+                  onNodeSelect={handleNodeSelect}
+                  onEdgeSelect={handleEdgeSelect}
+                  onScenesChange={handleScenesChange}
+                  onAudiosChange={handleAudiosChange}
+                  versions={versions}
+                  currentGraph={buildSnapshot()}
+                  onSaveVersion={handleSaveVersion}
+                  onRestoreVersion={handleRestoreVersion}
+                  onDeleteVersion={handleDeleteVersion}
+                  annotations={annotations}
+                  annotationAuthor={annotationAuthor}
+                  onAddAnnotation={handleAddAnnotation}
+                  onResolveAnnotation={handleResolveAnnotation}
+                  onReplyAnnotation={handleReplyAnnotation}
+                  onDeleteAnnotation={handleDeleteAnnotation}
+                  onOpenAnnotationDialog={(nodeId) => setAnnotationDialog({ nodeId })}
+                  graph={graph}
+                  workId={workId}
+                  onApplyStory={(newNodes, newEdges, newChars, newTitle) => {
+                    setNodes(newNodes)
+                    setEdges(newEdges)
+                    setCharacters(newChars)
+                    setTitle(newTitle)
+                    setSelectedNodeIds(newNodes.map((n) => n.id))
+                    pushHistory('BATCH', `应用创境生成故事「${newTitle}」`)
+                    showToast('success', `故事「${newTitle}」已应用到画布`)
+                    setTimeout(() => {
+                      fitView({ padding: 0.3, duration: 500 })
+                    }, 100)
+                  }}
+                  onAddCharacters={(newChars) => {
+                    newChars.forEach((char) => addCharacter(char))
+                  }}
+                  onAddNode={(type, position, data) => {
+                    const id = `${type}-${Date.now()}`
+                    const newNode = {
+                      id,
+                      type: type as StoryNode['type'],
+                      position,
+                      data: { ...createNodeData(type), ...data } as StoryNode['data'],
+                    }
+                    setNodes((nds) => [...nds, newNode as StoryNode])
+                    setSelectedNodeIds([id])
+                    pushHistory('ADD_NODE', `创境添加 ${nodeTypeLabels[type] || type} 节点`)
+                    return id
+                  }}
+                  onAddEdge={(source, target) => {
+                    const connection = { source, target, sourceHandle: null, targetHandle: null }
+                    let edgeId = ''
+                    setEdges((eds) => {
+                      const newEdges = addEdge(connection, eds)
+                      edgeId = newEdges[newEdges.length - 1]?.id || ''
+                      return newEdges as StoryEdge[]
+                    })
+                    pushHistory('ADD_EDGE', '创境创建连线')
+                    return edgeId
+                  }}
+                />
+              )}
+              {activeRightActivity === 'versions' && (
+                <VersionPanel
+                  versions={versions}
+                  currentGraph={{ nodes, edges, characters, scenes: scenesRef.current, audios: audioRef.current, variables, groups: [] }}
+                  onSaveVersion={handleSaveVersion}
+                  onRestoreVersion={handleRestoreVersion}
+                  onDeleteVersion={handleDeleteVersion}
+                />
+              )}
+              {activeRightActivity === 'ai-chat' && (
+                aiChatPanelElement
+              )}
+              {activeRightActivity === 'stats' && (
+                <MemoizedWritingStatsPanel
+                  workId={workId || 'default'}
+                  nodeCount={nodes.length}
+                  wordCount={nodes.reduce((acc, node) => {
+                    const data = node.data as Record<string, unknown> | undefined
+                    if (!data) return acc
+                    let count = 0
+                    if (typeof data.text === 'string') count += data.text.length
+                    if (typeof data.prompt === 'string') count += data.prompt.length
+                    if (typeof data.title === 'string') count += data.title.length
+                    if (Array.isArray(data.options)) {
+                      for (const opt of data.options) {
+                        if (opt && typeof opt === 'object') {
+                          const optObj = opt as Record<string, unknown>
+                          if (typeof optObj.text === 'string') count += optObj.text.length
+                        }
+                      }
+                    }
+                    return acc + count
+                  }, 0)}
+                />
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* 右栏内部：属性面板（可通过 P 键切换显隐） */}
-      {rightInnerPropsVisible && (
-        <EditorRightPanel
-          selectedNode={selectedNode || null}
-          selectedEdge={selectedEdge || null}
-          selectedNodeCount={selectedNodeIds.length}
-          characters={characters}
-          tags={tags}
-          title={title}
-          assets={assetsRef.current}
-          variables={variables}
-          scenes={scenesRef.current}
-          audios={audioRef.current}
-          nodes={nodes as StoryNode[]}
-          edges={edges as StoryEdge[]}
-          activeTab={rightPanelTab}
-          onTabChange={setRightPanelTab}
-          onUpdateNode={updateNodeData}
-          onDeleteNode={deleteNode}
-          onUpdateEdge={updateEdgeData}
-          onDeleteEdge={handleDeleteEdge}
-          onAddCharacter={addCharacter}
-          onUpdateCharacter={updateCharacter}
-          onDeleteCharacter={deleteCharacter}
-          onUpdateTitle={setTitle}
-          onUpdateTags={setTags}
-          onUpdateVariables={setVariables}
-          onNodeSelect={handleNodeSelect}
-          onEdgeSelect={handleEdgeSelect}
-          onScenesChange={handleScenesChange}
-          onAudiosChange={handleAudiosChange}
-          versions={versions}
-          currentGraph={buildSnapshot()}
-          onSaveVersion={handleSaveVersion}
-          onRestoreVersion={handleRestoreVersion}
-          onDeleteVersion={handleDeleteVersion}
-          annotations={annotations}
-          annotationAuthor={annotationAuthor}
-          onAddAnnotation={handleAddAnnotation}
-          onResolveAnnotation={handleResolveAnnotation}
-          onReplyAnnotation={handleReplyAnnotation}
-          onDeleteAnnotation={handleDeleteAnnotation}
-          onOpenAnnotationDialog={(nodeId) => setAnnotationDialog({ nodeId })}
-          graph={graph}
-          workId={workId}
-          collapsed={false}
-          onToggleCollapse={handleToggleRightInnerPanel}
-          onApplyStory={(newNodes, newEdges, newChars, newTitle) => {
-            setNodes(newNodes)
-            setEdges(newEdges)
-            setCharacters(newChars)
-            setTitle(newTitle)
-            setSelectedNodeIds(newNodes.map((n) => n.id))
-            pushHistory('BATCH', `应用创境生成故事「${newTitle}」`)
-            showToast('success', `故事「${newTitle}」已应用到画布`)
-            setTimeout(() => {
-              fitView({ padding: 0.3, duration: 500 })
-            }, 100)
-          }}
-          onAddCharacters={(newChars) => {
-            newChars.forEach((char) => addCharacter(char))
-          }}
-          onAddNode={(type, position, data) => {
-            const id = `${type}-${Date.now()}`
-            const newNode = {
-              id,
-              type: type as StoryNode['type'],
-              position,
-              data: { ...createNodeData(type), ...data } as StoryNode['data'],
-            }
-            setNodes((nds) => [...nds, newNode as StoryNode])
-            setSelectedNodeIds([id])
-            pushHistory('ADD_NODE', `创境添加 ${nodeTypeLabels[type] || type} 节点`)
-            return id
-          }}
-          onAddEdge={(source, target) => {
-            const connection = { source, target, sourceHandle: null, targetHandle: null }
-            let edgeId = ''
-            setEdges((eds) => {
-              const newEdges = addEdge(connection, eds)
-              edgeId = newEdges[newEdges.length - 1]?.id || ''
-              return newEdges as StoryEdge[]
-            })
-            pushHistory('ADD_EDGE', '创境创建连线')
-            return edgeId
-          }}
-        />
-      )}
-    </div>
-
-      <ToastContainerPortal />
-
-      {/* NodeSearch: Ctrl+F 打开 */}
-      <NodeSearch
-        nodes={nodes as StoryNode[]}
-        characters={characters}
-        open={showNodeSearch}
-        onClose={handleCloseNodeSearch}
-        onReplaceNode={handleReplaceNode}
+      {/* AI Floating Button + Flyout */}
+      <AiFloatingButton
+        onClick={() => setAiPanelMode(aiPanelMode === 'hidden' ? 'floating' : 'hidden')}
+        isOpen={aiPanelMode !== 'hidden'}
       />
+      <AiPanelFlyout
+        open={aiPanelMode !== 'hidden'}
+        pinned={aiPanelMode === 'pinned'}
+        onClose={() => setAiPanelMode('hidden')}
+        onPin={() => setAiPanelMode(aiPanelMode === 'pinned' ? 'floating' : 'pinned')}
+      >
+        {aiChatPanelElement}
+      </AiPanelFlyout>
 
-      {/* 导出对话框 */}
+      {/* Modal dialogs (unchanged, keep existing) */}
+      <ToastContainerPortal />
       <ExportDialog
         open={showExportDialog}
         graph={graph}
@@ -2069,15 +2142,11 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
         onImportTranslation={handleImportTranslation}
         monetization={monetization}
       />
-
-      {/* 预览对话框 */}
       <StoryPreview
         graph={graph}
         open={showPreview}
         onClose={() => setShowPreview(false)}
       />
-
-      {/* 创作者中心 */}
       <CreatorCenterDialog
         open={showCreatorCenter}
         onClose={() => setShowCreatorCenter(false)}
@@ -2086,14 +2155,10 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
         initialTab={creatorCenterTab}
         onLoginStateChange={() => setLoginState(n => n + 1)}
       />
-
-      {/* 作品发现 */}
       <DiscoverDialog
         open={showDiscover}
         onClose={() => setShowDiscover(false)}
       />
-
-      {/* 快捷键提示 */}
       <ShortcutsModal
         open={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
@@ -2144,404 +2209,6 @@ const StatusBar = memo(function StatusBar({ nodeCount, edgeCount, completionPerc
           </span>
         </>
       )}
-    </div>
-  )
-})
-
-interface UndoRedoButtonsProps {
-  canUndo: boolean
-  canRedo: boolean
-  onUndo: () => void
-  onRedo: () => void
-  onPreview?: () => void
-  onExport?: () => void
-  onDirectoryUpload?: () => void
-  onDiscover?: () => void
-  loggedIn?: boolean
-  account?: { displayName: string; email: string } | null
-  onOpenAccount?: () => void
-  onBack?: () => void
-  onStartTour?: () => void
-  onShowShortcuts?: () => void
-  onToggleAiPanel?: () => void
-  onToggleRightInnerPanel?: () => void
-  onToggleRightFullscreen?: () => void
-  aiPanelVisible?: boolean
-  rightInnerPropsVisible?: boolean
-  rightFullscreen?: boolean
-}
-
-const UndoRedoButtons = memo(function UndoRedoButtons({ canUndo, canRedo, onUndo, onRedo, onPreview, onExport, onDirectoryUpload, onDiscover, loggedIn, account, onOpenAccount, onBack, onStartTour, onShowShortcuts, onToggleAiPanel, onToggleRightInnerPanel, onToggleRightFullscreen, aiPanelVisible, rightInnerPropsVisible, rightFullscreen }: UndoRedoButtonsProps) {
-  return (
-    <div className="absolute top-4 right-4 flex items-center gap-1 bg-card/90 backdrop-blur border rounded-lg px-2 py-1 shadow-sm z-10">
-      {onBack && (
-        <>
-          <button
-            onClick={onBack}
-            className="flex items-center gap-1.5 px-2 py-1 rounded transition-colors hover:bg-slate-700 text-slate-400 hover:text-white text-xs"
-            title="返回项目管理"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span className="text-xs font-medium hidden sm:inline">项目</span>
-          </button>
-          <span className="w-px h-4 bg-border" />
-        </>
-      )}
-      {/* 布局切换按钮 */}
-      {onToggleAiPanel && (
-        <>
-          <button
-            onClick={onToggleAiPanel}
-            className={clsx(
-              'flex items-center gap-1.5 px-2 py-1 rounded transition-colors text-xs',
-              aiPanelVisible
-                ? 'bg-amber-500/10 text-amber-400 hover:bg-amber-500/20'
-                : 'hover:bg-slate-700 text-slate-400 hover:text-white'
-            )}
-            title="切换 AI 创境面板 (Ctrl+Shift+A)"
-          >
-            <MessageSquare className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">AI</span>
-          </button>
-        </>
-      )}
-      {onToggleRightInnerPanel && (
-        <>
-          <button
-            onClick={onToggleRightInnerPanel}
-            className={clsx(
-              'flex items-center gap-1.5 px-2 py-1 rounded transition-colors text-xs',
-              rightInnerPropsVisible
-                ? 'bg-slate-700 text-white'
-                : 'hover:bg-slate-700 text-slate-400 hover:text-white'
-            )}
-            title="切换属性面板 (P)"
-          >
-            <PanelRight className="w-3.5 h-3.5" />
-          </button>
-        </>
-      )}
-      {onToggleRightFullscreen && (
-        <>
-          <button
-            onClick={onToggleRightFullscreen}
-            className="flex items-center gap-1.5 px-2 py-1 rounded transition-colors hover:bg-slate-700 text-slate-400 hover:text-white text-xs"
-            title={rightFullscreen ? '退出全屏画布 (Esc)' : '全屏画布'}
-          >
-            {rightFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
-          </button>
-          <span className="w-px h-4 bg-border" />
-        </>
-      )}
-      {/* 账号登录状态 */}
-      {onOpenAccount && (
-        <>
-          {loggedIn && account ? (
-            <span className="flex items-center gap-1.5 px-2 py-1 text-xs text-emerald-400" title={account.email}>
-              <span className="w-2 h-2 rounded-full bg-emerald-400" />
-              <span className="font-medium">{account.displayName}</span>
-            </span>
-          ) : (
-            <button
-              onClick={onOpenAccount}
-              className="flex items-center gap-1.5 px-2 py-1 rounded transition-colors hover:bg-muted text-muted-foreground hover:text-foreground text-xs"
-              title="创作者中心 - 登录/注册账号"
-            >
-              登录
-            </button>
-          )}
-          <span className="w-px h-4 bg-border" />
-        </>
-      )}
-      {/* 预览按钮 */}
-      {onPreview && (
-        <>
-          <button
-            onClick={onPreview}
-            className="flex items-center gap-1.5 px-2 py-1 rounded transition-colors hover:bg-emerald-500/10 text-foreground hover:text-emerald-400"
-            title="预览作品 (Ctrl+P)"
-          >
-            <Play className="w-4 h-4" />
-            <span className="text-xs font-medium">预览</span>
-          </button>
-          <span className="w-px h-4 bg-border" />
-        </>
-      )}
-      {onExport && (
-        <>
-          <button
-            onClick={onExport}
-            className="flex items-center gap-1.5 px-2 py-1 rounded transition-colors hover:bg-primary/10 text-foreground hover:text-primary"
-            title="导出作品"
-          >
-            <Download className="w-4 h-4" />
-            <span className="text-xs font-medium">导出</span>
-          </button>
-          <span className="w-px h-4 bg-border" />
-        </>
-      )}
-      {/* 作品墙上传按钮 */}
-      {onDirectoryUpload && (
-        <>
-          <button
-            onClick={onDirectoryUpload}
-            className="flex items-center gap-1.5 px-2 py-1 rounded transition-colors hover:bg-amber-500/10 text-foreground hover:text-amber-400"
-            title="创作者中心 - 管理平台、发布作品"
-          >
-            <Upload className="w-4 h-4" />
-            <span className="text-xs font-medium">创作者中心</span>
-          </button>
-          <span className="w-px h-4 bg-border" />
-        </>
-      )}
-      {/* 作品发现按钮 */}
-      {onDiscover && (
-        <>
-          <button
-            onClick={onDiscover}
-            className="flex items-center gap-1.5 px-2 py-1 rounded transition-colors hover:bg-purple-500/10 text-foreground hover:text-purple-400"
-            title="发现作品 - 探索去中心化作品生态"
-          >
-            <Globe className="w-4 h-4" />
-            <span className="text-xs font-medium hidden sm:inline">发现</span>
-          </button>
-          <span className="w-px h-4 bg-border" />
-        </>
-      )}
-      <button
-        onClick={onUndo}
-        disabled={!canUndo}
-        className={`p-1.5 rounded transition-colors ${canUndo ? 'hover:bg-muted text-foreground' : 'text-muted-foreground/40 cursor-not-allowed'}`}
-        title="撤销 (Ctrl+Z)"
-      >
-        <Undo2 className="w-4 h-4" />
-      </button>
-      <button
-        onClick={onRedo}
-        disabled={!canRedo}
-        className={`p-1.5 rounded transition-colors ${canRedo ? 'hover:bg-muted text-foreground' : 'text-muted-foreground/40 cursor-not-allowed'}`}
-        title="重做 (Ctrl+Y)"
-      >
-        <Redo2 className="w-4 h-4" />
-      </button>
-      {onStartTour && onShowShortcuts && (
-        <>
-          <span className="w-px h-4 bg-border" />
-          <HelpMenu
-            onStartTour={onStartTour}
-            onShowShortcuts={onShowShortcuts}
-          />
-        </>
-      )}
-    </div>
-  )
-})
-
-interface MultiSelectToolbarProps {
-  selectedCount: number
-  onCopy: () => void
-  onDelete: () => void
-  onCancel: () => void
-  onCreateGroup?: () => void
-}
-
-const MultiSelectToolbar = memo(function MultiSelectToolbar({ selectedCount, onCopy, onDelete, onCancel, onCreateGroup }: MultiSelectToolbarProps) {
-  return (
-    <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-card/95 backdrop-blur border border-primary/30 rounded-lg px-4 py-2 shadow-lg z-20">
-      <span className="text-sm font-medium text-foreground">
-        已选中 <span className="text-primary">{selectedCount}</span> 个节点
-      </span>
-      <div className="w-px h-4 bg-border" />
-      {onCreateGroup && selectedCount >= 2 && (
-        <>
-          <button
-            onClick={onCreateGroup}
-            className="flex items-center gap-1.5 px-3 py-1 text-xs bg-purple-600/90 hover:bg-purple-600 text-white rounded-md transition-colors"
-            title="创建分组"
-          >
-            <Layers className="w-3.5 h-3.5" />
-            创建分组
-          </button>
-          <div className="w-px h-4 bg-border" />
-        </>
-      )}
-      <button
-        onClick={onCopy}
-        className="flex items-center gap-1.5 px-3 py-1 text-xs bg-primary/90 hover:bg-primary text-primary-foreground rounded-md transition-colors"
-        title="复制选中节点 (Ctrl+C)"
-      >
-        <Copy className="w-3.5 h-3.5" />
-        复制
-      </button>
-      <button
-        onClick={onDelete}
-        className="flex items-center gap-1.5 px-3 py-1 text-xs bg-destructive/90 hover:bg-destructive text-destructive-foreground rounded-md transition-colors"
-        title="删除选中节点 (Delete)"
-      >
-        <Trash2 className="w-3.5 h-3.5" />
-        批量删除
-      </button>
-      <button
-        onClick={onCancel}
-        className="flex items-center gap-1.5 px-3 py-1 text-xs bg-muted hover:bg-muted/80 text-foreground rounded-md transition-colors"
-        title="取消选择 (Esc)"
-      >
-        <X className="w-3.5 h-3.5" />
-        取消选择
-      </button>
-    </div>
-  )
-})
-
-interface GroupToolbarProps {
-  group: NodeGroup
-  onToggleCollapse: () => void
-  onRename: (name: string) => void
-  onColorChange: (color: string) => void
-  onUngroup: () => void
-  onDelete: () => void
-  onClose: () => void
-}
-
-const GroupToolbar = memo(function GroupToolbar({ group, onToggleCollapse, onRename, onColorChange, onUngroup, onDelete, onClose }: GroupToolbarProps) {
-  const [showColors, setShowColors] = useState(false)
-  const [isRenaming, setIsRenaming] = useState(false)
-  const [editName, setEditName] = useState(group.name)
-  const inputRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    if (isRenaming && inputRef.current) {
-      inputRef.current.focus()
-      inputRef.current.select()
-    }
-  }, [isRenaming])
-
-  const handleSaveName = useCallback(() => {
-    if (editName.trim() && editName !== group.name) {
-      onRename(editName.trim())
-    }
-    setIsRenaming(false)
-  }, [editName, group.name, onRename])
-
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      handleSaveName()
-    } else if (e.key === 'Escape') {
-      e.preventDefault()
-      setEditName(group.name)
-      setIsRenaming(false)
-    }
-  }, [handleSaveName, group.name])
-
-  const colorInfo = GROUP_COLORS.find(c => c.value === group.color) || GROUP_COLORS[0]
-
-  return (
-    <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-card/95 backdrop-blur border rounded-lg px-4 py-2 shadow-lg z-20"
-      style={{ borderColor: colorInfo.value + '50' }}
-    >
-      <div className="flex items-center gap-2">
-        <div
-          className="w-4 h-4 rounded"
-          style={{ backgroundColor: group.color }}
-        />
-        {isRenaming ? (
-          <input
-            ref={inputRef}
-            value={editName}
-            onChange={(e) => setEditName(e.target.value)}
-            onKeyDown={handleKeyDown}
-            onBlur={handleSaveName}
-            className="text-sm font-medium bg-background border border-primary/30 rounded px-2 py-0.5 outline-none w-32"
-          />
-        ) : (
-          <span className="text-sm font-medium text-foreground">{group.name}</span>
-        )}
-        <span className="text-xs text-muted-foreground">({group.nodeIds.length} 节点)</span>
-      </div>
-
-      <div className="w-px h-4 bg-border" />
-
-      <button
-        onClick={onToggleCollapse}
-        className="flex items-center gap-1.5 px-3 py-1 text-xs bg-muted hover:bg-muted/80 text-foreground rounded-md transition-colors"
-        title={group.collapsed ? '展开分组' : '折叠分组'}
-      >
-        {group.collapsed ? (
-          <ChevronDown className="w-3.5 h-3.5" />
-        ) : (
-          <ChevronRight className="w-3.5 h-3.5" />
-        )}
-        {group.collapsed ? '展开' : '折叠'}
-      </button>
-
-      {!isRenaming && (
-        <button
-          onClick={() => setIsRenaming(true)}
-          className="flex items-center gap-1.5 px-3 py-1 text-xs bg-muted hover:bg-muted/80 text-foreground rounded-md transition-colors"
-          title="重命名分组"
-        >
-          <Pencil className="w-3.5 h-3.5" />
-          重命名
-        </button>
-      )}
-
-      <div className="relative">
-        <button
-          onClick={() => setShowColors(!showColors)}
-          className="flex items-center gap-1.5 px-3 py-1 text-xs bg-muted hover:bg-muted/80 text-foreground rounded-md transition-colors"
-          title="更改颜色"
-        >
-          <div className="w-3.5 h-3.5 rounded" style={{ backgroundColor: group.color }} />
-          颜色
-        </button>
-        {showColors && (
-          <div className="absolute top-full left-0 mt-1 flex gap-1 p-2 bg-card border rounded-lg shadow-lg z-30">
-            {GROUP_COLORS.map((color) => (
-              <button
-                key={color.value}
-                onClick={() => {
-                  onColorChange(color.value)
-                  setShowColors(false)
-                }}
-                className={`w-6 h-6 rounded transition-transform hover:scale-110 ${
-                  group.color === color.value ? 'ring-2 ring-offset-1 ring-foreground' : ''
-                }`}
-                style={{ backgroundColor: color.value }}
-                title={color.name}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="w-px h-4 bg-border" />
-
-      <button
-        onClick={onUngroup}
-        className="flex items-center gap-1.5 px-3 py-1 text-xs bg-amber-500/90 hover:bg-amber-500 text-white rounded-md transition-colors"
-        title="取消分组（保留节点）"
-      >
-        <Layers className="w-3.5 h-3.5" />
-        取消分组
-      </button>
-
-      <button
-        onClick={onDelete}
-        className="flex items-center gap-1.5 px-3 py-1 text-xs bg-destructive/90 hover:bg-destructive text-destructive-foreground rounded-md transition-colors"
-        title="删除分组及节点"
-      >
-        <Trash2 className="w-3.5 h-3.5" />
-        删除
-      </button>
-
-      <button
-        onClick={onClose}
-        className="flex items-center justify-center p-1 text-muted-foreground hover:text-foreground transition-colors"
-        title="关闭工具栏"
-      >
-        <X className="w-4 h-4" />
-      </button>
     </div>
   )
 })

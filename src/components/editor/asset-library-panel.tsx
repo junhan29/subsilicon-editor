@@ -17,16 +17,20 @@ import {
   HardDrive,
   Package,
   Loader2,
+  Tag,
 } from 'lucide-react'
 import { Input } from '@editor/components/ui/input'
 import { Button } from '@editor/components/ui/button'
+import { Label } from '@editor/components/ui/label'
+import { Textarea } from '@editor/components/ui/textarea'
+import { showToast } from './toast'
 import {
   filterAssetsByCategory,
   searchAssets,
   type AssetCategory,
   type LibraryAsset,
 } from '@editor/lib/asset-library'
-import type { StoryNode } from '@editor/types/editor'
+import type { StoryNode, StoryCharacter } from '@editor/types/editor'
 import {
   exportAssetPack,
   importAssetPack,
@@ -40,7 +44,10 @@ import {
   getAllAssets,
   deleteAsset,
   getTotalAssetSize,
+  updateAssetAnnotation,
+  saveBlobAsAsset,
   type StoredAsset,
+  type AssetAnnotation,
 } from '@editor/lib/local-db'
 
 type FilterCategory = 'all' | AssetCategory
@@ -49,6 +56,7 @@ type PanelTab = 'official' | 'mine'
 interface AssetLibraryPanelProps {
   selectedNode?: StoryNode | null
   onInsertAsset?: (asset: LibraryAsset) => void
+  characters?: StoryCharacter[]
 }
 
 const LICENSE_LABELS: Record<string, string> = {
@@ -78,7 +86,7 @@ const PANEL_TABS: { key: PanelTab; label: string; icon: typeof ImageIcon }[] = [
   { key: 'mine', label: '我的素材', icon: HardDrive },
 ]
 
-function AssetLibraryPanelImpl({ selectedNode, onInsertAsset }: AssetLibraryPanelProps) {
+function AssetLibraryPanelImpl({ selectedNode, onInsertAsset, characters = [] }: AssetLibraryPanelProps) {
   const [activePanel, setActivePanel] = useState<PanelTab>('official')
   const [activeCategory, setActiveCategory] = useState<FilterCategory>('all')
   const [searchQuery, setSearchQuery] = useState('')
@@ -96,10 +104,12 @@ function AssetLibraryPanelImpl({ selectedNode, onInsertAsset }: AssetLibraryPane
   const [deleteConfirm, setDeleteConfirm] = useState<StoredAsset | null>(null)
   const [editingAsset, setEditingAsset] = useState<StoredAsset | null>(null)
   const [editName, setEditName] = useState('')
+  const [annotatingAsset, setAnnotatingAsset] = useState<StoredAsset | null>(null)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const editInputRef = useRef<HTMLInputElement>(null)
   const blobUrlRef = useRef<string | null>(null)
+  const uploadInputRef = useRef<HTMLInputElement>(null)
 
   const loadMyAssets = useCallback(async () => {
     setIsLoading(true)
@@ -233,6 +243,37 @@ function AssetLibraryPanelImpl({ selectedNode, onInsertAsset }: AssetLibraryPane
     []
   )
 
+  // 上传图片/视频/音频文件到本地素材库
+  const handleUploadClick = useCallback(() => {
+    uploadInputRef.current?.click()
+  }, [])
+
+  const handleUploadFiles = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = e.target.files
+      if (!files || files.length === 0) return
+      e.target.value = ''
+      setErrorMsg(null)
+      let ok = 0
+      let fail = 0
+      for (const file of Array.from(files)) {
+        try {
+          await saveBlobAsAsset(file, file.name)
+          ok++
+        } catch {
+          fail++
+        }
+      }
+      if (ok > 0) {
+        await loadMyAssets()
+        showToast('success', `已添加 ${ok} 个素材${fail > 0 ? `，${fail} 个失败` : ''}`)
+      } else if (fail > 0) {
+        setErrorMsg(`${fail} 个文件添加失败`)
+      }
+    },
+    [loadMyAssets]
+  )
+
   const handleStartRename = useCallback((asset: StoredAsset) => {
     setEditingAsset(asset)
     setEditName(asset.name)
@@ -285,6 +326,14 @@ function AssetLibraryPanelImpl({ selectedNode, onInsertAsset }: AssetLibraryPane
         className="hidden"
         onChange={handleFileChange}
       />
+      <input
+        ref={uploadInputRef}
+        type="file"
+        accept="image/*,video/*,audio/*"
+        multiple
+        className="hidden"
+        onChange={handleUploadFiles}
+      />
 
       <div className="px-2.5 pt-2 pb-1 border-b">
         <div className="grid grid-cols-2 gap-0.5 bg-muted rounded-md p-0.5">
@@ -330,33 +379,47 @@ function AssetLibraryPanelImpl({ selectedNode, onInsertAsset }: AssetLibraryPane
       )}
 
       {activePanel === 'mine' && (
-        <div className="px-2.5 py-1.5 border-b flex items-center justify-between gap-1.5">
-          <span className="text-[10px] text-muted-foreground">
-            {myAssets.length} 个素材 · {formatFileSize(totalSize)}
-          </span>
-          <div className="flex gap-1">
+        <>
+          <div className="px-2.5 py-1.5 border-b">
             <Button
-              variant="ghost"
+              variant="default"
               size="sm"
-              className="h-6 px-2 text-[10px]"
-              onClick={handleImportClick}
+              className="w-full h-7 text-[10px]"
+              onClick={handleUploadClick}
               disabled={!!showProgress}
             >
               <Upload className="w-3 h-3 mr-1" />
-              导入
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 px-2 text-[10px]"
-              onClick={handleExport}
-              disabled={!!showProgress || myAssets.length === 0}
-            >
-              <Download className="w-3 h-3 mr-1" />
-              导出
+              上传图片 / 视频 / 音频
             </Button>
           </div>
-        </div>
+          <div className="px-2.5 py-1 border-b flex items-center justify-between gap-1.5">
+            <span className="text-[10px] text-muted-foreground">
+              {myAssets.length} 个素材 · {formatFileSize(totalSize)}
+            </span>
+            <div className="flex gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 text-[10px]"
+                onClick={handleImportClick}
+                disabled={!!showProgress}
+              >
+                <Package className="w-3 h-3 mr-1" />
+                导入素材包
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 text-[10px]"
+                onClick={handleExport}
+                disabled={!!showProgress || myAssets.length === 0}
+              >
+                <Download className="w-3 h-3 mr-1" />
+                导出
+              </Button>
+            </div>
+          </div>
+        </>
       )}
 
       <div className="px-2.5 py-2 border-b">
@@ -461,15 +524,17 @@ function AssetLibraryPanelImpl({ selectedNode, onInsertAsset }: AssetLibraryPane
           <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
             <HardDrive className="w-8 h-8 mb-2 opacity-30" />
             <p className="text-[11px]">暂无本地素材</p>
-            <p className="text-[9px] mt-1">导入 .sassets 素材包开始使用</p>
+            <p className="text-[9px] mt-1 text-center leading-relaxed">
+              点击上方「上传」按钮<br />添加你的图片、视频或音频
+            </p>
             <Button
-              variant="outline"
+              variant="default"
               size="sm"
               className="mt-4 h-7 text-[10px]"
-              onClick={handleImportClick}
+              onClick={handleUploadClick}
             >
               <Upload className="w-3 h-3 mr-1" />
-              导入素材包
+              上传素材
             </Button>
           </div>
         ) : (
@@ -486,6 +551,7 @@ function AssetLibraryPanelImpl({ selectedNode, onInsertAsset }: AssetLibraryPane
                 onEditChange={(v) => setEditName(v)}
                 onEditSubmit={handleRenameSubmit}
                 onDelete={() => setDeleteConfirm(asset)}
+                onAnnotate={() => setAnnotatingAsset(asset)}
               />
             ))}
           </div>
@@ -514,6 +580,19 @@ function AssetLibraryPanelImpl({ selectedNode, onInsertAsset }: AssetLibraryPane
           asset={deleteConfirm}
           onConfirm={() => handleDelete(deleteConfirm)}
           onCancel={() => setDeleteConfirm(null)}
+        />
+      )}
+
+      {annotatingAsset && (
+        <AssetAnnotationModal
+          asset={annotatingAsset}
+          characters={characters}
+          onClose={() => setAnnotatingAsset(null)}
+          onSaved={async () => {
+            const refreshed = await getAllAssets()
+            setMyAssets(refreshed)
+            setAnnotatingAsset(null)
+          }}
         />
       )}
     </div>
@@ -581,6 +660,7 @@ interface MyAssetItemProps {
   onEditChange: (v: string) => void
   onEditSubmit: () => void
   onDelete: () => void
+  onAnnotate: () => void
 }
 
 const MyAssetItem = memo(function MyAssetItem({
@@ -593,6 +673,7 @@ const MyAssetItem = memo(function MyAssetItem({
   onEditChange,
   onEditSubmit,
   onDelete,
+  onAnnotate,
 }: MyAssetItemProps) {
   const [thumbUrl, setThumbUrl] = useState<string | null>(null)
   const isAudio = asset.type.startsWith('audio/')
@@ -622,6 +703,14 @@ const MyAssetItem = memo(function MyAssetItem({
       }
     },
     [onEditSubmit]
+  )
+
+  // 检查素材是否已有标注（任意字段有值即算已标注）
+  const hasAnnotation = Boolean(
+    asset.annotation &&
+    Object.values(asset.annotation).some(
+      (v) => v != null && v !== '' && !(Array.isArray(v) && v.length === 0)
+    )
   )
 
   return (
@@ -657,9 +746,26 @@ const MyAssetItem = memo(function MyAssetItem({
         )}
         <p className="text-[9px] text-muted-foreground mt-0.5">
           {formatFileSize(asset.size)} · {asset.type.split('/')[1] || asset.type}
+          {hasAnnotation && (
+            <span className="ml-1 text-cyan-400">· 已标注</span>
+          )}
         </p>
       </div>
 
+      {/* 标注按钮常驻显示 —— 新手必须能看到这个核心功能 */}
+      <button
+        onClick={onAnnotate}
+        className={`shrink-0 h-6 px-1.5 rounded flex items-center gap-0.5 text-[9px] transition-colors ${
+          hasAnnotation
+            ? 'text-cyan-400 bg-cyan-500/10 hover:bg-cyan-500/20'
+            : 'text-muted-foreground bg-muted/40 hover:text-cyan-400 hover:bg-cyan-500/10'
+        }`}
+        title={hasAnnotation ? '编辑标注' : '标注素材（让 AI 认识这个素材）'}
+      >
+        <Tag className="w-3 h-3" />
+        {hasAnnotation ? '已标注' : '标注'}
+      </button>
+      {/* 重命名/删除保持 hover 显示，减少视觉杂乱 */}
       <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
         <button
           onClick={onEdit}
@@ -926,3 +1032,190 @@ function DeleteConfirmModal({ asset, onConfirm, onCancel }: DeleteConfirmModalPr
 
 export const AssetLibraryPanel = memo(AssetLibraryPanelImpl)
 export { AssetLibraryPanel as default }
+
+// --- 素材标注编辑弹窗 ---
+
+const USAGE_TYPES = [
+  { value: 'character_sprite', label: '角色立绘' },
+  { value: 'reference', label: '参考图（一致性锚点）' },
+  { value: 'background', label: '背景图' },
+  { value: 'cg', label: 'CG 过场' },
+  { value: 'video', label: '视频素材' },
+  { value: 'audio_bgm', label: 'BGM' },
+  { value: 'audio_se', label: '音效' },
+]
+
+const EMOTION_OPTIONS = [
+  { value: 'normal', label: '平静' },
+  { value: 'happy', label: '开心' },
+  { value: 'sad', label: '悲伤' },
+  { value: 'angry', label: '愤怒' },
+  { value: 'surprised', label: '惊讶' },
+  { value: 'embarrassed', label: '害羞' },
+  { value: 'thinking', label: '思考' },
+  { value: 'scared', label: '害怕' },
+  { value: 'crying', label: '哭泣' },
+  { value: 'laughing', label: '大笑' },
+]
+
+interface AssetAnnotationModalProps {
+  asset: StoredAsset
+  characters: StoryCharacter[]
+  onClose: () => void
+  onSaved: () => void
+}
+
+function AssetAnnotationModal({ asset, characters, onClose, onSaved }: AssetAnnotationModalProps) {
+  const [annotation, setAnnotation] = useState<AssetAnnotation>(asset.annotation || {})
+  const [saving, setSaving] = useState(false)
+  const [tagInput, setTagInput] = useState('')
+
+  const update = (patch: Partial<AssetAnnotation>) => setAnnotation((prev) => ({ ...prev, ...patch }))
+
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      const cleaned: AssetAnnotation = {}
+      for (const [k, v] of Object.entries(annotation)) {
+        if (v != null && v !== '' && !(Array.isArray(v) && v.length === 0)) {
+          (cleaned as Record<string, unknown>)[k] = v
+        }
+      }
+      await updateAssetAnnotation(asset.hash, cleaned)
+      onSaved()
+    } catch {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50" onClick={onClose}>
+      <div
+        className="bg-card border rounded-lg shadow-2xl w-[440px] max-w-[90vw] max-h-[90vh] overflow-hidden flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-4 py-3 border-b">
+          <h3 className="text-sm font-medium flex items-center gap-2">
+            <Tag className="w-4 h-4 text-cyan-400" />
+            素材标注
+          </h3>
+          <button onClick={onClose} className="w-6 h-6 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="px-4 py-3 space-y-3 overflow-y-auto">
+          <p className="text-[10px] text-muted-foreground bg-muted/30 rounded px-2 py-1.5 leading-relaxed">
+            💡 标注后，AI 会自动把素材配到合适的节点。
+            <br />例如：标注「角色=小明, 情绪=开心」的图片，AI 创建小明开心对话时就会自动用这张图。
+          </p>
+
+          <div className="space-y-1.5">
+            <Label className="text-[11px]">关联角色</Label>
+            <select
+              value={annotation.characterId || ''}
+              onChange={(e) => update({ characterId: e.target.value || undefined })}
+              className="w-full h-8 text-xs rounded-md border border-input bg-background px-2"
+            >
+              <option value="">— 不关联角色 —</option>
+              {characters.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1.5">
+              <Label className="text-[11px]">情绪/表情</Label>
+              <select
+                value={annotation.emotion || ''}
+                onChange={(e) => update({ emotion: e.target.value || undefined })}
+                className="w-full h-8 text-xs rounded-md border border-input bg-background px-2"
+              >
+                <option value="">— 无 —</option>
+                {EMOTION_OPTIONS.map((e) => (
+                  <option key={e.value} value={e.value}>{e.label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-[11px]">用途分类</Label>
+              <select
+                value={annotation.usageType || ''}
+                onChange={(e) => update({ usageType: e.target.value || undefined })}
+                className="w-full h-8 text-xs rounded-md border border-input bg-background px-2"
+              >
+                <option value="">— 自动判断 —</option>
+                {USAGE_TYPES.map((u) => (
+                  <option key={u.value} value={u.value}>{u.label}</option>
+                ))}
+              </select>
+              {annotation.usageType === 'reference' && (
+                <p className="text-[10px] text-amber-600 dark:text-amber-400 bg-amber-500/10 rounded px-2 py-1.5 leading-relaxed">
+                  💡 参考图 = 角色的「长相模板」，AI 生成立绘时保持五官、服饰一致。
+                  <br />建议：正面、清晰、单人照。需配合 ComfyUI 使用（云服务仅靠文字，长相可能不一致）。
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-[11px]">场景标签</Label>
+            <Input
+              value={annotation.sceneTag || ''}
+              onChange={(e) => update({ sceneTag: e.target.value || undefined })}
+              placeholder="如：教室、夜晚街道、森林..."
+              className="h-8 text-xs"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-[11px]">描述（自然语言）</Label>
+            <Textarea
+              value={annotation.description || ''}
+              onChange={(e) => update({ description: e.target.value || undefined })}
+              placeholder="如：小明穿着校服微笑的全身立绘"
+              className="min-h-[50px] text-xs resize-none"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-[11px]">自定义标签</Label>
+            <div className="flex flex-wrap gap-1 mb-1">
+              {(annotation.tags || []).map((t) => (
+                <span key={t} className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] rounded bg-cyan-500/10 text-cyan-600 border border-cyan-500/20">
+                  {t}
+                  <button onClick={() => update({ tags: (annotation.tags || []).filter((x) => x !== t) })}>
+                    <X className="w-2.5 h-2.5" />
+                  </button>
+                </span>
+              ))}
+            </div>
+            <Input
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && tagInput.trim()) {
+                  e.preventDefault()
+                  update({ tags: [...(annotation.tags || []), tagInput.trim()] })
+                  setTagInput('')
+                }
+              }}
+              placeholder="输入标签后回车添加"
+              className="h-7 text-xs"
+            />
+          </div>
+        </div>
+
+        <div className="border-t px-4 py-3 flex gap-2">
+          <Button variant="outline" size="sm" className="flex-1 h-8 text-xs" onClick={onClose}>
+            取消
+          </Button>
+          <Button size="sm" className="flex-1 h-8 text-xs" onClick={handleSave} disabled={saving}>
+            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : '保存标注'}
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}

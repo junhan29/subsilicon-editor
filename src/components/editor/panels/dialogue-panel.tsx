@@ -12,6 +12,7 @@ import type { BasePanelProps } from './shared-props'
 import { TEXT_ANIMATION_TYPES, ENTER_ANIMATION_TYPES, SPRITE_POSITION_TYPES, DIALOG_STYLE_TYPES, DIALOG_COLOR_OPTIONS } from './shared-props'
 import { useDebouncedState } from '@editor/lib/use-debounced-state'
 import { AiAssistButton } from '../ai-assist-button'
+import { NodeVideoBindingSection } from '../node-video-binding'
 
 export function DialoguePanel({ node, characters, variables, assets, scenes, onUpdateNode, onOpenAssets }: BasePanelProps) {
   const { data, id } = node
@@ -749,6 +750,7 @@ export function DialoguePanel({ node, characters, variables, assets, scenes, onU
           </div>
         )}
       </div>
+      <NodeVideoBindingSection node={node} onUpdateNode={onUpdateNode} />
     </>
   )
 }

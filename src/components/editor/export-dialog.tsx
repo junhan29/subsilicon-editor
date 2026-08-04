@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { X, Download, FileCode, Archive, FileText, BookOpen, Image as ImageIcon, Settings2, Loader2, Languages, Lock, ShieldCheck } from 'lucide-react'
+import { X, Download, FileCode, Archive, FileText, BookOpen, Image as ImageIcon, Settings2, Loader2, Languages, Lock, ShieldCheck, MonitorPlay, Monitor, Film, PlayCircle, ListVideo } from 'lucide-react'
 import { Button } from '@editor/components/ui/button'
 import type { StoryGraph } from '@editor/types/editor'
 import type { MonetizationConfig } from '@editor/lib/work-monetization'
@@ -15,8 +15,18 @@ import { I18nExportPanel } from './i18n-export-panel'
 import { SUBMIT_CONFIG } from '@editor/lib/submit-config'
 import { showToast } from './toast'
 import { trapFocus, focusFirstInteractive, restoreFocus } from '@editor/lib/focus-manager'
+import {
+  exportDesktopApp,
+  canBuildDesktopInstaller,
+  type DesktopAppOptions,
+} from '@editor/lib/export-desktop-app'
+import {
+  exportBilibiliInteractive,
+  type BilibiliInteractiveOptions,
+  type VideoBinding,
+} from '@editor/lib/export-bilibili-interactive'
 
-type ExportFormat = 'html' | 'zip' | 'script' | 'epub' | 'i18n' | 'story_exec'
+type ExportFormat = 'html' | 'zip' | 'script' | 'epub' | 'i18n' | 'story_exec' | 'desktop_app' | 'bilibili_interactive'
 type ImageQuality = 'original' | 'high' | 'medium' | 'low'
 
 interface ExportDialogProps {
@@ -34,6 +44,8 @@ const FORMATS: { id: ExportFormat; name: string; description: string; icon: type
   { id: 'script', name: '剧本文本', description: '剧本格式的纯文本', icon: FileText, ext: '.txt' },
   { id: 'epub', name: 'EPUB 电子书', description: '可导入阅读器阅读', icon: BookOpen, ext: '.epub' },
   { id: 'i18n', name: '翻译表', description: '提取文本用于多语言翻译', icon: Languages, ext: '.json/.csv' },
+  { id: 'desktop_app', name: '独立游戏 / 桌面软件', description: '打包为 .dmg / .exe / .AppImage', icon: MonitorPlay, ext: '.zip / 安装包' },
+  { id: 'bilibili_interactive', name: 'B 站互动视频 / 伪互动', description: '分 P 配置 CSV + 章节拼接脚本', icon: Film, ext: '.zip' },
 ]
 
 const IMAGE_QUALITY_OPTIONS: { id: ImageQuality; label: string; value: number }[] = [
@@ -93,6 +105,23 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
   const [drmKofiUrl, setDrmKofiUrl] = useState<string>('')
   const [drmCurrency, setDrmCurrency] = useState<string>('CNY')
 
+  // 独立游戏软件（桌面 App）导出
+  const [desktopVersion, setDesktopVersion] = useState<string>('1.0.0')
+  const [desktopAuthor, setDesktopAuthor] = useState<string>('')
+  const [desktopDescription, setDesktopDescription] = useState<string>('')
+  const [desktopTargets, setDesktopTargets] = useState<Record<'mac' | 'win' | 'linux' | 'current', boolean>>({
+    current: true, mac: false, win: false, linux: false,
+  })
+  const [desktopBuildLog, setDesktopBuildLog] = useState<Array<{ level: string; msg: string }>>([])
+
+  // B 站互动视频导出
+  const [biliMode, setBiliMode] = useState<'interactive' | 'pseudo'>('interactive')
+  const [biliDefaultSegSec, setBiliDefaultSegSec] = useState<number>(15)
+  const [biliBindings, setBiliBindings] = useState<Record<string, VideoBinding>>(() => {
+    return {}
+  })
+  const [buildLogCollapsed, setBuildLogCollapsed] = useState<boolean>(false)
+
   // 从 monetization 配置初始化 DRM 设置
   useEffect(() => {
     if (!monetization) return
@@ -134,10 +163,13 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
 
   const selectedTheme = READER_THEME_PRESETS.find((t) => t.id === themeId) || READER_THEME_PRESETS[0]
 
-  const themeApplicable = format !== 'script' && format !== 'i18n' && format !== 'story_exec'
+  const themeApplicable = format !== 'script' && format !== 'i18n' && format !== 'story_exec' && format !== 'desktop_app' && format !== 'bilibili_interactive'
   const assetsApplicable = format === 'zip' || format === 'epub'
   const isI18nFormat = format === 'i18n'
   const isStoryExecFormat = format === 'story_exec'
+  const isDesktopFormat = format === 'desktop_app'
+  const isBiliFormat = format === 'bilibili_interactive'
+  const canDirectBuild = canBuildDesktopInstaller()
 
   const handleExport = useCallback(async () => {
     if (exporting) return
@@ -246,6 +278,71 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
           filename = `${safeTitle}.story.html`
           break
         }
+        case 'desktop_app': {
+          setDesktopBuildLog([])
+          const platforms: DesktopAppOptions['platforms'] =
+            ((Object.keys(desktopTargets) as Array<keyof typeof desktopTargets>)
+              .filter((k) => desktopTargets[k])) as unknown as DesktopAppOptions['platforms']
+          const result = await exportDesktopApp(graph, {
+            workId: safeTitle,
+            workTitle: graph.title || safeTitle,
+            version: desktopVersion,
+            author: desktopAuthor || undefined,
+            description: desktopDescription || undefined,
+            monetization: monetization ?? undefined,
+            platforms: (platforms || []).length ? (platforms || ['current']) : ['current'],
+            onProgress: (stage, info) => {
+              const map = { shell: 20, zip: 40, build: 70, done: 90 } as const
+              setProgress(map[stage] ?? 60)
+              setDesktopBuildLog((prev) => [...prev, { level: 'info', msg: `[${stage}] ${info || ''}` }].slice(-300))
+            },
+            onBuildLog: (level, msg) => {
+              setDesktopBuildLog((prev) => [...prev, { level, msg }].slice(-300))
+            },
+          })
+          setProgress(95)
+          if (result.type === 'shell-zip' && result.zip) {
+            blob = result.zip
+            filename = result.fileName
+          } else if (result.outputs && result.outputs.length) {
+            // 已生成安装包到磁盘：打包成一个元信息文件下载（因文件在远程磁盘，浏览器侧拿不到内容；直接 toast）
+            const meta = {
+              type: 'installers',
+              shellDir: result.shellDir,
+              files: result.outputs,
+              messages: result.messages,
+              generatedAt: new Date().toISOString(),
+            }
+            blob = new Blob([JSON.stringify(meta, null, 2)], { type: 'application/json;charset=utf-8' })
+            filename = `${safeTitle}-desktop-installers.json`
+          } else {
+            const meta = { type: 'error', messages: result.messages, generatedAt: new Date().toISOString() }
+            blob = new Blob([JSON.stringify(meta, null, 2)], { type: 'application/json;charset=utf-8' })
+            filename = `${safeTitle}-desktop-build-failed.json`
+          }
+          break
+        }
+        case 'bilibili_interactive': {
+          setProgress(50)
+          const bindings = Object.values(biliBindings)
+          const result = await exportBilibiliInteractive(graph, {
+            workId: safeTitle,
+            workTitle: graph.title || safeTitle,
+            bindings,
+            pseudo: biliMode === 'pseudo',
+            defaultSegmentSec: biliDefaultSegSec,
+          })
+          setProgress(95)
+          blob = result.zip
+          filename = result.fileName
+          if (result.summary.missingBindings.length) {
+            showToast(
+              'info',
+              `仍有 ${result.summary.missingBindings.length} 个节点未绑定视频素材（清单已包含），建议在节点视频素材 Tab 补全后重导出`
+            )
+          }
+          break
+        }
       }
 
       setProgress(85)
@@ -267,7 +364,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
       const msg = err instanceof Error ? err.message : String(err)
       showToast('error', `导出失败：${msg}`)
     }
-  }, [exporting, format, graph, themeApplicable, selectedTheme, includeDebug, imageQuality, onClose, drmEnabled, drmPrice, drmFreePreview, drmUnlockMode, drmWechatQR, drmAlipayQR, drmContact, drmWebhookUrl, drmWebhookProvider, drmStripeUrl, drmPaypalUrl, drmPatreonUrl, drmKofiUrl, drmCurrency])
+  }, [exporting, format, graph, themeApplicable, selectedTheme, includeDebug, imageQuality, onClose, drmEnabled, drmPrice, drmFreePreview, drmUnlockMode, drmWechatQR, drmAlipayQR, drmContact, drmWebhookUrl, drmWebhookProvider, drmStripeUrl, drmPaypalUrl, drmPatreonUrl, drmKofiUrl, drmCurrency, desktopTargets, desktopVersion, desktopAuthor, desktopDescription, biliMode, biliDefaultSegSec, biliBindings])
 
   if (!open) return null
 
@@ -348,6 +445,244 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
 
           {isI18nFormat ? (
             <I18nExportPanel graph={graph} onImport={onImportTranslation} />
+          ) : isDesktopFormat ? (
+            <>
+              <section>
+                <div className="flex items-center gap-2 mb-2.5">
+                  <Monitor className="w-3.5 h-3.5 text-muted-foreground" />
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    桌面作品元信息
+                  </h4>
+                </div>
+                <div className="grid grid-cols-2 gap-2 mb-3">
+                  <div>
+                    <label className="text-[11px] text-muted-foreground block mb-1">版本号</label>
+                    <input
+                      type="text"
+                      value={desktopVersion}
+                      onChange={(e) => setDesktopVersion(e.target.value)}
+                      placeholder="1.0.0"
+                      className="w-full px-2 py-1.5 rounded border border-border bg-background text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] text-muted-foreground block mb-1">作者（版权页）</label>
+                    <input
+                      type="text"
+                      value={desktopAuthor}
+                      onChange={(e) => setDesktopAuthor(e.target.value)}
+                      placeholder="可选"
+                      className="w-full px-2 py-1.5 rounded border border-border bg-background text-xs"
+                    />
+                  </div>
+                </div>
+                <div className="mb-3">
+                  <label className="text-[11px] text-muted-foreground block mb-1">作品描述（About / DMG 简介）</label>
+                  <textarea
+                    value={desktopDescription}
+                    onChange={(e) => setDesktopDescription(e.target.value)}
+                    rows={2}
+                    placeholder="可选"
+                    className="w-full px-2 py-1.5 rounded border border-border bg-background text-xs resize-none"
+                  />
+                </div>
+              </section>
+              <section>
+                <div className="flex items-center gap-2 mb-2.5">
+                  <MonitorPlay className="w-3.5 h-3.5 text-muted-foreground" />
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    打包目标平台
+                  </h4>
+                </div>
+                <div className={`p-2.5 rounded-lg border border-border space-y-2 ${canDirectBuild ? '' : 'opacity-80'}`}>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {(['current', 'mac', 'win', 'linux'] as const).map((p) => (
+                      <label key={p} className={`flex items-center justify-center gap-1.5 py-2 rounded border text-[11px] cursor-pointer transition-colors ${desktopTargets[p] ? 'bg-primary/10 border-primary text-primary' : 'border-border hover:bg-muted/40'}`}>
+                        <input
+                          type="checkbox"
+                          className="w-3.5 h-3.5 accent-primary"
+                          checked={desktopTargets[p]}
+                          onChange={(e) => setDesktopTargets((s) => ({ ...s, [p]: e.target.checked }))}
+                        />
+                        <span>
+                          {p === 'current' ? '当前系统' : p === 'mac' ? 'macOS' : p === 'win' ? 'Windows' : 'Linux'}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                  <div className="text-[11px] text-muted-foreground leading-relaxed">
+                    {canDirectBuild
+                      ? '当前环境具备打包能力（SubSilicon Editor Electron 版），导出时会调用 electron-builder 在本机生成安装包，并把生成位置告知。'
+                      : '当前为纯前端环境，将生成「壳目录 ZIP」—— 你在本地解压后执行 npm install && npm run dist:xxx（xxx=mac/win/linux） 即可得到安装包。'}
+                  </div>
+                </div>
+              </section>
+              {desktopBuildLog.length > 0 && (
+                <section>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <ListVideo className="w-3.5 h-3.5 text-muted-foreground" />
+                      <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">构建日志</h4>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setBuildLogCollapsed((v) => !v)}
+                      className="text-[11px] text-muted-foreground hover:text-foreground"
+                    >
+                      {buildLogCollapsed ? '展开' : '收起'}
+                    </button>
+                  </div>
+                  {!buildLogCollapsed && (
+                    <pre className="max-h-40 overflow-auto rounded-lg border border-border bg-muted/40 p-2 text-[10px] leading-snug font-mono">
+                      {desktopBuildLog.map((l, i) => (
+                        <div key={i} className={
+                          l.level === 'error' ? 'text-rose-600' :
+                            l.level === 'warn' ? 'text-amber-600' : 'text-muted-foreground'
+                        }>
+                          {l.msg}
+                        </div>
+                      ))}
+                    </pre>
+                  )}
+                </section>
+              )}
+            </>
+          ) : isBiliFormat ? (
+            <>
+              <section>
+                <div className="flex items-center gap-2 mb-2.5">
+                  <PlayCircle className="w-3.5 h-3.5 text-muted-foreground" />
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    B 站发布模式
+                  </h4>
+                </div>
+                <div className="grid grid-cols-2 gap-2 mb-2">
+                  <button
+                    type="button"
+                    onClick={() => setBiliMode('interactive')}
+                    className={`p-2.5 rounded-lg border text-left text-xs transition-all ${
+                      biliMode === 'interactive'
+                        ? 'border-primary bg-primary/5 ring-1 ring-primary/30'
+                        : 'border-border hover:bg-muted/40'
+                    }`}
+                  >
+                    <div className="font-medium">互动视频（分 P + 选项跳转）</div>
+                    <div className="text-[10px] text-muted-foreground mt-1">
+                      上传多个分 P → 导入 CSV → B 站播放器自动弹选项，支持真·分支剧情
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBiliMode('pseudo')}
+                    className={`p-2.5 rounded-lg border text-left text-xs transition-all ${
+                      biliMode === 'pseudo'
+                        ? 'border-primary bg-primary/5 ring-1 ring-primary/30'
+                        : 'border-border hover:bg-muted/40'
+                    }`}
+                  >
+                    <div className="font-medium">伪互动（单视频 + 章节跳转）</div>
+                    <div className="text-[10px] text-muted-foreground mt-1">
+                      拼成一个视频，简介 / 置顶评论放章节链接，观众手动跳转；适合不想申互动权限的 UP
+                    </div>
+                  </button>
+                </div>
+                <div className="p-2.5 rounded-lg border border-border mb-2">
+                  <label className="text-[11px] text-muted-foreground block mb-1">
+                    默认每段占位时长（秒） · 未单独绑定素材的节点用这个值排期
+                  </label>
+                  <input
+                    type="number"
+                    min={3}
+                    max={300}
+                    value={biliDefaultSegSec}
+                    onChange={(e) => setBiliDefaultSegSec(Math.max(3, Math.min(300, Number(e.target.value))))}
+                    className="w-24 px-2 py-1.5 rounded border border-border bg-background text-sm text-center"
+                  />
+                </div>
+              </section>
+              <section>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Film className="w-3.5 h-3.5 text-muted-foreground" />
+                    <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      节点 → 视频素材绑定（共 {graph.nodes?.length || 0} 个节点）
+                    </h4>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next: Record<string, VideoBinding> = {}
+                      for (const n of graph.nodes || []) {
+                        const old = biliBindings[n.id] || {}
+                        const data = (n.data || {}) as { title?: string }
+                        next[n.id] = {
+                          nodeId: n.id,
+                          partTitle: old.partTitle || data.title || undefined,
+                          durationSec: old.durationSec,
+                          assetRef: old.assetRef,
+                          popupOffsetSec: old.popupOffsetSec,
+                        }
+                      }
+                      setBiliBindings(next)
+                      showToast('info', '已根据图重建绑定表（保留旧值）')
+                    }}
+                    className="text-[11px] text-muted-foreground hover:text-foreground"
+                  >
+                    刷新列表
+                  </button>
+                </div>
+                <div className="max-h-72 overflow-auto rounded-lg border border-border divide-y text-[11px]">
+                  {(graph.nodes || []).slice(0, 200).map((n, idx) => {
+                    const cur = biliBindings[n.id] || { nodeId: n.id }
+                    const set = <K extends keyof VideoBinding>(k: K, v: VideoBinding[K]) =>
+                      setBiliBindings((s) => ({ ...s, [n.id]: { ...(s[n.id] || { nodeId: n.id }), [k]: v } }))
+                    return (
+                      <div key={n.id} className="p-2 grid grid-cols-12 gap-1.5 items-center">
+                        <div className="col-span-2 text-muted-foreground truncate">#{idx + 1} {n.id.slice(0, 6)}</div>
+                        <div className="col-span-4">
+                          <input
+                            type="text"
+                            value={cur.partTitle || ''}
+                            onChange={(e) => set('partTitle', e.target.value)}
+                            placeholder="分 P 标题（建议 20 字内）"
+                            className="w-full px-1.5 py-1 rounded border border-border bg-background text-[11px]"
+                          />
+                        </div>
+                        <div className="col-span-2">
+                          <input
+                            type="number"
+                            value={cur.durationSec == null ? '' : cur.durationSec}
+                            onChange={(e) => set('durationSec', e.target.value === '' ? undefined : Math.max(1, Number(e.target.value)))}
+                            placeholder="秒"
+                            className="w-full px-1.5 py-1 rounded border border-border bg-background text-[11px] text-center"
+                          />
+                        </div>
+                        <div className="col-span-4">
+                          <input
+                            type="text"
+                            value={cur.assetRef || ''}
+                            onChange={(e) => set('assetRef', e.target.value)}
+                            placeholder="素材路径 / 素材库 ID"
+                            className="w-full px-1.5 py-1 rounded border border-border bg-background text-[11px]"
+                          />
+                        </div>
+                      </div>
+                    )
+                  })}
+                  {(graph.nodes?.length || 0) === 0 && (
+                    <div className="p-4 text-center text-muted-foreground">暂无节点</div>
+                  )}
+                  {(graph.nodes?.length || 0) > 200 && (
+                    <div className="p-2 text-[11px] text-muted-foreground text-center">
+                      节点过多：仅显示前 200，其余节点用默认占位
+                    </div>
+                  )}
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-1.5 leading-relaxed">
+                  素材绑定可后续回节点属性面板「视频素材」Tab 精细编辑；导出时未绑定时会自动按节点标题生成默认分 P。
+                </p>
+              </section>
+            </>
           ) : isStoryExecFormat ? (
             <>
           <section>

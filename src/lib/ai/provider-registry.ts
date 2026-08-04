@@ -1,6 +1,7 @@
 import type { AiConfig, AiProviderConfig, AiRequestOptions, AiProvider, AiStreamResult } from './types'
 import { OpenAiCompatibleProvider } from './providers/openai-compatible'
 import { ollamaProvider } from './providers/ollama-provider'
+import { runStrictConnectivityTest, PING_PROMPT } from './request-builder'
 import { initLocalModelConfig } from '../local-model-manager'
 
 initLocalModelConfig()
@@ -42,9 +43,6 @@ function buildProviders(config: AiConfig | null): AiProvider[] {
   const providers: AiProvider[] = []
 
   if (config?.enabled) {
-    // 兼容两种格式：
-    // 1. AiConfig（含 providers 数组，来自 ai-settings-panel.tsx）
-    // 2. FlatAiConfig（含单个 apiKey/apiUrl/model，来自 ai-settings-dialog.tsx / settings-page.tsx）
     if (Array.isArray(config.providers) && config.providers.length > 0) {
       for (const p of config.providers) {
         if (p.enabled && p.apiKey) {
@@ -52,7 +50,6 @@ function buildProviders(config: AiConfig | null): AiProvider[] {
         }
       }
     } else if (isFlatConfig(config)) {
-      // FlatAiConfig 格式：转换为单个 provider
       const pc = flatToProviderConfig(config)
       providers.push(new OpenAiCompatibleProvider(pc.id, pc.name, pc))
     }
@@ -232,3 +229,211 @@ async function* fallbackStream(text: string): AsyncGenerator<string, void, unkno
     await new Promise((r) => setTimeout(r, 10))
   }
 }
+
+export interface ConnectivityCheckResult {
+  ok: boolean
+  status: number
+  latencyMs: number
+  providerId: string
+  providerName: string
+  type: 'remote' | 'local'
+  error?: string
+  content?: string
+}
+
+export interface AiIndependentRunReport {
+  /** 是否存在任意一种可工作的 AI 路径 */
+  overallOk: boolean
+  /** 配置层面（enabled + apiKey/model 均已填）是否可用 */
+  configReady: boolean
+  /** 远程连通性结果 */
+  remoteResults: ConnectivityCheckResult[]
+  /** 本地连通性结果（Ollama） */
+  localResults: ConnectivityCheckResult[]
+  /** 业务级冒烟（最小 prompt 走完全链路）结果 */
+  smokeResults: ConnectivityCheckResult[]
+  /** 提示语：建议如何修复 */
+  suggestions: string[]
+  checkedAt: string
+}
+
+/**
+ * AI 独立运行自检（"接入 API 后是否可以独立运行" 的标准验证）。
+ * 三步法：
+ *   1) 配置完整度检查
+ *   2) 对每个远程/本地 provider 执行"严格同源"连通性测试
+ *   3) 用最小 prompt 走一遍完整业务链路（callAi → 解析），作为业务级冒烟
+ * 测试用 prompt 为最小 token（"Reply with one word: OK" + "Ping"），对账号成本几乎无影响。
+ */
+export async function runAiIndependentSelfCheck(
+  configOverride?: AiConfig | null
+): Promise<AiIndependentRunReport> {
+  const cfg = configOverride ?? getAiConfig() ?? null
+  const suggestions: string[] = []
+  let configReady = false
+  const remoteResults: ConnectivityCheckResult[] = []
+  const localResults: ConnectivityCheckResult[] = []
+
+  // --- 第 1 步：配置完整度 ---
+  if (!cfg) {
+    suggestions.push('尚未保存任何创境配置，请到创境设置填写 API Key / 启动本地 Ollama')
+  } else if (!cfg.enabled) {
+    suggestions.push('创境开关为"关闭"状态，请在创境设置中启用')
+  } else {
+    if (isFlatConfig(cfg)) {
+      if (!cfg.apiKey) suggestions.push('Flat 配置缺失 apiKey 字段')
+      if (!cfg.model) suggestions.push('请选择模型（Flat 配置）')
+      configReady = !!(cfg.apiKey && cfg.model)
+    } else if (Array.isArray(cfg.providers)) {
+      const enabled = cfg.providers.filter((p) => p.enabled)
+      if (enabled.length === 0) suggestions.push('未启用任何一个远程创境服务商')
+      for (const p of enabled) {
+        if (!p.apiKey) suggestions.push(`服务商 ${p.name} 未填 API Key`)
+        if (!p.model) suggestions.push(`服务商 ${p.name} 未选择模型`)
+      }
+      configReady = enabled.every((p) => !!p.apiKey && !!p.model) && enabled.length > 0
+    }
+  }
+
+  // --- 第 2 步：对每个 provider 执行连通性测试（严格同源） ---
+  const snapshotProviders = cfg !== cachedConfig || cachedProviders.length === 0
+    ? buildProviders(cfg ?? loadConfig())
+    : cachedProviders
+
+  for (const provider of snapshotProviders) {
+    if (provider.type === 'remote') {
+      try {
+        const p = provider as OpenAiCompatibleProvider
+        const res = await p.testConnectivity()
+        remoteResults.push({
+          providerId: p.id,
+          providerName: p.name,
+          type: 'remote',
+          ok: res.ok,
+          status: res.status,
+          latencyMs: res.latencyMs,
+          error: res.error,
+          content: res.content,
+        })
+      } catch (e) {
+        remoteResults.push({
+          providerId: provider.id,
+          providerName: provider.name,
+          type: 'remote',
+          ok: false,
+          status: 0,
+          latencyMs: 0,
+          error: e instanceof Error ? e.message : String(e),
+        })
+      }
+    } else {
+      try {
+        const available = await provider.isAvailable()
+        if (available) {
+          // Ollama 真正可调用 — 用最小 prompt 冒烟
+          const started = performance.now()
+          try {
+            const content = await provider.generate(PING_PROMPT)
+            localResults.push({
+              providerId: provider.id,
+              providerName: provider.name,
+              type: 'local',
+              ok: true,
+              status: 200,
+              latencyMs: performance.now() - started,
+              content,
+            })
+          } catch (err) {
+            localResults.push({
+              providerId: provider.id,
+              providerName: provider.name,
+              type: 'local',
+              ok: false,
+              status: 0,
+              latencyMs: performance.now() - started,
+              error: err instanceof Error ? err.message : String(err),
+            })
+          }
+        } else {
+          localResults.push({
+            providerId: provider.id,
+            providerName: provider.name,
+            type: 'local',
+            ok: false,
+            status: 0,
+            latencyMs: 0,
+            error: 'Ollama 未启动或未拉取模型，请执行 ollama serve && ollama pull 模型名',
+          })
+        }
+      } catch (e) {
+        localResults.push({
+          providerId: provider.id,
+          providerName: provider.name,
+          type: 'local',
+          ok: false,
+          status: 0,
+          latencyMs: 0,
+          error: e instanceof Error ? e.message : String(e),
+        })
+      }
+    }
+  }
+
+  // --- 第 3 步：完整业务链路冒烟（callAi 走 provider 回退链） ---
+  const smokeResults: ConnectivityCheckResult[] = []
+  const smokeStarted = performance.now()
+  try {
+    const result = await callAi(PING_PROMPT)
+    smokeResults.push({
+      providerId: 'business-chain',
+      providerName: '完整业务链路',
+      type: 'remote',
+      ok: !!result.trim(),
+      status: 200,
+      latencyMs: performance.now() - smokeStarted,
+      content: result.trim(),
+    })
+  } catch (e) {
+    smokeResults.push({
+      providerId: 'business-chain',
+      providerName: '完整业务链路',
+      type: 'remote',
+      ok: false,
+      status: 0,
+      latencyMs: performance.now() - smokeStarted,
+      error: e instanceof Error ? e.message : String(e),
+    })
+  }
+
+  // --- 汇总 ---
+  const anyProviderOk =
+    remoteResults.some((r) => r.ok) || localResults.some((r) => r.ok)
+  const smokeOk = smokeResults.some((r) => r.ok)
+
+  if (!anyProviderOk && remoteResults.length === 0 && localResults.filter((r) => r.ok).length === 0) {
+    // 没一个 provider 可用
+    const localErrors = localResults.filter((r) => !r.ok).map((r) => r.error).filter(Boolean) as string[]
+    if (localErrors.length) suggestions.push(...localErrors.slice(0, 2))
+    const remoteErrors = remoteResults.filter((r) => !r.ok).map((r) => `${r.providerName}: ${r.error || `HTTP ${r.status}`}`).slice(0, 3)
+    if (remoteErrors.length) suggestions.push(...remoteErrors)
+  }
+  if (!smokeOk && anyProviderOk) {
+    suggestions.push('至少有一个 provider 连通成功，但完整业务链路（callAi）失败，请检查 model 名或 quota')
+  }
+  if (smokeOk && smokeResults[0]?.content && !/ok/i.test(smokeResults[0].content)) {
+    suggestions.push(`最小 prompt 返回内容"${smokeResults[0].content.slice(0, 50)}"，与预期"OK"不一致，属正常偏差（部分模型输出有前缀）`)
+  }
+
+  return {
+    overallOk: smokeOk,
+    configReady,
+    remoteResults,
+    localResults,
+    smokeResults,
+    suggestions,
+    checkedAt: new Date().toISOString(),
+  }
+}
+
+export type AiIndependentSelfCheckReport = AiIndependentRunReport
+

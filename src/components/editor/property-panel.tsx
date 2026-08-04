@@ -5,7 +5,7 @@ import { Button } from '@editor/components/ui/button'
 import { Input } from '@editor/components/ui/input'
 import { Label } from '@editor/components/ui/label'
 import { Textarea } from '@editor/components/ui/textarea'
-import { X, Plus, Trash2, Users, ArrowRight, ChevronDown, ChevronRight, Copy, Check, Layers, MessageSquare, Sparkles, Loader2, AlertTriangle } from 'lucide-react'
+import { X, Plus, Trash2, Users, ArrowRight, ChevronDown, ChevronRight, Copy, Check, Layers, MessageSquare, Sparkles, Loader2, AlertTriangle, Film } from 'lucide-react'
 import type { StoryNode, StoryCharacter, StoryEdge, StoryVariable, CharacterGender, NodeAnnotation } from '@editor/types/editor'
 import { enhanceCharacter } from '@editor/lib/ai'
 import { showToast } from './toast'
@@ -96,6 +96,10 @@ import { ConditionPanel } from './panels/condition-panel'
 import { GatherPanel } from './panels/gather-panel'
 import { JumpPanel } from './panels/jump-panel'
 import { RandomPanel } from './panels/random-panel'
+import { AiIndependentSelfCheckPanel } from './ai-independent-self-check'
+import { collectAllVideoBindingsFromGraph } from './node-video-binding'
+import type { StoryGraph } from '@editor/types/editor'
+import type { VideoBinding } from '@editor/lib/export-bilibili-interactive'
 
 // 面板映射表
 const PANEL_MAP: Record<string, React.ComponentType<any>> = {
@@ -188,6 +192,7 @@ interface PropertyPanelProps {
   annotations?: NodeAnnotation[]
   onAddAnnotation?: (nodeId: string) => void
   onViewAnnotations?: () => void
+  graph?: StoryGraph | null
 }
 
 function PropertyPanel({
@@ -215,6 +220,7 @@ function PropertyPanel({
   annotations = [],
   onAddAnnotation,
   onViewAnnotations,
+  graph,
 }: PropertyPanelProps) {
   const [expandedCharId, setExpandedCharId] = useState<string | null>(null)
   const [copiedCharId, setCopiedCharId] = useState<string | null>(null)
@@ -440,6 +446,12 @@ function PropertyPanel({
             )}
             <p className="text-[10px] text-muted-foreground">变量可在选项节点中设置效果，用于记录好感度等数据</p>
           </div>
+
+          {/* B 站互动视频：节点 → 素材绑定的批量管理视图 */}
+          <VideoBindingsBulkSection graph={graph} />
+
+          {/* AI 独立运行自检入口 */}
+          <AiIndependentSelfCheckPanel />
 
           {/* 角色管理部分 */}
           {characters.map((char) => (
@@ -731,6 +743,85 @@ function PropertyPanel({
       <div className="p-3 border-t">
         <p className="text-[10px] text-muted-foreground text-center">按 Delete 键删除节点 · 右键节点添加批注</p>
       </div>
+    </div>
+  )
+}
+
+/** 批量查看 & 管理所有已绑定 B 站视频素材的节点（只读 + 跳转提示） */
+function VideoBindingsBulkSection({ graph }: { graph?: StoryGraph | null }) {
+  const [open, setOpen] = useState(false)
+  if (!graph) return null
+  const bindings = collectAllVideoBindingsFromGraph(graph)
+  const idToNode = new Map(graph.nodes.map((n) => [n.id, n]))
+  return (
+    <div className="rounded-xl border border-border/60 bg-muted/20 p-3.5 space-y-2.5">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between gap-2 text-left"
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-8 h-8 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center shrink-0">
+            <Film className="w-4 h-4 text-violet-600" />
+          </div>
+          <div className="min-w-0">
+            <div className="text-sm font-medium">B 站视频素材绑定 · 批量概览</div>
+            <p className="text-[11px] text-muted-foreground leading-snug">
+              共 {graph.nodes.length} 个节点，已绑定 {bindings.length} 处。点击选中节点即可在下方进行编辑。
+            </p>
+          </div>
+        </div>
+        {open ? (
+          <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
+        ) : (
+          <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+        )}
+      </button>
+      {open && (
+        <div className="rounded-lg border border-border/60 bg-background divide-y divide-border/40 overflow-hidden">
+          {bindings.length === 0 ? (
+            <div className="px-3 py-4 text-center text-[11px] text-muted-foreground italic">
+              尚未有任何节点绑定视频素材。选中具体节点，在「视频素材绑定」折叠块里编辑即可。
+            </div>
+          ) : (
+            bindings.map((b) => {
+              const node = idToNode.get(b.nodeId) as any
+              const title =
+                b.partTitle ||
+                (node?.data?.title as string | undefined) ||
+                (node?.data?.text as string | undefined)?.slice(0, 20) ||
+                b.nodeId.slice(0, 10)
+              return (
+                <div key={b.nodeId} className="px-3 py-2">
+                  <div className="text-[11px] font-medium flex items-center justify-between gap-2">
+                    <span className="truncate">{title}</span>
+                    <span className="text-[9px] font-mono text-muted-foreground shrink-0">
+                      {b.nodeId.slice(0, 8)}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 mt-1 text-[10px]">
+                    <div className="col-span-3 text-muted-foreground break-all truncate">
+                      {b.assetRef || '（未绑定素材路径）'}
+                    </div>
+                    <div>时长：{b.durationSec ?? '默认'}s</div>
+                    <div>
+                      弹窗：
+                      {b.popupOffsetSec == null
+                        ? '默认'
+                        : b.popupOffsetSec < 0
+                        ? '不显示'
+                        : `${b.popupOffsetSec}s`}
+                    </div>
+                    <div className="text-right">
+                      {(node?.type as string) || 'unknown'}
+                    </div>
+                  </div>
+                </div>
+              )
+            })
+          )}
+        </div>
+      )}
     </div>
   )
 }

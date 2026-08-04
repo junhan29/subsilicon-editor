@@ -4,11 +4,12 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { Send, Bot, User, Trash2, Sparkles, Loader2, AlertCircle, Settings, Check, X, Image, Video, Music, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
 import { showToast } from './toast'
 import { AiSettingsDialog } from './ai-settings-dialog'
-import { isAiAvailable, callAiStream, generateMedia, optimizePrompt, getMediaProviderConfig, buildConsistentImagePrompt, refreshAiConfig, type MediaProviderConfig } from '@editor/lib/ai'
+import { isAiAvailable, callAiStream, generateMedia, optimizePrompt, getMediaProviderConfig, buildConsistentImagePrompt, refreshAiConfig, type VideoGenerationParams } from '@editor/lib/ai'
 import { serializeGraphContext } from '@editor/lib/ai/chat-graph-context'
 import { getChatSystemPrompt } from '@editor/lib/ai/chat-system-prompt'
 import { parseAllAiCommands, executeAiActions, type EditorCanvasCallbacks, type MediaGenerationRequest } from '@editor/lib/ai/chat-command-executor'
 import { getModelsForProvider } from '@editor/lib/ai/model-presets'
+import { getAllAssets, saveBlobAsAsset, updateAssetAnnotation, findAssetsByAnnotation, type AssetAnnotation } from '@editor/lib/local-db'
 import type { StoryNode, StoryEdge, StoryCharacter, ComicScene } from '@editor/types/editor'
 import type { AiConfig, AiProviderConfig } from '@editor/types/ai'
 
@@ -18,6 +19,25 @@ export interface ChatMessage {
   content: string
   timestamp: number
   mediaRequests?: MediaGenerationRequest[]
+}
+
+// 新手示例问题 —— 点击即填入输入框
+const EXAMPLE_PROMPTS = [
+  '帮我写一个悬疑故事的开场',
+  '创建一个对话节点，角色是小明和小红在教室聊天',
+  '设计一个有三个选项的选择节点',
+  '保存一下我的作品',
+]
+
+// 标签中文化映射 —— 让媒体请求卡片对新手友好
+const EMOTION_LABELS: Record<string, string> = {
+  normal: '平静', happy: '开心', sad: '悲伤', angry: '愤怒',
+  surprised: '惊讶', embarrassed: '害羞', thinking: '思考',
+  scared: '害怕', crying: '哭泣', laughing: '大笑',
+}
+const USAGE_LABELS: Record<string, string> = {
+  character_sprite: '角色立绘', reference: '参考图', background: '背景图',
+  cg: 'CG过场', video: '视频', audio_bgm: 'BGM', audio_se: '音效',
 }
 
 interface AiChatPanelProps {
@@ -32,8 +52,13 @@ interface AiChatPanelProps {
   onAddNode?: (type: string, position: { x: number; y: number }, data: Record<string, unknown>) => string | undefined
   onAddEdge?: (source: string, target: string) => string | undefined
   onNodeSelect?: (nodeId: string) => void
-  collapsed?: boolean
-  onToggleCollapse?: () => void
+  onAddCharacter?: (character: StoryCharacter) => void
+  onBindAsset?: (nodeId: string, assetHash: string, usageType?: string) => Promise<boolean>
+  onSaveWork?: () => void
+  onExportWork?: () => void
+  onPreviewWork?: () => void
+  onUndo?: () => void
+  onRedo?: () => void
 }
 
 function buildCallbacks(props: AiChatPanelProps): EditorCanvasCallbacks {
@@ -45,17 +70,24 @@ function buildCallbacks(props: AiChatPanelProps): EditorCanvasCallbacks {
     onAddNode: props.onAddNode,
     onAddEdge: props.onAddEdge,
     onNodeSelect: props.onNodeSelect,
+    onAddCharacter: props.onAddCharacter,
+    onBindAsset: props.onBindAsset,
+    onSaveWork: props.onSaveWork,
+    onExportWork: props.onExportWork,
+    onPreviewWork: props.onPreviewWork,
+    onUndo: props.onUndo,
+    onRedo: props.onRedo,
   }
 }
 
 export function AiChatPanel(props: AiChatPanelProps) {
-  const { nodes, edges, characters, scenes, collapsed, onToggleCollapse } = props
+  const { nodes, edges, characters, scenes, onBindAsset } = props
 
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'welcome',
       role: 'system',
-      content: '我是创境助手，可以直接操作画布上的节点。试试对我说「创建一个对话节点」或「帮我设计一个悬疑故事开场」。',
+      content: '👋 我是创境助手，可以帮你写故事、建节点、设计分支。\n\n直接用大白话告诉我想做什么就行，比如：\n• 「帮我写一个校园恋爱故事的开场」\n• 「创建一个角色叫小明的对话节点」\n• 「设计两个选项让玩家选择」\n\n下面有几个示例，点一下就能用 👇',
       timestamp: Date.now(),
     },
   ])
@@ -177,6 +209,12 @@ export function AiChatPanel(props: AiChatPanelProps) {
     }
   }, [input])
 
+  // 点击示例问题 —— 填入输入框并聚焦
+  const handleExampleClick = (prompt: string) => {
+    setInput(prompt)
+    inputRef.current?.focus()
+  }
+
   // 发送消息
   const handleSend = async () => {
     const trimmed = input.trim()
@@ -196,8 +234,14 @@ export function AiChatPanel(props: AiChatPanelProps) {
     }
     setMessages((prev) => [...prev, userMessage])
 
-    // 构建创境请求
-    const graphContext = serializeGraphContext(nodes, edges, characters, scenes)
+    // 构建创境请求（包含已标注的素材库，让 AI 能调度素材）
+    let annotatedAssets: Awaited<ReturnType<typeof getAllAssets>> = []
+    try {
+      annotatedAssets = await getAllAssets()
+    } catch {
+      // IndexedDB 不可用时忽略
+    }
+    const graphContext = serializeGraphContext(nodes, edges, characters, scenes, annotatedAssets)
     const systemPrompt = getChatSystemPrompt(graphContext)
 
     try {
@@ -321,29 +365,29 @@ export function AiChatPanel(props: AiChatPanelProps) {
       {
         id: 'welcome-' + Date.now(),
         role: 'system',
-        content: '对话已清空。有什么我可以帮你的？',
+        content: '👋 对话已清空。直接用大白话告诉我想做什么就行！\n\n下面有几个示例，点一下就能用 👇',
         timestamp: Date.now(),
       },
     ])
     setStreamingContent('')
   }
 
-  // 处理媒体生成请求
+  // 处理媒体生成请求：生成 → 入库 → 自动标注 → 自动绑节点
   const handleGenerateMedia = useCallback(async (msgId: string, request: MediaGenerationRequest) => {
     const provider = getMediaProviderConfig()
     if (!provider) {
-      showToast('error', '请先配置媒体生成服务商（在创境设置 → 媒体生成中配置）')
+      showToast('error', '请先在创境设置中配置媒体生成服务商')
       return
     }
 
-    // 在消息中更新该请求的状态为 generating
+    // 标记为 generating
     setMessages((prev) =>
       prev.map((msg) => {
         if (msg.id !== msgId || !msg.mediaRequests) return msg
         return {
           ...msg,
-          mediaRequests: msg.mediaRequests.map((r, i) =>
-            i === msg.mediaRequests!.indexOf(request) ? { ...r, _status: 'generating' as const } : r
+          mediaRequests: msg.mediaRequests.map((r) =>
+            r === request ? { ...r, _status: 'generating' as const } : r
           ),
         }
       })
@@ -352,25 +396,90 @@ export function AiChatPanel(props: AiChatPanelProps) {
     try {
       // 优化 prompt
       const optimized = await optimizePrompt(request.prompt, request.mediaType as 'image' | 'video', request.style || 'anime')
-      const result = await generateMedia(
-        { prompt: optimized, width: request.width || 1024, height: request.height || 1024, style: (request.style || 'anime') as any },
-        provider
-      )
 
-      // 将生成结果添加到场景
+      // 查找参考图（标注为 reference 的素材），用于 ComfyUI IP-Adapter 一致性锚点
+      // 优先角色参考图（characterId），其次场景参考图（sceneTag）；仅 image 类型启用
+      let referenceImageHash: string | undefined
+      if (request.mediaType === 'image') {
+        try {
+          const query: AssetAnnotation = { usageType: 'reference' }
+          if (request.characterId) query.characterId = request.characterId
+          else if (request.sceneTag) query.sceneTag = request.sceneTag
+          if (query.characterId || query.sceneTag) {
+            const refs = await findAssetsByAnnotation(query)
+            if (refs.length > 0) referenceImageHash = refs[0].hash
+          }
+        } catch {
+          // IndexedDB 不可用时忽略
+        }
+      }
+
+      const result = request.mediaType === 'video'
+        ? await generateMedia(
+            { prompt: optimized, duration: 5 } as VideoGenerationParams,
+            provider
+          )
+        : await generateMedia(
+            {
+              prompt: optimized,
+              width: request.width || 1024,
+              height: request.height || 1024,
+              style: (request.style || 'anime') as any,
+              referenceImageHash,
+            },
+            provider
+          )
+
+      // 拉取生成结果为 Blob，入库为素材（去重），自动标注 + 绑定节点
+      let assetHash: string | undefined
+      let bound = false
+      try {
+        const resp = await fetch(result.url)
+        if (!resp.ok) throw new Error(`fetch ${resp.status}`)
+        const blob = await resp.blob()
+        const ext = (blob.type.split('/')[1] || 'bin').split(';')[0]
+        assetHash = await saveBlobAsAsset(blob, `${request.mediaType}-${Date.now()}.${ext}`)
+
+        // 自动标注：把请求里的上下文字段写入素材标注
+        const annotation: AssetAnnotation = {}
+        if (request.characterId) annotation.characterId = request.characterId
+        if (request.emotion) annotation.emotion = request.emotion
+        if (request.sceneTag) annotation.sceneTag = request.sceneTag
+        if (request.usageType) annotation.usageType = request.usageType
+        if (request.description) annotation.description = request.description
+        if (Object.keys(annotation).length > 0) {
+          await updateAssetAnnotation(assetHash, annotation)
+        }
+
+        // 自动绑定到目标节点
+        if (request.nodeId && onBindAsset) {
+          bound = await onBindAsset(request.nodeId, assetHash, request.usageType)
+        }
+
+        // 释放 Stability 等返回的 blob URL
+        if (result.cleanup) result.cleanup()
+      } catch {
+        // 入库/标注/绑定失败不阻断展示，仅 assetHash 为空
+        assetHash = undefined
+      }
+
       const mediaIcon = request.mediaType === 'image' ? '🖼️' : request.mediaType === 'video' ? '🎬' : '🎵'
+      const tail = assetHash
+        ? ` · 已入库${bound ? ' · 已绑节点' : ''}`
+        : ''
+      showToast('success', `${mediaIcon} 生成完成${tail}`)
+
       setMessages((prev) =>
         prev.map((msg) => {
           if (msg.id !== msgId || !msg.mediaRequests) return msg
           return {
             ...msg,
             mediaRequests: msg.mediaRequests.map((r) =>
-              r === request ? { ...r, _status: 'done' as const, _result: result.url } : r
+              r === request ? { ...r, _status: 'done' as const, _result: result.url, _assetHash: assetHash } : r
             ),
           }
         })
       )
-      showToast('success', `${mediaIcon} 生成完成`)
     } catch (e) {
       setMessages((prev) =>
         prev.map((msg) => {
@@ -385,7 +494,7 @@ export function AiChatPanel(props: AiChatPanelProps) {
       )
       showToast('error', `生成失败: ${e instanceof Error ? e.message : '未知错误'}`)
     }
-  }, [])
+  }, [onBindAsset])
 
   // 拒绝媒体生成
   const handleRejectMedia = useCallback((msgId: string, request: MediaGenerationRequest) => {
@@ -445,29 +554,6 @@ export function AiChatPanel(props: AiChatPanelProps) {
     })
   }
 
-  if (collapsed) {
-    return (
-      <div className="flex flex-col h-full w-10 bg-slate-900 border-r border-slate-800 items-center py-2 gap-2 shrink-0">
-        <div
-          className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shrink-0"
-          title="创境 AI 对话"
-        >
-          <Sparkles className="w-3.5 h-3.5 text-white" />
-        </div>
-        <button
-          onClick={onToggleCollapse}
-          className="p-1.5 rounded hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
-          title="展开 AI 面板"
-        >
-          <ChevronRight className="w-4 h-4" />
-        </button>
-        {aiEnabled && (
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" title="已连接" />
-        )}
-      </div>
-    )
-  }
-
   return (
     <div className="flex flex-col h-full min-w-0">
       {/* 顶部工具栏 */}
@@ -524,13 +610,6 @@ export function AiChatPanel(props: AiChatPanelProps) {
         </div>
         <div className="flex items-center gap-1">
           <button
-            onClick={onToggleCollapse}
-            className="p-1.5 rounded hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
-            title="收起 AI 面板"
-          >
-            <ChevronLeft className="w-3.5 h-3.5" />
-          </button>
-          <button
             onClick={() => setShowSettings(true)}
             className="p-1.5 rounded hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
             title="创境设置"
@@ -578,8 +657,9 @@ export function AiChatPanel(props: AiChatPanelProps) {
               {msg.mediaRequests && msg.mediaRequests.length > 0 && (
                 <div className="mt-2 space-y-2 border-t border-slate-600/30 pt-2">
                   {msg.mediaRequests.map((req, i) => {
-                    const status = (req as any)._status as string | undefined
-                    const result = (req as any)._result as string | undefined
+                    const status = req._status
+                    const result = req._result
+                    const assetHash = req._assetHash
                     const mediaIcon = req.mediaType === 'image' ? Image : req.mediaType === 'video' ? Video : Music
                     const mediaColor = req.mediaType === 'image' ? 'text-pink-400' : req.mediaType === 'video' ? 'text-purple-400' : 'text-green-400'
                     const mediaBg = req.mediaType === 'image' ? 'bg-pink-500/10 border-pink-500/20' :
@@ -588,8 +668,18 @@ export function AiChatPanel(props: AiChatPanelProps) {
                     if (status === 'done' && result) {
                       return (
                         <div key={i} className={`p-2 rounded border ${mediaBg}`}>
-                          <img src={result} alt={req.prompt} className="w-full rounded mb-1.5 max-h-48 object-cover" />
+                          {req.mediaType === 'video' ? (
+                            <video src={result} controls className="w-full rounded mb-1.5 max-h-48 object-cover" />
+                          ) : (
+                            <img src={result} alt={req.prompt} className="w-full rounded mb-1.5 max-h-48 object-cover" />
+                          )}
                           <p className="text-[10px] text-slate-400 truncate">{req.prompt}</p>
+                          {assetHash && (
+                            <p className="text-[10px] text-emerald-400 mt-1">
+                              ✓ 已入库 {assetHash.slice(0, 8)}
+                              {req.nodeId && ' · 已绑定节点'}
+                            </p>
+                          )}
                         </div>
                       )
                     }
@@ -631,7 +721,32 @@ export function AiChatPanel(props: AiChatPanelProps) {
                             {req.mediaType === 'image' ? '图片生成' : req.mediaType === 'video' ? '视频生成' : '音频生成'}
                           </span>
                         </div>
-                        <p className="text-[10px] text-slate-400 truncate mb-2">{req.prompt}</p>
+                        <p className="text-[10px] text-slate-400 truncate mb-1.5">{req.prompt}</p>
+                        {(req.characterId || req.emotion || req.sceneTag || req.usageType || req.nodeId) && (
+                          <div className="flex flex-wrap gap-1 mb-2">
+                            {req.characterId && (
+                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-300">
+                                角色:{characters.find((c) => c.id === req.characterId)?.name || req.characterId}
+                              </span>
+                            )}
+                            {req.emotion && (
+                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300">
+                                {EMOTION_LABELS[req.emotion] || req.emotion}
+                              </span>
+                            )}
+                            {req.sceneTag && <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300">{req.sceneTag}</span>}
+                            {req.usageType && (
+                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-500/20 text-slate-300">
+                                {USAGE_LABELS[req.usageType] || req.usageType}
+                              </span>
+                            )}
+                            {req.nodeId && (
+                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-300">
+                                → {String(nodes.find((n) => n.id === req.nodeId)?.data?.title || '节点')}
+                              </span>
+                            )}
+                          </div>
+                        )}
                         <div className="flex gap-1.5">
                           <button
                             onClick={() => handleGenerateMedia(msg.id, req)}
@@ -677,15 +792,34 @@ export function AiChatPanel(props: AiChatPanelProps) {
 
         {/* 创境未配置提示 */}
         {!aiEnabled && !isStreaming && messages.length <= 1 && (
-          <div className="flex flex-col items-center justify-center py-8 text-center">
+          <div className="flex flex-col items-center justify-center py-8 text-center px-4">
             <AlertCircle className="w-8 h-8 text-slate-500 mb-2" />
-            <p className="text-xs text-slate-400 mb-3">创境服务未配置</p>
+            <p className="text-xs text-slate-400 mb-1">创境服务未配置</p>
+            <p className="text-[10px] text-slate-500 mb-3 leading-relaxed">
+              配置后可以：让 AI 帮你写故事、自动创建节点、<br />设计分支选项、生成图片和视频
+            </p>
             <button
               onClick={() => setShowSettings(true)}
-              className="px-3 py-1.5 text-xs bg-amber-500/15 text-amber-400 border border-amber-500/30 rounded-lg hover:bg-amber-500/25 transition-colors"
+              className="px-4 py-2 text-xs bg-amber-500/15 text-amber-400 border border-amber-500/30 rounded-lg hover:bg-amber-500/25 transition-colors"
             >
-              配置创境服务商
+              ⚙️ 点这里配置（约 1 分钟）
             </button>
+          </div>
+        )}
+
+        {/* 示例问题按钮 —— 仅 AI 已启用、非流式、消息很少时显示 */}
+        {aiEnabled && !isStreaming && messages.length <= 1 && (
+          <div className="flex flex-col gap-1.5 px-1">
+            {EXAMPLE_PROMPTS.map((prompt, i) => (
+              <button
+                key={i}
+                onClick={() => handleExampleClick(prompt)}
+                className="text-left text-[11px] text-slate-300 bg-slate-700/30 hover:bg-slate-700/60 border border-slate-600/40 hover:border-amber-500/30 rounded-lg px-2.5 py-2 transition-colors"
+              >
+                <Sparkles className="w-3 h-3 inline mr-1.5 text-amber-400/60" />
+                {prompt}
+              </button>
+            ))}
           </div>
         )}
 
@@ -700,7 +834,7 @@ export function AiChatPanel(props: AiChatPanelProps) {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="输入你的创作需求... (Enter 发送, Shift+Enter 换行)"
+            placeholder="用大白话说你想做什么，比如「帮我写一个对话」...（Enter 发送）"
             rows={1}
             disabled={isStreaming}
             className="flex-1 text-xs rounded-lg border border-slate-600 bg-slate-700/50 px-3 py-2 text-white placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-500/50 resize-none min-h-[34px] max-h-[120px] disabled:opacity-50"
