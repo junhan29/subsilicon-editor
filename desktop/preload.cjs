@@ -17,8 +17,10 @@ contextBridge.exposeInMainWorld('__electronAPI', {
   maximizeWindow: () => ipcRenderer.send('maximizeWindow'),
   closeWindow: () => ipcRenderer.send('closeWindow'),
   checkForUpdates: () => ipcRenderer.send('checkForUpdates'),
-  downloadUpdate: () => ipcRenderer.send('downloadUpdate'),
-  installUpdate: () => ipcRenderer.send('installUpdate'),
+  // Mac 应用未签名，无法自动下载安装；统一改为打开官网下载页
+  downloadUpdate: () => ipcRenderer.send('openDownloadPage'),
+  installUpdate: () => ipcRenderer.send('openDownloadPage'),
+  openDownloadPage: () => ipcRenderer.send('openDownloadPage'),
   onUpdateChecking: (callback) => {
     const listener = () => callback()
     ipcRenderer.on('update-checking', listener)
@@ -38,16 +40,6 @@ contextBridge.exposeInMainWorld('__electronAPI', {
     const listener = (event, message) => callback(message)
     ipcRenderer.on('update-error', listener)
     return () => ipcRenderer.removeListener('update-error', listener)
-  },
-  onUpdateProgress: (callback) => {
-    const listener = (event, progress) => callback(progress)
-    ipcRenderer.on('update-progress', listener)
-    return () => ipcRenderer.removeListener('update-progress', listener)
-  },
-  onUpdateDownloaded: (callback) => {
-    const listener = () => callback()
-    ipcRenderer.on('update-downloaded', listener)
-    return () => ipcRenderer.removeListener('update-downloaded', listener)
   },
   onNewFile: (callback) => {
     const listener = () => callback()

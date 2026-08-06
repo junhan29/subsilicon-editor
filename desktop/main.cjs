@@ -7,6 +7,10 @@ const isDev = process.env.NODE_ENV === 'development'
 const isMac = process.platform === 'darwin'
 const isWin = process.platform === 'win32'
 
+// 官网下载页地址：Mac 应用未签名，无法使用 electron-updater 自动安装，
+// 检测到新版本时引导用户到浏览器下载 DMG 手动安装。
+const DOWNLOAD_PAGE_URL = 'https://subsilicon.cn/download'
+
 // 全局异常兜底，防止未捕获异常导致主进程崩溃
 process.on('uncaughtException', (error) => {
   console.error('[Main] Uncaught Exception:', error)
@@ -380,12 +384,11 @@ function setupAutoUpdate() {
     url: 'https://subsilicon.cn/releases',
   })
 
+  // 仅用于版本检测，不自动下载安装：
+  // Mac 应用未签名，Squirrel.Mac 无法替换 .app bundle，
+  // quitAndInstall 会失败；改为检测到新版本后引导用户手动下载 DMG。
   autoUpdater.autoDownload = false
-  autoUpdater.autoInstallOnAppQuit = true
-
-  autoUpdater.on('before-quit-for-update', () => {
-    console.log('[AutoUpdater] 即将退出以安装更新')
-  })
+  autoUpdater.autoInstallOnAppQuit = false
 
   autoUpdater.on('checking-for-update', () => {
     mainWindow?.webContents.send('update-checking')
@@ -396,6 +399,7 @@ function setupAutoUpdate() {
       version: info.version,
       releaseDate: info.releaseDate,
       releaseNotes: info.releaseNotes,
+      downloadUrl: DOWNLOAD_PAGE_URL,
     })
   })
 
@@ -405,20 +409,6 @@ function setupAutoUpdate() {
 
   autoUpdater.on('error', (err) => {
     mainWindow?.webContents.send('update-error', err.message)
-  })
-
-  autoUpdater.on('download-progress', (progress) => {
-    mainWindow?.webContents.send('update-progress', {
-      percent: progress.percent,
-      bytesPerSecond: progress.bytesPerSecond,
-      total: progress.total,
-      transferred: progress.transferred,
-    })
-  })
-
-  autoUpdater.on('update-downloaded', () => {
-    console.log('[AutoUpdater] 更新下载完成，等待用户安装')
-    mainWindow?.webContents.send('update-downloaded')
   })
 }
 
@@ -435,26 +425,22 @@ ipcMain.on('checkForUpdates', () => {
   })
 })
 
+// 引导用户到浏览器下载最新版本 DMG 手动安装。
+// 保留 downloadUpdate / installUpdate IPC 以兼容旧前端调用，统一重定向到下载页。
 ipcMain.on('downloadUpdate', () => {
-  if (isDev) return
-  autoUpdater.downloadUpdate().catch(err => {
-    mainWindow?.webContents.send('update-error', err.message)
-  })
+  shell.openExternal(DOWNLOAD_PAGE_URL)
+})
+
+ipcMain.on('installUpdate', () => {
+  shell.openExternal(DOWNLOAD_PAGE_URL)
+})
+
+ipcMain.on('openDownloadPage', () => {
+  shell.openExternal(DOWNLOAD_PAGE_URL)
 })
 
 ipcMain.handle('getAppPath', () => {
   return app.getAppPath()
-})
-
-ipcMain.on('installUpdate', () => {
-  if (isDev) return
-  console.log('[AutoUpdater] 用户触发安装，准备退出并安装')
-  try {
-    autoUpdater.quitAndInstall(true, true)
-  } catch (err) {
-    console.error('[AutoUpdater] 安装失败:', err)
-    mainWindow?.webContents.send('update-error', err.message)
-  }
 })
 
 ipcMain.on('openExternal', (event, url) => {

@@ -34,14 +34,19 @@ declare global {
       maximizeWindow: () => void
       closeWindow: () => void
       checkForUpdates: () => void
+      // Mac 应用未签名，无法自动下载安装；以下三个方法统一打开官网下载页
       downloadUpdate: () => void
       installUpdate: () => void
+      openDownloadPage: () => void
       onUpdateChecking: (callback: () => void) => () => void
-      onUpdateAvailable: (callback: (info: { version: string }) => void) => () => void
+      onUpdateAvailable: (callback: (info: {
+        version: string
+        releaseDate?: string
+        releaseNotes?: string
+        downloadUrl?: string
+      }) => void) => () => void
       onUpdateNotAvailable: (callback: () => void) => () => void
       onUpdateError: (callback: (message: string) => void) => () => void
-      onUpdateProgress: (callback: (progress: { percent: number }) => void) => () => void
-      onUpdateDownloaded: (callback: () => void) => () => void
       onNewFile: (callback: () => void) => () => void
       onOpenFile: (callback: () => void) => () => void
       onSaveFile: (callback: () => void) => () => void

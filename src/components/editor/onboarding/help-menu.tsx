@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { HelpCircle, X, Play, Keyboard, BookOpen, MessageCircle, Lightbulb, RefreshCw, CheckCircle2, AlertCircle, Download, RotateCcw } from 'lucide-react'
+import { HelpCircle, X, Play, Keyboard, Lightbulb, RefreshCw, CheckCircle2, AlertCircle, Download, ExternalLink } from 'lucide-react'
 import { Button } from '@editor/components/ui/button'
 import { showToast } from '../toast'
 
@@ -14,14 +14,14 @@ interface UpdateInfo {
   version: string
   releaseDate?: string
   releaseNotes?: string
+  downloadUrl?: string
 }
 
 export function HelpMenu({ onStartTour, onShowShortcuts }: HelpMenuProps) {
   const [open, setOpen] = useState(false)
   const [updateChecking, setUpdateChecking] = useState(false)
-  const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'available' | 'downloading' | 'downloaded' | 'not-available' | 'error'>('idle')
+  const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'available' | 'not-available' | 'error'>('idle')
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null)
-  const [downloadProgress, setDownloadProgress] = useState(0)
   const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -52,20 +52,11 @@ export function HelpMenu({ onStartTour, onShowShortcuts }: HelpMenuProps) {
         setUpdateStatus('error')
         showToast('error', `更新检查失败: ${message}`)
       })
-      api.onUpdateProgress((progress) => {
-        setUpdateStatus('downloading')
-        setDownloadProgress(Math.round(progress.percent))
-      })
-      api.onUpdateDownloaded(() => {
-        setUpdateStatus('downloaded')
-        setDownloadProgress(100)
-        showToast('success', '更新已下载完成，点击重启安装')
-      })
     }
   }, [])
 
   const handleCheckUpdates = useCallback(() => {
-    if (updateChecking || updateStatus === 'downloading') return
+    if (updateChecking || updateStatus === 'checking') return
     setUpdateChecking(true)
     setUpdateStatus('checking')
 
@@ -78,17 +69,11 @@ export function HelpMenu({ onStartTour, onShowShortcuts }: HelpMenuProps) {
     }, 10000)
   }, [updateChecking, updateStatus])
 
+  // Mac 应用未签名，无法在应用内自动下载安装；引导用户到浏览器下载 DMG 手动安装
   const handleDownloadUpdate = useCallback(() => {
     if (typeof window !== 'undefined' && window.__electronAPI) {
-      window.__electronAPI.downloadUpdate()
-      setUpdateStatus('downloading')
-      setDownloadProgress(0)
-    }
-  }, [])
-
-  const handleInstallUpdate = useCallback(() => {
-    if (typeof window !== 'undefined' && window.__electronAPI) {
-      window.__electronAPI.installUpdate()
+      window.__electronAPI.openDownloadPage()
+      showToast('info', '已在浏览器打开下载页，请下载最新版本 DMG 安装')
     }
   }, [])
 
@@ -108,15 +93,15 @@ export function HelpMenu({ onStartTour, onShowShortcuts }: HelpMenuProps) {
     {
       icon: updateChecking
         ? <RefreshCw className="w-4 h-4 animate-spin" />
-        : updateStatus === 'available' || updateStatus === 'downloading' || updateStatus === 'downloaded'
+        : updateStatus === 'available'
         ? <AlertCircle className="w-4 h-4 text-amber-400" />
         : updateStatus === 'not-available'
         ? <CheckCircle2 className="w-4 h-4 text-green-500" />
         : <RefreshCw className="w-4 h-4" />,
       label: '检查更新',
-      desc: updateChecking ? '检查中...' : updateStatus === 'available' ? `发现新版本 v${updateInfo?.version}` : updateStatus === 'downloading' ? `下载中 ${downloadProgress}%` : updateStatus === 'downloaded' ? '已下载，等待安装' : updateStatus === 'not-available' ? '已是最新版本' : '手动检查更新',
+      desc: updateChecking ? '检查中...' : updateStatus === 'available' ? `发现新版本 v${updateInfo?.version}` : updateStatus === 'not-available' ? '已是最新版本' : '手动检查更新',
       onClick: handleCheckUpdates,
-      disabled: updateChecking || updateStatus === 'downloading',
+      disabled: updateChecking,
     },
   ]
 
@@ -186,8 +171,8 @@ export function HelpMenu({ onStartTour, onShowShortcuts }: HelpMenuProps) {
             ))}
           </div>
 
-          {/* 更新详情面板 */}
-          {updateInfo && (updateStatus === 'available' || updateStatus === 'downloading' || updateStatus === 'downloaded') && (
+          {/* 更新详情面板：检测到新版本时显示更新日志和前往下载按钮 */}
+          {updateInfo && updateStatus === 'available' && (
             <div className="mx-2 mb-2 p-3 rounded-lg bg-amber-500/5 border border-amber-500/20">
               <div className="flex items-center gap-2 mb-2">
                 <Download className="w-3.5 h-3.5 text-amber-500" />
@@ -205,40 +190,17 @@ export function HelpMenu({ onStartTour, onShowShortcuts }: HelpMenuProps) {
                 </div>
               )}
 
-              {/* 下载进度条 */}
-              {updateStatus === 'downloading' && (
-                <div className="mb-2">
-                  <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-amber-500 transition-all duration-300"
-                      style={{ width: `${downloadProgress}%` }}
-                    />
-                  </div>
-                  <p className="text-[10px] text-muted-foreground mt-1 text-center">{downloadProgress}%</p>
-                </div>
-              )}
+              <p className="text-[10px] text-muted-foreground mb-2">
+                应用未签名，需在浏览器下载 DMG 手动安装
+              </p>
 
-              {/* 操作按钮 */}
-              <div className="flex gap-2">
-                {updateStatus === 'available' && (
-                  <button
-                    onClick={handleDownloadUpdate}
-                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-500/15 hover:bg-amber-500/25 text-amber-600 dark:text-amber-400 text-xs font-medium transition-colors"
-                  >
-                    <Download className="w-3 h-3" />
-                    下载更新
-                  </button>
-                )}
-                {updateStatus === 'downloaded' && (
-                  <button
-                    onClick={handleInstallUpdate}
-                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md bg-green-500/15 hover:bg-green-500/25 text-green-600 dark:text-green-400 text-xs font-medium transition-colors"
-                  >
-                    <RotateCcw className="w-3 h-3" />
-                    重启安装
-                  </button>
-                )}
-              </div>
+              <button
+                onClick={handleDownloadUpdate}
+                className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-500/15 hover:bg-amber-500/25 text-amber-600 dark:text-amber-400 text-xs font-medium transition-colors"
+              >
+                <ExternalLink className="w-3 h-3" />
+                前往下载页
+              </button>
             </div>
           )}
 

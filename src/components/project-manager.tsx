@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Plus, FolderOpen, Settings, Trash2, Copy, Edit3, MoreHorizontal, BookOpen, Clock, FileText, Sparkles, RefreshCw, Download, RotateCcw, AlertCircle, CheckCircle2, X, FolderSync, CheckCircle, Search, Grid, List, Star, HardDrive, Hash, AlertTriangle } from 'lucide-react'
+import { Plus, FolderOpen, Settings, Trash2, Copy, Edit3, MoreHorizontal, BookOpen, Clock, FileText, Sparkles, RefreshCw, Download, ExternalLink, AlertCircle, CheckCircle2, X, FolderSync, CheckCircle, Search, Grid, List, Star, HardDrive, Hash, AlertTriangle } from 'lucide-react'
 import type { StoryGraph } from '@editor/types/editor'
 import { getAllWorks, loadWork, saveWork, deleteWork, generateProjectId, type StoredWork } from '@editor/lib/local-db/work-store'
 
-type UpdateStatus = 'idle' | 'checking' | 'available' | 'downloading' | 'downloaded' | 'not-available' | 'error'
-interface UpdateInfo { version: string; releaseDate?: string; releaseNotes?: string }
+// Mac 应用未签名，无法在应用内自动下载安装；仅保留版本检测，引导用户手动下载
+type UpdateStatus = 'idle' | 'checking' | 'available' | 'not-available' | 'error'
+interface UpdateInfo { version: string; releaseDate?: string; releaseNotes?: string; downloadUrl?: string }
 
 const emptyGraph: StoryGraph = {
   title: '未命名故事',
@@ -69,9 +70,7 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings }: 
 
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus>('idle')
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null)
-  const [downloadProgress, setDownloadProgress] = useState(0)
   const [updateError, setUpdateError] = useState<string | null>(null)
-  const [isInApplications, setIsInApplications] = useState(true)
   const updateInitRef = useRef(false)
 
   useEffect(() => {
@@ -79,12 +78,6 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings }: 
     updateInitRef.current = true
     const api = window.__electronAPI
     if (!api) return
-
-    api.getAppPath?.().then((path: string) => {
-      if (path && !path.startsWith('/Applications/') && !path.includes('/Applications/')) {
-        setIsInApplications(false)
-      }
-    }).catch(() => {})
 
     const unsubs = [
       api.onUpdateChecking(() => {
@@ -101,14 +94,6 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings }: 
         setUpdateStatus('error')
         setUpdateError(message || '更新失败')
       }),
-      api.onUpdateProgress((p: { percent: number }) => {
-        setUpdateStatus('downloading')
-        setDownloadProgress(Math.round(p.percent))
-      }),
-      api.onUpdateDownloaded(() => {
-        setUpdateStatus('downloaded')
-        setDownloadProgress(100)
-      }),
     ]
 
     setTimeout(() => api.checkForUpdates(), 2000)
@@ -117,20 +102,15 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings }: 
   }, [])
 
   const handleCheckUpdates = () => {
-    if (updateStatus === 'checking' || updateStatus === 'downloading') return
+    if (updateStatus === 'checking') return
     setUpdateStatus('checking')
     window.__electronAPI?.checkForUpdates()
     setTimeout(() => setUpdateStatus(s => s === 'checking' ? 'idle' : s), 15000)
   }
 
+  // Mac 应用未签名，无法在应用内自动下载安装；引导用户到浏览器下载 DMG 手动安装
   const handleDownloadUpdate = () => {
-    window.__electronAPI?.downloadUpdate()
-    setUpdateStatus('downloading')
-    setDownloadProgress(0)
-  }
-
-  const handleInstallUpdate = () => {
-    window.__electronAPI?.installUpdate()
+    window.__electronAPI?.openDownloadPage()
   }
 
   // 打开新建项目对话框
@@ -350,30 +330,24 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings }: 
         <div className="flex items-center gap-2">
           <button
             onClick={handleCheckUpdates}
-            disabled={updateStatus === 'checking' || updateStatus === 'downloading'}
+            disabled={updateStatus === 'checking'}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg transition-colors ${
               updateStatus === 'available'
                 ? 'bg-amber-500/15 text-amber-400 hover:bg-amber-500/25'
-                : updateStatus === 'downloaded'
-                ? 'bg-green-500/15 text-green-400 hover:bg-green-500/25'
                 : updateStatus === 'not-available'
                 ? 'text-green-400 hover:bg-slate-800'
                 : 'text-slate-400 hover:text-white hover:bg-slate-800'
-            } ${(updateStatus === 'checking' || updateStatus === 'downloading') ? 'opacity-50 cursor-not-allowed' : ''}`}
+            } ${updateStatus === 'checking' ? 'opacity-50 cursor-not-allowed' : ''}`}
             title={
               updateStatus === 'available' ? `发现新版本 v${updateInfo?.version}` :
-              updateStatus === 'downloaded' ? '已下载，点击安装' :
               updateStatus === 'checking' ? '检查中...' :
-              updateStatus === 'downloading' ? `下载中 ${downloadProgress}%` :
               '检查更新'
             }
           >
             {updateStatus === 'checking' ? (
               <RefreshCw className="w-4 h-4 animate-spin" />
-            ) : updateStatus === 'available' || updateStatus === 'downloading' ? (
+            ) : updateStatus === 'available' ? (
               <Download className="w-4 h-4" />
-            ) : updateStatus === 'downloaded' ? (
-              <RotateCcw className="w-4 h-4" />
             ) : updateStatus === 'not-available' ? (
               <CheckCircle2 className="w-4 h-4" />
             ) : (
@@ -381,8 +355,6 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings }: 
             )}
             {updateStatus === 'checking' ? '检查中' :
              updateStatus === 'available' ? '有更新' :
-             updateStatus === 'downloading' ? `${downloadProgress}%` :
-             updateStatus === 'downloaded' ? '安装' :
              updateStatus === 'not-available' ? '已是最新' :
              '检查更新'}
           </button>
@@ -396,8 +368,8 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings }: 
         </div>
       </header>
 
-      {/* 更新通知横幅 */}
-      {(updateStatus === 'available' || updateStatus === 'downloading' || updateStatus === 'downloaded' || updateStatus === 'error') && updateInfo && (
+      {/* 更新通知横幅：检测到新版本时引导用户到浏览器下载 DMG 手动安装 */}
+      {(updateStatus === 'available' || updateStatus === 'error') && updateInfo && (
         <div className={`mx-6 mt-3 mb-0 p-4 rounded-xl border ${
           updateStatus === 'error'
             ? 'bg-red-500/10 border-red-500/20'
@@ -406,15 +378,9 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings }: 
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3 min-w-0">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-                updateStatus === 'downloaded' ? 'bg-green-500/15' :
-                updateStatus === 'error' ? 'bg-red-500/15' :
-                'bg-amber-500/15'
+                updateStatus === 'error' ? 'bg-red-500/15' : 'bg-amber-500/15'
               }`}>
-                {updateStatus === 'downloading' ? (
-                  <RefreshCw className="w-4 h-4 text-amber-400 animate-spin" />
-                ) : updateStatus === 'downloaded' ? (
-                  <CheckCircle2 className="w-4 h-4 text-green-400" />
-                ) : updateStatus === 'error' ? (
+                {updateStatus === 'error' ? (
                   <AlertTriangle className="w-4 h-4 text-red-400" />
                 ) : (
                   <AlertCircle className="w-4 h-4 text-amber-400" />
@@ -423,8 +389,6 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings }: 
               <div className="min-w-0">
                 <p className="text-sm font-medium text-white">
                   {updateStatus === 'available' && `新版本 v${updateInfo.version} 可用`}
-                  {updateStatus === 'downloading' && `正在下载更新 ${downloadProgress}%`}
-                  {updateStatus === 'downloaded' && `更新已下载完成`}
                   {updateStatus === 'error' && `更新失败`}
                 </p>
                 {updateStatus === 'error' && updateError && (
@@ -435,35 +399,21 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings }: 
                     {updateInfo.releaseNotes.split('\n').slice(1, 3).join(' · ').replace(/^##\s*/, '')}
                   </p>
                 )}
-                {updateStatus === 'downloaded' && !isInApplications && (
-                  <p className="text-xs text-amber-400 mt-0.5">
-                    提示：请将应用移到 Applications 文件夹后再安装
+                {updateStatus === 'available' && (
+                  <p className="text-[11px] text-amber-400/80 mt-0.5">
+                    应用未签名，需在浏览器下载 DMG 手动安装
                   </p>
                 )}
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              {updateStatus === 'downloading' && (
-                <div className="w-24 h-1.5 bg-slate-700 rounded-full overflow-hidden">
-                  <div className="h-full bg-amber-500 transition-all duration-300 rounded-full" style={{ width: `${downloadProgress}%` }} />
-                </div>
-              )}
               {updateStatus === 'available' && (
                 <button
                   onClick={handleDownloadUpdate}
                   className="flex items-center gap-1.5 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-medium rounded-lg transition-colors"
                 >
-                  <Download className="w-3.5 h-3.5" />
-                  下载更新
-                </button>
-              )}
-              {updateStatus === 'downloaded' && (
-                <button
-                  onClick={handleInstallUpdate}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-xs font-medium rounded-lg transition-colors"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  重启安装
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  前往下载
                 </button>
               )}
               {updateStatus === 'error' && (
@@ -475,14 +425,12 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings }: 
                   重试
                 </button>
               )}
-              {(updateStatus === 'available' || updateStatus === 'downloaded' || updateStatus === 'error') && (
-                <button
-                  onClick={() => { setUpdateStatus('idle'); setUpdateInfo(null); setUpdateError(null) }}
-                  className="p-2 rounded-lg hover:bg-slate-800 text-slate-500 hover:text-slate-300 transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
+              <button
+                onClick={() => { setUpdateStatus('idle'); setUpdateInfo(null); setUpdateError(null) }}
+                className="p-2 rounded-lg hover:bg-slate-800 text-slate-500 hover:text-slate-300 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
           </div>
         </div>
