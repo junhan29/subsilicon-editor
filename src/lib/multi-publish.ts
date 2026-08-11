@@ -1,9 +1,10 @@
 import type { StoryGraph } from '@editor/types/editor'
+import type { WorkTypeId } from '@editor/types/work'
 import {
   listProviders,
   type SubmitProvider,
 } from '@editor/lib/submit-providers'
-import { exportPreviewHTML } from '@editor/lib/export-preview-html'
+import { getWorkType } from '@editor/lib/work-registry'
 import { getAccount } from '@editor/lib/local-account-store'
 
 export interface PublishRecord {
@@ -117,7 +118,8 @@ export async function publishToProvider(
   provider: SubmitProvider,
   graph: StoryGraph,
   workId: string,
-  options: PublishOptions
+  options: PublishOptions,
+  workType: WorkTypeId = 'interactive-narrative'
 ): Promise<{ success: boolean; remoteWorkId?: string; error?: string }> {
   const account = getAccount()
   if (!account) {
@@ -125,7 +127,9 @@ export async function publishToProvider(
   }
 
   try {
-    const previewHtml = exportPreviewHTML(graph)
+    // v2.0：按作品类型生成预览产物（互动叙事保持 v1.x 行为）
+    const adapter = getWorkType(workType)
+    const previewHtml = await adapter.getPreviewHTML(graph)
     const previewBlob = new Blob([previewHtml], { type: 'text/html;charset=utf-8' })
 
     const formData = new FormData()
@@ -185,6 +189,7 @@ export async function publishToMultiple(
   graph: StoryGraph,
   workId: string,
   options: PublishOptions,
+  workType: WorkTypeId = 'interactive-narrative',
   onProgress?: (providerId: string, status: 'publishing' | 'success' | 'failed', error?: string) => void
 ): Promise<MultiPublishResult[]> {
   const providers = listProviders().filter(p => providerIds.includes(p.id) && p.enabled)
@@ -201,7 +206,7 @@ export async function publishToMultiple(
 
     onProgress?.(provider.id, 'publishing')
 
-    const result = await publishToProvider(provider, graph, workId, options)
+    const result = await publishToProvider(provider, graph, workId, options, workType)
 
     if (result.success) {
       updatePublishRecord(record.id, {

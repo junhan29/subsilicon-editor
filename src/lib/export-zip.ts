@@ -1,8 +1,35 @@
 import JSZip from 'jszip'
 import { exportToHTML } from './export-html'
 import type { StoryGraph } from '@editor/types/editor'
+import type { MonetizationConfig } from '@editor/lib/work-monetization'
 
-function extractAssets(graph: StoryGraph): Array<{ name: string; blob: Blob }> {
+/** 收集付费节点 id（paidNodes + paidChapters） */
+function collectPaidNodeIds(graph: StoryGraph): Set<string> {
+  const monetization = graph.monetization as MonetizationConfig | undefined
+  const ids = new Set<string>()
+  if (!monetization?.enabled) return ids
+  for (const id of monetization.paidNodes || []) ids.add(id)
+  for (const ch of monetization.paidChapters || []) {
+    for (const id of ch.nodeIds || []) ids.add(id)
+  }
+  return ids
+}
+
+/**
+ * 构建分发版 graph：付费节点内容置为占位。
+ * story.json 与 HTML 一样是分发物，不能携带付费节点明文，
+ * 否则解压 ZIP 即可免费读取全部付费内容。
+ */
+function sanitizeGraphForDistribution(graph: StoryGraph, paidIds: Set<string>): StoryGraph {
+  if (paidIds.size === 0) return graph
+  const nodes = (graph.nodes || []).map((node) => {
+    if (!paidIds.has(node.id)) return node
+    return { ...node, data: { locked: true, label: '付费内容' } }
+  })
+  return { ...graph, nodes }
+}
+
+function extractAssets(graph: StoryGraph, paidIds: Set<string> = new Set()): Array<{ name: string; blob: Blob }> {
   const assets: Array<{ name: string; blob: Blob }> = []
   let audioIndex = 0
   let imageIndex = 0
@@ -55,9 +82,10 @@ function extractAssets(graph: StoryGraph): Array<{ name: string; blob: Blob }> {
     }
   }
 
-  // 提取节点资源（CG、音频、视频等）
+  // 提取节点资源（CG、音频、视频等）——付费节点资源不随 ZIP 分发
   if (graph.nodes) {
     for (const node of graph.nodes) {
+      if (paidIds.has(node.id)) continue
       const data = node.data as Record<string, unknown> | undefined
       if (!data) continue
 
@@ -124,15 +152,21 @@ function buildReadme(graph: StoryGraph): string {
 export async function exportToZIP(graph: StoryGraph): Promise<Blob> {
   const zip = new JSZip()
 
-  const html = await exportToHTML(graph)
+  const paidIds = collectPaidNodeIds(graph)
+
+  // index.html 同样使用付费内容打码后的副本：此前直接 exportToHTML(graph)，
+  // 未传 monetization 导致 encryptPaidContent 被跳过、isNodeUnlocked 恒返回 true，
+  // 付费节点文本与内嵌素材（dataURL）在 ZIP 内明文可见，story.json 打码被完全绕过。
+  const html = await exportToHTML(sanitizeGraphForDistribution(graph, paidIds))
   zip.file('index.html', html)
 
-  const assets = extractAssets(graph)
+  const assets = extractAssets(graph, paidIds)
   for (const asset of assets) {
     zip.file(asset.name, asset.blob)
   }
 
-  zip.file('story.json', JSON.stringify(graph, null, 2))
+  // story.json 使用付费内容打码后的副本，付费节点明文不随 ZIP 分发
+  zip.file('story.json', JSON.stringify(sanitizeGraphForDistribution(graph, paidIds), null, 2))
   zip.file('README.txt', buildReadme(graph))
 
   return await zip.generateAsync({ type: 'blob' })

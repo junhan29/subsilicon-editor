@@ -17,6 +17,7 @@ import {
   type Node,
   type Edge as RFEdge,
   type NodeChange,
+  type NodeProps,
 } from '@xyflow/react'
 import { X, ShieldCheck, MessageSquare, PanelRight, Workflow, Image, Search, Settings, User, BarChart3, GitBranch, Bot } from 'lucide-react'
 import clsx from 'clsx'
@@ -67,6 +68,7 @@ import { StoryPreview } from './preview/story-preview'
 import { AlignmentLines } from './alignment-lines'
 import type { AlignmentGuide } from '@editor/lib/alignment-guides'
 import type { StoryNode, StoryEdge, StoryCharacter, StoryGraph, ComicScene, ComicAudio, NodeGroup, NodeTemplate, CharacterSprite, NodeAnnotation, AnnotationType } from '@editor/types/editor'
+import type { WorkTypeId } from '@editor/types/work'
 import type { MonetizationConfig } from '@editor/lib/work-monetization'
 import { GROUP_COLORS } from '@editor/types/editor'
 import { parseOutline, generateNodesFromOutline, generateOutlineFromNodes } from '@editor/lib/outline-parser'
@@ -88,8 +90,8 @@ import { matchShortcut } from '@editor/lib/shortcut-manager'
 import { toggleTheme, initTheme, type Theme, subscribeTheme } from '@editor/lib/theme-manager'
 import { startSession, endSession, recordAction, estimateWordCount } from '@editor/lib/writing-stats'
 
-// 为所有节点类型包裹批注标记
-const nodeTypes = {
+// 为所有节点类型包裹批注标记（random 在组件内动态包装以传入 updateNodeData）
+const baseNodeTypes = {
   dialogue: withAnnotationMarker(DialogueNode),
   narration: withAnnotationMarker(NarrationNode),
   choice: withAnnotationMarker(ChoiceNode),
@@ -99,12 +101,33 @@ const nodeTypes = {
   condition: withAnnotationMarker(ConditionNode),
   cg: withAnnotationMarker(CgNode),
   jump: withAnnotationMarker(JumpNode),
-  random: withAnnotationMarker(RandomNode),
   group: GroupNode,
 }
 
 const edgeTypes = {
   default: CustomEdge,
+}
+
+/**
+ * 复制/粘贴/插入模板后重映射节点内部引用（jump 的 targetNodeId、random 选项的 targetId）。
+ * idMap 为「旧 id → 新 id」。内部引用指向本次副本内的节点时替换为副本 id，
+ * 指向组外节点时保留原 id（引用的原节点仍存在）。
+ */
+function remapNodeRefsInGraph(nodes: StoryNode[], idMap: Map<string, string>): void {
+  for (const node of nodes) {
+    const data = node.data as Record<string, unknown>
+    if (typeof data.targetNodeId === 'string' && idMap.has(data.targetNodeId)) {
+      data.targetNodeId = idMap.get(data.targetNodeId) as string
+    }
+    const options = data.options as Array<Record<string, unknown>> | undefined
+    if (Array.isArray(options)) {
+      for (const opt of options) {
+        if (opt && typeof opt.targetId === 'string' && idMap.has(opt.targetId)) {
+          opt.targetId = idMap.get(opt.targetId) as string
+        }
+      }
+    }
+  }
 }
 
 interface StoryCanvasProps {
@@ -115,9 +138,11 @@ interface StoryCanvasProps {
   onStartTour?: () => void
   workId?: string
   onBack?: () => void
+  /** v2.0：作品类型（默认互动叙事） */
+  workType?: WorkTypeId
 }
 
-export function StoryCanvas({ initialGraph, onSave, onGraphChange, templateId, onStartTour, workId, onBack }: StoryCanvasProps) {
+export function StoryCanvas({ initialGraph, onSave, onGraphChange, templateId, onStartTour, workId, onBack, workType = 'interactive-narrative' }: StoryCanvasProps) {
   return (
     <ReactFlowProvider>
       <A11yAnnouncer>
@@ -129,13 +154,14 @@ export function StoryCanvas({ initialGraph, onSave, onGraphChange, templateId, o
           onStartTour={onStartTour}
           workId={workId}
           onBack={onBack}
+          workType={workType}
         />
       </A11yAnnouncer>
     </ReactFlowProvider>
   )
 }
 
-function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onStartTour, workId, onBack }: StoryCanvasProps) {
+function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onStartTour, workId, onBack, workType = 'interactive-narrative' }: StoryCanvasProps) {
   const [nodes, setNodes] = useNodesState(initialGraph?.nodes || [])
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialGraph?.edges || [])
   const [groups, setGroups] = useState<NodeGroup[]>(initialGraph?.groups || [])
@@ -153,6 +179,14 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
     { id: 'scene-default', name: '默认场景', backgroundImage: 'https://picsum.photos/seed/default-scene/800/600' },
   ])
   const audioRef = useRef<ComicAudio[]>(initialGraph?.audios || [])
+  // scenes/audios 存于 ref（避免大数组进入渲染依赖），用版本号驱动 graph 重算：
+  // 面板编辑场景/音频后，若版本号不变，graph memo 不会重建，保存/预览/导出会拿到旧数据。
+  const [scenesVersion, setScenesVersion] = useState(0)
+  const [audiosVersion, setAudiosVersion] = useState(0)
+  // 打开素材库时预设的分类（video CG 需定位到视频分类）
+  const [assetCategory, setAssetCategory] = useState<'all' | 'video'>('all')
+  // 描述：初始加载保留，避免保存时被清空
+  const [description, setDescription] = useState(initialGraph?.description || '')
   const [isDraggingOver, setIsDraggingOver] = useState(false)
   const [showNodeSearch, setShowNodeSearch] = useState(false)
   const [showExportDialog, setShowExportDialog] = useState(false)
@@ -237,6 +271,8 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
       audios: initialGraph?.audios || [],
       variables: initialGraph?.variables || [],
       groups: initialGraph?.groups || [],
+      annotations: initialGraph?.annotations || [],
+      monetization: initialGraph?.monetization ?? null,
     }
     historyStoreRef.current.initialize(initialSnapshot)
 
@@ -245,7 +281,9 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
       // 取消订阅避免内存泄漏
       unsubscribe()
     }
-  }, [initialGraph])
+    // 仅在首次挂载时初始化历史栈：保存后 onSave 会更新 initialGraph，
+    // 若此处依赖 initialGraph，每次保存都会清空撤销/重做历史。
+  }, [])
 
   // 加载版本列表（localStorage）
   useEffect(() => {
@@ -412,11 +450,11 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
   }, [workId])
 
   // 使用 ref 持有最新状态，避免频繁重建
-  const latestRef = useRef({ nodes, edges, characters, scenes: scenesRef.current, audioTracks: audioRef.current, variables, groups })
-  latestRef.current = { nodes, edges, characters, scenes: scenesRef.current, audioTracks: audioRef.current, variables, groups }
+  const latestRef = useRef({ nodes, edges, characters, scenes: scenesRef.current, audioTracks: audioRef.current, variables, groups, annotations, monetization })
+  latestRef.current = { nodes, edges, characters, scenes: scenesRef.current, audioTracks: audioRef.current, variables, groups, annotations, monetization }
 
   const buildSnapshot = useCallback((): StoryGraphSnapshot => {
-    const { nodes: n, edges: e, characters: c, scenes: s, audioTracks: a, variables: v, groups: g } = latestRef.current
+    const { nodes: n, edges: e, characters: c, scenes: s, audioTracks: a, variables: v, groups: g, annotations: ann, monetization: mon } = latestRef.current
     return {
       nodes: n as StoryGraphSnapshot['nodes'],
       edges: e as StoryGraphSnapshot['edges'],
@@ -425,6 +463,8 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
       audios: a as StoryGraphSnapshot['audios'],
       variables: v as StoryGraphSnapshot['variables'],
       groups: g as StoryGraphSnapshot['groups'],
+      annotations: ann as StoryGraphSnapshot['annotations'],
+      monetization: mon as StoryGraphSnapshot['monetization'],
     }
   }, [])
 
@@ -447,7 +487,9 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
       recordAction(wid, wordDelta, nodeDelta)
     }
     pendingHistoryActionRef.current = null
-  }, [nodes, edges, buildSnapshot, workId])
+    // groups/characters/variables/scenes/audios 变更同样要驱动历史入栈，
+    // 否则 pending 操作会被挂账到下一次节点/边变更（错误入栈）或永远丢失。
+  }, [nodes, edges, characters, variables, groups, scenesVersion, audiosVersion, buildSnapshot, workId])
 
   // 拖拽过程中节流记录历史
   const lastPushTimeRef = useRef(0)
@@ -457,6 +499,25 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
     lastPushTimeRef.current = now
     pushHistory(type, description)
   }, [pushHistory])
+
+  const handleDeleteEdge = useCallback((id: string) => {
+    setEdges((eds) => eds.filter((e) => e.id !== id))
+    setSelectedEdgeId(null)
+    // 删除连线需入历史栈，否则不可撤销（此前缺失）
+    pushHistory('DELETE_EDGE', '删除连线')
+  }, [setEdges, pushHistory])
+
+  // 「管理素材 / 从素材库选择」按钮：打开左侧资源库，并定位到对应分类
+  // （video CG 此前错误地打开了音频分类；tab 参数此前被丢弃，素材库无法定位视频）
+  const handleOpenAssets = useCallback((tab?: 'images' | 'audios' | 'video') => {
+    setAssetCategory(tab === 'video' ? 'video' : 'all')
+    setActiveLeftActivity('assets')
+  }, [setActiveLeftActivity])
+
+  /** 生成带随机后缀的节点 id，避免同一毫秒批量创建（AI 生成/连点）产生重复 id */
+  const generateNodeId = useCallback((type: string) => {
+    return `${type}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  }, [])
 
   const undo = useCallback(() => {
     const snapshot = historyStoreRef.current?.undo()
@@ -468,6 +529,16 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
       setVariables(snapshot.variables as import('@editor/types/editor').StoryVariable[])
       scenesRef.current = snapshot.scenes as ComicScene[]
       audioRef.current = snapshot.audios as ComicAudio[]
+      // 场景/音频可能随快照回滚，递增版本号驱动 graph 重算
+      setScenesVersion((v) => v + 1)
+      setAudiosVersion((v) => v + 1)
+      // 批注与付费配置随快照回滚（可选字段兼容早期快照）
+      if (snapshot.annotations) {
+        setAnnotations(snapshot.annotations as NodeAnnotation[])
+      }
+      if (snapshot.monetization !== undefined) {
+        setMonetization((snapshot.monetization as MonetizationConfig | null) ?? null)
+      }
       showToast('info', '已撤销')
       announce('已撤销')
     }
@@ -483,6 +554,16 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
       setVariables(snapshot.variables as import('@editor/types/editor').StoryVariable[])
       scenesRef.current = snapshot.scenes as ComicScene[]
       audioRef.current = snapshot.audios as ComicAudio[]
+      // 场景/音频可能随快照回滚，递增版本号驱动 graph 重算
+      setScenesVersion((v) => v + 1)
+      setAudiosVersion((v) => v + 1)
+      // 批注与付费配置随快照回滚（可选字段兼容早期快照）
+      if (snapshot.annotations) {
+        setAnnotations(snapshot.annotations as NodeAnnotation[])
+      }
+      if (snapshot.monetization !== undefined) {
+        setMonetization((snapshot.monetization as MonetizationConfig | null) ?? null)
+      }
       showToast('info', '已重做')
       announce('已重做')
     }
@@ -491,7 +572,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
   // 构建当前 graph — useMemo 优化避免每次渲染重建
   const graph = useMemo((): StoryGraph => ({
     title,
-    description: '',
+    description,
     templateId: (templateId as StoryGraph['templateId']) || 'dialogue',
     characters,
     variables,
@@ -504,7 +585,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
     groups,
     annotations,
     monetization: monetization ?? undefined,
-  }), [title, templateId, characters, variables, nodes, edges, tags, groups, annotations, monetization])
+  }), [title, description, templateId, characters, variables, nodes, edges, tags, groups, annotations, monetization, scenesVersion, audiosVersion])
 
   // 使用 ref 持有最新 graph，供 beforeunload / unmount 同步保存使用
   const graphRef = useRef(graph)
@@ -577,7 +658,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
   }
 
   const addNodeAtCenter = useCallback((type: string) => {
-    const id = `${type}-${Date.now()}`
+    const id = generateNodeId(type)
     const position = screenToFlowPosition({
       x: window.innerWidth / 2 - 100,
       y: window.innerHeight / 2 - 80,
@@ -620,6 +701,31 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
     return () => window.removeEventListener('subsilicon-node-drop', handleDrop)
   }, [setNodes, pushHistory, nodeTypeLabels])
 
+  /**
+   * 删除节点后的关联数据清理：
+   * - 分组 nodeIds 中的悬空 id（避免分组节点数/折叠显示错误）
+   * - monetization.paidNodes / freePreviewNodes 中的悬空 id（付费列表残留已删节点）
+   * 批注清理见 deleteSelectedNodes / deleteNode 各自的 store 调用。
+   */
+  const cleanupOrphanRefs = useCallback((idsToDelete: string[]) => {
+    setGroups((prev) =>
+      prev.map((g) =>
+        g.nodeIds.some((id) => idsToDelete.includes(id))
+          ? { ...g, nodeIds: g.nodeIds.filter((id) => !idsToDelete.includes(id)) }
+          : g
+      )
+    )
+    setMonetization((prev) => {
+      if (!prev) return prev
+      const paidNodes = (prev.paidNodes || []).filter((id) => !idsToDelete.includes(id))
+      const freePreviewNodes = (prev.freePreviewNodes || []).filter((id) => !idsToDelete.includes(id))
+      if (paidNodes.length === (prev.paidNodes || []).length && freePreviewNodes.length === (prev.freePreviewNodes || []).length) {
+        return prev
+      }
+      return { ...prev, paidNodes, freePreviewNodes }
+    })
+  }, [setGroups, setMonetization])
+
   const onConnect = useCallback(
     (connection: Connection) => {
       setEdges((eds) => addEdge(connection, eds))
@@ -646,6 +752,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
     setNodes((nds) => nds.filter((n) => !idsToDelete.includes(n.id)))
     setEdges((eds) => eds.filter((e) => !idsToDelete.includes(e.source) && !idsToDelete.includes(e.target)))
     setSelectedNodeIds([])
+    cleanupOrphanRefs(idsToDelete)
 
     if (deletedCount === 1) {
       const nodeType = nodes.find((n) => n.id === idsToDelete[0])?.type
@@ -655,7 +762,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
       pushHistory('BATCH', `批量删除 ${deletedCount} 个节点`)
       showToast('info', `已删除 ${deletedCount} 个节点`)
     }
-  }, [selectedNodeIds, nodes, setNodes, setEdges, pushHistory, workId])
+  }, [selectedNodeIds, nodes, setNodes, setEdges, pushHistory, workId, cleanupOrphanRefs])
 
   const createGroupFromSelection = useCallback(() => {
     if (selectedNodeIds.length < 2) {
@@ -672,7 +779,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
     const maxY = Math.max(...selectedNodesList.map((n) => n.position.y + 120))
 
     const padding = 40
-    const groupId = `group-${Date.now()}`
+    const groupId = `group-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
     const newGroup: NodeGroup = {
       id: groupId,
       name: `分组 ${groups.length + 1}`,
@@ -811,10 +918,6 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
     return [...groupNodesForFlow, ...filteredNodes] as Node[]
   }, [nodes, groups, groupNodesForFlow])
 
-  const generateNodeId = useCallback((type: string) => {
-    return `${type}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-  }, [])
-
   const copySelectedNodes = useCallback(() => {
     if (selectedNodeIds.length === 0) return
 
@@ -853,6 +956,9 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
         data: JSON.parse(JSON.stringify(node.data)),
       }
     })
+    // idMap 完整后重映射节点内部引用（jump 的 targetNodeId、random 选项的 targetId），
+    // 否则副本指向原节点，原节点被删后副本在预览中死链
+    remapNodeRefsInGraph(newNodes, idMap)
 
     const newEdges: StoryEdge[] = clipboard.edges.map((edge) => {
       const newSource = idMap.get(edge.source) || edge.source
@@ -923,6 +1029,8 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
         target: newTarget,
       }
     })
+    // 模板复制同样要重映射节点内部引用
+    remapNodeRefsInGraph(newNodes, idMap)
 
     setNodes((nds) => [...nds, ...newNodes])
     setEdges((eds) => [...eds, ...newEdges])
@@ -1002,6 +1110,18 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
         return
       }
 
+      // 弹窗/预览打开时不响应画布快捷键，否则导出/预览流程中
+      // 误按 Delete 或字母键会删除/修改弹窗背后的作品数据
+      const anyDialogOpen =
+        showNodeSearch ||
+        showExportDialog ||
+        showCreatorCenter ||
+        showDiscover ||
+        showShortcutsModal ||
+        showPreview ||
+        showAiSettings
+      if (anyDialogOpen) return
+
       // 画布类：撤销 / 重做 / 缩放 / 适应视图
       if (matchShortcut(e, 'undo')) {
         e.preventDefault()
@@ -1077,6 +1197,13 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
           if (now - lastDeleteTimeRef.current < 300) return
           lastDeleteTimeRef.current = now
           deleteSelectedNodes()
+        } else if (selectedEdgeId) {
+          // 选中连线时 Delete/Backspace 同样生效（此前仅节点分支，连线删除入口断链）
+          e.preventDefault()
+          const now = Date.now()
+          if (now - lastDeleteTimeRef.current < 300) return
+          lastDeleteTimeRef.current = now
+          handleDeleteEdge(selectedEdgeId)
         }
         return
       }
@@ -1208,6 +1335,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
     undo,
     redo,
     deleteSelectedNodes,
+    handleDeleteEdge,
     copySelectedNodes,
     pasteNodes,
     duplicateSelectedNodes,
@@ -1225,6 +1353,13 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
     setActiveLeftActivity,
     setActiveRightActivity,
     setAiPanelMode,
+    showNodeSearch,
+    showExportDialog,
+    showCreatorCenter,
+    showDiscover,
+    showShortcutsModal,
+    showPreview,
+    showAiSettings,
   ])
 
   const updateNodeData = useCallback((nodeId: string, data: Partial<StoryNode['data']>) => {
@@ -1233,6 +1368,14 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
     )
     throttledPushHistory('UPDATE_NODE', '修改节点属性')
   }, [setNodes, throttledPushHistory])
+
+  // random 节点自带编辑控件，需要受控更新回调（入历史栈 + 触发 graph 重算）
+  const nodeTypes = useMemo(() => ({
+    ...baseNodeTypes,
+    random: withAnnotationMarker((props: NodeProps) => (
+      <RandomNode {...props} onUpdateNode={updateNodeData} />
+    )),
+  }), [updateNodeData])
 
   const handleReplaceNode = useCallback((nodeId: string, data: Partial<StoryNode['data']>) => {
     setNodes((nds) =>
@@ -1261,10 +1404,15 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
     setNodes((nds) => nds.filter((n) => n.id !== nodeId))
     setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId))
     setSelectedNodeIds((ids) => ids.filter((id) => id !== nodeId))
+    cleanupOrphanRefs([nodeId])
+    // 单删同样清理关联批注（此前仅批量删除清理）
+    const wid = workId || 'default'
+    storeDeleteAnnotationsByNode(wid, nodeId)
+    setAnnotations(loadAnnotations(wid))
     pushHistory('DELETE_NODE', `删除 ${nodeTypeLabels[nodeType || ''] || '节点'}`)
     showToast('info', `${nodeTypeLabels[nodeType || ''] || '节点'}已删除`)
     announce(`${nodeTypeLabels[nodeType || ''] || '节点'}已删除`)
-  }, [nodes, setNodes, setEdges, pushHistory, announce])
+  }, [nodes, setNodes, setEdges, pushHistory, announce, cleanupOrphanRefs, workId, setAnnotations])
 
   const saveGraph = useCallback(() => {
     onSave(graphRef.current)
@@ -1317,6 +1465,13 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
       setSelectedNodeIds([])
       setSelectedEdgeId(null)
       setSelectedGroupId(null)
+      // 版本快照含批注与付费配置时一并恢复
+      if (graphData.annotations) {
+        setAnnotations(graphData.annotations as NodeAnnotation[])
+      }
+      if (graphData.monetization !== undefined) {
+        setMonetization((graphData.monetization as MonetizationConfig | null) ?? null)
+      }
       // 推入历史记录以支持撤销
       pushHistory('BATCH', `恢复版本「${restored.name}」`)
       showToast('success', `已恢复到版本「${restored.name}」`)
@@ -1354,19 +1509,22 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
 
   const addCharacter = useCallback((character: StoryCharacter) => {
     setCharacters((prev) => [...prev, character])
+    pushHistory('ADD_CHARACTER', `新增角色「${character.name}」`)
     showToast('success', `角色「${character.name}」已添加`)
-  }, [setCharacters])
+  }, [setCharacters, pushHistory])
 
   const updateCharacter = useCallback((character: StoryCharacter) => {
     setCharacters((prev) => prev.map((c) => (c.id === character.id ? character : c)))
+    pushHistory('UPDATE_CHARACTER', `编辑角色「${character.name}」`)
     showToast('success', `角色「${character.name}」已更新`)
-  }, [setCharacters])
+  }, [setCharacters, pushHistory])
 
   const deleteCharacter = useCallback((characterId: string) => {
     const char = characters.find(c => c.id === characterId)
     setCharacters((prev) => prev.filter((c) => c.id !== characterId))
+    pushHistory('DELETE_CHARACTER', `删除角色「${char?.name || ''}」`)
     showToast('info', `角色「${char?.name || ''}」已删除`)
-  }, [characters, setCharacters])
+  }, [characters, setCharacters, pushHistory])
 
   // 素材库：插入素材到当前选中节点
   // - 背景图 → 设置到节点的 backgroundImage 字段
@@ -1471,9 +1629,15 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
     handleGroupNodeDrag(event, node, nodes)
   }, [handleGroupNodeDrag])
 
-  const handleNodeDragStop = useCallback(() => {
+  const handleNodeDragStop = useCallback((_event: unknown, node?: Node) => {
     alignmentLinesRef.current?.handleNodeDragStop()
-    throttledPushHistory('UPDATE_GROUP', '移动分组')
+    // 仅分组节点拖拽属于「移动分组」；普通节点此前也被标记为移动分组，
+    // 导致历史描述错乱
+    if (node?.type === 'group') {
+      throttledPushHistory('UPDATE_GROUP', '移动分组')
+    } else {
+      throttledPushHistory('UPDATE_NODE', '移动节点')
+    }
   }, [throttledPushHistory])
 
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -1503,7 +1667,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
       y: e.clientY,
     })
 
-    const id = `${type}-${Date.now()}`
+    const id = generateNodeId(type)
     const data = createNodeData(type)
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1585,11 +1749,6 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
     }
   }, [])
 
-  const handleDeleteEdge = useCallback((id: string) => {
-    setEdges((eds) => eds.filter((e) => e.id !== id))
-    setSelectedEdgeId(null)
-  }, [setEdges])
-
   const handleNodeSelect = useCallback((id: string) => {
     setSelectedNodeIds([id])
     const node = nodes.find((n) => n.id === id)
@@ -1609,11 +1768,24 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
 
   const handleScenesChange = useCallback((newScenes: ComicScene[]) => {
     scenesRef.current = newScenes
-  }, [])
+    // 触发 graph 重算，确保保存/预览/导出使用最新场景数据
+    setScenesVersion((v) => v + 1)
+    // 场景编辑入历史栈，避免 undo 静默回滚未记录的场景变更
+    pushHistory('UPDATE_SCENE', '更新场景')
+  }, [pushHistory])
 
   const handleAudiosChange = useCallback((newAudios: ComicAudio[]) => {
     audioRef.current = newAudios
-  }, [])
+    // 触发 graph 重算，确保保存/预览/导出使用最新音频数据
+    setAudiosVersion((v) => v + 1)
+    // 音频编辑入历史栈，避免 undo 静默回滚未记录的音频变更
+    pushHistory('UPDATE_AUDIO', '更新音频')
+  }, [pushHistory])
+
+  const handleVariablesChange = useCallback((newVariables: import('@editor/types/editor').StoryVariable[]) => {
+    setVariables(newVariables)
+    pushHistory('UPDATE_VARIABLES', '编辑变量')
+  }, [setVariables, pushHistory])
 
   const handleCloseNodeSearch = useCallback(() => {
     setShowNodeSearch(false)
@@ -1640,7 +1812,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
       onUpdateEdge={updateEdgeData}
       onDeleteEdge={handleDeleteEdge}
       onAddNode={(type, position, data) => {
-        const id = `${type}-${Date.now()}`
+        const id = generateNodeId(type)
         const newNode = {
           id,
           type: type as StoryNode['type'],
@@ -1776,6 +1948,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
                   selectedNode={selectedNode || null}
                   onInsertAsset={handleInsertAsset}
                   characters={characters}
+                  initialCategory={assetCategory}
                 />
               )}
               {activeLeftActivity === 'search' && (
@@ -2019,11 +2192,12 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
                   onDeleteCharacter={deleteCharacter}
                   onUpdateTitle={setTitle}
                   onUpdateTags={setTags}
-                  onUpdateVariables={setVariables}
+                  onUpdateVariables={handleVariablesChange}
                   onNodeSelect={handleNodeSelect}
                   onEdgeSelect={handleEdgeSelect}
                   onScenesChange={handleScenesChange}
                   onAudiosChange={handleAudiosChange}
+                  onOpenAssets={handleOpenAssets}
                   versions={versions}
                   currentGraph={buildSnapshot()}
                   onSaveVersion={handleSaveVersion}
@@ -2054,7 +2228,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
                     newChars.forEach((char) => addCharacter(char))
                   }}
                   onAddNode={(type, position, data) => {
-                    const id = `${type}-${Date.now()}`
+                    const id = generateNodeId(type)
                     const newNode = {
                       id,
                       type: type as StoryNode['type'],
@@ -2141,11 +2315,15 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
         onClose={() => setShowExportDialog(false)}
         onImportTranslation={handleImportTranslation}
         monetization={monetization}
+        workType={workType}
+        workId={workId}
+        onMonetizationChange={setMonetization}
       />
       <StoryPreview
         graph={graph}
         open={showPreview}
         onClose={() => setShowPreview(false)}
+        workId={workId}
       />
       <CreatorCenterDialog
         open={showCreatorCenter}

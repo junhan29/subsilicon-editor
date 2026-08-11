@@ -17,8 +17,28 @@ import {
   SEED_KEY_PREFIX,
   UNLOCK_CODE_PREFIX,
   UNLOCK_REQUEST_PREFIX,
+  stripSeedKeyFromConfig,
+  stripSeedKeyFromDocument,
+  hydrateSeedKeyFromLocal,
+  saveSeedKey,
+  loadSeedKey,
+  deleteSeedKey,
 } from '../work-monetization'
 import type { MonetizationConfig } from '../work-monetization'
+
+// seedKey 存取依赖 localStorage；node 测试环境无此全局，注入最小 stub
+if (!globalThis.localStorage) {
+  const store = new Map<string, string>()
+  const stub: Storage = {
+    get length() { return store.size },
+    clear: () => store.clear(),
+    getItem: (k) => store.get(k) ?? null,
+    key: (i) => Array.from(store.keys())[i] ?? null,
+    removeItem: (k) => { store.delete(k) },
+    setItem: (k, v) => { store.set(k, String(v)) },
+  }
+  ;(globalThis as unknown as { localStorage: Storage }).localStorage = stub
+}
 
 function makeMonetizationConfig(
   overrides: Partial<MonetizationConfig> = {}
@@ -331,5 +351,73 @@ describe('getMonetizationStats 付费统计', () => {
     expect(stats.priceRange.min).toEqual(5.0)
     expect(stats.priceRange.max).toEqual(15.0)
     expect(stats.totalPaidChapters).toEqual(2)
+  })
+})
+
+describe('seedKey 隔离（解锁不继承）', () => {
+  it('stripSeedKeyFromConfig 剥离明文 seedKey，保留 seedKeyHash', () => {
+    const config = makeMonetizationConfig({ seedKey: 'SUBSL-SEED-ABCD1234', seedKeyHash: 'abcd' })
+    const stripped = stripSeedKeyFromConfig(config)
+    expect('seedKey' in stripped).toBe(false)
+    expect(stripped.seedKeyHash).toEqual('abcd')
+    expect(stripped.workId).toEqual(config.workId)
+    expect(stripped.enabled).toBe(true)
+  })
+
+  it('无 seedKey 的配置原样返回', () => {
+    const config = makeMonetizationConfig()
+    const stripped = stripSeedKeyFromConfig(config)
+    expect(stripped).toBe(config)
+  })
+
+  it('stripSeedKeyFromDocument 剥离文档级 monetization 中的 seedKey', () => {
+    const doc = {
+      id: 'w1',
+      name: '作品',
+      monetization: makeMonetizationConfig({ seedKey: 'SUBSL-SEED-ABCD1234' }),
+    }
+    const stripped = stripSeedKeyFromDocument(doc)
+    expect('seedKey' in (stripped.monetization as MonetizationConfig)).toBe(false)
+    expect(stripped.id).toEqual('w1')
+  })
+
+  it('无 monetization 的文档原样返回', () => {
+    const doc = { id: 'w1', name: '作品' }
+    expect(stripSeedKeyFromDocument(doc)).toBe(doc)
+  })
+
+  it('本地持有密钥时 hydrateSeedKeyFromLocal 恢复 seedKey', () => {
+    const config = makeMonetizationConfig({ workId: 'work_hydrate_ok' })
+    saveSeedKey(config.workId as string, 'SUBSL-SEED-HYDRATE1234')
+    const hydrated = hydrateSeedKeyFromLocal(config)
+    expect(hydrated.seedKey).toEqual('SUBSL-SEED-HYDRATE1234')
+    deleteSeedKey(config.workId as string)
+  })
+
+  it('本地无密钥时（接收副本场景）hydrate 返回原配置，不可签发解锁码', () => {
+    const config = makeMonetizationConfig({ workId: 'work_hydrate_none' })
+    deleteSeedKey(config.workId as string)
+    const hydrated = hydrateSeedKeyFromLocal(config)
+    expect('seedKey' in hydrated).toBe(false)
+    expect(hydrated).toBe(config)
+  })
+
+  it('剥离 + 无本地密钥 → 无法生成解锁码（仍需付费）', async () => {
+    const workId = 'work_inherit_test'
+    const requestCode = UNLOCK_REQUEST_PREFIX + 'FEED1234'
+    // 创作者本机：持有密钥
+    const creatorKey = 'SUBSL-SEED-OWNER0001'
+    saveSeedKey(workId, creatorKey)
+    const creatorCode = await generateUnlockCode(creatorKey, requestCode, workId)
+    expect((await verifyUnlockCode(creatorCode.code, workId, requestCode)).valid).toBe(true)
+
+    // 作品被复制/传递后，接收方本机无密钥
+    deleteSeedKey(workId)
+    const receivedConfig = makeMonetizationConfig({ workId })
+    const stripped = stripSeedKeyFromConfig(receivedConfig)
+    expect('seedKey' in stripped).toBe(false)
+    // 接收方无法凭作品数据恢复出密钥来签发解锁码
+    const receivedHydrated = hydrateSeedKeyFromLocal(stripped)
+    expect('seedKey' in receivedHydrated).toBe(false)
   })
 })

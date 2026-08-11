@@ -399,7 +399,7 @@ async function hmacSign(key: string, message: string): Promise<string> {
     .toUpperCase()
 }
 
-async function sha256Hex(message: string): Promise<string> {
+export async function sha256Hex(message: string): Promise<string> {
   const encoder = new TextEncoder()
   const data = encoder.encode(message)
   const hashBuffer = await crypto.subtle.digest('SHA-256', data)
@@ -581,6 +581,108 @@ export function loadAllSeedKeys(): Record<string, { seedKey: string; createdAt: 
 export function loadSeedKey(workId: string): string | null {
   const keys = loadAllSeedKeys()
   return keys[workId]?.seedKey || null
+}
+
+/**
+ * 从营利配置中剥离明文种子密钥。
+ *
+ * 种子密钥是创作者本机的「签发凭据」，一旦进入作品数据（存储/复制/导入/
+ * 导出），接收方即可据其生成解锁码免费解锁付费内容。因此作品数据中必须
+ * 只保留 seedKeyHash（用于验证），明文 seedKey 只存在于本机 localStorage。
+ */
+export function stripSeedKeyFromConfig(config: MonetizationConfig): MonetizationConfig {
+  if (!config || !('seedKey' in config)) return config
+  const { seedKey: _removed, ...rest } = config
+  return rest as MonetizationConfig
+}
+
+/** 作品数据（WorkDocument）通用剥离：返回不含明文 seedKey 的副本 */
+export function stripSeedKeyFromDocument<T extends object>(doc: T): T {
+  if (!doc || !('monetization' in doc) || !(doc as { monetization?: unknown }).monetization) return doc
+  return {
+    ...doc,
+    monetization: stripSeedKeyFromConfig((doc as { monetization: MonetizationConfig }).monetization),
+  }
+}
+
+/** 离线解锁码的本机存储 key（与 seedKey 同模式：仅创作者本机持有） */
+export const OFFLINE_CODES_STORAGE_KEY = 'subsilicon_offline_codes'
+
+export function saveOfflineCodes(workId: string, codes: OfflineUnlockCode[]): void {
+  const all = loadAllOfflineCodes()
+  if (codes.length === 0) delete all[workId]
+  else all[workId] = codes
+  localStorage.setItem(OFFLINE_CODES_STORAGE_KEY, JSON.stringify(all))
+}
+
+export function loadAllOfflineCodes(): Record<string, OfflineUnlockCode[]> {
+  try {
+    const data = localStorage.getItem(OFFLINE_CODES_STORAGE_KEY)
+    return data ? JSON.parse(data) : {}
+  } catch {
+    return {}
+  }
+}
+
+export function loadOfflineCodes(workId: string): OfflineUnlockCode[] {
+  return loadAllOfflineCodes()[workId] || []
+}
+
+export function deleteOfflineCodes(workId: string): void {
+  const all = loadAllOfflineCodes()
+  delete all[workId]
+  localStorage.setItem(OFFLINE_CODES_STORAGE_KEY, JSON.stringify(all))
+}
+
+/**
+ * 从营利配置中剥离所有「签发凭据 / 已签发凭证」：
+ * - seedKey：种子密钥，可据其生成任意解锁码
+ * - offlineCodes：已签发的离线解锁码明文（含密钥推导材料 maskedKeyBase64）
+ * - preGeneratedCodes：预生成解锁码明文
+ *
+ * 这些字段与 seedKey 同级，只存在于创作者本机 localStorage。作品数据
+ * （存储 / 复制 / 导入 / 导出）只保留 seedKeyHash 等验证材料，接收方
+ * 无法继承解锁凭据，仍需为读者重新建立付费体系。
+ */
+export function stripSensitiveFromConfig(config: MonetizationConfig): MonetizationConfig {
+  if (!config || typeof config !== 'object') return config
+  const result = { ...config } as MonetizationConfig
+  delete result.seedKey
+  delete result.offlineCodes
+  delete (result as MonetizationConfig & { preGeneratedCodes?: unknown }).preGeneratedCodes
+  return result
+}
+
+/** 作品数据（WorkDocument）通用剥离：返回不含任何解锁凭据的副本 */
+export function stripSensitiveFromDocument<T extends object>(doc: T): T {
+  if (!doc || !('monetization' in doc) || !(doc as { monetization?: unknown }).monetization) return doc
+  return {
+    ...doc,
+    monetization: stripSensitiveFromConfig((doc as { monetization: MonetizationConfig }).monetization),
+  }
+}
+
+/**
+ * 导出前从本机 localStorage 恢复离线解锁码（仅创作者本机持有）。
+ * 若本地无该作品的离线码（例如接收自他人的副本），返回原配置——
+ * 导出物不含离线解锁码，offline 模式对接收方不可用，达到防传播目的。
+ */
+export function hydrateOfflineCodesFromLocal(config: MonetizationConfig): MonetizationConfig {
+  if (!config || !config.workId) return config
+  const codes = loadOfflineCodes(config.workId)
+  if (codes.length === 0) return config
+  return { ...config, offlineCodes: codes }
+}
+
+/**
+ * 导出前从本机 localStorage 恢复 seedKey（仅当本地持有该作品的密钥）。
+ * 若本地无密钥（例如接收自他人的副本），返回原配置——创作者需重新生成。
+ */
+export function hydrateSeedKeyFromLocal(config: MonetizationConfig): MonetizationConfig {
+  if (!config || !config.workId) return config
+  const key = loadSeedKey(config.workId)
+  if (!key) return config
+  return { ...config, seedKey: key }
 }
 
 export function deleteSeedKey(workId: string): void {

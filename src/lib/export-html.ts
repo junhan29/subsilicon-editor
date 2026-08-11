@@ -177,7 +177,14 @@ export function encryptPaidContent(
   }
 
   const freePreviewNodes = monetization.freePreviewNodes || []
-  const sensitiveFields = ['text', 'title', 'description', 'prompt', 'subtitle']
+  // 除文本字段外，付费节点的媒体字段（CG 图/背景/立绘/音频等 dataURL）若明文内嵌，
+  // 读者无需解锁即可从源码提取；渲染端 decryptNodeData 已自动解密所有 __ENC__ 字段，
+  // 因此媒体字段一并加密即可。
+  const sensitiveFields = [
+    'text', 'title', 'description', 'prompt', 'subtitle',
+    'url', 'backgroundImage', 'characterSprite', 'coverImage',
+    'audioUrl', 'bgm', 'bgs', 'seUrl', 'voiceUrl', 'musicUrl',
+  ]
 
   for (const node of newGraph.nodes) {
     // 只加密付费节点（排除免费预览节点）
@@ -217,6 +224,7 @@ function buildHTMLTemplate(params: {
   title: string
   graphJSON: string
   monetization?: HTMLMonetizationConfig
+  variablesJson: string
 }): string {
   return `<!DOCTYPE html>
 <html lang="zh-CN">
@@ -251,7 +259,7 @@ function buildHTMLTemplate(params: {
     .scene-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: -1; opacity: 0.3; }
     .character-sprite { position: fixed; bottom: 0; z-index: 1; max-height: 60vh; }
     .character-sprite.left { left: 10%; }
-    .character-sprite.center { left: 50%; transform: translateX(-50%; }
+    .character-sprite.center { left: 50%; transform: translateX(-50%); }
     .character-sprite.right { right: 10%; }
     @keyframes typewriter { from { width: 0; } to { width: 100%; } }
     .typewriter { overflow: hidden; white-space: nowrap; animation: typewriter 2s steps(40) forwards; }
@@ -309,6 +317,155 @@ function buildHTMLTemplate(params: {
 
       var root = document.getElementById('root');
       var currentNodeId = graph.nodes.find(function(n) { return n.type === 'dialogue' || n.type === 'choice'; })?.id || graph.nodes[0]?.id;
+
+      // ---- 变量系统：初始值来自 graph.variables，选择效果与条件表达式与预览/可执行故事一致 ----
+      var variables = ${params.variablesJson};
+
+      function ExpressionParser(context) {
+        this.context = context;
+        this.tokens = [];
+        this.position = 0;
+      }
+      ExpressionParser.prototype.parse = function(expression) {
+        if (!expression || String(expression).trim() === '') return true;
+        this.tokens = this.tokenize(String(expression));
+        this.position = 0;
+        return this.parseExpression();
+      };
+      ExpressionParser.prototype.tokenize = function(expression) {
+        var tokens = [];
+        var i = 0;
+        while (i < expression.length) {
+          var ch = expression[i];
+          if (/\s/.test(ch)) { i++; continue; }
+          if (/\d/.test(ch) || (ch === '.' && /\d/.test(expression[i + 1]))) {
+            var num = '';
+            while (i < expression.length && /[\d.]/.test(expression[i])) { num += expression[i]; i++; }
+            tokens.push({ type: 'NUMBER', value: parseFloat(num) });
+            continue;
+          }
+          if (ch === '"' || ch === "'") {
+            var quote = ch; var str = ''; i++;
+            while (i < expression.length && expression[i] !== quote) {
+              if (expression[i] === '\\\\' && i + 1 < expression.length) { str += expression[i + 1]; i += 2; }
+              else { str += expression[i]; i++; }
+            }
+            i++;
+            tokens.push({ type: 'STRING', value: str });
+            continue;
+          }
+          if (expression.substring(i, i + 4) === 'true') { tokens.push({ type: 'BOOLEAN', value: true }); i += 4; continue; }
+          if (expression.substring(i, i + 5) === 'false') { tokens.push({ type: 'BOOLEAN', value: false }); i += 5; continue; }
+          // 标识符（含中文变量名）
+          if (/[a-zA-Z_\\u00C0-\\uFFFF]/.test(ch)) {
+            var id = '';
+            while (i < expression.length && /[a-zA-Z0-9_\\u00C0-\\uFFFF]/.test(expression[i])) { id += expression[i]; i++; }
+            tokens.push({ type: 'IDENTIFIER', value: id });
+            continue;
+          }
+          if (i + 1 < expression.length) {
+            var two = expression.substring(i, i + 2);
+            if (['==', '!=', '<=', '>=', '&&', '||'].indexOf(two) !== -1) { tokens.push({ type: 'OPERATOR', value: two }); i += 2; continue; }
+          }
+          if ('+-*/%<>=!(),'.indexOf(ch) !== -1) { tokens.push({ type: 'OPERATOR', value: ch }); i++; continue; }
+          i++;
+        }
+        tokens.push({ type: 'EOF', value: '' });
+        return tokens;
+      };
+      ExpressionParser.prototype.cur = function() { return this.tokens[this.position] || { type: 'EOF', value: '' }; };
+      ExpressionParser.prototype.eat = function() { var t = this.cur(); this.position++; return t; };
+      ExpressionParser.prototype.parseExpression = function() { return this.parseOr(); };
+      ExpressionParser.prototype.parseOr = function() {
+        var left = this.parseAnd();
+        while (this.cur().type === 'OPERATOR' && this.cur().value === '||') { this.eat(); left = left || this.parseAnd(); }
+        return left;
+      };
+      ExpressionParser.prototype.parseAnd = function() {
+        var left = this.parseEq();
+        while (this.cur().type === 'OPERATOR' && this.cur().value === '&&') { this.eat(); left = left && this.parseEq(); }
+        return left;
+      };
+      ExpressionParser.prototype.parseEq = function() {
+        var left = this.parseCmp();
+        while (this.cur().type === 'OPERATOR' && (this.cur().value === '==' || this.cur().value === '!=')) {
+          var op = this.eat().value; var right = this.parseCmp();
+          left = op === '==' ? left === right : left !== right;
+        }
+        return left;
+      };
+      ExpressionParser.prototype.parseCmp = function() {
+        var left = this.parseAdd();
+        while (this.cur().type === 'OPERATOR' && ['<', '<=', '>', '>='].indexOf(this.cur().value) !== -1) {
+          var op = this.eat().value; var right = this.parseAdd();
+          if (op === '<') left = left < right;
+          else if (op === '<=') left = left <= right;
+          else if (op === '>') left = left > right;
+          else left = left >= right;
+        }
+        return left;
+      };
+      ExpressionParser.prototype.parseAdd = function() {
+        var left = this.parseMul();
+        while (this.cur().type === 'OPERATOR' && (this.cur().value === '+' || this.cur().value === '-')) {
+          var op = this.eat().value; left = op === '+' ? left + this.parseMul() : left - this.parseMul();
+        }
+        return left;
+      };
+      ExpressionParser.prototype.parseMul = function() {
+        var left = this.parseUnary();
+        while (this.cur().type === 'OPERATOR' && ['*', '/', '%'].indexOf(this.cur().value) !== -1) {
+          var op = this.eat().value; var right = this.parseUnary();
+          if (op === '*') left = left * right;
+          else if (op === '/') left = right !== 0 ? left / right : 0;
+          else left = right !== 0 ? left % right : 0;
+        }
+        return left;
+      };
+      ExpressionParser.prototype.parseUnary = function() {
+        if (this.cur().type === 'OPERATOR' && this.cur().value === '!') { this.eat(); return !this.parseUnary(); }
+        if (this.cur().type === 'OPERATOR' && this.cur().value === '-') { this.eat(); return -this.parseUnary(); }
+        return this.parsePrimary();
+      };
+      ExpressionParser.prototype.parsePrimary = function() {
+        var t = this.cur();
+        if (t.type === 'OPERATOR' && t.value === '(') { this.eat(); var r = this.parseExpression(); this.eat(); return r; }
+        if (t.type === 'NUMBER') { this.eat(); return t.value; }
+        if (t.type === 'STRING') { this.eat(); return t.value; }
+        if (t.type === 'BOOLEAN') { this.eat(); return t.value; }
+        if (t.type === 'IDENTIFIER') {
+          var name = this.eat().value;
+          if (name in this.context.variables) return this.context.variables[name];
+          return undefined;
+        }
+        this.eat();
+        return undefined;
+      };
+
+      function evaluateExpression(expr) {
+        try {
+          var parser = new ExpressionParser({ variables: variables });
+          return Boolean(parser.parse(expr));
+        } catch(e) { return false; }
+      }
+
+      function applyVariableEffect(effect) {
+        if (!effect || !effect.variableName) return;
+        var name = effect.variableName;
+        var op = effect.operation || 'set';
+        var value = effect.value;
+        if (typeof value === 'string') {
+          if (!isNaN(value)) value = parseFloat(value);
+          else if (value === 'true') value = true;
+          else if (value === 'false') value = false;
+        }
+        var current = variables[name];
+        if (op === 'set') variables[name] = value;
+        else if (op === 'add') variables[name] = (current || 0) + value;
+        else if (op === 'subtract') variables[name] = (current || 0) - value;
+        else if (op === 'multiply') variables[name] = (current || 1) * value;
+      }
+      // ---- 变量系统结束 ----
 
       var UNLOCK_PREFIX = '${UNLOCK_CODE_PREFIX}';
       var REQ_PREFIX = '${UNLOCK_REQUEST_PREFIX}';
@@ -1168,6 +1325,9 @@ function buildHTMLTemplate(params: {
 
         root.innerHTML = html;
         window.selectChoice = function(index) {
+          // 选择效果（变量增减）此前在导出物中完全不生效
+          var opt = options[index];
+          if (opt && opt.variableEffect) applyVariableEffect(opt.variableEffect);
           var edges = getEdgesFrom(currentNodeId);
           var sourceHandle = edges.find(function(e) { return e.sourceHandle === (options[index]?.id || 'opt-' + index); });
           var targetId = sourceHandle ? sourceHandle.target : edges[index]?.target;
@@ -1244,30 +1404,48 @@ function buildHTMLTemplate(params: {
       }
 
       function renderJump(node, data) {
-        var targetId = data.targetNodeId;
+        // 跳转节点支持表达式门控（与预览/可执行故事一致）；目标不存在时回退到第一条出边
+        var expr = data.expression;
+        var canJump = expr ? evaluateExpression(expr) : true;
+        var targetId = canJump && data.targetNodeId ? data.targetNodeId : null;
         if (targetId) {
           renderNode(findNode(targetId));
         } else {
-          root.innerHTML = '<div class="node"><p class="node-text">跳转目标不存在</p></div>';
+          var edges = getEdgesFrom(node.id);
+          if (edges.length > 0) {
+            renderNode(findNode(edges[0].target));
+          } else {
+            root.innerHTML = '<div class="node"><p class="node-text">跳转目标不存在</p></div>';
+          }
         }
       }
 
       function renderGather(node, data) {
         var label = data.label || '汇聚';
         root.innerHTML = '<div class="node" style="text-align:center;opacity:0.5;"><p class="node-text">[' + label + ']</p></div>';
+        // 汇聚节点是纯流程控制：短暂展示后自动沿第一条出边继续。
+        // 此前只渲染占位无流转，故事经过汇聚节点时读者被卡死。
+        var edges = getEdgesFrom(node.id);
+        if (edges.length > 0) {
+          var targetId = edges[0].target;
+          setTimeout(function() { renderNode(findNode(targetId)); }, 120);
+        }
       }
 
       function renderCondition(node, data) {
         var expression = data.expression || 'true';
-        var result = false;
-        try {
-          result = new Function('return ' + expression)();
-        } catch(e) { result = false; }
+        // 条件表达式经变量引擎求值：裸 eval 无法解析变量名（如「好感度 >= 60」
+        // 会抛 ReferenceError 恒走 false 分支），依赖变量的分支在导出物中全部失效
+        var result = evaluateExpression(expression);
 
         var edges = getEdgesFrom(node.id);
         var targetEdge = edges.find(function(e) { return e.sourceHandle === (result ? 'true' : 'false'); });
         if (targetEdge) {
           renderNode(findNode(targetEdge.target));
+        } else {
+          var fallback = edges[0];
+          if (fallback) renderNode(findNode(fallback.target));
+          else root.innerHTML = '<div class="node"><p class="node-text">条件分支未连接</p></div>';
         }
       }
 
@@ -1348,5 +1526,17 @@ export async function exportToHTML(
     title: graph.title || '未命名故事',
     graphJSON,
     monetization: htmlMonetization,
+    // 变量初始值映射（name → initialValue），驱动导出物中的条件求值与选择效果
+    variablesJson: JSON.stringify(
+      (processedGraph.variables || []).reduce(
+        (acc, v) => {
+          const variable = v as { name?: string; initialValue?: unknown; defaultValue?: unknown }
+          const name = variable?.name
+          if (name) acc[name] = variable.initialValue ?? variable.defaultValue ?? 0
+          return acc
+        },
+        {} as Record<string, unknown>
+      )
+    ),
   })
 }

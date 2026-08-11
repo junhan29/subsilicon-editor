@@ -266,6 +266,7 @@ export function DirectoryUploadDialog({
             contactInfo: wechat.trim(),
             externalLink: afdianLink.trim(),
           },
+          'interactive-narrative',
           (providerId, status, error) => {
             setPublishResults(prev => ({ ...prev, [providerId]: status }))
           }

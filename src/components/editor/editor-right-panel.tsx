@@ -69,6 +69,8 @@ interface EditorRightPanelProps {
   monetization?: MonetizationConfig | null
   onMonetizationChange?: (config: MonetizationConfig) => void
   workId?: string
+  /** 打开素材库（供「管理素材 / 从素材库选择」按钮使用） */
+  onOpenAssets?: (tab?: 'images' | 'audios' | 'video') => void
 }
 
 // VS Code 风格标签按钮组件
@@ -155,6 +157,7 @@ function EditorRightPanel({
   monetization,
   onMonetizationChange,
   workId = generateWorkId(),
+  onOpenAssets,
 }: EditorRightPanelProps) {
   const [internalActiveTab, setInternalActiveTab] = useState('properties')
   const activeTab = activeTabProp ?? internalActiveTab
@@ -267,6 +270,7 @@ function EditorRightPanel({
               scenes={scenes}
               variables={variables}
               editCharId={editCharId}
+              onOpenAssets={onOpenAssets}
               onUpdateNode={onUpdateNode}
               onDeleteNode={onDeleteNode}
               onUpdateEdge={onUpdateEdge}

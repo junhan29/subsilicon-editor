@@ -14,13 +14,15 @@ export function EndingPanel({ node, onUpdateNode }: BasePanelProps) {
   const [title, setTitle, flushTitle] = useDebouncedState(
     (data as any).title || '',
     300,
-    (value) => onUpdateNode(id, { ...data, title: value })
+    (value) => onUpdateNode(id, { ...data, title: value }),
+    { flushOnUnmount: true }
   )
 
   const [text, setText, flushText] = useDebouncedState(
     (data as any).text || '',
     300,
-    (value) => onUpdateNode(id, { ...data, text: value })
+    (value) => onUpdateNode(id, { ...data, text: value }),
+    { flushOnUnmount: true }
   )
 
   return (

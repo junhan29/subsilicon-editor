@@ -33,7 +33,7 @@ export interface BasePanelProps {
   scenes?: ComicScene[]
   onUpdateNode: (nodeId: string, data: Partial<StoryNode['data']>) => void
   onDeleteNode: (nodeId: string) => void
-  onOpenAssets?: (tab?: 'images' | 'audios') => void
+  onOpenAssets?: (tab?: 'images' | 'audios' | 'video') => void
 }
 
 export interface EdgePanelProps {

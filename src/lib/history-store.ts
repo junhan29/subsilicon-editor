@@ -13,6 +13,7 @@ export type HistoryActionType =
   | 'UPDATE_SCENE'
   | 'ADD_AUDIO'
   | 'DELETE_AUDIO'
+  | 'UPDATE_AUDIO'
   | 'UPDATE_VARIABLES'
   | 'ADD_GROUP'
   | 'DELETE_GROUP'
@@ -35,6 +36,10 @@ export interface StoryGraphSnapshot {
   audios: unknown[]
   variables: unknown[]
   groups: unknown[]
+  // 批注与付费配置纳入历史快照：撤销/重做/版本恢复时一并回滚
+  // （可选字段兼容早期入栈的快照）
+  annotations?: unknown[]
+  monetization?: unknown | null
 }
 
 export interface HistoryState {

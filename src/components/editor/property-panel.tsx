@@ -186,7 +186,7 @@ interface PropertyPanelProps {
   editCharId?: string
   onUpdateTitle?: (title: string) => void
   onUpdateTags?: (tags: string[]) => void
-  onOpenAssets?: (tab?: 'images' | 'audios') => void
+  onOpenAssets?: (tab?: 'images' | 'audios' | 'video') => void
   variables?: StoryVariable[]
   onUpdateVariables?: (variables: StoryVariable[]) => void
   annotations?: NodeAnnotation[]

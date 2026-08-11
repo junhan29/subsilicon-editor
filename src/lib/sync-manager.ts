@@ -39,6 +39,36 @@ const STATE_KEY = 'subsilicon_sync_state'
 const LOG_KEY = 'subsilicon_sync_log'
 const SYNC_DIR = 'SubSilicon/works'
 
+// 同步基线：记录每个作品上次同步成功时的本地 updatedAt 与云端 lastModified，
+// 用于判定「本地与云端都在上次同步后被修改」的双向冲突。
+const SYNC_MARKERS_KEY = 'subsilicon_sync_markers'
+
+interface SyncMarker {
+  localUpdatedAt: number
+  remoteModified: number
+}
+
+let syncMarkers: Record<string, SyncMarker> = {}
+
+function loadSyncMarkers(): void {
+  try {
+    const raw = localStorage.getItem(SYNC_MARKERS_KEY)
+    if (raw) {
+      syncMarkers = JSON.parse(raw)
+    }
+  } catch {
+    syncMarkers = {}
+  }
+}
+
+function saveSyncMarkers(): void {
+  try {
+    localStorage.setItem(SYNC_MARKERS_KEY, JSON.stringify(syncMarkers))
+  } catch {
+    // ignore
+  }
+}
+
 let syncState: SyncState = {
   status: 'idle',
   conflicts: [],
@@ -170,8 +200,14 @@ function parseWorkFilename(filename: string): { workId: string; name: string } |
   if (!filename.endsWith('.sstory')) return null
   
   const baseName = filename.slice(0, -7)
-  const underscoreIndex = baseName.indexOf('_')
+  // workId 形如 proj_<时间戳>_<随机串>（含下划线），须按前缀正则切分，
+  // 否则所有作品会被折叠成同一个 workId「proj」，导致换机恢复只下载最新一个
+  const prefixMatch = baseName.match(/^(proj_\d+_[a-z0-9]+)_(.*)$/)
+  if (prefixMatch) {
+    return { workId: prefixMatch[1], name: prefixMatch[2] || prefixMatch[1] }
+  }
   
+  const underscoreIndex = baseName.indexOf('_')
   if (underscoreIndex === -1) {
     return { workId: baseName, name: baseName }
   }
@@ -230,7 +266,7 @@ export async function uploadWork(workId: string): Promise<void> {
   addLog('success', `已上传: ${work.name}`)
 }
 
-export async function downloadWork(workId: string): Promise<void> {
+export async function downloadWork(workId: string): Promise<StoredWork | void> {
   const config = loadConfigFromStorage()
   if (!config) {
     throw new Error('WebDAV 未配置')
@@ -257,6 +293,7 @@ export async function downloadWork(workId: string): Promise<void> {
   
   await saveWork(work)
   addLog('success', `已下载: ${work.name}`)
+  return work
 }
 
 export async function deleteRemoteWork(workId: string): Promise<void> {
@@ -335,42 +372,73 @@ export async function syncWorks(): Promise<void> {
         try {
           addLog('info', `上传新作品: ${localWork.name}`)
           await uploadWork(workId)
+          syncMarkers[workId] = { localUpdatedAt: localWork.updatedAt || Date.now(), remoteModified: Date.now() }
         } catch (error) {
           addLog('error', `上传失败 ${localWork.name}: ${error}`)
         }
       } else if (!localWork && remoteFile) {
         try {
           addLog('info', `下载新作品: ${remoteFile.name}`)
-          await downloadWork(workId)
+          const downloaded = await downloadWork(workId)
+          if (downloaded) {
+            syncMarkers[workId] = {
+              localUpdatedAt: downloaded.updatedAt || remoteFile.lastModified || Date.now(),
+              remoteModified: remoteFile.lastModified || Date.now(),
+            }
+          }
         } catch (error) {
           addLog('error', `下载失败 ${remoteFile.name}: ${error}`)
         }
       } else if (localWork && remoteFile) {
         const localTime = localWork.updatedAt || 0
         const remoteTime = remoteFile.lastModified || 0
-        const timeDiff = Math.abs(localTime - remoteTime)
-        
-        if (timeDiff < 5000) {
+        const marker = syncMarkers[workId]
+
+        // 冲突检测：本地与云端都在上次同步后被修改（双向改动）。
+        // 此时不能按 last-write-wins 静默覆盖任意一侧，暂停自动合并交给用户选择。
+        // （无基线标记说明是首次同步，仅按 updatedAt 合并，并建立基线）
+        if (marker && localTime > marker.localUpdatedAt && remoteTime > marker.remoteModified) {
+          conflicts.push(workId)
+          addLog('warning', `检测到冲突: ${localWork.name}`)
           continue
         }
-        
+
+        // 不再用时间差窗口静默跳过：若本地与云端更新时间接近但内容不同，
+        // 直接跳过会丢更新（本地改动可能被云端旧版本覆盖）。
+        // 一律按 updatedAt 决定方向（last-write-wins），相等时视为一致无需操作。
         if (localTime > remoteTime) {
           try {
             addLog('info', `本地更新，上传: ${localWork.name}`)
             await uploadWork(workId)
+            // 上传后云端文件 lastModified 由服务器写入，此处用本地上传完成时间近似基线
+            syncMarkers[workId] = { localUpdatedAt: localWork.updatedAt || Date.now(), remoteModified: Date.now() }
           } catch (error) {
             addLog('error', `上传失败 ${localWork.name}: ${error}`)
           }
         } else if (remoteTime > localTime) {
           try {
             addLog('info', `云端更新，下载: ${localWork.name}`)
-            await downloadWork(workId)
+            const downloaded = await downloadWork(workId)
+            if (downloaded) {
+              syncMarkers[workId] = {
+                localUpdatedAt: downloaded.updatedAt || remoteTime,
+                remoteModified: remoteTime,
+              }
+            }
           } catch (error) {
             addLog('error', `下载失败 ${localWork.name}: ${error}`)
           }
         }
       }
     }
+
+    // 清理已删除作品的同步基线，避免无限增长
+    for (const workId of Object.keys(syncMarkers)) {
+      if (!allWorkIds.has(workId)) {
+        delete syncMarkers[workId]
+      }
+    }
+    saveSyncMarkers()
     
     setState({
       status: conflicts.length > 0 ? 'conflict' : 'success',
@@ -406,9 +474,13 @@ export async function resolveConflict(
   
   if (choose === 'local') {
     await uploadWork(workId)
+    syncMarkers[workId] = { localUpdatedAt: localWork?.updatedAt || Date.now(), remoteModified: Date.now() }
     addLog('success', `冲突已解决，保留本地版本: ${localWork?.name || workId}`)
   } else if (choose === 'remote') {
-    await downloadWork(workId)
+    const downloaded = await downloadWork(workId)
+    if (downloaded) {
+      syncMarkers[workId] = { localUpdatedAt: downloaded.updatedAt || Date.now(), remoteModified: Date.now() }
+    }
     addLog('success', `冲突已解决，保留云端版本: ${workId}`)
   } else if (choose === 'both') {
     if (localWork) {
@@ -419,9 +491,11 @@ export async function resolveConflict(
       }
       await saveWork(newWork)
       await uploadWork(workId)
+      syncMarkers[workId] = { localUpdatedAt: localWork.updatedAt || Date.now(), remoteModified: Date.now() }
       addLog('success', `冲突已解决，两个版本都保留`)
     }
   }
+  saveSyncMarkers()
   
   const newConflicts = syncState.conflicts.filter((id) => id !== workId)
   setState({
@@ -431,3 +505,4 @@ export async function resolveConflict(
 }
 
 loadStateFromStorage()
+loadSyncMarkers()

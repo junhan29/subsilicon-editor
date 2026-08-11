@@ -57,6 +57,8 @@ interface AssetLibraryPanelProps {
   selectedNode?: StoryNode | null
   onInsertAsset?: (asset: LibraryAsset) => void
   characters?: StoryCharacter[]
+  /** 打开素材库时预设的分类（如视频 CG 直接定位到视频分类） */
+  initialCategory?: 'all' | AssetCategory
 }
 
 const LICENSE_LABELS: Record<string, string> = {
@@ -86,9 +88,9 @@ const PANEL_TABS: { key: PanelTab; label: string; icon: typeof ImageIcon }[] = [
   { key: 'mine', label: '我的素材', icon: HardDrive },
 ]
 
-function AssetLibraryPanelImpl({ selectedNode, onInsertAsset, characters = [] }: AssetLibraryPanelProps) {
+function AssetLibraryPanelImpl({ selectedNode, onInsertAsset, characters = [], initialCategory = 'all' }: AssetLibraryPanelProps) {
   const [activePanel, setActivePanel] = useState<PanelTab>('official')
-  const [activeCategory, setActiveCategory] = useState<FilterCategory>('all')
+  const [activeCategory, setActiveCategory] = useState<FilterCategory>(initialCategory)
   const [searchQuery, setSearchQuery] = useState('')
   const [previewAsset, setPreviewAsset] = useState<LibraryAsset | null>(null)
 

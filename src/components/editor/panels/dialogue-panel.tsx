@@ -24,13 +24,15 @@ export function DialoguePanel({ node, characters, variables, assets, scenes, onU
   const [text, setText, flushText] = useDebouncedState(
     (data as any).text || '',
     300,
-    (value) => onUpdateNode(id, { ...data, text: value })
+    (value) => onUpdateNode(id, { ...data, text: value }),
+    { flushOnUnmount: true }
   )
 
   const [emotion, setEmotion, flushEmotion] = useDebouncedState(
     (data as any).emotion || '',
     300,
-    (value) => onUpdateNode(id, { ...data, emotion: value })
+    (value) => onUpdateNode(id, { ...data, emotion: value }),
+    { flushOnUnmount: true }
   )
 
   const [showVisualStyle, setShowVisualStyle] = useState(false)

@@ -1,5 +1,6 @@
 import JSZip from 'jszip'
 import type { StoryGraph, StoryNode, StoryCharacter, ComicScene } from '@editor/types/editor'
+import type { MonetizationConfig } from '@editor/lib/work-monetization'
 import { topologicalSortNodes } from './export-script'
 
 interface Chapter {
@@ -143,7 +144,8 @@ function nodeToXHTML(node: StoryNode, ctx: { characters: StoryCharacter[]; scene
 // 将节点列表切分为章节
 function splitIntoChapters(
   nodes: StoryNode[],
-  ctx: { characters: StoryCharacter[]; scenes?: ComicScene[] }
+  ctx: { characters: StoryCharacter[]; scenes?: ComicScene[] },
+  paidNodeIds: Set<string> = new Set()
 ): Chapter[] {
   const chapters: Chapter[] = []
   let current: StoryNode[] = []
@@ -157,7 +159,13 @@ function splitIntoChapters(
     const id = `chapter-${chapterIndex}`
     const title = currentTitle
     const body = current
-      .map((n) => `      ${nodeToXHTML(n, ctx)}`)
+      .map((n) => {
+        // 付费节点只输出占位提示，付费内容不打入 EPUB 明文
+        if (paidNodeIds.has(n.id)) {
+          return `      <div class="locked"><p>付费内容</p><p class="sub">支持创作者，解锁后阅读</p></div>`
+        }
+        return `      ${nodeToXHTML(n, ctx)}`
+      })
       .join('\n\n')
     const xhtml = buildChapterXHTML(title, body)
     chapters.push({ id, title, xhtml })
@@ -234,6 +242,8 @@ div.cg img { max-width: 100%; height: auto; display: block; margin: 0.5em auto; 
 div.cg .media-placeholder { color: #7e22ce; font-style: italic; text-align: center; padding: 1em; background: #faf5ff; border: 1px dashed #c084fc; }
 div.unlock { background: #fef2f2; border: 2px dashed #dc2626; padding: 0.8em; margin: 1em 0; text-align: center; }
 div.unlock .price { color: #dc2626; font-weight: bold; font-size: 1.2em; }
+div.locked { color: #d97706; border: 1px dashed #d1d5db; padding: 1.5em; margin: 1em 0; text-align: center; font-style: italic; }
+div.locked .sub { color: #9ca3af; font-size: 0.9em; }
 p.condition, p.jump, p.gather, p.random { color: #6b7280; font-style: italic; margin: 0.5em 0; padding: 0.2em 0.5em; background: #f3f4f6; border-radius: 3px; }
 `
 }
@@ -379,7 +389,17 @@ export async function exportToEPUB(graph: StoryGraph): Promise<Blob> {
   const sortedNodes = topologicalSortNodes(nodes, edges)
   const ctx = { characters, scenes }
 
-  const chapters = splitIntoChapters(sortedNodes, ctx)
+  // 收集付费节点 id（paidNodes + paidChapters），导出时打码不打入明文
+  const monetization = graph.monetization as MonetizationConfig | undefined
+  const paidNodeIds = new Set<string>()
+  if (monetization?.enabled) {
+    for (const id of monetization.paidNodes || []) paidNodeIds.add(id)
+    for (const ch of monetization.paidChapters || []) {
+      for (const id of ch.nodeIds || []) paidNodeIds.add(id)
+    }
+  }
+
+  const chapters = splitIntoChapters(sortedNodes, ctx, paidNodeIds)
 
   // 处理封面图（settings.coverImage）
   const settings = graph.settings as { coverImage?: string }

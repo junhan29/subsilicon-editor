@@ -135,10 +135,10 @@ export class ExpressionParser {
         continue
       }
 
-      // 标识符/变量名
-      if (/[a-zA-Z_]/.test(char)) {
+      // 标识符/变量名（支持中文/Unicode 变量名，如「好感度」）
+      if (/[a-zA-Z_\u00C0-\uFFFF]/.test(char)) {
         let id = ''
-        while (i < expression.length && /[a-zA-Z0-9_]/.test(expression[i])) {
+        while (i < expression.length && /[a-zA-Z0-9_\u00C0-\uFFFF]/.test(expression[i])) {
           id += expression[i]
           i++
         }

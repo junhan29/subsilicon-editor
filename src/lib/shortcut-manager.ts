@@ -60,7 +60,10 @@ const DEFAULT_BINDINGS: ShortcutBinding[] = [
   { id: 'toggleTheme', action: '切换主题', description: '在深色与浅色主题之间切换', defaultKeys: ['Ctrl', 'Shift', 'T'], category: 'view', icon: 'Sun' },
 
   { id: 'help', action: '帮助中心', description: '打开帮助中心菜单', defaultKeys: ['F1'], category: 'help', icon: 'HelpCircle' },
-  { id: 'tour', action: '重新引导', description: '重新播放新手引导', defaultKeys: ['Shift', '?'], category: 'help', icon: 'Play' },
+  // 注意：tour 原绑定为 ['Shift', '?']，但 '?' 在美式键盘上只能由 Shift+/ 输入，
+  // eventToKeys 会将其归一化为 ['?']，['Shift', '?'] 绑定永远无法匹配。
+  // 改用 Shift+H 避免不可达，同时保留 '?'（Shift+/）绑定打开快捷键面板。
+  { id: 'tour', action: '重新引导', description: '重新播放新手引导', defaultKeys: ['Shift', 'H'], category: 'help', icon: 'Play' },
 ]
 
 export const SHORTCUT_CATEGORY_LABELS: Record<ShortcutBinding['category'], string> = {
@@ -200,9 +203,31 @@ function keysEqual(a: string[], b: string[]): boolean {
 }
 
 /**
+ * 将「或」组合的拍平数组拆分：在重复出现的修饰键处分割。
+ * 例：['Ctrl', 'Y', 'Ctrl', 'Shift', 'Z'] → [['Ctrl', 'Y'], ['Ctrl', 'Shift', 'Z']]
+ * 用于支持一个 action 绑定多个互斥的组合（如 Ctrl+Y 或 Ctrl+Shift+Z）。
+ */
+function splitCombos(keys: string[]): string[][] {
+  const combos: string[][] = []
+  let current: string[] = []
+  const seenMods = new Set<string>()
+  for (const k of keys) {
+    if ((k === 'Ctrl' || k === 'Shift' || k === 'Alt') && seenMods.has(k) && current.length > 0) {
+      combos.push(current)
+      current = []
+    }
+    if (k === 'Ctrl' || k === 'Shift' || k === 'Alt') seenMods.add(k)
+    current.push(k)
+  }
+  if (current.length > 0) combos.push(current)
+  return combos
+}
+
+/**
  * 判断一个按键组合是否匹配某个 action 的当前绑定。
- * 支持两种语义：
+ * 支持三种语义：
  *  - 单组合：含修饰键（Ctrl/Shift/Alt）的视为单一组合，如 ['Ctrl', 'Shift', 'Z'] = Ctrl+Shift+Z
+ *  - 多组合「或」：重复修饰键拆分为多个互斥组合，如 ['Ctrl','Y','Ctrl','Shift','Z'] = Ctrl+Y 或 Ctrl+Shift+Z
  *  - 多选一：不含修饰键的数组视为多个单键「或」，如 ['Delete', 'Backspace'] = Delete 或 Backspace
  */
 export function matchShortcut(event: KeyboardEvent, action: string): boolean {
@@ -214,9 +239,10 @@ export function matchShortcut(event: KeyboardEvent, action: string): boolean {
 
   const hasModifier = activeKeys.some((k) => k === 'Ctrl' || k === 'Shift' || k === 'Alt')
 
-  // 含修饰键：单一组合
+  // 含修饰键：可能是多组合「或」（Ctrl+Y / Ctrl+Shift+Z），任一组合匹配即生效
   if (hasModifier) {
-    return keysEqual(activeKeys, eventKeys)
+    const combos = splitCombos(activeKeys)
+    return combos.some((combo) => keysEqual(combo, eventKeys))
   }
 
   // 不含修饰键：每个键都是独立的「或」候选
@@ -224,6 +250,11 @@ export function matchShortcut(event: KeyboardEvent, action: string): boolean {
 }
 
 export function formatKeys(keys: string[]): string {
+  const hasModifier = keys.some((k) => k === 'Ctrl' || k === 'Shift' || k === 'Alt')
+  if (hasModifier) {
+    const combos = splitCombos(keys)
+    if (combos.length > 1) return combos.map((c) => c.join('+')).join(' / ')
+  }
   return keys.join('+')
 }
 

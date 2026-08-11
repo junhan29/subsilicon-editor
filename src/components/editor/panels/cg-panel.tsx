@@ -88,7 +88,7 @@ export function CGPanel({ node, onOpenAssets, onUpdateNode }: BasePanelProps) {
         <div className="flex items-center justify-between">
           <Label className="text-xs">资源上传</Label>
           <Button variant="ghost" size="sm" className="h-6 px-2 text-[10px] text-muted-foreground hover:text-foreground"
-            onClick={() => onOpenAssets?.(mediaType === 'video' ? 'audios' : 'images')}>
+            onClick={() => onOpenAssets?.(mediaType === 'video' ? 'video' : 'images')}>
             <Image className="w-3 h-3 mr-1" />从素材库选择
           </Button>
         </div>

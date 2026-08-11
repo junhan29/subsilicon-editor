@@ -839,16 +839,6 @@ function buildStoryHTML(encryptedData: string, ivBase64: string, config: StoryEx
               html += '</div>';
             }
 
-            // 预生成码区域
-            if (C.preGeneratedCodes && C.preGeneratedCodes.length > 0) {
-              html += '<div class="pw-divider"></div>';
-              html += '<div class="pw-section-title">已有解锁码？</div>';
-              html += '<div class="pw-code-grid">';
-              C.preGeneratedCodes.forEach(function(c, i) {
-                html += '<div class="pw-code-item' + (c.usedAt ? ' used' : '') + '" onclick="usePreGeneratedCode(' + i + ')">' + c.code + '</div>';
-              });
-              html += '</div>';
-            }
           } else if (mode === 'semi_auto') {
             // 原有半自动模式
             if (hasQR) {
@@ -900,57 +890,6 @@ function buildStoryHTML(encryptedData: string, ivBase64: string, config: StoryEx
         document.querySelectorAll('.pw-section').forEach(function(s) {
           s.classList.toggle('active', s.dataset.section === tabId);
         });
-      };
-
-      window.usePreGeneratedCode = async function(index) {
-        var codes = C.preGeneratedCodes || [];
-        var item = codes[index];
-        if (!item || item.usedAt) return;
-        var msg = document.getElementById('unlock-msg') || document.getElementById('manual-msg');
-        if (!msg) return;
-        msg.className = 'pw-msg info'; msg.textContent = '正在验证...';
-
-        // 优先尝试离线验证
-        var offline = await tryOfflineUnlock(item.code);
-        if (offline && offline.success) {
-          item.usedAt = Date.now();
-          msg.className = 'pw-msg success'; msg.textContent = '解锁成功！即将开始阅读...';
-          setTimeout(function() { paywall.classList.add('hidden'); startStory(); }, 1200);
-          return;
-        }
-        if (offline && offline.error) {
-          msg.className = 'pw-msg error'; msg.textContent = offline.error;
-          return;
-        }
-
-        // 离线验证不可用，尝试 API
-        if (!C.apiUrl) {
-          msg.className = 'pw-msg error'; msg.textContent = '离线验证不可用，请联系创作者获取有效解锁码';
-          return;
-        }
-
-        try {
-          var fingerprint = await sha256(navigator.userAgent + screen.width + 'x' + screen.height);
-          var resp = await fetch(C.apiUrl, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'unlock', workId: C.workId, orderNo: item.code, deviceFingerprint: fingerprint }),
-          });
-          var result = await resp.json();
-          if (result.success) {
-            item.usedAt = Date.now();
-            item.deviceFingerprint = fingerprint;
-            setUnlocked(result.keyBase64, result.ivBase64);
-            decodedData = await decryptData(result.keyBase64, result.ivBase64);
-            graph = JSON.parse(decodedData);
-            initVariables();
-            msg.className = 'pw-msg success'; msg.textContent = '解锁成功！即将开始阅读...';
-            setTimeout(function() { paywall.classList.add('hidden'); startStory(); }, 1200);
-          } else {
-            msg.className = 'pw-msg error'; msg.textContent = result.error || '解锁码无效';
-          }
-        } catch(e) {
-          msg.className = 'pw-msg error'; msg.textContent = '网络错误';
-        }
       };
 
       window.doHybridUnlock = async function() {

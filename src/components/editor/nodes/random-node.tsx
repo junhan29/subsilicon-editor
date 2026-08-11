@@ -17,7 +17,11 @@ type RandomNodeData = {
   options?: RandomOption[]
 }
 
-function RandomNodeComponent({ data, selected }: NodeProps) {
+interface RandomNodeProps extends NodeProps {
+  onUpdateNode?: (nodeId: string, data: { options?: RandomOption[] }) => void
+}
+
+function RandomNodeComponent({ id, data, selected, onUpdateNode }: RandomNodeProps) {
   const d = data as unknown as RandomNodeData
   const [options, setOptions] = useState<RandomOption[]>(
     d.options || [
@@ -37,8 +41,14 @@ function RandomNodeComponent({ data, selected }: NodeProps) {
 
   const syncToData = (newOptions: RandomOption[]) => {
     setOptions(newOptions)
-    const currentData = data as Record<string, unknown>
-    currentData.options = newOptions
+    if (onUpdateNode) {
+      // 走受控更新：入历史栈 + 触发 graph 重算，避免原地 mutation
+      // 导致保存时读到旧 options
+      onUpdateNode(id, { options: newOptions })
+    } else {
+      const currentData = data as Record<string, unknown>
+      currentData.options = newOptions
+    }
   }
 
   const addOption = () => {

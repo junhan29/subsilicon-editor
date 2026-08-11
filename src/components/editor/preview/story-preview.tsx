@@ -15,6 +15,8 @@ interface StoryPreviewProps {
   graph: StoryGraph
   open: boolean
   onClose: () => void
+  /** 作品 id：存档按 workId 隔离，避免改标题丢档 / 同名作品串档 */
+  workId?: string
 }
 
 interface HistoryEntry {
@@ -97,7 +99,7 @@ function AudioChannelControl({ volume, label, icon, isPlaying, onVolumeChange }:
   )
 }
 
-export function StoryPreview({ graph, open, onClose }: StoryPreviewProps) {
+export function StoryPreview({ graph, open, onClose, workId }: StoryPreviewProps) {
   const [state, setState] = useState<StoryState>({
     currentNodeId: null,
     history: [],
@@ -118,7 +120,9 @@ export function StoryPreview({ graph, open, onClose }: StoryPreviewProps) {
   const autoSaveTimer = useRef<number | null>(null)
   const contentRef = useRef<HTMLDivElement>(null)
 
-  const graphId = graph.title || 'default'
+  // 存档/分析以 workId 为 key：标题会变且可能重名，用标题存档会导致
+  // 改标题后旧存档变孤儿数据、同名作品互相串档
+  const graphId = workId || graph.title || 'default'
 
   const { onNodeEnter, onChoice: onAnalyticsChoice, onStoryEnd } = useReaderAnalytics({
     storyId: graphId,
@@ -234,6 +238,12 @@ export function StoryPreview({ graph, open, onClose }: StoryPreviewProps) {
   }
 
   const findStartNode = useCallback(() => {
+    // 与导出 HTML / 运行时一致：优先取第一个 dialogue/choice 节点作为起点，
+    // 环状图/多入口时「无入边的第一个节点」可能选错起点
+    const storyStart = graph.nodes.find(
+      (n) => n.type === 'dialogue' || n.type === 'choice'
+    )
+    if (storyStart) return storyStart
     const targetIds = new Set(graph.edges.map((e) => e.target))
     return graph.nodes.find((n) => !targetIds.has(n.id))
   }, [graph])
@@ -385,7 +395,16 @@ export function StoryPreview({ graph, open, onClose }: StoryPreviewProps) {
           const edge = graph.edges.find(
             (e) => e.source === node.id && e.sourceHandle === chosen.id
           )
-          if (edge) nextNodeId = edge.target
+          if (edge) {
+            nextNodeId = edge.target
+          } else {
+            // random 节点底部出边 sourceHandle 为 null（画布连线不设 handle），
+            // 无法按 sourceHandle 匹配；回退为按选项 index 顺序取对应出边（与导出 HTML 一致），
+            // 否则预览在随机节点处必然卡死
+            const outEdges = graph.edges.filter((e) => e.source === node.id)
+            const edgeIdx = outEdges[validOptions.indexOf(chosen)]
+            if (edgeIdx) nextNodeId = edgeIdx.target
+          }
         }
       }
     } else if (node.type === 'jump') {

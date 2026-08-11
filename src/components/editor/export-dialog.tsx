@@ -1,10 +1,13 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { X, Download, FileCode, Archive, FileText, BookOpen, Image as ImageIcon, Settings2, Loader2, Languages, Lock, ShieldCheck, MonitorPlay, Monitor, Film, PlayCircle, ListVideo } from 'lucide-react'
 import { Button } from '@editor/components/ui/button'
 import type { StoryGraph } from '@editor/types/editor'
+import type { WorkTypeId } from '@editor/types/work'
 import type { MonetizationConfig } from '@editor/lib/work-monetization'
+import { hydrateSeedKeyFromLocal, hydrateOfflineCodesFromLocal } from '@editor/lib/work-monetization'
+import { getWorkType } from '@editor/lib/work-registry'
 import { exportToHTML } from '@editor/lib/export-html'
 import { exportToZIP } from '@editor/lib/export-zip'
 import { exportToScript } from '@editor/lib/export-script'
@@ -35,6 +38,12 @@ interface ExportDialogProps {
   onClose: () => void
   onImportTranslation?: (newGraph: StoryGraph) => void
   monetization?: MonetizationConfig | null
+  /** v2.0：作品类型（默认互动叙事，用于按类型过滤导出格式） */
+  workType?: WorkTypeId
+  /** 作品 id（用于付费配置 workId） */
+  workId?: string
+  /** 付费设置变更回调：把对话框中的 DRM 配置合并写回作品并随保存持久化 */
+  onMonetizationChange?: (config: MonetizationConfig | null) => void
 }
 
 const FORMATS: { id: ExportFormat; name: string; description: string; icon: typeof FileCode; ext: string }[] = [
@@ -77,7 +86,7 @@ function applyThemeToHTML(html: string, theme: ReaderTheme): string {
   return html.replace('</style>', `${css}\n  </style>`)
 }
 
-export function ExportDialog({ open, graph, onClose, onImportTranslation, monetization }: ExportDialogProps) {
+export function ExportDialog({ open, graph, onClose, onImportTranslation, monetization, workType = 'interactive-narrative', workId, onMonetizationChange }: ExportDialogProps) {
   const [format, setFormat] = useState<ExportFormat>('html')
   const [themeId, setThemeId] = useState<string>(READER_THEME_PRESETS[0].id)
   const [includeAssets, setIncludeAssets] = useState(true)
@@ -163,6 +172,20 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
 
   const selectedTheme = READER_THEME_PRESETS.find((t) => t.id === themeId) || READER_THEME_PRESETS[0]
 
+  // v2.0：按作品类型过滤可用导出格式（互动叙事返回全部既有格式）
+  const availableFormats = useMemo(() => {
+    const adapter = getWorkType(workType)
+    const supported = new Set(adapter.getExportFormats().map((f) => f.id))
+    return FORMATS.filter((f) => supported.has(f.id))
+  }, [workType])
+
+  // 若当前选中格式被过滤（理论不会发生），回退到第一个
+  useEffect(() => {
+    if (!availableFormats.some((f) => f.id === format)) {
+      setFormat((availableFormats[0]?.id as ExportFormat) || 'html')
+    }
+  }, [availableFormats, format])
+
   const themeApplicable = format !== 'script' && format !== 'i18n' && format !== 'story_exec' && format !== 'desktop_app' && format !== 'bilibili_interactive'
   const assetsApplicable = format === 'zip' || format === 'epub'
   const isI18nFormat = format === 'i18n'
@@ -176,6 +199,28 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
     setExporting(true)
     setProgress(10)
 
+    // 把对话框中的 DRM 设置合并写回作品（仅覆盖本对话框可编辑字段，
+    // 其余字段如 paidNodes/paidChapters/seedKeyHash 保留原值），
+    // 随作品保存持久化——此前设置仅存于对话框本地 state，关闭即丢失。
+    if (onMonetizationChange) {
+      const base = monetization || ({} as MonetizationConfig)
+      const merged: MonetizationConfig = {
+        ...base,
+        enabled: drmEnabled,
+        price: drmPrice,
+        workId: workId || base.workId || '',
+        wechatQRCode: drmWechatQR || undefined,
+        alipayQRCode: drmAlipayQR || undefined,
+        wechatContact: drmContact || undefined,
+        alipayContact: drmContact || undefined,
+        customApiUrl: drmWebhookUrl.trim() || base.customApiUrl || undefined,
+        paidNodes: base.paidNodes || [],
+        granularity: base.granularity || 'whole',
+        paymentMethod: base.paymentMethod || (drmWechatQR ? 'wechat_manual' : 'offline'),
+      }
+      onMonetizationChange(merged)
+    }
+
     try {
       const safeTitle = sanitizeFilename(graph.title || '未命名故事')
       let blob: Blob | null = null
@@ -186,7 +231,9 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
 
       switch (format) {
         case 'html': {
-          let html = await exportToHTML(graph, monetization ?? undefined)
+          // 作品数据不携带明文 seedKey，导出时从本机 localStorage 恢复；
+          // 接收自他人的副本若无本地密钥，将无法签发解锁码（需创作者重新生成）。
+          let html = await exportToHTML(graph, monetization ? hydrateSeedKeyFromLocal(monetization) : undefined)
           if (themeApplicable) {
             html = applyThemeToHTML(html, selectedTheme)
           }
@@ -215,6 +262,9 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
           break
         }
         case 'story_exec': {
+          // 导出前从本机 localStorage 恢复离线解锁码（与 seedKey 同模式）。
+          // 接收方本机无该作品的离线码，导出物不含离线解锁码，offline 模式不可用。
+          const hydratedMonetization = monetization ? hydrateOfflineCodesFromLocal(monetization) : undefined
           // 根据 monetization 配置确定解锁模式
           let unlockMode: UnlockMode = monetization?.paymentMethod === 'multi' ? 'hybrid' : drmUnlockMode
           if (monetization?.paymentMethod === 'offline') {
@@ -236,10 +286,10 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
             patreonLink: drmPatreonUrl || undefined,
             kofiLink: drmKofiUrl || undefined,
             // 混合模式配置
-            multiChannel: monetization?.multiChannel,
+            multiChannel: hydratedMonetization?.multiChannel,
             // 去中心化配置
-            customApiUrl: monetization?.customApiUrl,
-            offlineCodes: monetization?.offlineCodes?.map(c => ({
+            customApiUrl: hydratedMonetization?.customApiUrl,
+            offlineCodes: hydratedMonetization?.offlineCodes?.map(c => ({
               code: c.code,
               maskedKeyBase64: c.maskedKeyBase64,
             })),
@@ -289,7 +339,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
             version: desktopVersion,
             author: desktopAuthor || undefined,
             description: desktopDescription || undefined,
-            monetization: monetization ?? undefined,
+            monetization: monetization ? hydrateSeedKeyFromLocal(monetization) : undefined,
             platforms: (platforms || []).length ? (platforms || ['current']) : ['current'],
             onProgress: (stage, info) => {
               const map = { shell: 20, zip: 40, build: 70, done: 90 } as const
@@ -364,7 +414,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
       const msg = err instanceof Error ? err.message : String(err)
       showToast('error', `导出失败：${msg}`)
     }
-  }, [exporting, format, graph, themeApplicable, selectedTheme, includeDebug, imageQuality, onClose, drmEnabled, drmPrice, drmFreePreview, drmUnlockMode, drmWechatQR, drmAlipayQR, drmContact, drmWebhookUrl, drmWebhookProvider, drmStripeUrl, drmPaypalUrl, drmPatreonUrl, drmKofiUrl, drmCurrency, desktopTargets, desktopVersion, desktopAuthor, desktopDescription, biliMode, biliDefaultSegSec, biliBindings])
+  }, [exporting, format, graph, themeApplicable, selectedTheme, includeDebug, imageQuality, onClose, drmEnabled, drmPrice, drmFreePreview, drmUnlockMode, drmWechatQR, drmAlipayQR, drmContact, drmWebhookUrl, drmWebhookProvider, drmStripeUrl, drmPaypalUrl, drmPatreonUrl, drmKofiUrl, drmCurrency, desktopTargets, desktopVersion, desktopAuthor, desktopDescription, biliMode, biliDefaultSegSec, biliBindings, monetization, workId, onMonetizationChange])
 
   if (!open) return null
 
@@ -406,7 +456,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
               </h4>
             </div>
             <div className="grid grid-cols-2 gap-2">
-              {FORMATS.map((fmt) => {
+              {availableFormats.map((fmt) => {
                 const Icon = fmt.icon
                 const isActive = format === fmt.id
                 return (

@@ -1,27 +1,16 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Plus, FolderOpen, Settings, Trash2, Copy, Edit3, MoreHorizontal, BookOpen, Clock, FileText, Sparkles, RefreshCw, Download, ExternalLink, AlertCircle, CheckCircle2, X, FolderSync, CheckCircle, Search, Grid, List, Star, HardDrive, Hash, AlertTriangle } from 'lucide-react'
 import type { StoryGraph } from '@editor/types/editor'
+import type { WorkDocument, WorkTypeId } from '@editor/types/work'
 import { getAllWorks, loadWork, saveWork, deleteWork, generateProjectId, type StoredWork } from '@editor/lib/local-db/work-store'
+import { interactiveNarrativeAdapter, createEmptyInteractiveGraph } from '@editor/lib/work-types/interactive-narrative'
+import { isWorkDocument } from '@editor/lib/work-registry'
 
 // Mac 应用未签名，无法在应用内自动下载安装；仅保留版本检测，引导用户手动下载
 type UpdateStatus = 'idle' | 'checking' | 'available' | 'not-available' | 'error'
 interface UpdateInfo { version: string; releaseDate?: string; releaseNotes?: string; downloadUrl?: string }
 
-const emptyGraph: StoryGraph = {
-  title: '未命名故事',
-  description: '',
-  templateId: 'custom',
-  characters: [],
-  variables: [],
-  nodes: [],
-  edges: [],
-  settings: { title: '未命名故事', tags: [] },
-  assets: { images: [], audios: [], fonts: [] },
-  scenes: [],
-  audios: [],
-  groups: [],
-  annotations: [],
-}
+const emptyGraph: StoryGraph = createEmptyInteractiveGraph()
 
 interface ProjectManagerProps {
   onOpenProject: (work: StoredWork) => void
@@ -43,6 +32,7 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings }: 
   const [showNewProjectDialog, setShowNewProjectDialog] = useState(false)
   const [newProjectName, setNewProjectName] = useState('')
   const [newProjectPath, setNewProjectPath] = useState('')
+  const [newProjectType, setNewProjectType] = useState<WorkTypeId>('interactive-narrative')
   const [creating, setCreating] = useState(false)
   
   // 导入项目状态
@@ -117,6 +107,7 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings }: 
   const handleOpenNewProjectDialog = () => {
     setNewProjectName('')
     setNewProjectPath('')
+    setNewProjectType('interactive-narrative')
     setShowNewProjectDialog(true)
   }
 
@@ -127,6 +118,21 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings }: 
     
     const id = generateProjectId()
     const now = Date.now()
+    // 按所选作品类型创建 WorkDocument（novel/video/comic 使用独立模型）
+    let editorData: StoredWork['editorData']
+    if (newProjectType === 'novel') {
+      const { createEmptyNovelDocument } = await import('@editor/lib/work-types/novel')
+      editorData = createEmptyNovelDocument(newProjectName.trim())
+    } else if (newProjectType === 'video') {
+      const { createEmptyVideoDocument } = await import('@editor/lib/work-types/video')
+      editorData = createEmptyVideoDocument(newProjectName.trim())
+    } else if (newProjectType === 'comic') {
+      const { createEmptyComicDocument } = await import('@editor/lib/work-types/comic')
+      editorData = createEmptyComicDocument(newProjectName.trim())
+    } else {
+      const graph: StoryGraph = { ...emptyGraph, title: newProjectName.trim() }
+      editorData = interactiveNarrativeAdapter.fromGraph(graph)
+    }
     const work: StoredWork = {
       id,
       name: newProjectName.trim(),
@@ -136,7 +142,8 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings }: 
       nodeCount: 0,
       edgeCount: 0,
       templateId: 'custom',
-      editorData: { ...emptyGraph, title: newProjectName.trim() },
+      workType: newProjectType,
+      editorData,
       customPath: newProjectPath.trim() || undefined,
     }
     await saveWork(work)
@@ -165,35 +172,66 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings }: 
         const fileResult = await window.__electronAPI?.readFileAsText?.(filePath)
         if (fileResult?.success && fileResult.data) {
           const content = fileResult.data
-          let projectData: Partial<StoryGraph> | null = null
+          let parsed: unknown = null
 
           // 解析文件内容
           if (filePath.endsWith('.json')) {
-            projectData = JSON.parse(content)
+            parsed = JSON.parse(content)
           } else if (filePath.endsWith('.story.html')) {
             // 从 HTML 中提取嵌入的 JSON 数据
             const match = content.match(/<script[^>]*id="story-data"[^>]*>([\s\S]*?)<\/script>/)
             if (match) {
-              projectData = JSON.parse(match[1])
+              parsed = JSON.parse(match[1])
             }
           }
           
-          if (projectData) {
+          if (parsed) {
             const id = generateProjectId()
             const now = Date.now()
-            const work: StoredWork = {
-              id,
-              name: projectData.title || projectData.settings?.title || '导入的项目',
-              updatedAt: now,
-              createdAt: now,
-              lastOpened: now,
-              nodeCount: projectData.nodes?.length || 0,
-              edgeCount: projectData.edges?.length || 0,
-              templateId: projectData.templateId || 'custom',
-              editorData: { ...emptyGraph, ...projectData, title: projectData.title || projectData.settings?.title || '导入的项目' },
+
+            // v2 WorkDocument（novel/video/comic/互动叙事）：保留 workType / extra / graph，
+            // 绝不能按旧 StoryGraph 解析，否则类型数据埋在 graph.extra 中会被丢弃，
+            // 后续在 StoryCanvas 保存时永久覆盖原数据。
+            if (isWorkDocument(parsed)) {
+              const doc = parsed
+              const graph = doc.graph
+              const metaTitle = doc.meta?.title
+              const work: StoredWork = {
+                id,
+                name: metaTitle || '导入的项目',
+                updatedAt: now,
+                createdAt: now,
+                lastOpened: now,
+                nodeCount: graph.nodes?.length || 0,
+                edgeCount: graph.edges?.length || 0,
+                templateId: 'custom',
+                workType: doc.workType,
+                editorData: doc,
+              }
+              await saveWork(work)
+              loadWorks()
+            } else {
+              const projectData = parsed as Partial<StoryGraph>
+              const graph: StoryGraph = {
+                ...emptyGraph,
+                ...projectData,
+                title: projectData.title || projectData.settings?.title || '导入的项目',
+              }
+              const work: StoredWork = {
+                id,
+                name: projectData.title || projectData.settings?.title || '导入的项目',
+                updatedAt: now,
+                createdAt: now,
+                lastOpened: now,
+                nodeCount: projectData.nodes?.length || 0,
+                edgeCount: projectData.edges?.length || 0,
+                templateId: projectData.templateId || 'custom',
+                workType: 'interactive-narrative',
+                editorData: interactiveNarrativeAdapter.fromGraph(graph),
+              }
+              await saveWork(work)
+              loadWorks()
             }
-            await saveWork(work)
-            loadWorks()
           }
         }
       }
@@ -208,6 +246,7 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings }: 
   const handleNewProject = async () => {
     const id = generateProjectId()
     const now = Date.now()
+    const graph: StoryGraph = { ...emptyGraph, title: '新项目' }
     const work: StoredWork = {
       id,
       name: '新项目',
@@ -217,7 +256,8 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings }: 
       nodeCount: 0,
       edgeCount: 0,
       templateId: 'custom',
-      editorData: { ...emptyGraph, title: '新项目' },
+      workType: 'interactive-narrative',
+      editorData: interactiveNarrativeAdapter.fromGraph(graph),
     }
     await saveWork(work)
     onNewProject(work)
@@ -285,7 +325,14 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings }: 
     const work = works.find((w) => w.id === renamingId)
     if (work) {
       work.name = renameValue.trim()
-      work.editorData.title = renameValue.trim()
+      // 兼容双格式：WorkDocument 更新 meta+graph.title，旧格式更新 graph.title
+      if (work.editorData && 'workType' in work.editorData) {
+        const doc = work.editorData as WorkDocument
+        doc.meta.title = renameValue.trim()
+        doc.graph.title = renameValue.trim()
+      } else {
+        work.editorData.title = renameValue.trim()
+      }
       await saveWork(work)
       loadWorks()
     }
@@ -778,12 +825,38 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings }: 
 
             <div className="p-4 space-y-4">
               <div className="space-y-2">
+                <label className="text-xs text-slate-400">作品类型</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { id: 'interactive-narrative' as WorkTypeId, name: '互动叙事', desc: '节点图 · 分支 · 多结局' },
+                    { id: 'novel' as WorkTypeId, name: '小说', desc: '章节树 · 富文本正文' },
+                    { id: 'video' as WorkTypeId, name: '视频', desc: '时间线 · 字幕 · 配音' },
+                    { id: 'comic' as WorkTypeId, name: '漫画', desc: '分镜画格 · 台词旁白' },
+                  ].map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => setNewProjectType(t.id)}
+                      className={`p-2.5 rounded-lg border text-left transition-all ${
+                        newProjectType === t.id
+                          ? 'border-pink-500 bg-pink-500/10 ring-1 ring-pink-500/30'
+                          : 'border-slate-600 hover:border-slate-500'
+                      }`}
+                    >
+                      <div className="text-sm font-medium text-white">{t.name}</div>
+                      <div className="text-[11px] text-slate-400 mt-0.5">{t.desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2">
                 <label className="text-xs text-slate-400">项目名称 *</label>
                 <input
                   type="text"
                   value={newProjectName}
                   onChange={(e) => setNewProjectName(e.target.value)}
-                  placeholder="输入项目名称..."
+                  placeholder={newProjectType === 'novel' ? '输入书名...' : newProjectType === 'video' ? '输入视频标题...' : newProjectType === 'comic' ? '输入漫画标题...' : '输入项目名称...'}
                   className="w-full h-9 text-sm rounded-lg border border-slate-600 bg-slate-700 px-3 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-pink-500/50"
                   autoFocus
                   onKeyDown={(e) => e.key === 'Enter' && handleConfirmNewProject()}

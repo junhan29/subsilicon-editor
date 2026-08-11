@@ -25,7 +25,8 @@ export function ConditionPanel({ node, variables = [], onUpdateNode }: BasePanel
     300,
     (value) => {
       onUpdateNode(id, { ...data, expression: value })
-    }
+    },
+    { flushOnUnmount: true }
   )
 
   useEffect(() => {
