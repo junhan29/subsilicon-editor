@@ -106,6 +106,35 @@ export async function encryptStoryData(
   }
 }
 
+/** 生成可持久化的 AES 密钥（base64），用于跨导出保持密钥稳定 */
+export function generateEncryptionKeyBase64(): string {
+  const { key } = generateEncryptionKey()
+  return arrayBufferToBase64(key.buffer as ArrayBuffer)
+}
+
+/**
+ * 使用指定密钥加密故事数据（与预生成的离线解锁码绑定同一个密钥）。
+ * 密钥由调用方提供（如从本机恢复的作品离线密钥），iv 仍每次随机生成。
+ */
+export async function encryptStoryDataWithKey(
+  graphJSON: string,
+  keyBase64: string
+): Promise<{
+  encryptedData: string
+  keyBase64: string
+  ivBase64: string
+}> {
+  const keyBytes = new Uint8Array(base64ToArrayBuffer(keyBase64))
+  const { iv } = generateEncryptionKey()
+  const encrypted = await encryptWithAES(graphJSON, keyBytes, iv)
+
+  return {
+    encryptedData: AES_ENC_PREFIX + encrypted,
+    keyBase64,
+    ivBase64: arrayBufferToBase64(iv.buffer as ArrayBuffer),
+  }
+}
+
 export async function decryptStoryData(
   encryptedData: string,
   keyBase64: string,

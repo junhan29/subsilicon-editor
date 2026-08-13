@@ -9,17 +9,17 @@ import type { WorkDocument, WorkTypeAdapter } from '@editor/types/work'
 import type { StoryGraph } from '@editor/types/editor'
 import {
   COMIC_WORK_TYPE,
-  createEmptyComicDocument,
-  createEmptyComicData,
-  getComicData,
-  countComicPanels,
   countComicPages,
+  countComicPanels,
   countPaidPanels,
+  createEmptyComicData,
+  createEmptyComicDocument,
+  getComicData,
 } from '@editor/lib/work-types/comic'
 import {
+  exportComicPreviewHTML,
   exportComicToFlipHTML,
   exportComicToScrollHTML,
-  exportComicPreviewHTML,
   exportComicToZip,
   freePreviewPanels,
 } from '@editor/lib/export-comic'

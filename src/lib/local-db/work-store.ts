@@ -1,6 +1,6 @@
 import type { StoryGraph } from '@editor/types/editor'
 import type { WorkDocument, WorkTypeId } from '@editor/types/work'
-import { stripSensitiveFromConfig, type MonetizationConfig } from '@editor/lib/work-monetization'
+import { type MonetizationConfig, stripSensitiveFromConfig } from '@editor/lib/work-monetization'
 import { openDB } from './db'
 
 export interface WorkMetadata {
@@ -110,8 +110,8 @@ export function getDocumentFromWork(work: StoredWork): WorkDocument {
   if (data && typeof data === 'object' && 'workType' in data && 'graph' in data) {
     return data as WorkDocument
   }
-  // 旧格式：包装为互动叙事文档
-  const graph = data as StoryGraph
+  // 旧格式或损坏数据：包装为互动叙事文档（对 null/缺字段做兜底，避免解引用崩溃）
+  const graph = (data && typeof data === 'object' ? data : {}) as StoryGraph
   return {
     formatVersion: '2.0',
     workType: work.workType || 'interactive-narrative',
@@ -123,7 +123,11 @@ export function getDocumentFromWork(work: StoredWork): WorkDocument {
       createdAt: work.createdAt,
       updatedAt: work.updatedAt,
     },
-    graph,
+    graph: {
+      ...graph,
+      nodes: Array.isArray(graph.nodes) ? graph.nodes : [],
+      edges: Array.isArray(graph.edges) ? graph.edges : [],
+    },
     resources: {
       images: graph.assets?.images || [],
       audios: graph.assets?.audios || [],

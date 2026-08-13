@@ -1,20 +1,20 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef, memo } from 'react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import {
+  AlertTriangle,
+  CheckCircle2,
   Cloud,
   CloudOff,
-  RefreshCw,
-  CheckCircle2,
-  XCircle,
-  AlertTriangle,
-  Upload,
-  Download,
   Copy,
-  Trash2,
-  Info,
+  Download,
   Eye,
   EyeOff,
+  Info,
+  RefreshCw,
+  Trash2,
+  Upload,
+  XCircle,
 } from 'lucide-react'
 import { Button } from '@editor/components/ui/button'
 import { Input } from '@editor/components/ui/input'
@@ -22,24 +22,24 @@ import { Label } from '@editor/components/ui/label'
 import {
   Sheet,
   SheetContent,
+  SheetDescription,
   SheetHeader,
   SheetTitle,
-  SheetDescription,
 } from '@editor/components/ui/sheet'
 import {
-  loadWebDAVConfig,
-  saveWebDAVConfig,
-  clearWebDAVConfig,
-  testConnection,
-  syncWorks,
-  resolveConflict,
-  subscribeSyncState,
-  subscribeSyncLog,
-  type SyncState,
   type SyncLogEntry,
+  type SyncState,
   type WebDAVConfig,
+  clearWebDAVConfig,
+  loadWebDAVConfig,
+  resolveConflict,
+  saveWebDAVConfig,
+  subscribeSyncLog,
+  subscribeSyncState,
+  syncWorks,
+  testConnection,
 } from '@editor/lib/sync-manager'
-import { loadWork, type StoredWork } from '@editor/lib/local-db/work-store'
+import { type StoredWork, loadWork } from '@editor/lib/local-db/work-store'
 
 interface SyncSettingsProps {
   open: boolean

@@ -1,8 +1,8 @@
 'use client'
 
-import { memo, useState, useEffect } from 'react'
-import { Handle, Position, type NodeProps } from '@xyflow/react'
-import { Shuffle, Plus, Trash2, Percent } from 'lucide-react'
+import { memo, useEffect, useState } from 'react'
+import { Handle, type NodeProps, Position } from '@xyflow/react'
+import { Percent, Plus, Shuffle, Trash2 } from 'lucide-react'
 import { areNodesEqual } from '@editor/lib/utils'
 
 interface RandomOption {

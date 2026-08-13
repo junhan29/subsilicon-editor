@@ -1,10 +1,10 @@
 /** protection 单元测试 */
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   checkDomainBinding,
+  initProtection,
   injectWatermark,
   setupAntiCopy,
-  initProtection,
   stopDevToolsDetection,
 } from '../protection'
 

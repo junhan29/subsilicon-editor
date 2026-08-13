@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Label } from '@editor/components/ui/label'
 import { Input } from '@editor/components/ui/input'
 import { Button } from '@editor/components/ui/button'
-import { Plus, X, Image as ImageIcon, Upload, Layers } from 'lucide-react'
+import { Image as ImageIcon, Layers, Plus, Upload, X } from 'lucide-react'
 import type { BasePanelProps } from './shared-props'
 import { AiAssistButton } from '../ai-assist-button'
 import { NodeVideoBindingSection } from '../node-video-binding'

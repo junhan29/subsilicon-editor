@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
-import { X, Check, ArrowLeft } from 'lucide-react'
-import type { PuzzleScene, PuzzleLayer, ComicScene, StoryCharacter } from '@editor/types/editor'
+import { useCallback, useEffect, useState } from 'react'
+import { ArrowLeft, Check, X } from 'lucide-react'
+import type { ComicScene, PuzzleLayer, PuzzleScene, StoryCharacter } from '@editor/types/editor'
 import { AssetPanel } from './asset-panel'
 import { PuzzleCanvas } from './puzzle-canvas'
 import { LayerPanel } from './layer-panel'

@@ -37,6 +37,26 @@ export interface MultiChannelConfig {
 
 export type PaymentGranularity = 'whole' | 'chapter' | 'node'
 
+/** 可执行故事导出时的解锁模式（随作品持久化，避免每次导出对话框重置） */
+export type StoryUnlockMode = 'manual' | 'semi_auto' | 'webhook' | 'hybrid' | 'offline'
+
+/** 可执行故事导出配置（持久化到作品，导出对话框据此恢复） */
+export interface StoryExportSettings {
+  unlockMode?: StoryUnlockMode
+  currency?: string
+  freePreview?: number
+  webhookUrl?: string
+  webhookProvider?: string
+  stripeCheckoutUrl?: string
+  paypalLink?: string
+  patreonLink?: string
+  kofiLink?: string
+  /** 在线验码：导出时注册码池到服务端，读者码严格一次一用 */
+  onlineCodeVerify?: boolean
+  /** 作品内发码申请：读者付款后在作品内申请，创作者在编辑器确认发码 */
+  inWorkCodeRequest?: boolean
+}
+
 export interface PaidChapter {
   id: string
   name: string
@@ -71,6 +91,8 @@ export interface MonetizationConfig {
   customApiUrl?: string
   /** 离线解锁码列表（纯离线模式下使用） */
   offlineCodes?: OfflineUnlockCode[]
+  /** 可执行故事导出配置（随作品持久化，导出对话框据此恢复） */
+  exportSettings?: StoryExportSettings
   /** OPVP 自动验证配置（开放支付验证协议） */
   opvp?: {
     enabled: boolean
@@ -198,6 +220,31 @@ export interface OfflineUnlockCode {
   maskedKeyBase64: string
   usedAt?: number
   deviceFingerprint?: string
+}
+
+/** 导出物内嵌的离线解锁码条目：只含 codeHash，不含明文 code，
+ *  读者凭真实码经 SHA-256 匹配，防止拿到导出文件的人白嫖。 */
+export interface OfflineCodeExportEntry {
+  codeHash: string
+  maskedKeyBase64: string
+}
+
+/**
+ * 将本机离线解锁码转换为导出物条目（code → codeHash）。
+ * 明文 code 只保存在创作者本机 localStorage，绝不写入导出文件。
+ */
+export async function buildOfflineCodesForExport(
+  codes: OfflineUnlockCode[]
+): Promise<OfflineCodeExportEntry[]> {
+  const encoder = new TextEncoder()
+  const out: OfflineCodeExportEntry[] = []
+  for (const c of codes) {
+    const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(c.code))
+    const hashBytes = new Uint8Array(hashBuffer)
+    const codeHash = Array.from(hashBytes).map(b => b.toString(16).padStart(2, '0')).join('')
+    out.push({ codeHash, maskedKeyBase64: c.maskedKeyBase64 })
+  }
+  return out
 }
 
 /**
@@ -566,7 +613,11 @@ export function saveSeedKey(workId: string, seedKey: string): void {
     seedKey,
     createdAt: Date.now(),
   }
-  localStorage.setItem(SEED_KEY_STORAGE_KEY, JSON.stringify(keys))
+  try {
+    localStorage.setItem(SEED_KEY_STORAGE_KEY, JSON.stringify(keys))
+  } catch {
+    // 存储不可用（隐私模式/配额超限）时静默失败，读取路径已有容错
+  }
 }
 
 export function loadAllSeedKeys(): Record<string, { seedKey: string; createdAt: number }> {
@@ -612,7 +663,11 @@ export function saveOfflineCodes(workId: string, codes: OfflineUnlockCode[]): vo
   const all = loadAllOfflineCodes()
   if (codes.length === 0) delete all[workId]
   else all[workId] = codes
-  localStorage.setItem(OFFLINE_CODES_STORAGE_KEY, JSON.stringify(all))
+  try {
+    localStorage.setItem(OFFLINE_CODES_STORAGE_KEY, JSON.stringify(all))
+  } catch {
+    // 存储不可用（隐私模式/配额超限）时静默失败，读取路径已有容错
+  }
 }
 
 export function loadAllOfflineCodes(): Record<string, OfflineUnlockCode[]> {
@@ -632,6 +687,57 @@ export function deleteOfflineCodes(workId: string): void {
   const all = loadAllOfflineCodes()
   delete all[workId]
   localStorage.setItem(OFFLINE_CODES_STORAGE_KEY, JSON.stringify(all))
+}
+
+/** 离线解锁码对应的 AES 密钥（本机存储，用于持续签发新码，与 offlineCodes 同源） */
+export const OFFLINE_KEY_STORAGE_KEY = 'subsilicon_offline_keys'
+
+export function saveOfflineKey(workId: string, keyBase64: string): void {
+  const all = loadAllOfflineKeys()
+  all[workId] = { keyBase64, createdAt: Date.now() }
+  try {
+    localStorage.setItem(OFFLINE_KEY_STORAGE_KEY, JSON.stringify(all))
+  } catch {
+    // 存储不可用（隐私模式/配额超限）时静默失败，读取路径已有容错
+  }
+}
+
+export function loadAllOfflineKeys(): Record<string, { keyBase64: string; createdAt: number }> {
+  try {
+    const data = localStorage.getItem(OFFLINE_KEY_STORAGE_KEY)
+    return data ? JSON.parse(data) : {}
+  } catch {
+    return {}
+  }
+}
+
+export function loadOfflineKey(workId: string): string | null {
+  return loadAllOfflineKeys()[workId]?.keyBase64 || null
+}
+
+export function deleteOfflineKey(workId: string): void {
+  const all = loadAllOfflineKeys()
+  delete all[workId]
+  try {
+    localStorage.setItem(OFFLINE_KEY_STORAGE_KEY, JSON.stringify(all))
+  } catch {
+    // 存储不可用（隐私模式/配额超限）时静默失败，读取路径已有容错
+  }
+}
+
+/**
+ * 获取（或创建）某作品稳定可复用的离线加密密钥。
+ *
+ * 离线解锁码绑定到加密密钥：若每次导出都随机生成新密钥，已售出的离线码
+ * 在重新导出后全部失效。因此密钥首次生成后持久化，后续导出复用同一密钥，
+ * 保证同一作品的所有导出物与既有离线码一致。
+ */
+export function getOrCreateOfflineKey(workId: string, generateKeyBase64: () => string): string {
+  const existing = loadOfflineKey(workId)
+  if (existing) return existing
+  const key = generateKeyBase64()
+  saveOfflineKey(workId, key)
+  return key
 }
 
 /**

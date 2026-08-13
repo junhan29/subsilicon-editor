@@ -1,4 +1,4 @@
-import type { AiConfig, AiGenerateResult, AiCharacterResult, AiCharacter } from '../types'
+import type { AiCharacter, AiCharacterResult, AiConfig, AiGenerateResult } from '../types'
 import { callAi } from '../provider-registry'
 
 export const CHARACTER_DETAIL_SYSTEM_PROMPT = `你是一个专业的角色设计师。请根据角色名称、性格特点和故事类型，生成一个详细的角色设定。输出必须是严格的 JSON 格式，不要包含任何 markdown 标记或额外文字。

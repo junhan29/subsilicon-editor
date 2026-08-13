@@ -10,54 +10,54 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ArrowLeft,
-  Plus,
-  Trash2,
-  GripVertical,
-  Download,
-  Film,
-  Upload,
-  Image as ImageIcon,
-  Music,
-  Lock,
-  Unlock,
-  Save,
-  FileText,
-  Eye,
   CheckCircle2,
-  X,
   Clock,
+  Download,
+  Eye,
+  FileText,
+  Film,
+  GripVertical,
+  Image as ImageIcon,
+  Lock,
+  Music,
+  Plus,
+  Save,
+  Trash2,
+  Unlock,
+  Upload,
   Volume2,
+  X,
 } from 'lucide-react'
 import type { StoredWork } from '@editor/lib/local-db/work-store'
 import type { WorkDocument } from '@editor/types/work'
 import { saveWork } from '@editor/lib/local-db/work-store'
-import { saveAsset, getAsset } from '@editor/lib/local-db/asset-store'
+import { getAsset, saveAsset } from '@editor/lib/local-db/asset-store'
 import {
-  getVideoData,
-  withVideoData,
-  createEmptyVideoData,
-  generateClipId,
-  countVideoDuration,
-  countPaidClips,
-  defaultClipDuration,
   VIDEO_TRANSITIONS,
-  type VideoData,
+  type VideoAssetRef,
   type VideoClip,
   type VideoClipType,
-  type VideoAssetRef,
+  type VideoData,
+  countPaidClips,
+  countVideoDuration,
+  createEmptyVideoData,
+  defaultClipDuration,
+  generateClipId,
+  getVideoData,
+  withVideoData,
 } from '@editor/lib/work-types/video'
 import {
-  exportVideoToPlayerHTML,
   exportVideoPreviewHTML,
   exportVideoToBiliScript,
+  exportVideoToPlayerHTML,
 } from '@editor/lib/export-video'
 import {
   detectMediaType,
-  validateFileSize,
   generateHash,
   generateVideoThumbnail,
+  validateFileSize,
 } from '@editor/lib/media-processor'
-import { TimelinePlayer, type PlayerClip } from './timeline-player'
+import { type PlayerClip, TimelinePlayer } from './timeline-player'
 import { showToast } from './toast'
 
 interface VideoEditorProps {
@@ -214,6 +214,7 @@ export function VideoEditor({ work, onBack }: VideoEditorProps) {
   // 解析片段可播放 URL（供预览）
   useEffect(() => {
     let cancelled = false
+    const createdUrls: string[] = []
     ;(async () => {
       const clips = [...data.clips].sort((a, b) => a.order - b.order)
       const resolved: PlayerClip[] = []
@@ -221,7 +222,10 @@ export function VideoEditor({ work, onBack }: VideoEditorProps) {
         let src = ''
         if (clip.assetHash) {
           const asset = await getAsset(clip.assetHash)
-          if (asset) src = URL.createObjectURL(asset.blob)
+          if (asset) {
+            src = URL.createObjectURL(asset.blob)
+            createdUrls.push(src)
+          }
         }
         if (cancelled) return
         resolved.push({
@@ -235,7 +239,11 @@ export function VideoEditor({ work, onBack }: VideoEditorProps) {
       }
       if (!cancelled) setPlayerClips(resolved)
     })()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+      // 释放本次生成的 Blob URL，避免预览资源泄漏
+      createdUrls.forEach((url) => URL.revokeObjectURL(url))
+    }
   }, [data.clips])
 
   // 素材导入

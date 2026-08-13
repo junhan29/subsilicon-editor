@@ -2,26 +2,26 @@
 
 import { useCallback, useMemo, useRef, useState } from 'react'
 import {
-  useNodesState,
-  useEdgesState,
-  useReactFlow,
-  addEdge,
   type Connection,
   type Edge,
   type Node,
   type OnEdgesChange,
+  addEdge,
+  useEdgesState,
+  useNodesState,
+  useReactFlow,
 } from '@xyflow/react'
 import type {
-  StoryNode,
-  StoryEdge,
-  StoryCharacter,
-  StoryVariable,
+  CharacterSprite,
+  ComicAudio,
+  ComicScene,
   NodeGroup,
   NodeTemplate,
+  StoryCharacter,
+  StoryEdge,
   StoryGraph,
-  CharacterSprite,
-  ComicScene,
-  ComicAudio,
+  StoryNode,
+  StoryVariable,
 } from '@editor/types/editor'
 import { GROUP_COLORS } from '@editor/types/editor'
 import { NODE_TYPE_LABELS } from '@editor/constants'

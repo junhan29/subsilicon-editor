@@ -1,20 +1,24 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState, useRef } from 'react'
-import { X, Search, RotateCcw, AlertTriangle, Check, Pencil } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { AlertTriangle, Check, Pencil, RotateCcw, Search, X } from 'lucide-react'
 import {
-  getAllActiveBindings,
-  loadCustomBindings,
-  saveCustomBindings,
-  resetBindings,
+  type ActiveBinding,
+  SHORTCUT_CATEGORY_LABELS,
+  SHORTCUT_CATEGORY_ORDER,
+  applyDefaultPreset,
+  applySimplePreset,
   detectConflicts,
   eventToKeys,
   formatKeys,
-  SHORTCUT_CATEGORY_LABELS,
-  SHORTCUT_CATEGORY_ORDER,
-  type ActiveBinding,
+  getAllActiveBindings,
+  loadCustomBindings,
+  resetBindings,
+  saveCustomBindings,
 } from '@editor/lib/shortcut-manager'
-import { trapFocus, focusFirstInteractive, restoreFocus } from '@editor/lib/focus-manager'
+import { useAccessibilityStore } from '@editor/stores/accessibility-store'
+import { focusFirstInteractive, restoreFocus, trapFocus } from '@editor/lib/focus-manager'
+import { showToast } from '../toast'
 
 interface ShortcutSettingsProps {
   open: boolean
@@ -32,10 +36,28 @@ export function ShortcutSettings({ open, onClose }: ShortcutSettingsProps) {
   const titleId = 'shortcut-settings-title'
   const descId = 'shortcut-settings-description'
 
+  // ADHD 适配：基础快捷键预设状态
+  const simpleShortcuts = useAccessibilityStore((s) => s.simpleShortcuts)
+  const setSimpleShortcuts = useAccessibilityStore((s) => s.setSimpleShortcuts)
+
   const refresh = useCallback(() => {
     setBindings(getAllActiveBindings())
     setCustomIds(new Set(Object.keys(loadCustomBindings())))
   }, [])
+
+  const handleApplySimplePreset = useCallback(() => {
+    applySimplePreset()
+    setSimpleShortcuts(true)
+    refresh()
+    showToast('success', '已切换到基础模式快捷键（防误触）')
+  }, [refresh, setSimpleShortcuts])
+
+  const handleRestoreDefaults = useCallback(() => {
+    applyDefaultPreset()
+    setSimpleShortcuts(false)
+    refresh()
+    showToast('success', '已恢复默认快捷键')
+  }, [refresh, setSimpleShortcuts])
 
   useEffect(() => {
     if (open) refresh()
@@ -201,6 +223,36 @@ export function ShortcutSettings({ open, onClose }: ShortcutSettingsProps) {
               placeholder="搜索快捷键..."
               className="w-full pl-9 pr-3 py-2 text-sm bg-muted/40 border border-border rounded-lg focus:outline-none focus:border-primary focus:bg-background transition-colors"
             />
+          </div>
+        </div>
+
+        {/* 预设（ADHD 适配：基础模式，防误触） */}
+        <div className="px-5 py-3 border-b shrink-0">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">预设</span>
+              {simpleShortcuts && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary">
+                  当前：基础模式
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleApplySimplePreset}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-primary/10 text-primary hover:bg-primary/20 rounded-md transition-colors"
+                title="移除全部单字母快捷键，防止误触添加节点"
+              >
+                基础模式（防误触，适合快速上手）
+              </button>
+              <button
+                onClick={handleRestoreDefaults}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-muted hover:bg-muted/80 text-foreground rounded-md transition-colors"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                恢复默认
+              </button>
+            </div>
           </div>
         </div>
 

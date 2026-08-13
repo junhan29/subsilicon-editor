@@ -1,4 +1,4 @@
-import type { NodeTemplate, StoryNode, StoryEdge } from '@editor/types/editor'
+import type { NodeTemplate, StoryEdge, StoryNode } from '@editor/types/editor'
 
 const STORAGE_KEY = 'subsilicon-node-templates'
 

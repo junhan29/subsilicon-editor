@@ -19,7 +19,7 @@
  *      - 配合 pinned 评论 / 简介放跳转列表
  */
 import JSZip from 'jszip'
-import type { StoryGraph, StoryNode, StoryEdge } from '@editor/types/editor'
+import type { StoryEdge, StoryGraph, StoryNode } from '@editor/types/editor'
 
 export interface VideoBinding {
   /** graph.nodeId */

@@ -6,27 +6,27 @@
  * - 导出器：翻页 HTML（付费遮罩/解锁码/转义）、长条 HTML、试看预览（前 N 格）、ZIP 打包
  */
 
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import {
+  type ComicData,
+  countComicPages,
+  countComicPanels,
+  countPaidPanels,
   createEmptyComicData,
+  createEmptyComicDocument,
+  generatePanelId,
   getComicData,
   withComicData,
-  countComicPanels,
-  countComicPages,
-  countPaidPanels,
-  generatePanelId,
-  createEmptyComicDocument,
-  type ComicData,
 } from '../work-types/comic'
 import { comicAdapter } from '../work-types/comic-adapter'
 import {
+  type ComicPage,
   buildComicPages,
+  exportComicToZip,
   freePreviewPanels,
+  renderComicPreviewHTML,
   renderFlipHTML,
   renderScrollHTML,
-  renderComicPreviewHTML,
-  exportComicToZip,
-  type ComicPage,
 } from '../export-comic'
 
 function sampleData(): ComicData {

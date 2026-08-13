@@ -1,7 +1,7 @@
 'use client'
 
-import { memo, useState, useEffect } from 'react'
-import { Handle, Position, type NodeProps } from '@xyflow/react'
+import { memo, useEffect, useState } from 'react'
+import { Handle, type NodeProps, Position } from '@xyflow/react'
 import { ArrowRight, Hash, Zap } from 'lucide-react'
 import { areNodesEqual } from '@editor/lib/utils'
 

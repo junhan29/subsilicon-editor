@@ -1,13 +1,13 @@
 import type { StorageAdapter } from '../storage/types'
 import { MemoryStorageAdapter } from '../storage/memory-storage-adapter'
 import type {
-  ReaderSession,
-  NodeVisit,
-  ChoiceEvent,
-  StoryAnalytics,
-  NodeVisitStat,
-  ChoiceStat,
   AnalyticsFilter,
+  ChoiceEvent,
+  ChoiceStat,
+  NodeVisit,
+  NodeVisitStat,
+  ReaderSession,
+  StoryAnalytics,
 } from './types'
 
 const SESSIONS_PREFIX = 'analytics:sessions:'

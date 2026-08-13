@@ -1,8 +1,8 @@
 'use client'
 
-import { createContext, useContext, memo } from 'react'
-import { MessageSquare, CheckCircle2, AlertTriangle, Lightbulb, ListTodo } from 'lucide-react'
-import type { NodeAnnotation, AnnotationType } from '@editor/types/editor'
+import { createContext, memo, useContext } from 'react'
+import { AlertTriangle, CheckCircle2, Lightbulb, ListTodo, MessageSquare } from 'lucide-react'
+import type { AnnotationType, NodeAnnotation } from '@editor/types/editor'
 import { ANNOTATION_TYPE_META } from '@editor/types/editor'
 
 export interface AnnotationMarkerContextValue {

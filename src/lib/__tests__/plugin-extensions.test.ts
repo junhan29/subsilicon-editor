@@ -1,26 +1,26 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import {
+  clearLoadedPlugins,
+  isPluginLoaded,
   loadPlugin,
   unloadPlugin,
-  isPluginLoaded,
-  clearLoadedPlugins,
   validateModule,
 } from '../plugins/plugin-loader'
 import { pluginManager } from '../plugins/plugin-manager'
 import {
-  registerPanel,
-  unregisterPanel,
+  cleanupPluginExtensions,
+  clearAllExtensions,
+  getActions,
+  getActionsByPlugin,
+  getMenuItems,
   getPanels,
   getPanelsByPlugin,
   registerAction,
-  unregisterAction,
-  getActions,
-  getActionsByPlugin,
   registerMenuItem,
+  registerPanel,
+  unregisterAction,
   unregisterMenuItem,
-  getMenuItems,
-  cleanupPluginExtensions,
-  clearAllExtensions,
+  unregisterPanel,
 } from '../plugins/extension-points'
 import type { PluginManifest, PluginModule } from '../plugins/types'
 

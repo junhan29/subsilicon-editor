@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { AlertTriangle, Shield, AlertCircle, X, ExternalLink, TrendingUp } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { AlertCircle, AlertTriangle, ExternalLink, Shield, TrendingUp, X } from 'lucide-react'
 import { getComplianceStatus } from '@editor/lib/compliance-tracker'
 import type { ComplianceWarning } from '@editor/lib/work-monetization'
 

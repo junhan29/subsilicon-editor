@@ -1,4 +1,4 @@
-import type { StoryGraph, StoryNode, StoryCharacter, ComicScene } from '@editor/types/editor'
+import type { ComicScene, StoryCharacter, StoryGraph, StoryNode } from '@editor/types/editor'
 
 // 拓扑排序：按依赖顺序排列节点
 // - 使用 Kahn 算法

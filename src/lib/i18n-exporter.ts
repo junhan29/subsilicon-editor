@@ -1,4 +1,4 @@
-import type { StoryGraph, StoryNode, StoryCharacter, ComicScene, StoryVariable } from '@editor/types/editor'
+import type { ComicScene, StoryCharacter, StoryGraph, StoryNode, StoryVariable } from '@editor/types/editor'
 
 export type TextCategory =
   | 'dialogue'

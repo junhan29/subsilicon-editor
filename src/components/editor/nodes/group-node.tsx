@@ -1,7 +1,7 @@
 'use client'
 
-import { memo, useState, useCallback, useRef, useEffect } from 'react'
-import { ChevronDown, ChevronRight, Pencil, Check, X } from 'lucide-react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
+import { Check, ChevronDown, ChevronRight, Pencil, X } from 'lucide-react'
 import { areNodesEqual } from '@editor/lib/utils'
 import { GROUP_COLORS } from '@editor/types/editor'
 

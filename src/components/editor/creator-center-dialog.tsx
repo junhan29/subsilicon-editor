@@ -1,52 +1,55 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
-  X,
-  Loader2,
-  Mail,
-  Lock,
-  User,
   AlertCircle,
   CheckCircle2,
-  Tag,
-  Image as ImageIcon,
-  Plus,
-  Upload,
-  Home,
-  Link2,
-  Trash2,
-  Pencil,
-  Send,
-  FileText,
-  Server,
-  LogOut,
   Clock,
   Eye,
   EyeOff,
+  FileText,
+  Home,
+  Image as ImageIcon,
+  Link2,
+  Loader2,
+  Lock,
+  LogOut,
+  Mail,
+  MessagesSquare,
+  Pencil,
+  Plus,
+  Send,
+  Server,
   Sparkles,
+  Tag,
+  Trash2,
+  Upload,
+  User,
+  X,
 } from 'lucide-react'
 import type { StoryGraph } from '@editor/types/editor'
 import type {
+  CreatorAccount,
   PlatformConfig,
   PublishPlatform,
   PublishRecord,
-  CreatorAccount,
 } from '@editor/types/creator'
 import {
-  registerAccount,
-  loginAccount,
-  getCurrentAccount,
-  logoutAccount,
-  isLoggedIn,
-  getPlatformConfigs,
   addPlatformConfig,
-  updatePlatformConfig,
-  removePlatformConfig,
-  publishToPlatform,
+  getCurrentAccount,
+  getPlatformConfigs,
   getPublishRecords,
+  isLoggedIn,
+  loginAccount,
+  logoutAccount,
+  publishToPlatform,
+  registerAccount,
+  removePlatformConfig,
+  updatePlatformConfig,
 } from '@editor/lib/creator-service'
 import { exportPreviewHTML } from '@editor/lib/export-preview-html'
+import { UnlockCodeGenerator } from './unlock-code-generator'
+import { UnlockRequestsPanel } from './unlock-requests-panel'
 import { showToast } from './toast'
 
 interface CreatorCenterDialogProps {
@@ -54,7 +57,7 @@ interface CreatorCenterDialogProps {
   onClose: () => void
   graph: StoryGraph
   workId?: string
-  initialTab?: 'account' | 'platforms' | 'publish' | 'records'
+  initialTab?: 'account' | 'platforms' | 'publish' | 'records' | 'unlock' | 'unlock-requests'
   onLoginStateChange?: () => void
 }
 
@@ -70,7 +73,7 @@ const SUBSILICON_DEFAULT_NAME = 'SubSilicon 作品墙'
 const SUBSILICON_DEFAULT_API = 'https://subsilicon.cn/api/creator/preview/submit'
 const SUBSILICON_DEFAULT_DESC = '官方作品墙，审核通过后展示给所有用户'
 
-type Tab = 'account' | 'platforms' | 'publish' | 'records'
+type Tab = 'account' | 'platforms' | 'publish' | 'records' | 'unlock' | 'unlock-requests'
 type AccountTab = 'login' | 'register'
 
 type PlatformConfigWithPlatform = PlatformConfig & { platform?: PublishPlatform }
@@ -87,6 +90,8 @@ const TAB_ITEMS: { id: Tab; label: string; icon: typeof User }[] = [
   { id: 'platforms', label: '平台管理', icon: Server },
   { id: 'publish', label: '发布作品', icon: Send },
   { id: 'records', label: '发布记录', icon: FileText },
+  { id: 'unlock', label: '解锁码', icon: Lock },
+  { id: 'unlock-requests', label: '发码申请', icon: MessagesSquare },
 ]
 
 const inputClass =
@@ -617,6 +622,7 @@ export function CreatorCenterDialog({
                     <li><b>平台管理</b>：添加发布平台（如 SubSilicon 作品墙），填写独立账号</li>
                     <li><b>发布作品</b>：填写标题/简介/标签/封面，提交至所选平台</li>
                     <li><b>发布记录</b>：查看各平台审核状态</li>
+                    <li><b>解锁码</b>：离线支付后，用读者发来的凭证生成解锁码</li>
                   </ol>
                 </div>
                 <button
@@ -1495,6 +1501,33 @@ export function CreatorCenterDialog({
                   </div>
                 )}
               </div>
+            )}
+
+            {tab === 'unlock' && (
+              <div className="space-y-4">
+                {!workId ? (
+                  <div className="p-4 rounded-xl border border-blue-700/50 bg-blue-900/20">
+                    <div className="flex items-start gap-2.5">
+                      <AlertCircle className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
+                      <div className="space-y-1">
+                        <div className="text-sm font-medium text-blue-200">当前作品未保存</div>
+                        <p className="text-[12px] text-blue-300/80 leading-relaxed">
+                          请先保存作品，再为读者生成离线解锁码。
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <UnlockCodeGenerator
+                    workId={workId}
+                    paidChapters={graph.monetization?.paidChapters?.map((c) => ({ id: c.id, name: c.name, price: c.price }))}
+                  />
+                )}
+              </div>
+            )}
+
+            {tab === 'unlock-requests' && (
+              <UnlockRequestsPanel onRequireLogin={() => setTab('account')} />
             )}
           </main>
         </div>

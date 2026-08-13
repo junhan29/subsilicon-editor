@@ -1,8 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { X, Loader2, Mail, Lock, User, AlertCircle, CheckCircle2 } from 'lucide-react'
-import { register, login, getAccount, logout } from '@editor/lib/local-account-store'
+import { AlertCircle, CheckCircle2, Loader2, Lock, Mail, User, X } from 'lucide-react'
+import { getAccount, login, logout, register } from '@editor/lib/local-account-store'
 import { showToast } from './toast'
 
 interface AccountDialogProps {

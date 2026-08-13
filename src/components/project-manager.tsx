@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { Plus, FolderOpen, Settings, Trash2, Copy, Edit3, MoreHorizontal, BookOpen, Clock, FileText, Sparkles, RefreshCw, Download, ExternalLink, AlertCircle, CheckCircle2, X, FolderSync, CheckCircle, Search, Grid, List, Star, HardDrive, Hash, AlertTriangle } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { AlertCircle, AlertTriangle, BookOpen, CheckCircle, CheckCircle2, Clock, Copy, Download, Edit3, ExternalLink, FileText, FolderOpen, FolderSync, Grid, HardDrive, Hash, List, MoreHorizontal, Plus, RefreshCw, Search, Settings, Sparkles, Star, Trash2, X } from 'lucide-react'
 import type { StoryGraph } from '@editor/types/editor'
 import type { WorkDocument, WorkTypeId } from '@editor/types/work'
-import { getAllWorks, loadWork, saveWork, deleteWork, generateProjectId, type StoredWork } from '@editor/lib/local-db/work-store'
-import { interactiveNarrativeAdapter, createEmptyInteractiveGraph } from '@editor/lib/work-types/interactive-narrative'
+import { type StoredWork, deleteWork, generateProjectId, getAllWorks, loadWork, saveWork } from '@editor/lib/local-db/work-store'
+import { createEmptyInteractiveGraph, interactiveNarrativeAdapter } from '@editor/lib/work-types/interactive-narrative'
 import { isWorkDocument } from '@editor/lib/work-registry'
 
 // Mac 应用未签名，无法在应用内自动下载安装；仅保留版本检测，引导用户手动下载
@@ -115,41 +115,44 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings }: 
   const handleConfirmNewProject = async () => {
     if (!newProjectName.trim()) return
     setCreating(true)
-    
-    const id = generateProjectId()
-    const now = Date.now()
-    // 按所选作品类型创建 WorkDocument（novel/video/comic 使用独立模型）
-    let editorData: StoredWork['editorData']
-    if (newProjectType === 'novel') {
-      const { createEmptyNovelDocument } = await import('@editor/lib/work-types/novel')
-      editorData = createEmptyNovelDocument(newProjectName.trim())
-    } else if (newProjectType === 'video') {
-      const { createEmptyVideoDocument } = await import('@editor/lib/work-types/video')
-      editorData = createEmptyVideoDocument(newProjectName.trim())
-    } else if (newProjectType === 'comic') {
-      const { createEmptyComicDocument } = await import('@editor/lib/work-types/comic')
-      editorData = createEmptyComicDocument(newProjectName.trim())
-    } else {
-      const graph: StoryGraph = { ...emptyGraph, title: newProjectName.trim() }
-      editorData = interactiveNarrativeAdapter.fromGraph(graph)
+    try {
+      const id = generateProjectId()
+      const now = Date.now()
+      // 按所选作品类型创建 WorkDocument（novel/video/comic 使用独立模型）
+      let editorData: StoredWork['editorData']
+      if (newProjectType === 'novel') {
+        const { createEmptyNovelDocument } = await import('@editor/lib/work-types/novel')
+        editorData = createEmptyNovelDocument(newProjectName.trim())
+      } else if (newProjectType === 'video') {
+        const { createEmptyVideoDocument } = await import('@editor/lib/work-types/video')
+        editorData = createEmptyVideoDocument(newProjectName.trim())
+      } else if (newProjectType === 'comic') {
+        const { createEmptyComicDocument } = await import('@editor/lib/work-types/comic')
+        editorData = createEmptyComicDocument(newProjectName.trim())
+      } else {
+        const graph: StoryGraph = { ...emptyGraph, title: newProjectName.trim() }
+        editorData = interactiveNarrativeAdapter.fromGraph(graph)
+      }
+      const work: StoredWork = {
+        id,
+        name: newProjectName.trim(),
+        updatedAt: now,
+        createdAt: now,
+        lastOpened: now,
+        nodeCount: 0,
+        edgeCount: 0,
+        templateId: 'custom',
+        workType: newProjectType,
+        editorData,
+        customPath: newProjectPath.trim() || undefined,
+      }
+      await saveWork(work)
+      setShowNewProjectDialog(false)
+      onNewProject(work)
+    } finally {
+      // 保存失败也不让「创建并打开」按钮永久 loading
+      setCreating(false)
     }
-    const work: StoredWork = {
-      id,
-      name: newProjectName.trim(),
-      updatedAt: now,
-      createdAt: now,
-      lastOpened: now,
-      nodeCount: 0,
-      edgeCount: 0,
-      templateId: 'custom',
-      workType: newProjectType,
-      editorData,
-      customPath: newProjectPath.trim() || undefined,
-    }
-    await saveWork(work)
-    setCreating(false)
-    setShowNewProjectDialog(false)
-    onNewProject(work)
   }
 
   // 从文件导入项目

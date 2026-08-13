@@ -1,5 +1,5 @@
 import JSZip from 'jszip'
-import type { StoryGraph, StoryNode, StoryCharacter, ComicScene } from '@editor/types/editor'
+import type { ComicScene, StoryCharacter, StoryGraph, StoryNode } from '@editor/types/editor'
 import type { MonetizationConfig } from '@editor/lib/work-monetization'
 import { topologicalSortNodes } from './export-script'
 

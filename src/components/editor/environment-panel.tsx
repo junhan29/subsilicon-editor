@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Globe, Monitor, Check, X, Info } from 'lucide-react'
+import { Check, Globe, Info, Monitor, X } from 'lucide-react'
 import { environment, getFeatureSupport } from '@editor/lib/environment-detector'
 
 interface FeatureItem {
@@ -34,7 +34,7 @@ export function EnvironmentBanner() {
   }
 
   const handleLearnMore = () => {
-    showBanner && setShowBanner(false)
+    if (showBanner) setShowBanner(false)
     localStorage.setItem('subsilicon_env_banner_seen', 'true')
   }
 

@@ -1,18 +1,18 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import {
-  MousePointerClick,
-  ArrowRight,
   ArrowLeft,
-  Sparkles,
-  Play,
-  X,
+  ArrowRight,
   ChevronRight,
-  PanelLeft,
-  MessageSquare,
   Edit3,
+  MessageSquare,
+  MousePointerClick,
+  PanelLeft,
   PanelRight,
+  Play,
+  Sparkles,
+  X,
 } from 'lucide-react'
 import { Button } from '@editor/components/ui/button'
 

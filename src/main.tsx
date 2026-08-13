@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import ReactDOM from 'react-dom/client'
 import { StoryCanvas } from './components/editor/story-canvas'
 import { NovelEditor } from './components/editor/novel-editor'
@@ -11,12 +11,14 @@ import { ErrorBoundary } from './components/error-boundary'
 import { showToast } from './components/editor/toast'
 import { EditorTour, isTourCompleted, markTourCompleted } from './components/editor/onboarding/editor-tour'
 import { DEFAULT_TOUR_STEPS } from './components/editor/onboarding/tour-steps'
-import { saveWork, getGraphFromWork, getDocumentFromWork } from '@editor/lib/local-db/work-store'
+import { getDocumentFromWork, getGraphFromWork, saveWork } from '@editor/lib/local-db/work-store'
+import { migrateFromLocalStorage } from '@editor/lib/local-db'
 import type { WorkDocument } from '@editor/types/work'
 import type { StoredWork } from '@editor/lib/local-db/work-store'
 import type { StoryGraph } from './types/editor'
 import { interactiveNarrativeAdapter } from '@editor/lib/work-types/interactive-narrative'
 import { registerBuiltinWorkTypes } from '@editor/lib/work-types'
+import { useAccessibilityStore } from './stores/accessibility-store'
 import './index.css'
 
 // 应用启动即注册内置作品类型适配器
@@ -54,6 +56,20 @@ function App() {
   const [currentWork, setCurrentWork] = useState<StoredWork | null>(null)
   const [showTour, setShowTour] = useState(false)
 
+  // 用 ref 跟踪最新 currentWork：handleSaveGraph 保持稳定引用，
+  // 避免每次保存后 setCurrentWork 触发重渲染 → onSave 新引用 →
+  // StoryCanvas 卸载 effect 再次触发保存的无限循环（曾导致海量 saveWork 事务堆积）。
+  const currentWorkRef = useRef<StoredWork | null>(null)
+  useEffect(() => {
+    currentWorkRef.current = currentWork
+  }, [currentWork])
+
+  // ADHD 适配：低干扰模式开启时给 body 挂 low-stimulus class（配合 index.css 减弱动画）
+  const lowStimulus = useAccessibilityStore((s) => s.lowStimulus)
+  useEffect(() => {
+    document.body.classList.toggle('low-stimulus', lowStimulus)
+  }, [lowStimulus])
+
   useEffect(() => {
     const handleHashChange = () => {
       if (window.location.hash === '#panel') {
@@ -64,6 +80,13 @@ function App() {
     handleHashChange()
     window.addEventListener('hashchange', handleHashChange)
     return () => window.removeEventListener('hashchange', handleHashChange)
+  }, [])
+
+  useEffect(() => {
+    // 启动时把旧版 localStorage 作品数据迁移到 IndexedDB（幂等，只执行一次）
+    migrateFromLocalStorage().catch((err) => {
+      console.error('LocalStorage 数据迁移失败:', err)
+    })
   }, [])
 
   useEffect(() => {
@@ -120,14 +143,15 @@ function App() {
     setAppMode('editor')
   }
 
-  const handleSaveGraph = async (graph: StoryGraph) => {
-    if (!currentWork) return
+  const handleSaveGraph = useCallback(async (graph: StoryGraph) => {
+    const work = currentWorkRef.current
+    if (!work) return
     // v2.0：保存为 WorkDocument（保持当前作品类型，避免把插件/其他类型作品改写为互动叙事）
-    const workType = currentWork.workType || 'interactive-narrative'
+    const workType = work.workType || 'interactive-narrative'
     const document = interactiveNarrativeAdapter.fromGraph(graph)
     // 重建式保存此前会丢弃原文档的 meta.createdAt/creatorName/language、
     // resources.videos/others 与 extra 字段；此处从原文档透传保留
-    const prevDoc = getDocumentFromWork(currentWork)
+    const prevDoc = getDocumentFromWork(work)
     const preservedDoc: WorkDocument = {
       ...document,
       workType,
@@ -141,11 +165,15 @@ function App() {
       resources: {
         ...prevDoc.resources,
         ...document.resources,
+        // fromGraph 重建的 document.resources 会把 videos/others 置为空数组，
+        // 展开时覆盖 prevDoc 的同名字段导致资源丢失，此处显式保留原值。
+        videos: prevDoc.resources?.videos ?? document.resources.videos ?? [],
+        others: prevDoc.resources?.others ?? document.resources.others ?? [],
       },
       extra: prevDoc.extra ?? document.extra,
     }
     const updated: StoredWork = {
-      ...currentWork,
+      ...work,
       name: graph.title,
       updatedAt: Date.now(),
       lastOpened: Date.now(),
@@ -156,7 +184,7 @@ function App() {
     }
     setCurrentWork(updated)
     await saveWork(updated)
-  }
+  }, [])
 
   const handleBackToProjects = async () => {
     setAppMode('project-manager')

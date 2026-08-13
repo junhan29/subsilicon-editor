@@ -1,6 +1,6 @@
 'use client'
 
-import { Undo2, Redo2, Play, Download, MessageSquare, ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Download, Focus, MessageSquare, Play, Redo2, Save, Undo2 } from 'lucide-react'
 import clsx from 'clsx'
 
 interface TopToolbarProps {
@@ -9,10 +9,13 @@ interface TopToolbarProps {
   canRedo: boolean
   onUndo: () => void
   onRedo: () => void
+  onSave: () => void
   onPreview: () => void
   onExport: () => void
   onToggleAiPanel: () => void
   aiPanelVisible: boolean
+  onToggleFocusMode?: () => void
+  focusMode?: boolean
   onBack?: () => void
 }
 
@@ -22,10 +25,13 @@ export function TopToolbar({
   canRedo,
   onUndo,
   onRedo,
+  onSave,
   onPreview,
   onExport,
   onToggleAiPanel,
   aiPanelVisible,
+  onToggleFocusMode,
+  focusMode,
   onBack,
 }: TopToolbarProps) {
   return (
@@ -84,6 +90,34 @@ export function TopToolbar({
         title="AI 面板 (Ctrl+K)"
       >
         <MessageSquare className="h-3.5 w-3.5" />
+      </button>
+
+      <div className="mx-1 h-4 w-px bg-border" />
+
+      {/* 专注模式（ADHD 适配）：一键收起所有面板进入无干扰画布 */}
+      {onToggleFocusMode && (
+        <button
+          onClick={onToggleFocusMode}
+          className={clsx(
+            'rounded p-1.5 transition-colors',
+            focusMode
+              ? 'text-primary bg-primary/15'
+              : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+          )}
+          title={focusMode ? '退出专注模式 (Ctrl+Shift+L)' : '专注模式：隐藏所有面板 (Ctrl+Shift+L)'}
+          aria-pressed={focusMode}
+        >
+          <Focus className="h-3.5 w-3.5" />
+        </button>
+      )}
+
+      {/* 保存 */}
+      <button
+        onClick={onSave}
+        className="rounded p-1.5 text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
+        title="保存作品 (Ctrl+S)"
+      >
+        <Save className="h-3.5 w-3.5" />
       </button>
 
       <div className="mx-1 h-4 w-px bg-border" />

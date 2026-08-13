@@ -1,4 +1,4 @@
-import type { StoryNode, StoryEdge, StoryCharacter } from '@editor/types/editor'
+import type { StoryCharacter, StoryEdge, StoryNode } from '@editor/types/editor'
 
 export interface AiAction {
   type: 'createNode' | 'updateNode' | 'deleteNode' | 'connectNodes' | 'updateEdge' | 'deleteEdge' | 'addCharacter' | 'selectNode' | 'requestMediaGeneration' | 'bindAsset' | 'saveWork' | 'exportWork' | 'previewWork' | 'undo' | 'redo'

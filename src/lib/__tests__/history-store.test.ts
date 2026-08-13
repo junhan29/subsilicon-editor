@@ -1,13 +1,13 @@
 /** history-store 单元测试 */
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import {
   HistoryStore,
   createHistoryStore,
   createSnapshot,
 } from '../history-store'
 import type {
-  StoryGraphSnapshot,
   HistoryState,
+  StoryGraphSnapshot,
 } from '../history-store'
 
 function makeSnapshot(id: number | string): StoryGraphSnapshot {

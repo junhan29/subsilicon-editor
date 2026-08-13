@@ -45,7 +45,7 @@ export function registerPlugin(plugin: Plugin): void {
   if (plugin.config.enabled) {
     enabledPlugins.set(plugin.config.id, plugin)
     plugin.init?.()
-    console.log(`Plugin registered: ${plugin.config.name}`)
+    console.debug(`Plugin registered: ${plugin.config.name}`)
   }
 }
 
@@ -54,7 +54,7 @@ export function unregisterPlugin(pluginId: string): void {
   if (plugin) {
     plugin.cleanup?.()
     enabledPlugins.delete(pluginId)
-    console.log(`Plugin unregistered: ${plugin.config.name}`)
+    console.debug(`Plugin unregistered: ${plugin.config.name}`)
   }
 }
 

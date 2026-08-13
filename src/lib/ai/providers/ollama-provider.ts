@@ -1,6 +1,6 @@
 import type { AiRequestOptions } from '../types'
 import { BaseAiProvider } from './base'
-import { isOllamaAvailable, generateCompletion, getOllamaConfig } from '../../local-ai-service'
+import { generateCompletion, getOllamaConfig, isOllamaAvailable } from '../../local-ai-service'
 
 export class OllamaProvider extends BaseAiProvider {
   readonly id = 'ollama-local'

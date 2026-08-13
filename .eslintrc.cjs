@@ -31,6 +31,8 @@ module.exports = {
     '@typescript-eslint/no-explicit-any': 'warn',
     '@typescript-eslint/no-unused-vars': 'warn',
     'no-unused-vars': 'off',
+    // 项目既有模式：多处有意吞错（localStorage 写入失败等），允许空 catch 块
+    'no-empty': ['error', { allowEmptyCatch: true }],
     'sort-imports': [
       'warn',
       {

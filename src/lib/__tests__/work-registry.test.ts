@@ -7,9 +7,9 @@
  * - 双格式读取归一化（StoredWork.editorData）
  */
 
-import { describe, it, expect, beforeAll } from 'vitest'
-import { registerWorkType, getWorkType, listWorkTypes, hasWorkType, isWorkDocument, isLegacyStoryGraph } from '../work-registry'
-import { normalizeWorkDocument, toTypedGraph, isWorkType, migrateLegacyEditorData, DEFAULT_WORK_TYPE } from '../work-migrate'
+import { beforeAll, describe, expect, it } from 'vitest'
+import { getWorkType, hasWorkType, isLegacyStoryGraph, isWorkDocument, listWorkTypes, registerWorkType } from '../work-registry'
+import { DEFAULT_WORK_TYPE, isWorkType, migrateLegacyEditorData, normalizeWorkDocument, toTypedGraph } from '../work-migrate'
 import { interactiveNarrativeAdapter } from '../work-types/interactive-narrative'
 import type { StoryGraph } from '@editor/types/editor'
 

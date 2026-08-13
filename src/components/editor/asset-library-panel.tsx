@@ -1,23 +1,23 @@
 'use client'
 
-import { useCallback, useMemo, useState, memo, useEffect, useRef } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
-  Search,
-  X,
-  ImageIcon,
-  Music,
-  Video,
-  Check,
-  ExternalLink,
   AlertCircle,
-  Upload,
+  Check,
   Download,
-  Trash2,
   Edit3,
+  ExternalLink,
   HardDrive,
-  Package,
+  ImageIcon,
   Loader2,
+  Music,
+  Package,
+  Search,
   Tag,
+  Trash2,
+  Upload,
+  Video,
+  X,
 } from 'lucide-react'
 import { Input } from '@editor/components/ui/input'
 import { Button } from '@editor/components/ui/button'
@@ -25,29 +25,29 @@ import { Label } from '@editor/components/ui/label'
 import { Textarea } from '@editor/components/ui/textarea'
 import { showToast } from './toast'
 import {
-  filterAssetsByCategory,
-  searchAssets,
   type AssetCategory,
   type LibraryAsset,
+  filterAssetsByCategory,
+  searchAssets,
 } from '@editor/lib/asset-library'
-import type { StoryNode, StoryCharacter } from '@editor/types/editor'
+import type { StoryCharacter, StoryNode } from '@editor/types/editor'
 import {
-  exportAssetPack,
-  importAssetPack,
-  formatFileSize,
-  generateThumbnail,
-  type ImportResult,
   type ExportProgress,
   type ImportProgress,
+  type ImportResult,
+  exportAssetPack,
+  formatFileSize,
+  generateThumbnail,
+  importAssetPack,
 } from '@editor/lib/asset-packager'
 import {
-  getAllAssets,
-  deleteAsset,
-  getTotalAssetSize,
-  updateAssetAnnotation,
-  saveBlobAsAsset,
-  type StoredAsset,
   type AssetAnnotation,
+  type StoredAsset,
+  deleteAsset,
+  getAllAssets,
+  getTotalAssetSize,
+  saveBlobAsAsset,
+  updateAssetAnnotation,
 } from '@editor/lib/local-db'
 
 type FilterCategory = 'all' | AssetCategory

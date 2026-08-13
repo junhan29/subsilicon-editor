@@ -1,13 +1,13 @@
 'use client'
 
-import { memo, useRef, useEffect, forwardRef, useImperativeHandle } from 'react'
-import { useReactFlow, type Node } from '@xyflow/react'
+import { forwardRef, memo, useEffect, useImperativeHandle, useRef } from 'react'
+import { type Node, useReactFlow } from '@xyflow/react'
 import {
-  calculateAlignment,
-  getNodeBounds,
+  ALIGNMENT_THRESHOLD,
   type AlignmentGuide,
   type NodeBounds,
-  ALIGNMENT_THRESHOLD,
+  calculateAlignment,
+  getNodeBounds,
 } from '@editor/lib/alignment-guides'
 
 export interface AlignmentLinesRef {

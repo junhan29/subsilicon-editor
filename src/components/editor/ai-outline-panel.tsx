@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useCallback, useEffect, useRef } from 'react'
-import { Sparkles, Play, Loader2, X, Copy, CheckCircle2, RefreshCw, ChevronDown, ChevronRight } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { CheckCircle2, ChevronDown, ChevronRight, Copy, Loader2, Play, RefreshCw, Sparkles, X } from 'lucide-react'
 import { Button } from '@editor/components/ui/button'
-import { generateOutline, isAiAvailable, getAiConfig, type AiOutlineResult, type OutlineScene } from '@editor/lib/ai-service'
-import { streamGenerateOutlineParsed, type StreamCallbacks } from '@editor/lib/ai'
+import { type AiOutlineResult, type OutlineScene, generateOutline, getAiConfig, isAiAvailable } from '@editor/lib/ai-service'
+import { type StreamCallbacks, streamGenerateOutlineParsed } from '@editor/lib/ai'
 import { showToast } from './toast'
 import { AiSettingsDialog } from './ai-settings-dialog'
 

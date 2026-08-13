@@ -1,4 +1,4 @@
-import type { ConditionGroup, ConditionClause, StoryVariable } from '@editor/types/editor'
+import type { ConditionClause, ConditionGroup, StoryVariable } from '@editor/types/editor'
 import { generateId } from './utils'
 
 function escapeStringValue(value: string): string {

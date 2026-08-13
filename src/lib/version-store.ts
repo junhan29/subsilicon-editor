@@ -1,4 +1,4 @@
-import { createSnapshot, type StoryGraphSnapshot } from '@editor/lib/history-store'
+import { type StoryGraphSnapshot, createSnapshot } from '@editor/lib/history-store'
 
 export interface VersionSnapshot {
   id: string

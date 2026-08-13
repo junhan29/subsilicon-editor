@@ -1,17 +1,17 @@
 'use client'
 
 import { useState } from 'react'
-import { Image, Video, Loader2, Wand2, Settings, Check, AlertCircle } from 'lucide-react'
+import { AlertCircle, Check, Image, Loader2, Settings, Video, Wand2 } from 'lucide-react'
 import { showToast } from './toast'
 import {
-  generateMedia,
-  optimizePrompt,
-  buildConsistentImagePrompt,
-  getMediaProviderConfig,
-  saveMediaProviderConfig,
   type MediaProviderConfig,
+  buildConsistentImagePrompt,
+  generateMedia,
+  getMediaProviderConfig,
+  optimizePrompt,
+  saveMediaProviderConfig,
 } from '@editor/lib/ai'
-import type { StoryCharacter, ComicScene } from '@editor/types/editor'
+import type { ComicScene, StoryCharacter } from '@editor/types/editor'
 
 interface AiMediaPanelProps {
   characters: StoryCharacter[]

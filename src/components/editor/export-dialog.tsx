@@ -1,36 +1,53 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { X, Download, FileCode, Archive, FileText, BookOpen, Image as ImageIcon, Settings2, Loader2, Languages, Lock, ShieldCheck, MonitorPlay, Monitor, Film, PlayCircle, ListVideo } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Archive, BookOpen, Download, FileCode, FileText, Film, Image as ImageIcon, Languages, ListVideo, Loader2, Lock, Monitor, MonitorPlay, PlayCircle, Settings2, ShieldCheck, X } from 'lucide-react'
 import { Button } from '@editor/components/ui/button'
 import type { StoryGraph } from '@editor/types/editor'
 import type { WorkTypeId } from '@editor/types/work'
-import type { MonetizationConfig } from '@editor/lib/work-monetization'
-import { hydrateSeedKeyFromLocal, hydrateOfflineCodesFromLocal } from '@editor/lib/work-monetization'
+import type { MonetizationConfig, StoryExportSettings } from '@editor/lib/work-monetization'
+import {
+  buildOfflineCodesForExport,
+  generateOfflineUnlockCodes,
+  getOrCreateOfflineKey,
+  hydrateOfflineCodesFromLocal,
+  hydrateSeedKeyFromLocal,
+  loadOfflineCodes,
+  loadOfflineKey,
+  saveOfflineCodes,
+} from '@editor/lib/work-monetization'
+import { generateEncryptionKeyBase64 } from '@editor/lib/story-encrypt'
 import { getWorkType } from '@editor/lib/work-registry'
 import { exportToHTML } from '@editor/lib/export-html'
 import { exportToZIP } from '@editor/lib/export-zip'
 import { exportToScript } from '@editor/lib/export-script'
 import { exportToEPUB } from '@editor/lib/export-epub'
-import { exportToStoryHTML, type StoryExportConfig, type UnlockMode } from '@editor/lib/export-story-html'
-import { READER_THEME_PRESETS, themeToCSS, type ReaderTheme } from '@editor/lib/theme-presets'
+import { type StoryExportConfig, type UnlockMode, exportToStoryHTML } from '@editor/lib/export-story-html'
+import { READER_THEME_PRESETS, type ReaderTheme, themeToCSS } from '@editor/lib/theme-presets'
 import { I18nExportPanel } from './i18n-export-panel'
 import { SUBMIT_CONFIG } from '@editor/lib/submit-config'
+import { saveUnlockWorkToken } from '@editor/lib/unlock-request-client'
+import { parseAfdianLink } from '@editor/lib/afdian-link'
+import { getAccount } from '@editor/lib/local-account-store'
 import { showToast } from './toast'
-import { trapFocus, focusFirstInteractive, restoreFocus } from '@editor/lib/focus-manager'
+import { useA11yAnnouncer } from './a11y-announcer'
+import { focusFirstInteractive, restoreFocus, trapFocus } from '@editor/lib/focus-manager'
 import {
-  exportDesktopApp,
-  canBuildDesktopInstaller,
   type DesktopAppOptions,
+  canBuildDesktopInstaller,
+  exportDesktopApp,
 } from '@editor/lib/export-desktop-app'
 import {
-  exportBilibiliInteractive,
   type BilibiliInteractiveOptions,
   type VideoBinding,
+  exportBilibiliInteractive,
 } from '@editor/lib/export-bilibili-interactive'
 
 type ExportFormat = 'html' | 'zip' | 'script' | 'epub' | 'i18n' | 'story_exec' | 'desktop_app' | 'bilibili_interactive'
 type ImageQuality = 'original' | 'high' | 'medium' | 'low'
+
+/** 离线解锁码默认生成数量（创作者可发放给读者的激活码批次） */
+const OFFLINE_CODE_COUNT = 100
 
 interface ExportDialogProps {
   open: boolean
@@ -99,6 +116,9 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
   const titleId = 'export-dialog-title'
   const descId = 'export-dialog-description'
 
+  // 无障碍播报（ExportDialog 渲染于 A11yAnnouncer Provider 内；无 Provider 时为空操作）
+  const { announce } = useA11yAnnouncer()
+
   const [drmEnabled, setDrmEnabled] = useState(false)
   const [drmPrice, setDrmPrice] = useState<number>(9.9)
   const [drmFreePreview, setDrmFreePreview] = useState<number>(3)
@@ -113,6 +133,14 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
   const [drmPatreonUrl, setDrmPatreonUrl] = useState<string>('')
   const [drmKofiUrl, setDrmKofiUrl] = useState<string>('')
   const [drmCurrency, setDrmCurrency] = useState<string>('CNY')
+  const [drmOnlineCodeVerify, setDrmOnlineCodeVerify] = useState(false)
+  const [drmInWorkCodeRequest, setDrmInWorkCodeRequest] = useState(false)
+  // 第三方平台自动验证（爱发电）：链接 + 自动验证开关 + 开发者凭据（token 敏感，不随作品持久化）
+  const [drmAfdianLink, setDrmAfdianLink] = useState<string>('')
+  const [drmAfdianAutoVerify, setDrmAfdianAutoVerify] = useState(false)
+  const [drmAfdianUserId, setDrmAfdianUserId] = useState<string>('')
+  const [drmAfdianToken, setDrmAfdianToken] = useState<string>('')
+  const [drmAfdianPlanId, setDrmAfdianPlanId] = useState<string>('')
 
   // 独立游戏软件（桌面 App）导出
   const [desktopVersion, setDesktopVersion] = useState<string>('1.0.0')
@@ -131,16 +159,35 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
   })
   const [buildLogCollapsed, setBuildLogCollapsed] = useState<boolean>(false)
 
-  // 从 monetization 配置初始化 DRM 设置
+  // 从 monetization 配置初始化 DRM 设置（含持久化的可执行故事导出配置）
   useEffect(() => {
     if (!monetization) return
+    const es = monetization.exportSettings
     setDrmEnabled(monetization.enabled)
     setDrmPrice(monetization.price || 9.9)
+    setDrmFreePreview(es?.freePreview ?? 3)
+    setDrmUnlockMode(es?.unlockMode || 'semi_auto')
     setDrmWechatQR(monetization.wechatQRCode || '')
     setDrmAlipayQR(monetization.alipayQRCode || '')
     setDrmContact(monetization.wechatContact || monetization.alipayContact || '')
-    // 如果有第三方平台配置，提取链接
-    if (monetization.thirdParty) {
+    setDrmWebhookUrl(es?.webhookUrl || '')
+    setDrmWebhookProvider(es?.webhookProvider || 'stripe')
+    setDrmStripeUrl(es?.stripeCheckoutUrl || '')
+    setDrmPaypalUrl(es?.paypalLink || '')
+    setDrmPatreonUrl(es?.patreonLink || '')
+    setDrmKofiUrl(es?.kofiLink || '')
+    setDrmCurrency(es?.currency || 'CNY')
+    setDrmOnlineCodeVerify(es?.onlineCodeVerify || false)
+    setDrmInWorkCodeRequest(es?.inWorkCodeRequest || false)
+    // 第三方平台自动验证（爱发电）：从既有 multiChannel 的 afdian 渠道恢复
+    // （token 属敏感凭据不落盘，每次打开留空，导出时由用户重新填写）
+    const afdianChannel = monetization.multiChannel?.thirdPartyChannels?.find((c) => c.platform === 'afdian')
+    setDrmAfdianLink(afdianChannel?.link || '')
+    setDrmAfdianAutoVerify(afdianChannel?.autoVerify || false)
+    setDrmAfdianUserId(afdianChannel?.platformUserId || '')
+    setDrmAfdianPlanId(afdianChannel?.planId || '')
+    // 兼容旧数据：第三方平台链接（未持久化 exportSettings 时的历史字段）
+    if (monetization.thirdParty && !es?.patreonLink && !es?.kofiLink) {
       if (monetization.thirdParty.platform === 'afdian') setDrmPatreonUrl(monetization.thirdParty.link)
       if (monetization.thirdParty.platform === 'mianbaoduo') setDrmKofiUrl(monetization.thirdParty.link)
     }
@@ -199,25 +246,59 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
     setExporting(true)
     setProgress(10)
 
+    // 构建合并后的付费配置：所有导出分支统一使用 merged，
+    // 避免 HTML 分支仍引用旧 monetization prop 导致本次配置不生效。
+    const base = monetization || ({} as MonetizationConfig)
+    const exportSettings: StoryExportSettings = {
+      unlockMode: drmUnlockMode,
+      currency: drmCurrency,
+      freePreview: drmFreePreview,
+      webhookUrl: drmWebhookUrl.trim() || undefined,
+      webhookProvider: drmWebhookProvider,
+      stripeCheckoutUrl: drmStripeUrl || undefined,
+      paypalLink: drmPaypalUrl || undefined,
+      patreonLink: drmPatreonUrl || undefined,
+      kofiLink: drmKofiUrl || undefined,
+      onlineCodeVerify: drmOnlineCodeVerify,
+      inWorkCodeRequest: drmInWorkCodeRequest,
+    }
+    const merged: MonetizationConfig = {
+      ...base,
+      enabled: drmEnabled,
+      price: drmPrice,
+      workId: workId || base.workId || '',
+      wechatQRCode: drmWechatQR || undefined,
+      alipayQRCode: drmAlipayQR || undefined,
+      wechatContact: drmContact || undefined,
+      alipayContact: drmContact || undefined,
+      customApiUrl: drmWebhookUrl.trim() || base.customApiUrl || undefined,
+      paidNodes: base.paidNodes || [],
+      granularity: base.granularity || 'whole',
+      paymentMethod: drmUnlockMode === 'offline' ? 'offline' : drmUnlockMode === 'hybrid' ? 'multi' : base.paymentMethod || 'wechat_manual',
+      exportSettings,
+    }
+    // 第三方平台自动验证（爱发电）：开启且已填链接时，把 afdian 渠道合并进 multiChannel，
+    // 保留既有 manualChannels；token 属敏感凭据不写入作品数据（仅运行时 register 发送）。
+    if (drmAfdianAutoVerify && drmAfdianLink.trim()) {
+      merged.multiChannel = {
+        manualChannels: merged.multiChannel?.manualChannels || [],
+        thirdPartyChannels: [
+          {
+            platform: 'afdian',
+            link: drmAfdianLink.trim(),
+            autoVerify: true,
+            verifyEndpoint: SUBMIT_CONFIG.storyUnlockUrl,
+            platformUserId: drmAfdianUserId.trim() || undefined,
+            planId: drmAfdianPlanId.trim() || undefined,
+          },
+        ],
+        primaryChannel: merged.multiChannel?.primaryChannel || 'afdian',
+      }
+    }
     // 把对话框中的 DRM 设置合并写回作品（仅覆盖本对话框可编辑字段，
     // 其余字段如 paidNodes/paidChapters/seedKeyHash 保留原值），
     // 随作品保存持久化——此前设置仅存于对话框本地 state，关闭即丢失。
     if (onMonetizationChange) {
-      const base = monetization || ({} as MonetizationConfig)
-      const merged: MonetizationConfig = {
-        ...base,
-        enabled: drmEnabled,
-        price: drmPrice,
-        workId: workId || base.workId || '',
-        wechatQRCode: drmWechatQR || undefined,
-        alipayQRCode: drmAlipayQR || undefined,
-        wechatContact: drmContact || undefined,
-        alipayContact: drmContact || undefined,
-        customApiUrl: drmWebhookUrl.trim() || base.customApiUrl || undefined,
-        paidNodes: base.paidNodes || [],
-        granularity: base.granularity || 'whole',
-        paymentMethod: base.paymentMethod || (drmWechatQR ? 'wechat_manual' : 'offline'),
-      }
       onMonetizationChange(merged)
     }
 
@@ -233,12 +314,12 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
         case 'html': {
           // 作品数据不携带明文 seedKey，导出时从本机 localStorage 恢复；
           // 接收自他人的副本若无本地密钥，将无法签发解锁码（需创作者重新生成）。
-          let html = await exportToHTML(graph, monetization ? hydrateSeedKeyFromLocal(monetization) : undefined)
+          let html = await exportToHTML(graph, merged.enabled ? hydrateSeedKeyFromLocal(merged) : undefined)
           if (themeApplicable) {
             html = applyThemeToHTML(html, selectedTheme)
           }
           if (includeDebug) {
-            const debugInfo = `\n<!-- 调试信息\n节点数: ${graph.nodes?.length || 0}\n连线数: ${graph.edges?.length || 0}\n角色数: ${graph.characters?.length || 0}\n导出时间: ${new Date().toISOString()}\n主题: ${selectedTheme.name}\n图片质量: ${imageQuality}\n付费解锁: ${monetization?.enabled ? '已开启' : '未开启'}\n-->\n`
+            const debugInfo = `\n<!-- 调试信息\n节点数: ${graph.nodes?.length || 0}\n连线数: ${graph.edges?.length || 0}\n角色数: ${graph.characters?.length || 0}\n导出时间: ${new Date().toISOString()}\n主题: ${selectedTheme.name}\n图片质量: ${imageQuality}\n付费解锁: ${merged.enabled ? '已开启' : '未开启'}\n-->\n`
             html = html.replace('</body>', `${debugInfo}</body>`)
           }
           blob = new Blob([html], { type: 'text/html;charset=utf-8' })
@@ -262,13 +343,40 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
           break
         }
         case 'story_exec': {
-          // 导出前从本机 localStorage 恢复离线解锁码（与 seedKey 同模式）。
-          // 接收方本机无该作品的离线码，导出物不含离线解锁码，offline 模式不可用。
-          const hydratedMonetization = monetization ? hydrateOfflineCodesFromLocal(monetization) : undefined
-          // 根据 monetization 配置确定解锁模式
-          let unlockMode: UnlockMode = monetization?.paymentMethod === 'multi' ? 'hybrid' : drmUnlockMode
-          if (monetization?.paymentMethod === 'offline') {
-            unlockMode = 'offline'
+          // 在线验码注册解锁服务需要本地账号邮箱；未登录时直接阻止导出
+          const account = getAccount()
+          if ((drmOnlineCodeVerify || drmInWorkCodeRequest) && !account) {
+            setExporting(false)
+            setProgress(0)
+            showToast('error', '启用在线验码需先登录创作者账号')
+            return
+          }
+          // 从本机 localStorage 恢复该作品的既有配置（多渠道 / 自定义验证端点）。
+          const hydratedMonetization = merged.enabled ? hydrateOfflineCodesFromLocal(merged) : undefined
+          // 解锁模式以对话框当前选择为准（drmUnlockMode 从持久化的 exportSettings 恢复，
+          // 不随旧数据 paymentMethod 覆盖——旧数据以 drmUnlockMode 为准）
+          const unlockMode: UnlockMode = drmUnlockMode
+          // 离线解锁码：离线/混合模式下确保本机存在与导出密钥匹配的码。
+          // 密钥与码都持久化在创作者本机 localStorage，多次导出复用同一批码，
+          // 保证已售出的离线码在后续导出物（重新加密）中依然有效。
+          // 导出物只内嵌 codeHash（明文码绝不进入导出文件），读者凭真实码 SHA-256 匹配。
+          let offlineCodesForExport: import('@editor/lib/work-monetization').OfflineCodeExportEntry[] | undefined
+          let exportKeyBase64: string | undefined
+          if (drmEnabled && (unlockMode === 'offline' || unlockMode === 'hybrid' || unlockMode === 'manual')) {
+            // manual 模式同样内置离线码：创作者把本机保存的离线码作为激活码发给读者，
+            // 读者在「粘贴激活码」处输入即可离线解锁（无需自建服务）。
+            const existingCodes = loadOfflineCodes(merged.workId)
+            const existingKey = loadOfflineKey(merged.workId)
+            if (existingKey && existingCodes.length > 0) {
+              exportKeyBase64 = existingKey
+              offlineCodesForExport = await buildOfflineCodesForExport(existingCodes)
+            } else {
+              exportKeyBase64 = getOrCreateOfflineKey(merged.workId, generateEncryptionKeyBase64)
+              const codes = await generateOfflineUnlockCodes(OFFLINE_CODE_COUNT, exportKeyBase64)
+              saveOfflineCodes(merged.workId, codes)
+              offlineCodesForExport = await buildOfflineCodesForExport(codes)
+              showToast('info', `已生成 ${codes.length} 个离线解锁码并保存在本机，发放给读者即可离线解锁`)
+            }
           }
           const storyConfig: StoryExportConfig = {
             unlockMode,
@@ -289,38 +397,67 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
             multiChannel: hydratedMonetization?.multiChannel,
             // 去中心化配置
             customApiUrl: hydratedMonetization?.customApiUrl,
-            offlineCodes: hydratedMonetization?.offlineCodes?.map(c => ({
-              code: c.code,
-              maskedKeyBase64: c.maskedKeyBase64,
-            })),
+            offlineCodes: offlineCodesForExport,
+            keyBase64: exportKeyBase64,
+            // 在线验码 / 站内工单验码配置
+            onlineCodeVerify: drmOnlineCodeVerify,
+            inWorkCodeRequest: drmInWorkCodeRequest,
+            creatorEmail: account?.email,
           }
 
           setProgress(50)
           const result = await exportToStoryHTML(graph, storyConfig)
           setProgress(70)
 
-          // 仅在非离线模式下向服务端注册密钥
-          if (drmEnabled && result.keyBase64 && unlockMode !== 'offline') {
+          // 平台托管解锁（semi_auto/webhook 且未配置自建验证端点）时，把本次导出密钥
+          // 注册到平台解锁服务，读者端经该端点验证订单并取回密钥。
+          // 已配置 customApiUrl（创作者自建验证服务）或 offline/manual 模式时**不注册**，
+          // 密钥仅存本机——确保去中心化：密钥默认不离开创作者设备。
+          const usesPlatformUnlock =
+            drmEnabled && unlockMode !== 'offline' && unlockMode !== 'manual' && !hydratedMonetization?.customApiUrl
+          if ((usesPlatformUnlock || drmOnlineCodeVerify) && result.keyBase64) {
             try {
-              await fetch(SUBMIT_CONFIG.storyUnlockUrl, {
+              const registerBody: Record<string, unknown> = {
+                action: 'register',
+                workId: result.workId,
+                keyBase64: result.keyBase64,
+                ivBase64: result.ivBase64,
+                unlockMode: drmUnlockMode,
+                price: drmPrice,
+                freePreview: drmFreePreview,
+                creatorEmail: account?.email,
+              }
+              // 第三方平台自动验证（爱发电）：开发者凭据随 register 提交，服务端据此调用爱发电 API 验证订单
+              if (drmAfdianAutoVerify) {
+                registerBody.afdian = {
+                  userId: drmAfdianUserId.trim() || undefined,
+                  token: drmAfdianToken,
+                  planId: drmAfdianPlanId.trim() || undefined,
+                }
+              }
+              // 在线验码模式：把本机离线码哈希一并注册到平台，读者凭真实码经平台在线验证
+              if (drmOnlineCodeVerify && offlineCodesForExport?.length) {
+                registerBody.codeHashes = offlineCodesForExport.map((c) => c.codeHash)
+              }
+              const res = await fetch(SUBMIT_CONFIG.storyUnlockUrl, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  action: 'register',
-                  workId: result.workId,
-                  keyBase64: result.keyBase64,
-                  ivBase64: result.ivBase64,
-                  unlockMode: drmUnlockMode,
-                  price: drmPrice,
-                  freePreview: drmFreePreview,
-                  submitToken: SUBMIT_CONFIG.submitToken,
-                }),
+                headers: {
+                  'Content-Type': 'application/json',
+                  'X-Submit-Token': SUBMIT_CONFIG.submitToken,
+                },
+                body: JSON.stringify(registerBody),
               })
+              if (!res.ok) throw new Error(`register ${res.status}`)
+              // 每次注册服务端都会轮换 workToken（旧值失效），保存到本机供发码申请面板按作品归属使用
+              const registerData = (await res.json().catch(() => ({}))) as { workToken?: string }
+              if (registerData.workToken) {
+                saveUnlockWorkToken(result.workId, registerData.workToken)
+              }
               setProgress(80)
             } catch {
-              showToast('info', '密钥上传失败，请检查网络后重试导出')
+              showToast('info', '在线解锁服务注册失败，读者将无法在线验码（离线解锁仍可用）')
             }
-          } else if (unlockMode === 'offline') {
+          } else {
             setProgress(80)
           }
 
@@ -339,7 +476,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
             version: desktopVersion,
             author: desktopAuthor || undefined,
             description: desktopDescription || undefined,
-            monetization: monetization ? hydrateSeedKeyFromLocal(monetization) : undefined,
+            monetization: merged.enabled ? hydrateSeedKeyFromLocal(merged) : undefined,
             platforms: (platforms || []).length ? (platforms || ['current']) : ['current'],
             onProgress: (stage, info) => {
               const map = { shell: 20, zip: 40, build: 70, done: 90 } as const
@@ -400,6 +537,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
         triggerDownload(blob, filename)
         setProgress(100)
         showToast('success', `已导出为 ${filename}`)
+        announce('作品导出完成')
         setTimeout(() => {
           setExporting(false)
           setProgress(0)
@@ -414,7 +552,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
       const msg = err instanceof Error ? err.message : String(err)
       showToast('error', `导出失败：${msg}`)
     }
-  }, [exporting, format, graph, themeApplicable, selectedTheme, includeDebug, imageQuality, onClose, drmEnabled, drmPrice, drmFreePreview, drmUnlockMode, drmWechatQR, drmAlipayQR, drmContact, drmWebhookUrl, drmWebhookProvider, drmStripeUrl, drmPaypalUrl, drmPatreonUrl, drmKofiUrl, drmCurrency, desktopTargets, desktopVersion, desktopAuthor, desktopDescription, biliMode, biliDefaultSegSec, biliBindings, monetization, workId, onMonetizationChange])
+  }, [announce, exporting, format, graph, themeApplicable, selectedTheme, includeDebug, imageQuality, onClose, drmEnabled, drmPrice, drmFreePreview, drmUnlockMode, drmWechatQR, drmAlipayQR, drmContact, drmWebhookUrl, drmWebhookProvider, drmStripeUrl, drmPaypalUrl, drmPatreonUrl, drmKofiUrl, drmCurrency, drmOnlineCodeVerify, drmInWorkCodeRequest, drmAfdianLink, drmAfdianAutoVerify, drmAfdianUserId, drmAfdianToken, drmAfdianPlanId, desktopTargets, desktopVersion, desktopAuthor, desktopDescription, biliMode, biliDefaultSegSec, biliBindings, monetization, workId, onMonetizationChange])
 
   if (!open) return null
 
@@ -865,6 +1003,125 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                         <div className="font-medium">手动激活码</div>
                         <div className="text-[10px] text-muted-foreground mt-1">联系创作者获取激活码</div>
                       </button>
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 rounded-lg border border-border">
+                    <div className="text-sm mb-2">在线解锁服务</div>
+                    <div className="space-y-2">
+                      <label className="flex items-center gap-2.5 rounded-lg border border-border p-2.5 hover:bg-muted/40 transition-colors cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={drmOnlineCodeVerify}
+                          onChange={(e) => setDrmOnlineCodeVerify(e.target.checked)}
+                          className="w-4 h-4 rounded border-border accent-primary"
+                        />
+                        <div className="flex-1">
+                          <div className="text-sm">在线验码（严格一次一用）</div>
+                          <div className="text-[11px] text-muted-foreground">
+                            读者需联网验证解锁码，同一码不可跨设备重复使用；未开启则保持纯离线
+                          </div>
+                        </div>
+                      </label>
+
+                      <label className="flex items-center gap-2.5 rounded-lg border border-border p-2.5 hover:bg-muted/40 transition-colors cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={drmInWorkCodeRequest}
+                          onChange={(e) => setDrmInWorkCodeRequest(e.target.checked)}
+                          className="w-4 h-4 rounded border-border accent-primary"
+                        />
+                        <div className="flex-1">
+                          <div className="text-sm">作品内发码申请</div>
+                          <div className="text-[11px] text-muted-foreground">
+                            读者付款后在作品内申请解锁码，创作者在编辑器创作者中心确认后自动回传解锁
+                          </div>
+                        </div>
+                      </label>
+
+                      {(drmOnlineCodeVerify || drmInWorkCodeRequest) && (
+                        <div className="text-[11px] text-amber-600 bg-amber-500/10 border border-amber-500/20 rounded-md px-2.5 py-2 leading-relaxed">
+                          需要联网使用 SubSilicon 解锁服务；导出时会向服务端注册解锁信息（不含作品内容）。离线码模式仍作为兜底保留
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 rounded-lg border border-border">
+                    <div className="text-sm mb-2">第三方平台自动验证（爱发电）</div>
+                    <div className="space-y-2">
+                      <div>
+                        <label className="text-[11px] text-muted-foreground block mb-1">爱发电方案链接</label>
+                        <input
+                          type="text"
+                          value={drmAfdianLink}
+                          onChange={(e) => {
+                            const value = e.target.value
+                            setDrmAfdianLink(value)
+                            // 自动提取 userId / planId（保留可编辑：仅在开启开关且解析出值时填充）
+                            if (drmAfdianAutoVerify) {
+                              const info = parseAfdianLink(value)
+                              if (info.userId) setDrmAfdianUserId(info.userId)
+                              if (info.planId) setDrmAfdianPlanId(info.planId)
+                            }
+                          }}
+                          placeholder="https://afdian.com/a/你的主页"
+                          className="w-full px-2 py-1.5 rounded border border-border bg-background text-xs"
+                        />
+                      </div>
+
+                      <label className="flex items-center gap-2.5 rounded-lg border border-border p-2.5 hover:bg-muted/40 transition-colors cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={drmAfdianAutoVerify}
+                          onChange={(e) => setDrmAfdianAutoVerify(e.target.checked)}
+                          className="w-4 h-4 rounded border-border accent-primary"
+                        />
+                        <div className="flex-1">
+                          <div className="text-sm">自动验证订单</div>
+                          <div className="text-[11px] text-muted-foreground">
+                            读者在爱发电下单后输入订单号即可自动解锁，无需你手动发码
+                          </div>
+                        </div>
+                      </label>
+
+                      {drmAfdianAutoVerify && (
+                        <div className="space-y-2">
+                          <div>
+                            <label className="text-[11px] text-muted-foreground block mb-1">爱发电开发者 user_id</label>
+                            <input
+                              type="text"
+                              value={drmAfdianUserId}
+                              onChange={(e) => setDrmAfdianUserId(e.target.value)}
+                              placeholder="如 8d6f5a9c3e21"
+                              className="w-full px-2 py-1.5 rounded border border-border bg-background text-xs"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[11px] text-muted-foreground block mb-1">爱发电开发者 token</label>
+                            <input
+                              type="password"
+                              value={drmAfdianToken}
+                              onChange={(e) => setDrmAfdianToken(e.target.value)}
+                              placeholder="仅用于导出时注册验证服务，不随作品保存"
+                              className="w-full px-2 py-1.5 rounded border border-border bg-background text-xs"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[11px] text-muted-foreground block mb-1">方案 ID（自动提取，可修改）</label>
+                            <input
+                              type="text"
+                              value={drmAfdianPlanId}
+                              onChange={(e) => setDrmAfdianPlanId(e.target.value)}
+                              placeholder="如 plan_xxxxxx"
+                              className="w-full px-2 py-1.5 rounded border border-border bg-background text-xs"
+                            />
+                          </div>
+                          <div className="text-[11px] text-muted-foreground leading-relaxed">
+                            在爱发电 → 开发者中心获取 user_id 和 token（用于服务端验证订单，不会随作品发布）
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
 

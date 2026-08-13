@@ -1,16 +1,16 @@
 'use client'
 
-import type { StoryNode, StoryCharacter, StoryEdge, StoryVariable, ComicScene } from '@editor/types/editor'
+import type { ComicScene, StoryCharacter, StoryEdge, StoryNode, StoryVariable } from '@editor/types/editor'
 import {
-  NODE_TYPE_LABELS,
-  ENDING_TYPES,
-  EMOTION_TYPES,
-  TRANSITION_TYPES,
-  TEXT_ANIMATION_TYPES,
-  ENTER_ANIMATION_TYPES,
-  SPRITE_POSITION_TYPES,
-  DIALOG_STYLE_TYPES,
   DIALOG_COLOR_OPTIONS,
+  DIALOG_STYLE_TYPES,
+  EMOTION_TYPES,
+  ENDING_TYPES,
+  ENTER_ANIMATION_TYPES,
+  NODE_TYPE_LABELS,
+  SPRITE_POSITION_TYPES,
+  TEXT_ANIMATION_TYPES,
+  TRANSITION_TYPES,
 } from '@editor/constants'
 
 export {

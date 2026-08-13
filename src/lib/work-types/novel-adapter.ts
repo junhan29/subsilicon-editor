@@ -9,16 +9,16 @@ import type { WorkDocument, WorkTypeAdapter } from '@editor/types/work'
 import type { StoryGraph } from '@editor/types/editor'
 import {
   NOVEL_WORK_TYPE,
-  createEmptyNovelDocument,
-  getNovelData,
   countNovelWords,
   countPaidChapters,
+  createEmptyNovelDocument,
+  getNovelData,
 } from '@editor/lib/work-types/novel'
 import {
-  exportNovelToEPUB,
-  exportNovelToTXT,
-  exportNovelToHTML,
   exportNovelPreviewHTML,
+  exportNovelToEPUB,
+  exportNovelToHTML,
+  exportNovelToTXT,
 } from '@editor/lib/export-novel'
 
 export const novelAdapter: WorkTypeAdapter = {

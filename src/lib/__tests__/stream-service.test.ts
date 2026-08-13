@@ -1,8 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-  streamPolishText,
   streamContinueText,
   streamGenerateOutlineParsed,
+  streamPolishText,
 } from '../ai/services/stream-service'
 import { callAiStream } from '../ai/provider-registry'
 import type { AiStreamResult } from '../ai/types'
@@ -73,6 +73,7 @@ describe('Stream Service', () => {
     })
 
     it('onError 回调处理流错误', async () => {
+      // eslint-disable-next-line require-yield -- 该生成器有意只抛错，用于测试错误路径
       async function* errorStream(): AsyncGenerator<string, void, unknown> {
         throw new Error('stream error')
       }

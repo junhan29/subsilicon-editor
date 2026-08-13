@@ -2,7 +2,7 @@
 
 import { memo } from 'react'
 import { Handle, Position } from '@xyflow/react'
-import { Lock, Wallet, QrCode, MessageCircle } from 'lucide-react'
+import { Lock, MessageCircle, QrCode, Wallet } from 'lucide-react'
 import { areNodesEqual } from '@editor/lib/utils'
 
 function UnlockNodeComponent({ data, selected }: any) {

@@ -1,21 +1,24 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { CheckCircle, AlertTriangle, Info, X } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
+import { AlertTriangle, CheckCircle, Info, X } from 'lucide-react'
 
 export interface Toast {
   id: string
   type: 'success' | 'error' | 'info'
   message: string
+  /** 显示时长 ms；默认 3000，0 或负数 = 常驻不自动消失（需手动关闭） */
+  duration?: number
 }
 
 const listeners = new Set<(toast: Toast) => void>()
 
-export function showToast(type: Toast['type'], message: string) {
+export function showToast(type: Toast['type'], message: string, options?: { duration?: number }) {
   const toast: Toast = {
     id: `toast-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
     type,
     message,
+    duration: options?.duration,
   }
   listeners.forEach(fn => fn(toast))
 }
@@ -53,9 +56,12 @@ export function ToastContainer({ toasts, removeToast }: { toasts: Toast[]; remov
 
 function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: () => void }) {
   useEffect(() => {
-    const timer = setTimeout(onRemove, 3000)
+    const duration = toast.duration ?? 3000
+    // 常驻模式（0 或负数）不自动消失，由用户点关闭按钮手动关闭
+    if (duration <= 0) return
+    const timer = setTimeout(onRemove, duration)
     return () => clearTimeout(timer)
-  }, [onRemove])
+  }, [toast.duration, onRemove])
 
   const configs = {
     success: {

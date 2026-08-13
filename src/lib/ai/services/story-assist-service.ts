@@ -1,6 +1,6 @@
 import type { AiConfig } from '../../ai/types'
 import { callAi } from '../../ai/provider-registry'
-import type { StoryNode, StoryEdge, StoryCharacter } from '@editor/types/editor'
+import type { StoryCharacter, StoryEdge, StoryNode } from '@editor/types/editor'
 
 export interface StoryBranchSuggestion {
   title: string

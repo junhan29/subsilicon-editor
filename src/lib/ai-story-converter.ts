@@ -1,5 +1,5 @@
-import type { AiFullStoryResult, AiCharacter, OutlineScene } from './ai-service'
-import type { StoryNode, StoryEdge, StoryCharacter } from '@editor/types/editor'
+import type { AiCharacter, AiFullStoryResult, OutlineScene } from './ai-service'
+import type { StoryCharacter, StoryEdge, StoryNode } from '@editor/types/editor'
 
 export interface StoryConversionResult {
   nodes: StoryNode[]

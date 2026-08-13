@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react'
-import { ArrowLeft, Sparkles, Key, Globe, Cpu, Sun, Moon, Monitor, Info } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Accessibility, ArrowLeft, Cpu, Globe, Info, Key, Monitor, Moon, Sparkles, Sun } from 'lucide-react'
 import { Toggle } from '@editor/components/ui/toggle'
 import { refreshAiConfig } from '@editor/lib/ai'
-import { getModelsForProvider, getDefaultModel } from '@editor/lib/ai/model-presets'
+import { getDefaultModel, getModelsForProvider } from '@editor/lib/ai/model-presets'
+import { useAccessibilityStore } from '@editor/stores/accessibility-store'
 
 interface SettingsPageProps {
   onBack: () => void
@@ -17,7 +18,7 @@ interface FlatAiConfig {
 }
 
 export function SettingsPage({ onBack }: SettingsPageProps) {
-  const [activeSection, setActiveSection] = useState<'general' | 'ai' | 'about'>('general')
+  const [activeSection, setActiveSection] = useState<'general' | 'ai' | 'about' | 'accessibility'>('general')
   const [aiEnabled, setAiEnabled] = useState(() => {
     try {
       const saved = localStorage.getItem('subsilicon_ai_config')
@@ -35,6 +36,16 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
     }
   })
   const [showApiKey, setShowApiKey] = useState(false)
+
+  // ADHD 无障碍设置（zustand persist）
+  const lowStimulus = useAccessibilityStore((s) => s.lowStimulus)
+  const compactInterface = useAccessibilityStore((s) => s.compactInterface)
+  const simpleShortcuts = useAccessibilityStore((s) => s.simpleShortcuts)
+  const longFeedback = useAccessibilityStore((s) => s.longFeedback)
+  const setLowStimulus = useAccessibilityStore((s) => s.setLowStimulus)
+  const setCompactInterface = useAccessibilityStore((s) => s.setCompactInterface)
+  const setSimpleShortcuts = useAccessibilityStore((s) => s.setSimpleShortcuts)
+  const setLongFeedback = useAccessibilityStore((s) => s.setLongFeedback)
 
   useEffect(() => {
     const config = { ...aiConfig, enabled: aiEnabled }
@@ -56,6 +67,7 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
   const sections = [
     { id: 'general' as const, label: '通用', icon: Monitor },
     { id: 'ai' as const, label: '创境服务', icon: Cpu },
+    { id: 'accessibility' as const, label: '无障碍', icon: Accessibility },
     { id: 'about' as const, label: '关于', icon: Info },
   ]
 
@@ -217,6 +229,48 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
                     </div>
                   </>
                 )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeSection === 'accessibility' && (
+          <div className="p-6 max-w-2xl space-y-6">
+            <div>
+              <h3 className="text-sm font-semibold text-white mb-1">无障碍（ADHD 适配）</h3>
+              <p className="text-[10px] text-slate-500 mb-4">针对注意力难以集中的使用场景，提供降低干扰的界面选项，全部默认关闭</p>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 rounded-lg bg-slate-800/50 border border-slate-700">
+                  <div>
+                    <p className="text-xs font-medium text-white">低干扰模式</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">减少动画与视觉刺激，让界面更安静</p>
+                  </div>
+                  <Toggle checked={lowStimulus} onChange={setLowStimulus} />
+                </div>
+
+                <div className="flex items-center justify-between p-3 rounded-lg bg-slate-800/50 border border-slate-700">
+                  <div>
+                    <p className="text-xs font-medium text-white">精简界面</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">折叠右侧面板分组，节点库只显示常用节点</p>
+                  </div>
+                  <Toggle checked={compactInterface} onChange={setCompactInterface} />
+                </div>
+
+                <div className="flex items-center justify-between p-3 rounded-lg bg-slate-800/50 border border-slate-700">
+                  <div>
+                    <p className="text-xs font-medium text-white">基础快捷键</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">移除单字母快捷键，防止误触添加节点</p>
+                  </div>
+                  <Toggle checked={simpleShortcuts} onChange={setSimpleShortcuts} />
+                </div>
+
+                <div className="flex items-center justify-between p-3 rounded-lg bg-slate-800/50 border border-slate-700">
+                  <div>
+                    <p className="text-xs font-medium text-white">长反馈</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">提示信息停留更久，并播报更多操作结果</p>
+                  </div>
+                  <Toggle checked={longFeedback} onChange={setLongFeedback} />
+                </div>
               </div>
             </div>
           </div>

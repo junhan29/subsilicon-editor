@@ -1,14 +1,14 @@
 /** condition-builder 单元测试 */
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import {
   buildExpression,
-  parseExpression,
-  createEmptyGroup,
   createEmptyClause,
+  createEmptyGroup,
+  parseExpression,
 } from '../condition-builder'
 import type {
-  ConditionGroup,
   ConditionClause,
+  ConditionGroup,
   StoryVariable,
 } from '@editor/types/editor'
 

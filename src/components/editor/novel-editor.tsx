@@ -15,18 +15,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ArrowLeft,
-  Plus,
-  Trash2,
-  GripVertical,
-  Download,
   BookOpen,
-  Lock,
-  Unlock,
-  Save,
+  CheckCircle2,
+  Download,
+  Eye,
   FileCode,
   FileText,
-  Eye,
-  CheckCircle2,
+  GripVertical,
+  Lock,
+  Plus,
+  Save,
+  Trash2,
+  Unlock,
   X,
 } from 'lucide-react'
 import type { StoredWork } from '@editor/lib/local-db/work-store'
@@ -34,18 +34,18 @@ import type { WorkDocument } from '@editor/types/work'
 import { saveWork } from '@editor/lib/local-db/work-store'
 import { RichTextEditor, RichTextViewer } from './rich-text-editor'
 import {
-  getNovelData,
-  withNovelData,
+  type NovelChapter,
+  type NovelData,
+  countNovelWords,
   createEmptyNovelData,
   generateChapterId,
-  countNovelWords,
-  type NovelData,
-  type NovelChapter,
+  getNovelData,
+  withNovelData,
 } from '@editor/lib/work-types/novel'
 import {
   exportNovelToEPUB,
-  exportNovelToTXT,
   exportNovelToHTML,
+  exportNovelToTXT,
 } from '@editor/lib/export-novel'
 import { showToast } from './toast'
 

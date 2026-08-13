@@ -41,7 +41,7 @@ interface ActiveSession {
 }
 
 const activeSessions = new Map<string, ActiveSession>()
-let actionTimers = new Map<string, number>()
+const actionTimers = new Map<string, number>()
 
 function isBrowser(): boolean {
   return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined'

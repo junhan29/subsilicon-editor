@@ -1,5 +1,5 @@
-import type { StoryNode, StoryEdge, StoryCharacter, ComicScene } from '@editor/types/editor'
-import type { StoredAsset, AssetAnnotation } from '@editor/lib/local-db'
+import type { ComicScene, StoryCharacter, StoryEdge, StoryNode } from '@editor/types/editor'
+import type { AssetAnnotation, StoredAsset } from '@editor/lib/local-db'
 
 const NODE_TYPE_LABELS: Record<string, string> = {
   dialogue: '对话',

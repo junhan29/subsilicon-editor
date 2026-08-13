@@ -1,40 +1,41 @@
 'use client'
 
-import { useCallback, useState, memo, useEffect, useRef } from 'react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useReactFlow } from '@xyflow/react'
 import {
-  MessageCircle,
-  GitBranch,
-  Lock,
-  Flag,
-  GripVertical,
-  Lightbulb,
-  Merge,
-  Layers,
-  FileText,
-  Plus,
-  Trash2,
-  Save,
-  SplitSquareVertical,
-  Film,
-  Zap,
-  Shuffle,
-  Pencil,
-  X,
-  Sparkles,
-  User,
-  Library,
   AlignLeft,
-  ChevronRight,
   ChevronLeft,
+  ChevronRight,
+  FileText,
+  Film,
+  Flag,
+  GitBranch,
+  GripVertical,
+  Layers,
+  Library,
+  Lightbulb,
+  Lock,
+  Merge,
+  MessageCircle,
+  Pencil,
+  Plus,
+  Save,
+  Shuffle,
+  Sparkles,
+  SplitSquareVertical,
+  Trash2,
+  User,
+  X,
+  Zap,
 } from 'lucide-react'
 import { Button } from '@editor/components/ui/button'
 import { Input } from '@editor/components/ui/input'
-import { loadTemplates, saveTemplate, deleteTemplate, getOfficialTemplates, createTemplateFromSelection } from '@editor/lib/template-store'
-import { parseOutline, generateNodesFromOutline } from '@editor/lib/outline-parser'
+import { createTemplateFromSelection, deleteTemplate, getOfficialTemplates, loadTemplates, saveTemplate } from '@editor/lib/template-store'
+import { generateNodesFromOutline, parseOutline } from '@editor/lib/outline-parser'
 import { showToast } from './toast'
+import { useAccessibilityStore } from '@editor/stores/accessibility-store'
 import { AssetLibraryPanel } from './asset-library-panel'
-import type { NodeTemplate, StoryNode, StoryEdge, StoryCharacter } from '@editor/types/editor'
+import type { NodeTemplate, StoryCharacter, StoryEdge, StoryNode } from '@editor/types/editor'
 import type { LibraryAsset } from '@editor/lib/asset-library'
 
 export interface SidebarNodeType {
@@ -151,6 +152,14 @@ function EditorSidebar({
   const [showGenerateConfirm, setShowGenerateConfirm] = useState(false)
   const [pendingNodeCount, setPendingNodeCount] = useState(0)
   const editInputRef = useRef<HTMLInputElement>(null)
+
+  // ADHD 适配：精简界面开启时，节点库默认只显示常用 3 种，可展开查看全部
+  const compactInterface = useAccessibilityStore((s) => s.compactInterface)
+  const [showAllNodes, setShowAllNodes] = useState(false)
+  const COMMON_NODE_TYPES = ['dialogue', 'choice', 'ending']
+  const visibleNodeTypes = compactInterface && !showAllNodes
+    ? NODE_TYPES.filter((n) => COMMON_NODE_TYPES.includes(n.type))
+    : NODE_TYPES
 
   const outline = outlineProp !== undefined ? outlineProp : internalOutline
   const handleOutlineChange = onOutlineChange || setInternalOutline
@@ -327,7 +336,7 @@ function EditorSidebar({
           </div>
 
           <div className="flex-1 overflow-y-auto p-2.5 space-y-1.5">
-            {NODE_TYPES.map((node) => (
+            {visibleNodeTypes.map((node) => (
               <div
                 key={node.type}
                 draggable
@@ -345,6 +354,14 @@ function EditorSidebar({
                 <GripVertical className="w-3 h-3 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors shrink-0" />
               </div>
             ))}
+            {compactInterface && (
+              <button
+                onClick={() => setShowAllNodes((v) => !v)}
+                className="w-full flex items-center justify-center gap-1 py-1.5 text-[10px] font-medium text-muted-foreground hover:text-foreground hover:bg-accent/50 rounded-lg border border-dashed border-border/70 transition-colors"
+              >
+                {showAllNodes ? '收起，仅显示常用' : '全部节点'}
+              </button>
+            )}
           </div>
 
           {showTip && (

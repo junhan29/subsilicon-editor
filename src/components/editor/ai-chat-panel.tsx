@@ -1,16 +1,16 @@
 'use client'
 
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
-import { Send, Bot, User, Trash2, Sparkles, Loader2, AlertCircle, Settings, Check, X, Image, Video, Music, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { AlertCircle, Bot, Check, ChevronDown, ChevronLeft, ChevronRight, Image, Loader2, Music, Send, Settings, Sparkles, Trash2, User, Video, X } from 'lucide-react'
 import { showToast } from './toast'
 import { AiSettingsDialog } from './ai-settings-dialog'
-import { isAiAvailable, callAiStream, generateMedia, optimizePrompt, getMediaProviderConfig, buildConsistentImagePrompt, refreshAiConfig, type VideoGenerationParams } from '@editor/lib/ai'
+import { type VideoGenerationParams, buildConsistentImagePrompt, callAiStream, generateMedia, getMediaProviderConfig, isAiAvailable, optimizePrompt, refreshAiConfig } from '@editor/lib/ai'
 import { serializeGraphContext } from '@editor/lib/ai/chat-graph-context'
 import { getChatSystemPrompt } from '@editor/lib/ai/chat-system-prompt'
-import { parseAllAiCommands, executeAiActions, type EditorCanvasCallbacks, type MediaGenerationRequest } from '@editor/lib/ai/chat-command-executor'
+import { type EditorCanvasCallbacks, type MediaGenerationRequest, executeAiActions, parseAllAiCommands } from '@editor/lib/ai/chat-command-executor'
 import { getModelsForProvider } from '@editor/lib/ai/model-presets'
-import { getAllAssets, saveBlobAsAsset, updateAssetAnnotation, findAssetsByAnnotation, type AssetAnnotation } from '@editor/lib/local-db'
-import type { StoryNode, StoryEdge, StoryCharacter, ComicScene } from '@editor/types/editor'
+import { type AssetAnnotation, findAssetsByAnnotation, getAllAssets, saveBlobAsAsset, updateAssetAnnotation } from '@editor/lib/local-db'
+import type { ComicScene, StoryCharacter, StoryEdge, StoryNode } from '@editor/types/editor'
 import type { AiConfig, AiProviderConfig } from '@editor/types/ai'
 
 export interface ChatMessage {

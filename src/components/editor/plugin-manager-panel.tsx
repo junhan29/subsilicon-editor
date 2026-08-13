@@ -1,28 +1,28 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
-  Package,
-  Download,
-  Trash2,
-  RefreshCw,
+  AlertCircle,
   CheckCircle2,
-  Search,
+  Download,
   ExternalLink,
   Globe,
-  AlertCircle,
+  Package,
+  RefreshCw,
+  Search,
   Settings,
+  Trash2,
 } from 'lucide-react'
 import { Button } from '@editor/components/ui/button'
 import { Card, CardContent } from '@editor/components/ui/card'
 import { Badge } from '@editor/components/ui/badge'
 import {
+  PLUGIN_CATEGORIES,
+  type PluginManifest,
+  clearMarketplaceCache,
   fetchPluginMarketplace,
   installPlugin,
   uninstallPlugin,
-  PLUGIN_CATEGORIES,
-  clearMarketplaceCache,
-  type PluginManifest,
 } from '@editor/lib/plugins/plugin-registry'
 import { showToast } from './toast'
 

@@ -1,9 +1,9 @@
-import { useEffect, useRef, useCallback } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import {
-  startSession,
+  type ReaderSession,
   endSession,
   recordAction,
-  type ReaderSession,
+  startSession,
 } from '@editor/lib/analytics-store'
 
 interface UseReaderAnalyticsOptions {

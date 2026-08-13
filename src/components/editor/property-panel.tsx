@@ -1,27 +1,27 @@
 'use client'
 
-import { useState, useEffect, memo } from 'react'
+import { memo, useEffect, useState } from 'react'
 import { Button } from '@editor/components/ui/button'
 import { Input } from '@editor/components/ui/input'
 import { Label } from '@editor/components/ui/label'
 import { Textarea } from '@editor/components/ui/textarea'
-import { X, Plus, Trash2, Users, ArrowRight, ChevronDown, ChevronRight, Copy, Check, Layers, MessageSquare, Sparkles, Loader2, AlertTriangle, Film } from 'lucide-react'
-import type { StoryNode, StoryCharacter, StoryEdge, StoryVariable, CharacterGender, NodeAnnotation } from '@editor/types/editor'
+import { AlertTriangle, ArrowRight, Check, ChevronDown, ChevronRight, Copy, Film, Layers, Loader2, MessageSquare, Plus, Sparkles, Trash2, Users, X } from 'lucide-react'
+import type { CharacterGender, NodeAnnotation, StoryCharacter, StoryEdge, StoryNode, StoryVariable } from '@editor/types/editor'
 import { enhanceCharacter } from '@editor/lib/ai'
 import { showToast } from './toast'
 import {
-  NODE_TYPE_LABELS,
-  CHAR_COLORS,
-  STORY_TAGS,
-  PERSONALITY_TRAITS,
   APPEARANCE_TAGS,
-  SPEECH_TONES,
-  SPEECH_RHYTHMS,
-  SPEECH_VOCABULARY,
-  SKILL_TAGS,
-  HABIT_TAGS,
-  FEAR_TAGS,
   CHARACTER_CUSTOM_TAGS,
+  CHAR_COLORS,
+  FEAR_TAGS,
+  HABIT_TAGS,
+  NODE_TYPE_LABELS,
+  PERSONALITY_TRAITS,
+  SKILL_TAGS,
+  SPEECH_RHYTHMS,
+  SPEECH_TONES,
+  SPEECH_VOCABULARY,
+  STORY_TAGS,
 } from '@editor/constants'
 
 // 创境辅助增强组件（带 loading 状态）

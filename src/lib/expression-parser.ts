@@ -54,7 +54,7 @@ const OPERATORS: Record<string, (a: any, b?: any) => any> = {
 
 export interface EvaluationContext {
   variables: Record<string, any>
-  functions: Record<string, Function>
+  functions: Record<string, (...args: any[]) => any>
   visitCounts: Record<string, number>
   choiceCount: () => number
   turnsSince: (label: string) => number

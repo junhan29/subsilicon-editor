@@ -9,49 +9,49 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
+  Archive,
   ArrowLeft,
-  Plus,
-  Trash2,
-  GripVertical,
+  BookOpen,
+  CheckCircle2,
   Download,
-  Upload,
+  Eye,
+  GripVertical,
   Image as ImageIcon,
   Lock,
-  Unlock,
-  BookOpen,
-  Smartphone,
-  Archive,
-  Eye,
-  CheckCircle2,
-  X,
   MessageSquare,
+  Plus,
   Quote,
+  Smartphone,
+  Trash2,
+  Unlock,
+  Upload,
+  X,
 } from 'lucide-react'
 import type { StoredWork } from '@editor/lib/local-db/work-store'
 import type { WorkDocument } from '@editor/types/work'
 import { saveWork } from '@editor/lib/local-db/work-store'
-import { saveAsset, getAsset } from '@editor/lib/local-db/asset-store'
+import { getAsset, saveAsset } from '@editor/lib/local-db/asset-store'
 import {
+  type ComicAssetRef,
+  type ComicData,
+  type ComicDialogue,
+  type ComicPanel,
+  countComicPages,
+  countComicPanels,
+  countPaidPanels,
+  createEmptyComicData,
+  generateDialogueId,
+  generatePanelId,
   getComicData,
   withComicData,
-  createEmptyComicData,
-  generatePanelId,
-  generateDialogueId,
-  countComicPanels,
-  countComicPages,
-  countPaidPanels,
-  type ComicData,
-  type ComicPanel,
-  type ComicDialogue,
-  type ComicAssetRef,
 } from '@editor/lib/work-types/comic'
 import {
+  exportComicPreviewHTML,
   exportComicToFlipHTML,
   exportComicToScrollHTML,
   exportComicToZip,
-  exportComicPreviewHTML,
 } from '@editor/lib/export-comic'
-import { detectMediaType, validateFileSize, generateHash } from '@editor/lib/media-processor'
+import { detectMediaType, generateHash, validateFileSize } from '@editor/lib/media-processor'
 import { showToast } from './toast'
 
 interface ComicEditorProps {
@@ -341,10 +341,19 @@ export function ComicEditor({ work, onBack }: ComicEditorProps) {
   }
 
   const updatePanel = (id: string, patch: Partial<ComicPanel>) => {
-    const next: ComicData = {
-      ...data,
-      panels: data.panels.map((p) => (p.id === id ? { ...p, ...patch } : p)),
+    const patched = data.panels.map((p) => (p.id === id ? { ...p, ...patch } : p))
+    // 页码变更后按 (page, order) 语义重建：保证页内 order 从 0 连续编号、
+    // 不因挪动/合并产生重复或空洞，编辑器显示与导出排序一致。
+    let panels = patched
+    if (patch.page !== undefined) {
+      const pageOrder = new Map<number, number>()
+      panels = [...patched].sort((a, b) => a.page - b.page || a.order - b.order).map((p) => {
+        const o = pageOrder.get(p.page) || 0
+        pageOrder.set(p.page, o + 1)
+        return { ...p, order: o }
+      })
     }
+    const next: ComicData = { ...data, panels }
     setData(next)
     scheduleSave(next, title)
   }

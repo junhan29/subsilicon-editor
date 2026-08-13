@@ -1,27 +1,27 @@
 import type {
-  AiConfig,
-  AiPolishResult,
-  AiLayoutResult,
-  AiGenerateResult,
-  AiOutlineResult,
   AiCharacterResult,
+  AiConfig,
   AiDialogueResult,
-  AiSceneDescriptionResult,
-  AiPolishStyle,
+  AiGenerateResult,
+  AiLayoutResult,
   AiLayoutType,
+  AiOutlineResult,
+  AiPolishResult,
+  AiPolishStyle,
+  AiSceneDescriptionResult,
   AiStreamResult,
 } from '../types'
 import { callAiStream } from '../provider-registry'
 import {
-  STYLE_PROMPTS,
-  LAYOUT_PROMPTS,
   CONTINUE_STYLE_PROMPTS,
+  LAYOUT_PROMPTS,
+  STYLE_PROMPTS,
 } from './text-service'
 import { OUTLINE_SYSTEM_PROMPT, parseScene } from './outline-service'
 import {
   CHARACTER_DETAIL_SYSTEM_PROMPT,
-  parseCharacterFromJson,
   createFallbackCharacter,
+  parseCharacterFromJson,
 } from './character-service'
 import { DIALOGUE_SYSTEM_PROMPT } from './dialogue-service'
 import { SCENE_DESCRIPTION_SYSTEM_PROMPT } from './scene-service'

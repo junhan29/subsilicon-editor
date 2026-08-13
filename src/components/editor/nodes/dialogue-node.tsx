@@ -2,7 +2,7 @@
 
 import { memo } from 'react'
 import { Handle, Position } from '@xyflow/react'
-import { MessageCircle, User, Image, Music } from 'lucide-react'
+import { Image, MessageCircle, Music, User } from 'lucide-react'
 import { areNodesEqual } from '@editor/lib/utils'
 
 function DialogueNodeComponent({ data, selected }: any) {

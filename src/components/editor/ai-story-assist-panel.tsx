@@ -1,10 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { Lightbulb, Loader2, Wand2, ArrowRight, Sparkles, GitBranch, Clock, RefreshCw } from 'lucide-react'
+import { ArrowRight, Clock, GitBranch, Lightbulb, Loader2, RefreshCw, Sparkles, Wand2 } from 'lucide-react'
 import { showToast } from './toast'
-import { isAiAvailable, suggestNextPlot, generateNodeContent, type PlotSuggestion } from '@editor/lib/ai'
-import type { StoryNode, StoryEdge, StoryCharacter } from '@editor/types/editor'
+import { type PlotSuggestion, generateNodeContent, isAiAvailable, suggestNextPlot } from '@editor/lib/ai'
+import type { StoryCharacter, StoryEdge, StoryNode } from '@editor/types/editor'
 
 interface AiStoryAssistPanelProps {
   nodes: StoryNode[]

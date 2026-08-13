@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useCallback, useEffect, useRef } from 'react'
-import { X, ChevronDown, ChevronRight, Plus, Minus, Edit3, ArrowRight, GitCompare } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { ArrowRight, ChevronDown, ChevronRight, Edit3, GitCompare, Minus, Plus, X } from 'lucide-react'
 import type { VersionDiff, VersionModifiedNode } from '@editor/lib/version-store'
-import { trapFocus, focusFirstInteractive, restoreFocus } from '@editor/lib/focus-manager'
+import { focusFirstInteractive, restoreFocus, trapFocus } from '@editor/lib/focus-manager'
 
 interface VersionDiffViewProps {
   diff: VersionDiff

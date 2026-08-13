@@ -10,7 +10,7 @@
  */
 
 import JSZip from 'jszip'
-import type { ComicData, ComicPanel, ComicDialogue } from './work-types/comic'
+import type { ComicData, ComicDialogue, ComicPanel } from './work-types/comic'
 import { countPaidPanels } from './work-types/comic'
 import { sha256Hex } from './work-monetization'
 

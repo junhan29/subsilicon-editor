@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Minus, Square, X, Menu, FolderOpen, Save, Plus, ChevronDown } from 'lucide-react'
+import { ChevronDown, FolderOpen, Menu, Minus, Plus, Save, Square, X } from 'lucide-react'
 import { isDesktop } from '@editor/lib/editor-versions'
 import { showToast } from './toast'
 

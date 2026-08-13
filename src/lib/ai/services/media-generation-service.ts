@@ -1,7 +1,7 @@
 import type { AiConfig } from '../../ai/types'
 import { callAi } from '../../ai/provider-registry'
 import { getAsset } from '../../local-db'
-import type { StoryCharacter, ComicScene } from '@editor/types/editor'
+import type { ComicScene, StoryCharacter } from '@editor/types/editor'
 
 export interface ImageGenerationParams {
   prompt: string

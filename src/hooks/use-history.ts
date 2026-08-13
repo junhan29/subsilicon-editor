@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
+  type HistoryActionType,
   HistoryStore,
   type StoryGraphSnapshot,
-  type HistoryActionType,
 } from '@editor/lib/history-store'
-import { recordAction, estimateWordCount } from '@editor/lib/writing-stats'
+import { estimateWordCount, recordAction } from '@editor/lib/writing-stats'
 import { showToast } from '../components/editor/toast'
 
 /**

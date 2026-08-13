@@ -2,7 +2,7 @@ import type { StorageAdapter, StorageType } from './types'
 import { localStorageAdapter } from './local-storage-adapter'
 import { sessionStorageAdapter } from './session-storage-adapter'
 import { memoryStorageAdapter } from './memory-storage-adapter'
-import { STORAGE_KEYS, getStorageKey, type StorageKeyName } from './keys'
+import { STORAGE_KEYS, type StorageKeyName, getStorageKey } from './keys'
 
 const adapters: Record<StorageType, StorageAdapter> = {
   local: localStorageAdapter,

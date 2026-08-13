@@ -10,8 +10,8 @@
  * 素材通过 resolveAsset(hash) 由调用方（编辑器 asset-store）提供 dataURL。
  */
 
-import type { VideoData, VideoClip } from './work-types/video'
-import { countVideoDuration, countPaidClips } from './work-types/video'
+import type { VideoClip, VideoData } from './work-types/video'
+import { countPaidClips, countVideoDuration } from './work-types/video'
 import { sha256Hex } from './work-monetization'
 
 /** 播放列表片段（素材已解析为可播放 URL） */

@@ -9,17 +9,17 @@ import type { WorkDocument, WorkTypeAdapter } from '@editor/types/work'
 import type { StoryGraph } from '@editor/types/editor'
 import {
   VIDEO_WORK_TYPE,
-  createEmptyVideoDocument,
-  createEmptyVideoData,
-  getVideoData,
-  countVideoDuration,
   countPaidClips,
   countVideoClips,
+  countVideoDuration,
+  createEmptyVideoData,
+  createEmptyVideoDocument,
+  getVideoData,
 } from '@editor/lib/work-types/video'
 import {
-  exportVideoToPlayerHTML,
   exportVideoPreviewHTML,
   exportVideoToBiliScript,
+  exportVideoToPlayerHTML,
   freePreviewSeconds,
 } from '@editor/lib/export-video'
 

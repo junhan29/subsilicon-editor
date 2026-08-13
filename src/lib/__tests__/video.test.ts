@@ -6,27 +6,27 @@
  * - 导出器：播放列表构建、试看秒数、付费播放器 HTML（遮罩/解锁码）、试看 HTML（裁剪）、B 站分 P 脚本
  */
 
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import {
-  createEmptyVideoData,
-  getVideoData,
-  withVideoData,
-  countVideoDuration,
+  type VideoData,
   countPaidClips,
   countVideoClips,
-  generateClipId,
-  defaultClipDuration,
+  countVideoDuration,
+  createEmptyVideoData,
   createEmptyVideoDocument,
-  type VideoData,
+  defaultClipDuration,
+  generateClipId,
+  getVideoData,
+  withVideoData,
 } from '../work-types/video'
 import { videoAdapter } from '../work-types/video-adapter'
 import {
+  type PlaylistClip,
   buildVideoPlaylist,
+  exportVideoToBiliScript,
   freePreviewSeconds,
   renderPlayerHTML,
   renderPreviewHTML,
-  exportVideoToBiliScript,
-  type PlaylistClip,
 } from '../export-video'
 
 function sampleData(): VideoData {

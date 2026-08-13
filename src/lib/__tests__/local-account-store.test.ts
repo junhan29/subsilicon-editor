@@ -1,12 +1,12 @@
 /** local-account-store 单元测试 */
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { webcrypto } from 'node:crypto'
 import {
-  register,
-  login,
   getAccount,
-  logout,
   isLoggedIn,
+  login,
+  logout,
+  register,
   updateDisplayName,
 } from '../local-account-store'
 

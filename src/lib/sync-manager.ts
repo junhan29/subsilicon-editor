@@ -1,20 +1,20 @@
 import {
-  list as webdavList,
-  getFile as webdavGetFile,
-  putFile as webdavPutFile,
-  deleteFile as webdavDeleteFile,
-  ensureDir as webdavEnsureDir,
   type WebDAVConfig,
   type WebDAVFile,
+  deleteFile as webdavDeleteFile,
+  ensureDir as webdavEnsureDir,
+  getFile as webdavGetFile,
+  list as webdavList,
+  putFile as webdavPutFile,
 } from './webdav-client'
 
 export type { WebDAVConfig, WebDAVFile }
 import {
-  saveWork,
-  loadWork,
-  getAllWorks,
-  deleteWork,
   type StoredWork,
+  deleteWork,
+  getAllWorks,
+  loadWork,
+  saveWork,
 } from './local-db/work-store'
 
 export type SyncStatus = 'idle' | 'syncing' | 'success' | 'error' | 'conflict'
@@ -76,8 +76,8 @@ let syncState: SyncState = {
 
 let syncLog: SyncLogEntry[] = []
 
-let stateListeners: Set<(state: SyncState) => void> = new Set()
-let logListeners: Set<(logs: SyncLogEntry[]) => void> = new Set()
+const stateListeners: Set<(state: SyncState) => void> = new Set()
+const logListeners: Set<(logs: SyncLogEntry[]) => void> = new Set()
 
 function loadConfigFromStorage(): WebDAVConfig | null {
   try {

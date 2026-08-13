@@ -1,25 +1,25 @@
 'use client'
 
-import { useCallback, useEffect, useState, useRef, useMemo, memo } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
-  ReactFlow,
-  ReactFlowProvider,
   Background,
-  Controls,
-  MiniMap,
-  useNodesState,
-  useEdgesState,
-  addEdge,
-  useReactFlow,
-  applyNodeChanges,
   type Connection,
+  Controls,
   type Edge,
+  MiniMap,
   type Node,
-  type Edge as RFEdge,
   type NodeChange,
   type NodeProps,
+  type Edge as RFEdge,
+  ReactFlow,
+  ReactFlowProvider,
+  addEdge,
+  applyNodeChanges,
+  useEdgesState,
+  useNodesState,
+  useReactFlow,
 } from '@xyflow/react'
-import { X, ShieldCheck, MessageSquare, PanelRight, Workflow, Image, Search, Settings, User, BarChart3, GitBranch, Bot } from 'lucide-react'
+import { BarChart3, Bot, GitBranch, Image, MessageSquare, PanelRight, Search, Settings, ShieldCheck, User, Workflow, X } from 'lucide-react'
 import clsx from 'clsx'
 import CustomEdge from './custom-edge'
 import { useEditorCanvasStore } from '@editor/stores/editor-canvas-store'
@@ -49,17 +49,22 @@ import { AiPanelFlyout } from './ai-panel-flyout'
 import { EmptyCanvasGuide } from './onboarding/empty-canvas-guide'
 import { HelpMenu } from './onboarding/help-menu'
 import { ShortcutsModal } from './onboarding/shortcuts-modal'
-import { showToast, useToast, ToastContainer } from './toast'
+import { ToastContainer, showToast, useToast } from './toast'
 import { A11yAnnouncer, useA11yAnnouncer } from './a11y-announcer'
-import { HistoryStore, createSnapshot, type StoryGraphSnapshot, type HistoryActionType } from '@editor/lib/history-store'
+import { type HistoryActionType, HistoryStore, type StoryGraphSnapshot, createSnapshot } from '@editor/lib/history-store'
 import {
-  loadVersions,
-  saveVersion,
-  deleteVersion as deleteVersionFromStore,
-  restoreVersion,
   type VersionSnapshot,
+  deleteVersion as deleteVersionFromStore,
+  loadVersions,
+  restoreVersion,
+  saveVersion,
 } from '@editor/lib/version-store'
-import { getPerformanceMode, PERFORMANCE_CONFIG } from '@editor/lib/performance-mode'
+import { PERFORMANCE_CONFIG, getPerformanceMode } from '@editor/lib/performance-mode'
+import { useAccessibilityStore } from '@editor/stores/accessibility-store'
+import { type QualityIssue, runQualityCheck } from '@editor/lib/quality-check'
+import { createAutoSaveManager, createRecoveryManager, formatRecoveryTime } from '@editor/lib/auto-save'
+import { QualityCheckPanel } from './quality-check-panel'
+import { RecoveryBanner } from './recovery-banner'
 import { NodeSearch } from './node-search'
 import { ExportDialog } from './export-dialog'
 import { CreatorCenterDialog } from './creator-center-dialog'
@@ -67,28 +72,28 @@ import { DiscoverDialog } from './discover-dialog'
 import { StoryPreview } from './preview/story-preview'
 import { AlignmentLines } from './alignment-lines'
 import type { AlignmentGuide } from '@editor/lib/alignment-guides'
-import type { StoryNode, StoryEdge, StoryCharacter, StoryGraph, ComicScene, ComicAudio, NodeGroup, NodeTemplate, CharacterSprite, NodeAnnotation, AnnotationType } from '@editor/types/editor'
+import type { AnnotationType, CharacterSprite, ComicAudio, ComicScene, NodeAnnotation, NodeGroup, NodeTemplate, StoryCharacter, StoryEdge, StoryGraph, StoryNode } from '@editor/types/editor'
 import type { WorkTypeId } from '@editor/types/work'
 import type { MonetizationConfig } from '@editor/lib/work-monetization'
 import { GROUP_COLORS } from '@editor/types/editor'
-import { parseOutline, generateNodesFromOutline, generateOutlineFromNodes } from '@editor/lib/outline-parser'
+import { generateNodesFromOutline, generateOutlineFromNodes, parseOutline } from '@editor/lib/outline-parser'
 import type { LibraryAsset } from '@editor/lib/asset-library'
 import { ensureCreatorServiceInit } from '@editor/lib/creator-service'
 import {
+  getAnnotationAuthor,
   loadAnnotations,
   saveAnnotations,
   addAnnotation as storeAddAnnotation,
-  updateAnnotation as storeUpdateAnnotation,
+  addReply as storeAddReply,
   deleteAnnotation as storeDeleteAnnotation,
   deleteAnnotationsByNode as storeDeleteAnnotationsByNode,
-  addReply as storeAddReply,
-  getAnnotationAuthor,
   setAnnotationAuthor as storeSetAuthor,
+  updateAnnotation as storeUpdateAnnotation,
 } from '@editor/lib/annotation-store'
 import { AnnotationMarkerProvider, withAnnotationMarker } from './annotation-marker'
 import { matchShortcut } from '@editor/lib/shortcut-manager'
-import { toggleTheme, initTheme, type Theme, subscribeTheme } from '@editor/lib/theme-manager'
-import { startSession, endSession, recordAction, estimateWordCount } from '@editor/lib/writing-stats'
+import { type Theme, initTheme, subscribeTheme, toggleTheme } from '@editor/lib/theme-manager'
+import { endSession, estimateWordCount, recordAction, startSession } from '@editor/lib/writing-stats'
 
 // 为所有节点类型包裹批注标记（random 在组件内动态包装以传入 updateNodeData）
 const baseNodeTypes = {
@@ -134,7 +139,6 @@ interface StoryCanvasProps {
   initialGraph?: StoryGraph
   onSave: (graph: StoryGraph) => void
   onGraphChange?: (graph: StoryGraph) => void
-  templateId?: string
   onStartTour?: () => void
   workId?: string
   onBack?: () => void
@@ -142,7 +146,7 @@ interface StoryCanvasProps {
   workType?: WorkTypeId
 }
 
-export function StoryCanvas({ initialGraph, onSave, onGraphChange, templateId, onStartTour, workId, onBack, workType = 'interactive-narrative' }: StoryCanvasProps) {
+export function StoryCanvas({ initialGraph, onSave, onGraphChange, onStartTour, workId, onBack, workType = 'interactive-narrative' }: StoryCanvasProps) {
   return (
     <ReactFlowProvider>
       <A11yAnnouncer>
@@ -150,7 +154,6 @@ export function StoryCanvas({ initialGraph, onSave, onGraphChange, templateId, o
           initialGraph={initialGraph}
           onSave={onSave}
           onGraphChange={onGraphChange}
-          templateId={templateId}
           onStartTour={onStartTour}
           workId={workId}
           onBack={onBack}
@@ -161,7 +164,7 @@ export function StoryCanvas({ initialGraph, onSave, onGraphChange, templateId, o
   )
 }
 
-function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onStartTour, workId, onBack, workType = 'interactive-narrative' }: StoryCanvasProps) {
+function StoryCanvasInner({ initialGraph, onSave, onGraphChange, onStartTour, workId, onBack, workType = 'interactive-narrative' }: StoryCanvasProps) {
   const [nodes, setNodes] = useNodesState(initialGraph?.nodes || [])
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialGraph?.edges || [])
   const [groups, setGroups] = useState<NodeGroup[]>(initialGraph?.groups || [])
@@ -170,6 +173,9 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null)
   const [title, setTitle] = useState(initialGraph?.title || '未命名故事')
   const [tags, setTags] = useState<string[]>(initialGraph?.settings?.tags || [])
+  // 模板 ID 从作品图初始化；此前直接透传外部 prop（main.tsx 从未传入，
+  // 恒为 undefined），保存时恒回退 'dialogue'，导致自定义模板被静默覆盖。
+  const [graphTemplateId, setGraphTemplateId] = useState<StoryGraph['templateId']>(initialGraph?.templateId || 'custom')
   const [characters, setCharacters] = useState<StoryCharacter[]>(initialGraph?.characters || [])
   const [variables, setVariables] = useState<import('@editor/types/editor').StoryVariable[]>(initialGraph?.variables || [])
   const { announce } = useA11yAnnouncer()
@@ -192,7 +198,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
   const [showExportDialog, setShowExportDialog] = useState(false)
   // 创作者中心状态
   const [showCreatorCenter, setShowCreatorCenter] = useState(false)
-  const [creatorCenterTab, setCreatorCenterTab] = useState<'account' | 'platforms' | 'publish' | 'records'>('account')
+  const [creatorCenterTab, setCreatorCenterTab] = useState<'account' | 'platforms' | 'publish' | 'records' | 'unlock'>('account')
   const [loginState, setLoginState] = useState(0) // 用于刷新登录状态
   // 作品发现
   const [showDiscover, setShowDiscover] = useState(false)
@@ -221,6 +227,15 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
     setAiPanelMode,
   } = useEditorCanvasStore()
 
+  // ADHD 无障碍设置（专注模式 / 长反馈等）
+  const focusMode = useAccessibilityStore((s) => s.focusMode)
+  const longFeedback = useAccessibilityStore((s) => s.longFeedback)
+  const toggleFocusMode = useAccessibilityStore((s) => s.toggleFocusMode)
+  // 崩溃恢复横幅状态
+  const [recoveryInfo, setRecoveryInfo] = useState<{ time: number } | null>(null)
+  // ADHD 适配：自动保存管理器（挂载时启动，卸载/手动保存后清理）
+  const autoSaveRef = useRef<ReturnType<typeof createAutoSaveManager> | null>(null)
+
   // Activity Bar items
   const LEFT_ACTIVITY_ITEMS: ActivityBarItem[] = [
     { id: 'nodes', icon: <Workflow className="h-4 w-4" />, label: '节点库' },
@@ -238,6 +253,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
     { id: 'ai-chat', icon: <Bot className="h-4 w-4" />, label: 'AI 对话' },
     { id: 'versions', icon: <GitBranch className="h-4 w-4" />, label: '版本' },
     { id: 'stats', icon: <BarChart3 className="h-4 w-4" />, label: '统计' },
+    { id: 'quality-check', icon: <ShieldCheck className="h-4 w-4" />, label: '作品体检' },
   ]
 
   // 主题状态（订阅变化以触发重渲染）
@@ -247,6 +263,11 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
   const canvasRef = useRef<HTMLDivElement>(null)
   const historyStoreRef = useRef<HistoryStore<StoryGraphSnapshot> | null>(null)
   const pendingHistoryActionRef = useRef<{ type: HistoryActionType; description: string } | null>(null)
+  // 始终保持最新 onSave 引用（见 saveGraph 中说明）
+  const onSaveRef = useRef(onSave)
+  useEffect(() => {
+    onSaveRef.current = onSave
+  }, [onSave])
   const clipboardRef = useRef<{ nodes: StoryNode[]; edges: StoryEdge[] } | null>(null)
   const pasteOffsetRef = useRef(0)
   const alignmentLinesRef = useRef<import('./alignment-lines').AlignmentLinesRef | null>(null)
@@ -573,7 +594,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
   const graph = useMemo((): StoryGraph => ({
     title,
     description,
-    templateId: (templateId as StoryGraph['templateId']) || 'dialogue',
+    templateId: graphTemplateId,
     characters,
     variables,
     nodes: nodes as StoryNode[],
@@ -585,7 +606,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
     groups,
     annotations,
     monetization: monetization ?? undefined,
-  }), [title, description, templateId, characters, variables, nodes, edges, tags, groups, annotations, monetization, scenesVersion, audiosVersion])
+  }), [title, description, graphTemplateId, characters, variables, nodes, edges, tags, groups, annotations, monetization, scenesVersion, audiosVersion])
 
   // 使用 ref 持有最新 graph，供 beforeunload / unmount 同步保存使用
   const graphRef = useRef(graph)
@@ -1099,6 +1120,16 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!e.target) return
 
+      // 保存快捷键在输入框聚焦时也生效：创作过程常处于文本编辑状态，
+      // 同时 preventDefault 可拦截浏览器默认的「保存网页」弹窗
+      if (matchShortcut(e, 'save')) {
+        e.preventDefault()
+        saveGraph()
+        showToast('success', '作品已保存')
+        announce('作品已保存')
+        return
+      }
+
       const target = e.target as HTMLElement
       const isInputTarget =
         target instanceof HTMLInputElement ||
@@ -1224,6 +1255,27 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
       if (matchShortcut(e, 'toggleTheme')) {
         e.preventDefault()
         handleToggleTheme()
+        return
+      }
+
+      // ADHD 适配：专注模式（收起所有面板，进入无干扰画布）
+      if (matchShortcut(e, 'focusMode')) {
+        e.preventDefault()
+        toggleFocusMode()
+        announce(focusMode ? '专注模式已退出' : '专注模式已开启，已隐藏所有面板')
+        return
+      }
+
+      // ADHD 适配：作品体检（'Q'）
+      if (matchShortcut(e, 'qualityCheck')) {
+        e.preventDefault()
+        // 退出专注模式以显示体检面板
+        if (focusMode) {
+          toggleFocusMode()
+        }
+        setActiveRightActivity('quality-check')
+        const issues = runQualityCheck(graphRef.current)
+        announce(`作品体检：发现 ${issues.length} 个${issues.some((i) => i.severity === 'error') ? '需要处理' : '可优化'}的问题`)
         return
       }
 
@@ -1360,6 +1412,9 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
     showShortcutsModal,
     showPreview,
     showAiSettings,
+    focusMode,
+    toggleFocusMode,
+    announce,
   ])
 
   const updateNodeData = useCallback((nodeId: string, data: Partial<StoryNode['data']>) => {
@@ -1415,14 +1470,22 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
   }, [nodes, setNodes, setEdges, pushHistory, announce, cleanupOrphanRefs, workId, setAnnotations])
 
   const saveGraph = useCallback(() => {
-    onSave(graphRef.current)
-  }, [onSave])
+    // 通过 ref 调用最新的 onSave，保持 saveGraph 引用稳定：
+    // 若直接依赖 onSave（每次父组件渲染都是新引用），卸载 effect 会因
+    // onSave 变化反复重启并触发保存 → 保存 → setState → 重渲染 → 重启，
+    // 造成海量 saveWork 事务堆积（曾实测数万个 pending 事务挂起）。
+    onSaveRef.current(graphRef.current)
+  }, [])
 
   const handleSave = useCallback(() => {
     saveGraph()
-    showToast('success', '作品已保存')
+    // 手动保存成功后清掉自动保存与崩溃恢复快照（无需再恢复）
+    autoSaveRef.current?.clearAll()
+    createRecoveryManager().clearEditorState()
+    // ADHD 适配：长反馈开启时 toast 停留更久（6000ms）
+    showToast('success', '作品已保存', { duration: longFeedback ? 6000 : undefined })
     announce('作品已保存')
-  }, [saveGraph, announce])
+  }, [saveGraph, announce, longFeedback])
 
   // 窗口关闭前与组件卸载时立即保存，避免防抖导致的数据丢失
   useEffect(() => {
@@ -1435,6 +1498,49 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
       saveGraph()
     }
   }, [saveGraph])
+
+  // ADHD 适配：定时自动保存（30s 周期，崩溃后可恢复）+ 崩溃恢复检测
+  useEffect(() => {
+    const autoSave = createAutoSaveManager({
+      // 复用性能模式配置：normal 30s / large 60s / huge 120s
+      interval: PERFORMANCE_CONFIG[getPerformanceMode(nodes.length)].autoSaveInterval,
+      maxSnapshots: 3,
+    })
+    autoSave.start(
+      () => {
+        const g = graphRef.current
+        return {
+          nodes: g.nodes,
+          edges: g.edges,
+          characters: g.characters,
+          scenes: g.scenes || [],
+          audios: g.audios || [],
+          variables: g.variables || [],
+          title: g.title,
+          tags: g.settings?.tags || [],
+          timestamp: Date.now(),
+        }
+      },
+      () => {
+        if (longFeedback) announce('已自动保存')
+      }
+    )
+    autoSaveRef.current = autoSave
+
+    // 崩溃恢复：检测上次非正常退出留下的未保存状态
+    const recovery = createRecoveryManager()
+    const state = recovery.getEditorState()
+    if (state && Date.now() - state.timestamp < 24 * 60 * 60 * 1000) {
+      setRecoveryInfo({ time: state.timestamp })
+    }
+
+    return () => {
+      autoSave.stop()
+      autoSave.clearAll()
+    }
+    // 挂载时执行一次；性能模式的间隔随节点规模在下次挂载更新
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleSaveVersion = useCallback(
     (name: string, description: string) => {
@@ -1883,6 +1989,38 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-background">
+      {/* ADHD 适配：崩溃恢复横幅（检测到上次未保存的编辑时显示） */}
+      {recoveryInfo && (
+        <RecoveryBanner
+          time={recoveryInfo.time}
+          onRestore={() => {
+            const recovery = createRecoveryManager()
+            const state = recovery.getEditorState()
+            if (state) {
+              setNodes(state.nodes as StoryNode[])
+              setEdges(state.edges as StoryEdge[])
+              setCharacters(state.characters as StoryCharacter[])
+              setVariables(state.variables as import('@editor/types/editor').StoryVariable[])
+              setTitle(state.title)
+              setTags(state.tags)
+              scenesRef.current = state.scenes as ComicScene[]
+              setScenesVersion((v) => v + 1)
+              audioRef.current = state.audios as ComicAudio[]
+              setAudiosVersion((v) => v + 1)
+              recovery.clearEditorState()
+              autoSaveRef.current?.clearAll()
+              setRecoveryInfo(null)
+              showToast('success', '已恢复上次未保存的编辑')
+              announce('已恢复上次未保存的编辑')
+            }
+          }}
+          onDiscard={() => {
+            createRecoveryManager().clearEditorState()
+            setRecoveryInfo(null)
+          }}
+        />
+      )}
+
       {/* Top Toolbar */}
       <TopToolbar
         title={title}
@@ -1890,23 +2028,31 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
         canRedo={historyState.canRedo}
         onUndo={undo}
         onRedo={redo}
+        onSave={handleSave}
         onPreview={() => setShowPreview(true)}
         onExport={() => setShowExportDialog(true)}
         onToggleAiPanel={handleToggleAiPanel}
         aiPanelVisible={aiPanelMode !== 'hidden'}
+        onToggleFocusMode={() => {
+          toggleFocusMode()
+          announce(focusMode ? '专注模式已退出' : '专注模式已开启，已隐藏所有面板')
+        }}
+        focusMode={focusMode}
         onBack={onBack}
       />
 
       {/* Main content area: Activity Bars + Canvas */}
       <div className="flex flex-1 overflow-hidden relative">
-        {/* Left Activity Bar */}
-        <ActivityBar
-          side="left"
-          items={LEFT_ACTIVITY_ITEMS}
-          activeItem={activeLeftActivity}
-          onItemClick={setActiveLeftActivity}
-          bottomItems={LEFT_BOTTOM_ITEMS}
-        />
+        {/* Left Activity Bar（专注模式隐藏图标栏，保留纯画布） */}
+        {!focusMode && (
+          <ActivityBar
+            side="left"
+            items={LEFT_ACTIVITY_ITEMS}
+            activeItem={activeLeftActivity}
+            onItemClick={setActiveLeftActivity}
+            bottomItems={LEFT_BOTTOM_ITEMS}
+          />
+        )}
 
         {/* Left panel overlay (when activity item active) */}
         {activeLeftActivity && (
@@ -2070,7 +2216,8 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
               {alignmentEnabled && (
                 <AlignmentLines ref={alignmentLinesRef} enabled={alignmentEnabled} />
               )}
-              {perfConfig.miniMapVisible && (
+              {/* 专注模式隐藏小地图，减少视觉干扰 */}
+              {perfConfig.miniMapVisible && !focusMode && (
                 <MiniMap
                   className="!bg-card !border !border-border"
                   nodeStrokeWidth={3}
@@ -2141,13 +2288,15 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
           )}
         </div>
 
-        {/* Right Activity Bar */}
-        <ActivityBar
-          side="right"
-          items={RIGHT_ACTIVITY_ITEMS}
-          activeItem={activeRightActivity}
-          onItemClick={setActiveRightActivity}
-        />
+        {/* Right Activity Bar（专注模式隐藏图标栏，保留纯画布） */}
+        {!focusMode && (
+          <ActivityBar
+            side="right"
+            items={RIGHT_ACTIVITY_ITEMS}
+            activeItem={activeRightActivity}
+            onItemClick={setActiveRightActivity}
+          />
+        )}
 
         {/* Right panel overlay */}
         {activeRightActivity && (
@@ -2167,6 +2316,21 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, templateId, onS
               </button>
             </div>
             <div className={`flex-1 min-h-0 ${activeRightActivity === 'ai-chat' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
+              {activeRightActivity === 'quality-check' && (
+                <QualityCheckPanel
+                  nodes={nodes as StoryNode[]}
+                  edges={edges as StoryEdge[]}
+                  monetization={monetization}
+                  onLocateNode={(nodeId) => {
+                    setSelectedNodeIds([nodeId])
+                    const node = (nodes as StoryNode[]).find((n) => n.id === nodeId)
+                    if (node) {
+                      fitView({ nodes: [{ id: nodeId, position: node.position }], padding: 0.6, duration: 400 })
+                    }
+                  }}
+                  onClose={() => setActiveRightActivity(null)}
+                />
+              )}
               {activeRightActivity === 'properties' && (
                 <EditorRightPanel
                   selectedNode={selectedNode || null}

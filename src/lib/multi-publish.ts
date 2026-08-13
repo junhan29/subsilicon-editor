@@ -1,8 +1,8 @@
 import type { StoryGraph } from '@editor/types/editor'
 import type { WorkTypeId } from '@editor/types/work'
 import {
-  listProviders,
   type SubmitProvider,
+  listProviders,
 } from '@editor/lib/submit-providers'
 import { getWorkType } from '@editor/lib/work-registry'
 import { getAccount } from '@editor/lib/local-account-store'

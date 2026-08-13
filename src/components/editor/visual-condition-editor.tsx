@@ -1,9 +1,9 @@
 'use client'
 
 import { useCallback } from 'react'
-import { Trash2, Plus } from 'lucide-react'
-import type { ConditionGroup, ConditionClause, StoryVariable } from '@editor/types/editor'
-import { buildExpression, createEmptyGroup, createEmptyClause } from '@editor/lib/condition-builder'
+import { Plus, Trash2 } from 'lucide-react'
+import type { ConditionClause, ConditionGroup, StoryVariable } from '@editor/types/editor'
+import { buildExpression, createEmptyClause, createEmptyGroup } from '@editor/lib/condition-builder'
 import { Label } from '@editor/components/ui/label'
 
 interface VisualConditionEditorProps {

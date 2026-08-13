@@ -3,13 +3,13 @@
  * 直接调用 provider-registry 中的 runAiIndependentSelfCheck，并把检查结果可视化。
  */
 import { useState } from 'react'
-import { Bot, CheckCircle2, XCircle, AlertTriangle, Loader2, ChevronDown, ChevronRight, Network } from 'lucide-react'
+import { AlertTriangle, Bot, CheckCircle2, ChevronDown, ChevronRight, Loader2, Network, XCircle } from 'lucide-react'
 import { Button } from '@editor/components/ui/button'
 import { showToast } from './toast'
 import {
-  runAiIndependentSelfCheck,
   type AiIndependentRunReport,
   type ConnectivityCheckResult,
+  runAiIndependentSelfCheck,
 } from '@editor/lib/ai/provider-registry'
 
 interface ResultGroupProps {

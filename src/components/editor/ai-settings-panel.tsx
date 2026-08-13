@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import {
-  Sparkles, Settings, ChevronDown, ChevronUp, CheckCircle2,
-  ExternalLink, Copy, AlertCircle, Loader2, Key, Globe, FileText,
-  Download, Trash2, Cpu, Check, WifiOff, Package, Zap, HardDrive
+  AlertCircle, Check, CheckCircle2, ChevronDown, ChevronUp,
+  Copy, Cpu, Download, ExternalLink, FileText, Globe, HardDrive,
+  Key, Loader2, Package, Settings, Sparkles, Trash2, WifiOff, Zap
 } from 'lucide-react'
 import { Button } from '@editor/components/ui/button'
 import { Toggle } from '@editor/components/ui/toggle'
@@ -12,18 +12,18 @@ import { Badge } from '@editor/components/ui/badge'
 import { showToast } from './toast'
 import { AiOutlinePanel } from './ai-outline-panel'
 import type { AiConfig, AiProviderConfig } from '@editor/types/ai'
-import { getModelsForProvider, getDefaultModel } from '@editor/lib/ai/model-presets'
+import { getDefaultModel, getModelsForProvider } from '@editor/lib/ai/model-presets'
 import {
+  type LocalModelInfo,
+  type ModelDownloadStatus,
+  RECOMMENDED_MODELS,
+  deleteModel,
+  downloadModel,
+  formatFileSize,
+  getCurrentModel,
   isOllamaRunning,
   listInstalledModels,
-  downloadModel,
-  deleteModel,
-  useModel,
-  getCurrentModel,
-  RECOMMENDED_MODELS,
-  formatFileSize,
-  type ModelDownloadStatus,
-  type LocalModelInfo,
+  activateModel,
 } from '@editor/lib/local-model-manager'
 
 interface AiSettingsPanelProps {
@@ -282,7 +282,7 @@ export function AiSettingsPanel({ enabled: initialEnabled, onChange }: AiSetting
   }
 
   const handleSelectModel = async (modelName: string) => {
-    await useModel(modelName)
+    await activateModel(modelName)
     setCurrentModel(modelName)
     showToast('success', `已切换到 ${modelName}`)
   }

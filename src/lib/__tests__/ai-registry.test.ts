@@ -1,11 +1,11 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-  getAiConfig,
   getActiveProvider,
-  isAiAvailable,
+  getAiConfig,
   getAvailableProviders,
-  resetAiRegistry,
+  isAiAvailable,
   refreshAiConfig,
+  resetAiRegistry,
 } from '../ai'
 import type { AiConfig } from '@editor/types/ai'
 

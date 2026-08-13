@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { StoryNode, StoryEdge, StoryCharacter, StoryVariable, ComicScene, ComicAudio, NodeGroup, NodeAnnotation } from '@editor/types/editor'
+import type { ComicAudio, ComicScene, NodeAnnotation, NodeGroup, StoryCharacter, StoryEdge, StoryNode, StoryVariable } from '@editor/types/editor'
 import type { MonetizationConfig } from '@editor/lib/work-monetization'
 import type { VersionSnapshot } from '@editor/lib/version-store'
 import type { StoryGraphSnapshot } from '@editor/lib/history-store'

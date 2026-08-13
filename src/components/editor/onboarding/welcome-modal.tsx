@@ -1,19 +1,19 @@
 'use client'
 
 import {
-  X,
-  Sparkles,
-  MousePointer2,
-  GitBranch,
-  Lock,
-  Flag,
-  Play,
-  ChevronRight,
   BookOpen,
-  Keyboard,
-  Zap,
-  LayoutTemplate,
+  ChevronRight,
   Clock,
+  Flag,
+  GitBranch,
+  Keyboard,
+  LayoutTemplate,
+  Lock,
+  MousePointer2,
+  Play,
+  Sparkles,
+  X,
+  Zap,
 } from 'lucide-react'
 import { Button } from '@editor/components/ui/button'
 

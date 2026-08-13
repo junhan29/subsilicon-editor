@@ -1,14 +1,27 @@
 import type { StoryGraph } from '@editor/types/editor'
-import type { MonetizationConfig, HTMLMonetizationConfig, PreGeneratedCode } from '@editor/lib/work-monetization'
+import type { HTMLMonetizationConfig, MonetizationConfig, PreGeneratedCode } from '@editor/lib/work-monetization'
 import {
-  hashSeedKey,
-  UNLOCK_STATE_KEY_PREFIX,
   UNLOCK_CODE_PREFIX,
   UNLOCK_REQUEST_PREFIX,
+  UNLOCK_STATE_KEY_PREFIX,
+  hashSeedKey,
 } from '@editor/lib/work-monetization'
 import { getAsset } from '@editor/lib/local-db'
 
 const ENC_PREFIX = '__ENC__:'
+
+/**
+ * 安全 JSON 序列化（用于内联进 <script> 的配置值）：
+ * 转义 `<` 与 U+2028/U+2029，防止 `</script>` 注入与 JS 字符串截断。
+ * 值为 null/undefined 时输出 `null`。
+ */
+const safeJSON = (v: unknown): string =>
+  v == null
+    ? 'null'
+    : JSON.stringify(v)
+        .replace(/</g, '\\u003c')
+        .replace(/\u2028/g, '\\u2028')
+        .replace(/\u2029/g, '\\u2029')
 
 function blobToDataURL(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -303,7 +316,7 @@ function buildHTMLTemplate(params: {
   ${params.monetization ? '<div id="paywall-overlay" class="paywall-hidden"></div>' : ''}
   <script>
     window.__STORY_GRAPH__ = ${params.graphJSON};
-    ${params.monetization ? `window.__MONETIZATION__ = ${JSON.stringify(params.monetization)};` : ''}
+    ${params.monetization ? `window.__MONETIZATION__ = ${safeJSON(params.monetization)};` : ''}
   </script>
   <script>
     // 简易故事运行时
@@ -337,10 +350,10 @@ function buildHTMLTemplate(params: {
         var i = 0;
         while (i < expression.length) {
           var ch = expression[i];
-          if (/\s/.test(ch)) { i++; continue; }
-          if (/\d/.test(ch) || (ch === '.' && /\d/.test(expression[i + 1]))) {
+          if (/\\s/.test(ch)) { i++; continue; }
+          if (/\\d/.test(ch) || (ch === '.' && /\\d/.test(expression[i + 1]))) {
             var num = '';
-            while (i < expression.length && /[\d.]/.test(expression[i])) { num += expression[i]; i++; }
+            while (i < expression.length && /[\\d.]/.test(expression[i])) { num += expression[i]; i++; }
             tokens.push({ type: 'NUMBER', value: parseFloat(num) });
             continue;
           }
@@ -696,7 +709,7 @@ function buildHTMLTemplate(params: {
           if (multiTabs.length > 0) {
             paywallHTML += '<div class="paywall-tabs">';
             multiTabs.forEach(function(t, i) {
-              paywallHTML += '<button class="paywall-tab ' + (i === 0 ? 'active' : '') + '" onclick="switchPaywallTabMulti(\'' + t.id + '\', this)">' + t.label + '</button>';
+              paywallHTML += '<button class="paywall-tab ' + (i === 0 ? 'active' : '') + '" onclick="switchPaywallTabMulti(\\'' + t.id + '\\', this)">' + t.label + '</button>';
             });
             paywallHTML += '</div>';
           }
@@ -716,12 +729,12 @@ function buildHTMLTemplate(params: {
             paywallHTML += '<div class="paywall-divider"></div>';
             paywallHTML += '<p class="paywall-section-title">支付凭证</p>';
             paywallHTML += '<input type="text" class="paywall-input" id="payment-proof-multi-manual-' + i + '" placeholder="支付单号后 6 位" maxlength="6" />';
-            paywallHTML += '<button class="paywall-btn" onclick="generateRequestCodeMulti(\'manual\', ' + i + ')">生成解锁凭证</button>';
-            paywallHTML += '<div id="request-code-display-multi-manual-' + i + '" class="paywall-hidden"><div class="paywall-code-display" id="request-code-value-multi-manual-' + i + '"></div><button class="paywall-btn paywall-btn-secondary" onclick="copyRequestCodeMulti(\'manual\', ' + i + ')">复制凭证</button></div>';
+            paywallHTML += '<button class="paywall-btn" onclick="generateRequestCodeMulti(\\'manual\\', ' + i + ')">生成解锁凭证</button>';
+            paywallHTML += '<div id="request-code-display-multi-manual-' + i + '" class="paywall-hidden"><div class="paywall-code-display" id="request-code-value-multi-manual-' + i + '"></div><button class="paywall-btn paywall-btn-secondary" onclick="copyRequestCodeMulti(\\'manual\\', ' + i + ')">复制凭证</button></div>';
             paywallHTML += '<div class="paywall-divider"></div>';
             paywallHTML += '<p class="paywall-section-title">解锁码</p>';
             paywallHTML += '<input type="text" class="paywall-input" id="unlock-code-input-multi-manual-' + i + '" placeholder="粘贴收到的解锁码" />';
-            paywallHTML += '<button class="paywall-btn" onclick="verifyUnlockMulti(\'manual\', ' + i + ')">解锁</button>';
+            paywallHTML += '<button class="paywall-btn" onclick="verifyUnlockMulti(\\'manual\\', ' + i + ')">解锁</button>';
             paywallHTML += '<p id="unlock-result-multi-manual-' + i + '" class="paywall-hidden"></p>';
             paywallHTML += '</div>';
           });
@@ -742,12 +755,12 @@ function buildHTMLTemplate(params: {
             paywallHTML += '<div class="paywall-divider"></div>';
             paywallHTML += '<p class="paywall-section-title">支付凭证</p>';
             paywallHTML += '<input type="text" class="paywall-input" id="payment-proof-multi-third-' + i + '" placeholder="平台订单号后 6 位" maxlength="6" />';
-            paywallHTML += '<button class="paywall-btn" onclick="generateRequestCodeMulti(\'third\', ' + i + ')">生成解锁凭证</button>';
-            paywallHTML += '<div id="request-code-display-multi-third-' + i + '" class="paywall-hidden"><div class="paywall-code-display" id="request-code-value-multi-third-' + i + '"></div><button class="paywall-btn paywall-btn-secondary" onclick="copyRequestCodeMulti(\'third\', ' + i + ')">复制凭证</button></div>';
+            paywallHTML += '<button class="paywall-btn" onclick="generateRequestCodeMulti(\\'third\\', ' + i + ')">生成解锁凭证</button>';
+            paywallHTML += '<div id="request-code-display-multi-third-' + i + '" class="paywall-hidden"><div class="paywall-code-display" id="request-code-value-multi-third-' + i + '"></div><button class="paywall-btn paywall-btn-secondary" onclick="copyRequestCodeMulti(\\'third\\', ' + i + ')">复制凭证</button></div>';
             paywallHTML += '<div class="paywall-divider"></div>';
             paywallHTML += '<p class="paywall-section-title">解锁码</p>';
             paywallHTML += '<input type="text" class="paywall-input" id="unlock-code-input-multi-third-' + i + '" placeholder="粘贴收到的解锁码" />';
-            paywallHTML += '<button class="paywall-btn" onclick="verifyUnlockMulti(\'third\', ' + i + ')">解锁</button>';
+            paywallHTML += '<button class="paywall-btn" onclick="verifyUnlockMulti(\\'third\\', ' + i + ')">解锁</button>';
             paywallHTML += '<p id="unlock-result-multi-third-' + i + '" class="paywall-hidden"></p>';
             paywallHTML += '</div>';
           });

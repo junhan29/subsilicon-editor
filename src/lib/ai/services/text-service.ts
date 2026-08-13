@@ -1,4 +1,4 @@
-import type { AiConfig, AiPolishResult, AiLayoutResult, AiGenerateResult, AiPolishStyle, AiLayoutType } from '../types'
+import type { AiConfig, AiGenerateResult, AiLayoutResult, AiLayoutType, AiPolishResult, AiPolishStyle } from '../types'
 import { callAi } from '../provider-registry'
 
 export const STYLE_PROMPTS: Record<AiPolishStyle, string> = {

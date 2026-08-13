@@ -1,13 +1,13 @@
 import type {
+  EditorPluginApi,
+  HookHandler,
+  PluginContext,
+  PluginHookName,
+  PluginInstance,
   PluginManifest,
   PluginModule,
-  PluginInstance,
   PluginStatus,
-  PluginHookName,
-  HookHandler,
-  EditorPluginApi,
   PluginStorage,
-  PluginContext,
 } from './types'
 import { SandboxStorage } from './sandbox-storage'
 

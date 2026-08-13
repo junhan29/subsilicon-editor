@@ -1,4 +1,4 @@
-import type { OutlineItem, StoryNode, StoryEdge } from '@editor/types/editor'
+import type { OutlineItem, StoryEdge, StoryNode } from '@editor/types/editor'
 import { generateId } from './utils'
 
 function inferNodeType(title: string): string {
@@ -257,7 +257,7 @@ export function generateNodesFromOutline(
   }
 
   let currentY = startY
-  let currentChapterStartX = startX
+  const currentChapterStartX = startX
 
   for (const item of items) {
     if (item.type === 'chapter') {

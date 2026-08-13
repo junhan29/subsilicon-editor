@@ -1,5 +1,5 @@
 import JSZip from 'jszip'
-import { getAllAssets, saveAsset, getAsset, type StoredAsset } from './local-db'
+import { type StoredAsset, getAllAssets, getAsset, saveAsset } from './local-db'
 
 export interface AssetManifest {
   version: 1

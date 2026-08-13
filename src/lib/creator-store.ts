@@ -1,5 +1,5 @@
 import { openDB } from './local-db/db'
-import type { PlatformConfig, CreatorAccount, PublishRecord } from '@editor/types/creator'
+import type { CreatorAccount, PlatformConfig, PublishRecord } from '@editor/types/creator'
 
 export async function savePlatformConfig(config: PlatformConfig): Promise<void> {
   const db = await openDB()

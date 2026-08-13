@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useCallback } from 'react'
-import { Plus, X, ChevronDown, ChevronRight, Trash2, Edit3, Check, BarChart3 } from 'lucide-react'
+import { useCallback, useState } from 'react'
+import { BarChart3, Check, ChevronDown, ChevronRight, Edit3, Plus, Trash2, X } from 'lucide-react'
 import type { StoryVariable } from '@editor/types/editor'
 
 interface VariablePanelProps {

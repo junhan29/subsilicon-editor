@@ -9,7 +9,8 @@ export async function migrateFromLocalStorage(): Promise<number> {
   let migratedCount = 0
 
   // 迁移作品数据（subsilicon_editor_work_*）
-  for (let i = 0; i < localStorage.length; i++) {
+  // 倒序遍历：删除当前项后索引不会跳过后续项
+  for (let i = localStorage.length - 1; i >= 0; i--) {
     const key = localStorage.key(i)
     if (!key || !key.startsWith('subsilicon_editor_work_')) continue
     try {

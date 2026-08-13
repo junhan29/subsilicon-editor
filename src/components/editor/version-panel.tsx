@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useCallback, useMemo } from 'react'
-import { GitBranch, Plus, RotateCcw, GitCompare, Trash2, Clock, AlertTriangle } from 'lucide-react'
+import { useCallback, useMemo, useState } from 'react'
+import { AlertTriangle, Clock, GitBranch, GitCompare, Plus, RotateCcw, Trash2 } from 'lucide-react'
 import { VersionDiffView } from './version-diff'
 import {
-  compareVersions,
-  type VersionSnapshot,
   type VersionDiff,
+  type VersionSnapshot,
+  compareVersions,
 } from '@editor/lib/version-store'
 import type { StoryGraphSnapshot } from '@editor/lib/history-store'
 

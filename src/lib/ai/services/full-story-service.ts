@@ -1,4 +1,4 @@
-import type { AiConfig, AiFullStoryResult, AiCharacter, OutlineScene } from '../types'
+import type { AiCharacter, AiConfig, AiFullStoryResult, OutlineScene } from '../types'
 import { callAi } from '../provider-registry'
 
 const FULL_STORY_SYSTEM_PROMPT = `你是一个专业的互动叙事设计师。请根据主题和类型，生成一个完整的互动故事。输出必须是严格的 JSON 格式，不要包含任何 markdown 标记或额外文字。

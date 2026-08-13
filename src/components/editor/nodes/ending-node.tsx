@@ -2,7 +2,7 @@
 
 import { memo } from 'react'
 import { Handle, Position } from '@xyflow/react'
-import { Star, X, Circle, Lock, Flag } from 'lucide-react'
+import { Circle, Flag, Lock, Star, X } from 'lucide-react'
 import { areNodesEqual } from '@editor/lib/utils'
 
 type EndingType = 'good' | 'bad' | 'neutral' | 'secret'

@@ -1,14 +1,14 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import {
+  areNodesEqual,
   cn,
-  generateId,
   formatCurrency,
   formatDate,
   formatDateTime,
+  generateId,
   maskIdCard,
   maskPhone,
   shallowEqual,
-  areNodesEqual,
 } from '../utils'
 
 describe('utils', () => {

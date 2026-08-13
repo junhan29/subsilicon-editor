@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Input } from '@editor/components/ui/input'
 import { Button } from '@editor/components/ui/button'
 import { Card, CardContent } from '@editor/components/ui/card'
@@ -12,13 +12,13 @@ import {
   SheetTrigger,
 } from '@editor/components/ui/sheet'
 import {
-  Search,
-  Image as ImageIcon,
   Check,
-  Loader2,
   FolderOpen,
+  Image as ImageIcon,
+  Loader2,
+  Search,
 } from 'lucide-react'
-import { getAllAssets, StoredAsset } from '@editor/lib/local-db/asset-store'
+import { StoredAsset, getAllAssets } from '@editor/lib/local-db/asset-store'
 
 interface Asset {
   id: string

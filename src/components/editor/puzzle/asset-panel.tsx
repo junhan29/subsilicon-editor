@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, memo } from 'react'
-import { Search, Upload, Image as ImageIcon, User, Sparkles, Package } from 'lucide-react'
+import { memo, useState } from 'react'
+import { Image as ImageIcon, Package, Search, Sparkles, Upload, User } from 'lucide-react'
 import type { StoryCharacter } from '@editor/types/editor'
 
 interface AssetPanelProps {

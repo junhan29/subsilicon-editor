@@ -4,7 +4,7 @@
  * 数据持久化到 node.data.videoBinding，无需额外 store。
  */
 import { useState } from 'react'
-import { Film, ChevronDown, ChevronRight } from 'lucide-react'
+import { ChevronDown, ChevronRight, Film } from 'lucide-react'
 import { Label } from '@editor/components/ui/label'
 import { Input } from '@editor/components/ui/input'
 import type { StoryNode } from '@editor/types/editor'

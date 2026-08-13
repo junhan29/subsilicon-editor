@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useRef } from 'react'
-import { Loader2, AlertCircle, Upload, Check } from 'lucide-react'
+import { useRef, useState } from 'react'
+import { AlertCircle, Check, Loader2, Upload } from 'lucide-react'
 
 export function LocalFileInput({
   accept,

@@ -1,4 +1,4 @@
-import { Sparkles, MousePointer2, Settings, Eye, Save } from 'lucide-react'
+import { Eye, MousePointer2, Save, Settings, Sparkles } from 'lucide-react'
 
 export interface TourStep {
   id: string

@@ -1,10 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { Sparkles, Loader2, Wand2, PenLine, ArrowRight, Lightbulb, Image, Video } from 'lucide-react'
+import { ArrowRight, Image, Lightbulb, Loader2, PenLine, Sparkles, Video, Wand2 } from 'lucide-react'
 import { showToast } from './toast'
 import { AiSettingsDialog } from './ai-settings-dialog'
-import { isAiAvailable, callAi } from '@editor/lib/ai'
+import { callAi, isAiAvailable } from '@editor/lib/ai'
 
 export type AiAssistMode = 'polish' | 'continue' | 'generate' | 'expand' | 'suggest' | 'image' | 'video'
 

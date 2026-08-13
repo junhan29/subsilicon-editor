@@ -1,8 +1,8 @@
 'use client'
 
-import { memo, useMemo, useState, useCallback } from 'react'
-import { Plus, Trash2, CheckCircle2, RotateCcw, CornerDownRight, MessageSquare, Send } from 'lucide-react'
-import type { NodeAnnotation, AnnotationType, StoryNode } from '@editor/types/editor'
+import { memo, useCallback, useMemo, useState } from 'react'
+import { CheckCircle2, CornerDownRight, MessageSquare, Plus, RotateCcw, Send, Trash2 } from 'lucide-react'
+import type { AnnotationType, NodeAnnotation, StoryNode } from '@editor/types/editor'
 import { ANNOTATION_TYPE_META } from '@editor/types/editor'
 import { AnnotationTypeIcon } from './annotation-marker'
 

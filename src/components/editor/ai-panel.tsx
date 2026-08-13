@@ -1,14 +1,14 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Sparkles, Settings, AlertCircle, Loader2, Wand2, BookOpen, Users, ArrowRight } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { AlertCircle, ArrowRight, BookOpen, Loader2, Settings, Sparkles, Users, Wand2 } from 'lucide-react'
 import { showToast } from './toast'
 import { AiSettingsDialog } from './ai-settings-dialog'
 import {
-  generateFullStory, generateCharacterDetail, type AiFullStoryResult, type AiCharacter,
+  type AiCharacter, type AiFullStoryResult, generateCharacterDetail, generateFullStory,
 } from '@editor/lib/ai-service'
-import { convertAiStoryToGraph, convertAiCharacterToStoryCharacter } from '@editor/lib/ai-story-converter'
-import type { StoryNode, StoryEdge, StoryCharacter } from '@editor/types/editor'
+import { convertAiCharacterToStoryCharacter, convertAiStoryToGraph } from '@editor/lib/ai-story-converter'
+import type { StoryCharacter, StoryEdge, StoryNode } from '@editor/types/editor'
 
 interface AiPanelProps {
   onApplyStory: (nodes: StoryNode[], edges: StoryEdge[], characters: StoryCharacter[], title: string) => void

@@ -74,7 +74,7 @@ export function migrateSaveSlot(
       return slot
     }
 
-    let migrated: SaveSlot = { ...slot }
+    const migrated: SaveSlot = { ...slot }
 
     if (migrated.version < 2) {
       migrated.graphId = migrated.graphId || 'default'

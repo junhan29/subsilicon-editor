@@ -1,13 +1,13 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Label } from '@editor/components/ui/label'
 import { Input } from '@editor/components/ui/input'
 import { Code2, Eye } from 'lucide-react'
 import type { BasePanelProps } from './shared-props'
 import type { ConditionGroup } from '@editor/types/editor'
 import { VisualConditionEditor } from '../visual-condition-editor'
-import { buildExpression, parseExpression, createEmptyGroup, createEmptyClause } from '@editor/lib/condition-builder'
+import { buildExpression, createEmptyClause, createEmptyGroup, parseExpression } from '@editor/lib/condition-builder'
 import { useDebouncedState } from '@editor/lib/use-debounced-state'
 
 type EditorMode = 'visual' | 'manual'

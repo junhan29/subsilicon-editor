@@ -9,7 +9,7 @@
  */
 
 import JSZip from 'jszip'
-import type { NovelData, NovelChapter } from '@editor/lib/work-types/novel'
+import type { NovelChapter, NovelData } from '@editor/lib/work-types/novel'
 import { countNovelWords } from '@editor/lib/work-types/novel'
 
 function escapeXML(text: string): string {

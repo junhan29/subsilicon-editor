@@ -152,7 +152,7 @@ export function updateStoryAnalytics(session: ReaderSession): void {
   try {
     const key = `${ANALYTICS_KEY_PREFIX}story_${session.storyId}`
     const existingStr = localStorage.getItem(key)
-    let analytics: StoryAnalytics = existingStr 
+    const analytics: StoryAnalytics = existingStr 
       ? JSON.parse(existingStr) 
       : createEmptyAnalytics(session.storyId)
     

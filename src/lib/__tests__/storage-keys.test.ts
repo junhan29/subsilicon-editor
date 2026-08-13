@@ -1,10 +1,10 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import {
   STORAGE_KEYS,
-  getStorageKey,
   getAllStorageKeys,
   getLocalStorageKeys,
   getSessionStorageKeys,
+  getStorageKey,
   validateStorageKey,
 } from '../storage-keys'
 

@@ -1,11 +1,11 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
-  parseAiCommands,
-  parseAllAiCommands,
-  executeAiActions,
   type AiAction,
   type EditorCanvasCallbacks,
   type MediaGenerationRequest,
+  executeAiActions,
+  parseAiCommands,
+  parseAllAiCommands,
 } from '../ai/chat-command-executor'
 
 function createMockCallbacks(): EditorCanvasCallbacks {

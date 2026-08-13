@@ -1,26 +1,26 @@
 'use client'
 
-import { useState, useEffect, useCallback, memo } from 'react'
+import { memo, useCallback, useEffect, useState } from 'react'
 import {
+  Activity,
+  AlertTriangle,
+  Calendar,
   Clock,
+  Download,
   FileText,
   Flame,
-  Calendar,
-  Download,
-  Trash2,
-  AlertTriangle,
-  Activity,
   GitBranch,
   PenTool,
+  Trash2,
 } from 'lucide-react'
 import {
-  getStats,
-  formatDuration,
-  formatShortDuration,
+  type WritingSession,
+  type WritingStats,
   clearStats,
   exportStats,
-  type WritingStats,
-  type WritingSession,
+  formatDuration,
+  formatShortDuration,
+  getStats,
 } from '@editor/lib/writing-stats'
 import { showToast } from './toast'
 

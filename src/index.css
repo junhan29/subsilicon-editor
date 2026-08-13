@@ -513,3 +513,19 @@ body {
     transform: translateY(0) scale(1);
   }
 }
+
+/* ADHD 适配：尊重系统「减少动态效果」设置 */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+/* ADHD 适配：低干扰模式（设置开启时 body 挂 low-stimulus class） */
+.low-stimulus * {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+}
+.low-stimulus .animate-slide-in-toast { animation-name: none !important; }

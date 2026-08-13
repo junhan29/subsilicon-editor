@@ -6,7 +6,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Play, Pause, RotateCcw } from 'lucide-react'
+import { Pause, Play, RotateCcw } from 'lucide-react'
 import type { VideoClipType } from '@editor/lib/work-types/video'
 
 export interface PlayerClip {

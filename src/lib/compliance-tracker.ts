@@ -1,7 +1,7 @@
 import type {
-  IncomeRecord, IncomeTracking, ComplianceStatus, ComplianceWarning
+  ComplianceStatus, ComplianceWarning, IncomeRecord, IncomeTracking
 } from './work-monetization'
-import { COMPLIANCE_THRESHOLDS, COMPLIANCE_ADVICE } from './work-monetization'
+import { COMPLIANCE_ADVICE, COMPLIANCE_THRESHOLDS } from './work-monetization'
 
 const INCOME_STORAGE_KEY = 'subsilicon_income_tracking'
 

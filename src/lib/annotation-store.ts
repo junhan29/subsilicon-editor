@@ -1,4 +1,4 @@
-import type { NodeAnnotation, AnnotationType, AnnotationReply } from '@editor/types/editor'
+import type { AnnotationReply, AnnotationType, NodeAnnotation } from '@editor/types/editor'
 
 const STORAGE_KEY_PREFIX = 'subsilicon-annotations-'
 const FALLBACK_WORK_ID = 'default'

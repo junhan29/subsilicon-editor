@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { Button } from '@editor/components/ui/button'
 import { Slider } from '@editor/components/ui/slider'
 import { Label } from '@editor/components/ui/label'
 import {
-  Crop, RotateCw, Sun, Contrast, FlipHorizontal, FlipVertical,
-  Play, Pause, Scissors, SkipBack, SkipForward, Undo2, Redo2,
+  Contrast, Crop, FlipHorizontal, FlipVertical, Pause, Play,
+  Redo2, RotateCw, Scissors, SkipBack, SkipForward, Sun, Undo2,
 } from 'lucide-react'
 
 interface ImageEditorProps {

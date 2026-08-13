@@ -54,6 +54,9 @@ const DEFAULT_BINDINGS: ShortcutBinding[] = [
   { id: 'toggleRightPanel', action: '切换属性面板', description: '显示或隐藏右栏内属性面板', defaultKeys: ['P'], category: 'view', icon: 'PanelRight' },
   { id: 'toggleAiPanel', action: '切换 AI 面板', description: '显示或隐藏 AI 创境面板 (Ctrl+K)', defaultKeys: ['Ctrl', 'K'], category: 'view', icon: 'MessageSquare' },
   { id: 'toggleRightFullscreen', action: '画布全屏', description: '将右栏画布展开或退出全屏', defaultKeys: [], category: 'view', icon: 'Maximize' },
+  // 专注模式（ADHD 适配）已取代画布全屏：toggleRightFullscreen 条目保留以兼容旧版自定义绑定，不做删除。
+  // 默认键用 Ctrl+Shift+L 而非 Ctrl+Shift+F：后者在 macOS 是系统级「全屏切换」，会被系统拦截导致编辑器内快捷键失效
+  { id: 'focusMode', action: '专注模式', description: '收起所有面板，进入无干扰画布', defaultKeys: ['Ctrl', 'Shift', 'L'], category: 'view', icon: 'Focus' },
   { id: 'togglePreview', action: '切换预览', description: '打开或关闭预览模式', defaultKeys: ['Ctrl', 'P'], category: 'view', icon: 'Eye' },
   { id: 'toggleMinimap', action: '切换小地图', description: '显示或隐藏小地图', defaultKeys: ['M'], category: 'view', icon: 'Map' },
   { id: 'qualityCheck', action: '质量检测', description: '打开质量检测面板', defaultKeys: ['Q'], category: 'view', icon: 'ShieldCheck' },
@@ -301,3 +304,50 @@ export function getAllActiveBindings(): ActiveBinding[] {
     keys: custom[b.id] ? [...custom[b.id]] : [...b.defaultKeys],
   }))
 }
+
+/**
+ * ADHD 适配：基础模式快捷键预设（防误触：移除全部单字母快速加节点，保留核心操作）
+ * 注意：预设不包含 addDialogue/addChoice/addEnding 等单字母加节点快捷键，
+ * 避免 ADHD 用户在创作时误触导致意外新增节点。
+ */
+export const SIMPLE_SHORTCUT_PRESET: ShortcutConfig = {
+  save: ['Ctrl', 'S'],
+  undo: ['Ctrl', 'Z'],
+  redo: ['Ctrl', 'Y', 'Ctrl', 'Shift', 'Z'],
+  zoomIn: ['Ctrl', '='],
+  zoomOut: ['Ctrl', '-'],
+  fitView: ['Shift', '1'],
+  toggleSidebar: ['B'],
+  toggleRightPanel: ['P'],
+  toggleTheme: ['Ctrl', 'Shift', 'T'],
+  toggleAiPanel: ['Ctrl', 'K'],
+  focusMode: ['Ctrl', 'Shift', 'L'],
+  qualityCheck: ['Q'],
+  export: ['Ctrl', 'E'],
+  search: ['Ctrl', 'F'],
+  shortcuts: ['?'],
+  tour: ['Shift', 'H'],
+  copy: ['Ctrl', 'C'],
+  paste: ['Ctrl', 'V'],
+  duplicate: ['Ctrl', 'D'],
+  group: ['Ctrl', 'G'],
+  deselectAll: ['Escape'],
+  // 显式禁用全部单字母「快速加节点」快捷键（空数组 → matchShortcut 恒 false），
+  // 避免未出现在自定义配置中的 action 回退到默认单字母绑定导致误触。
+  addDialogue: [],
+  addChoice: [],
+  addEnding: [],
+  addGather: [],
+  addJump: [],
+  addRandom: [],
+  addUnlock: [],
+  addCondition: [],
+  addCG: [],
+  addNarration: [],
+}
+
+/** 应用基础模式预设（覆盖自定义绑定） */
+export function applySimplePreset(): void { saveCustomBindings(SIMPLE_SHORTCUT_PRESET) }
+
+/** 恢复默认绑定 */
+export function applyDefaultPreset(): void { resetBindings() }

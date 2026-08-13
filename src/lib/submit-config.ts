@@ -11,8 +11,11 @@ export const SUBMIT_CONFIG = {
     return getActiveProvider().apiUrl
   },
   get storyUnlockUrl(): string {
-    // 故事解锁接口沿用官方端点，第三方作品墙通常不实现此能力
-    return 'https://subsilicon.cn/api/story-unlock'
+    // 开发环境指向本地服务端便于联调，生产指向官方端点；
+    // import.meta 用 (import.meta as any) 兼容（tsconfig 未引入 vite/client 类型）
+    return (import.meta as any).env?.DEV
+      ? 'http://localhost:3000/api/story-unlock'
+      : 'https://subsilicon.cn/api/story-unlock'
   },
   get submitToken(): string {
     return getActiveProvider().authToken || ''

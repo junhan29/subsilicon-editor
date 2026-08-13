@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, memo } from 'react'
-import type { PuzzleScene, PuzzleLayer, StoryCharacter } from '@editor/types/editor'
+import { memo, useEffect, useState } from 'react'
+import type { PuzzleLayer, PuzzleScene, StoryCharacter } from '@editor/types/editor'
 
 interface RuntimeSceneRendererProps {
   scene: PuzzleScene

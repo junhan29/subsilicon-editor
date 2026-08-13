@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { X, Key, Globe, Cpu, CheckCircle2, Loader2, ExternalLink, Image } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { CheckCircle2, Cpu, ExternalLink, Globe, Image, Key, Loader2, X } from 'lucide-react'
 import { showToast } from './toast'
-import { refreshAiConfig, getMediaProviderConfig, saveMediaProviderConfig, type MediaProviderConfig } from '@editor/lib/ai'
-import { getModelsForProvider, getDefaultModel } from '@editor/lib/ai/model-presets'
+import { type MediaProviderConfig, getMediaProviderConfig, refreshAiConfig, saveMediaProviderConfig } from '@editor/lib/ai'
+import { getDefaultModel, getModelsForProvider } from '@editor/lib/ai/model-presets'
 
 interface AiSettingsDialogProps {
   open: boolean

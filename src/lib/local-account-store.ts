@@ -1,4 +1,5 @@
 import { generateId } from './utils'
+import { openDB } from './local-db/db'
 
 export interface LocalAccount {
   id: string
@@ -13,23 +14,10 @@ export interface LocalAccount {
 
 let currentAccount: Omit<LocalAccount, 'passwordHash'> | null = null
 
-const DB_NAME = 'subsilicon-editor'
+// accounts store 由 local-db/db.ts（版本 3）统一创建维护；
+// 此前本文件以版本 1 打开同一数据库（'subsilicon-editor'），
+// 与主库（版本 2/3）冲突导致 VersionError，注册/登录必然失败。
 const STORE_NAME = 'accounts'
-
-function openDB(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, 1)
-    request.onupgradeneeded = () => {
-      const db = request.result
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        const store = db.createObjectStore(STORE_NAME, { keyPath: 'email' })
-        store.createIndex('email', 'email', { unique: true })
-      }
-    }
-    request.onsuccess = () => resolve(request.result)
-    request.onerror = () => reject(request.error)
-  })
-}
 
 async function sha256(message: string): Promise<string> {
   const encoder = new TextEncoder()

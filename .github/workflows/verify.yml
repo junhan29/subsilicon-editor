@@ -1,0 +1,23 @@
+name: verify
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      # 统一门禁：lint + typecheck + 单元/组件测试 + 生产构建
+      - name: Run verify
+        run: npm run verify
+      # 覆盖率门禁：thresholds 以当前基线为下限（防回退），失败即阻塞 PR
+      - name: Run coverage
+        run: npm run test:coverage

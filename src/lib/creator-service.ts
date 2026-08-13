@@ -1,18 +1,18 @@
-import type { PlatformConfig, CreatorAccount, PublishRecord, PublishPlatform } from '@editor/types/creator'
+import type { CreatorAccount, PlatformConfig, PublishPlatform, PublishRecord } from '@editor/types/creator'
 import { BUILTIN_PLATFORMS, getPlatformById } from './platforms'
 import {
-  savePlatformConfig,
-  getAllPlatformConfigs,
-  deletePlatformConfig,
-  saveCreatorAccount,
-  getCreatorAccount,
   deleteCreatorAccount,
-  savePublishRecord,
+  deletePlatformConfig,
+  getAllPlatformConfigs,
   getAllPublishRecords,
+  getCreatorAccount,
   getPublishRecordsByWork,
+  saveCreatorAccount,
+  savePlatformConfig,
+  savePublishRecord,
 } from './creator-store'
 import { SUBMIT_CONFIG } from './submit-config'
-import { encryptPasswordFields, decryptPasswordFields } from './password-crypto'
+import { decryptPasswordFields, encryptPasswordFields } from './password-crypto'
 
 const PASSWORD_FIELDS = ['platformPassword', 'submitToken']
 

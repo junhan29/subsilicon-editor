@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
-import { Search, X, ArrowUp, ArrowDown, CornerDownLeft, Replace, ChevronDown, ChevronUp } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { ArrowDown, ArrowUp, ChevronDown, ChevronUp, CornerDownLeft, Replace, Search, X } from 'lucide-react'
 import { useReactFlow } from '@xyflow/react'
-import type { StoryNode, StoryCharacter } from '@editor/types/editor'
+import type { StoryCharacter, StoryNode } from '@editor/types/editor'
 
 interface SearchMatch {
   nodeId: string

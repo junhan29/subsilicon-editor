@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useCallback } from 'react'
-import { Sparkles, Play, Users, MapPin, Clock, Smile, Copy, Check, Download, BookOpen, Wand2 } from 'lucide-react'
+import { useCallback, useState } from 'react'
+import { BookOpen, Check, Clock, Copy, Download, MapPin, Play, Smile, Sparkles, Users, Wand2 } from 'lucide-react'
 import { Button } from '@editor/components/ui/button'
 import { Input } from '@editor/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@editor/components/ui/select'
@@ -13,15 +13,15 @@ import { ScrollArea } from '@editor/components/ui/scroll-area'
 import { showToast } from './toast'
 import { AiSettingsDialog } from './ai-settings-dialog'
 import {
-  generateFullStory,
+  type AiCharacter,
+  type AiFullStoryResult,
   generateCharacterDetail,
   generateDialogue,
+  generateFullStory,
   generateSceneDescription,
-  type AiFullStoryResult,
-  type AiCharacter,
 } from '@editor/lib/ai-service'
-import { convertAiStoryToGraph, convertAiCharacterToStoryCharacter } from '@editor/lib/ai-story-converter'
-import type { StoryNode, StoryEdge, StoryCharacter } from '@editor/types/editor'
+import { convertAiCharacterToStoryCharacter, convertAiStoryToGraph } from '@editor/lib/ai-story-converter'
+import type { StoryCharacter, StoryEdge, StoryNode } from '@editor/types/editor'
 
 interface AiStoryPanelProps {
   onApplyStory: (nodes: StoryNode[], edges: StoryEdge[], characters: StoryCharacter[], title: string) => void

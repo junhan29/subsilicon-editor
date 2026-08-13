@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useCallback, memo } from 'react'
-import { Settings, Users, Image, Music, ChevronLeft, ChevronRight, X, Plus, Edit3, Layers, BarChart3, GitBranch, MessageSquare, Activity, DollarSign } from 'lucide-react'
+import { memo, useCallback, useState } from 'react'
+import { Activity, BarChart3, ChevronDown, ChevronLeft, ChevronRight, DollarSign, Edit3, GitBranch, Image, Layers, MessageSquare, Music, Plus, Settings, Users, X } from 'lucide-react'
 import { showToast } from './toast'
+import { useAccessibilityStore } from '@editor/stores/accessibility-store'
 import { PropertyPanel } from './property-panel'
 import { PuzzleEditor } from './puzzle/puzzle-editor'
 import { VariablePanel } from './editor-right-panel/variable-panel'
@@ -14,7 +15,7 @@ import { AiMediaPanel } from './ai-media-panel'
 import { AnalyticsPanel } from './analytics-panel'
 import { PluginManagerPanel } from './plugin-manager-panel'
 import { generateDefaultAvatar } from '@editor/lib/avatar-utils'
-import type { StoryNode, StoryCharacter, StoryEdge, StoryVariable, ComicScene, ComicAudio, NodeAnnotation, AnnotationType, StoryGraph } from '@editor/types/editor'
+import type { AnnotationType, ComicAudio, ComicScene, NodeAnnotation, StoryCharacter, StoryEdge, StoryGraph, StoryNode, StoryVariable } from '@editor/types/editor'
 import type { StoryGraphSnapshot } from '@editor/lib/history-store'
 import type { VersionSnapshot } from '@editor/lib/version-store'
 import type { MonetizationConfig } from '@editor/lib/work-monetization'
@@ -177,6 +178,32 @@ function EditorRightPanel({
   const [showPuzzleEditor, setShowPuzzleEditor] = useState(false)
   const [editCharId, setEditCharId] = useState<string>('')
 
+  // ADHD 适配：精简界面开启时，tab 条按「内容 / 管理」两组折叠展示
+  const compactInterface = useAccessibilityStore((s) => s.compactInterface)
+  const [contentCollapsed, setContentCollapsed] = useState(false)
+  const [manageCollapsed, setManageCollapsed] = useState(false)
+
+  // tab 分组定义（compact 模式下分组折叠，普通模式保持原有单行顺序）
+  const CONTENT_TABS = ['properties', 'characters', 'scenes', 'audio', 'variables']
+  const MANAGE_TABS = ['versions', 'annotations', 'stats', 'income', 'analytics', 'plugins']
+
+  const toggleGroup = useCallback(
+    (group: 'content' | 'manage') => {
+      const groupTabs = group === 'content' ? CONTENT_TABS : MANAGE_TABS
+      const collapsing = group === 'content' ? !contentCollapsed : !manageCollapsed
+      if (group === 'content') {
+        setContentCollapsed(collapsing)
+      } else {
+        setManageCollapsed(collapsing)
+      }
+      // 折叠某组时，若当前激活 tab 在该组内，切换到另一组第一个 tab，避免内容与标签不一致
+      if (collapsing && groupTabs.includes(activeTab)) {
+        setActiveTab(group === 'content' ? MANAGE_TABS[0] : CONTENT_TABS[0])
+      }
+    },
+    [contentCollapsed, manageCollapsed, activeTab]
+  )
+
   const addScene = useCallback(() => {
     if (!sceneName.trim()) return
     const newScene: ComicScene = {
@@ -238,25 +265,73 @@ function EditorRightPanel({
     setShowPuzzleEditor(true)
   }, [sceneName, sceneImage, scenes, onScenesChange])
 
+  // tab 按钮组（分组后仍复用原有 TabButton 样式）
+  const contentTabs = (
+    <>
+      <TabButton icon={Settings} label="属性" tab="properties" activeTab={activeTab} onSelect={setActiveTab} />
+      <TabButton icon={Users} label="角色" tab="characters" activeTab={activeTab} onSelect={setActiveTab} />
+      <TabButton icon={Image} label="场景" tab="scenes" activeTab={activeTab} onSelect={setActiveTab} />
+      <TabButton icon={Music} label="音频" tab="audio" activeTab={activeTab} onSelect={setActiveTab} />
+      <TabButton icon={BarChart3} label="变量" tab="variables" activeTab={activeTab} onSelect={setActiveTab} />
+    </>
+  )
+  const manageTabs = (
+    <>
+      <TabButton icon={GitBranch} label="版本" tab="versions" activeTab={activeTab} onSelect={setActiveTab} />
+      <TabButton icon={MessageSquare} label="批注" tab="annotations" activeTab={activeTab} onSelect={setActiveTab}
+        badge={annotations.length > 0 ? annotations.length : undefined} />
+      <TabButton icon={Activity} label="统计" tab="stats" activeTab={activeTab} onSelect={setActiveTab} />
+      <TabButton icon={DollarSign} label="收益" tab="income" activeTab={activeTab} onSelect={setActiveTab} />
+      <TabButton icon={BarChart3} label="分析" tab="analytics" activeTab={activeTab} onSelect={setActiveTab} />
+      <TabButton icon={Layers} label="插件" tab="plugins" activeTab={activeTab} onSelect={setActiveTab} />
+    </>
+  )
+
   return (
     <div role="region" aria-label="右侧属性面板" className="w-[300px] flex flex-col bg-slate-800 border-l border-slate-700 h-full">
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* VS Code 风格标签栏：单行紧凑标签，图标+文字 */}
-        <div className="flex items-center border-b border-slate-800 bg-slate-900 overflow-x-auto scrollbar-none shrink-0">
-          <TabButton icon={Settings} label="属性" tab="properties" activeTab={activeTab} onSelect={setActiveTab} />
-          <TabButton icon={Users} label="角色" tab="characters" activeTab={activeTab} onSelect={setActiveTab} />
-          <TabButton icon={Image} label="场景" tab="scenes" activeTab={activeTab} onSelect={setActiveTab} />
-          <TabButton icon={Music} label="音频" tab="audio" activeTab={activeTab} onSelect={setActiveTab} />
-          <TabButton icon={BarChart3} label="变量" tab="variables" activeTab={activeTab} onSelect={setActiveTab} />
-          <div className="w-px h-5 bg-slate-700 mx-1 shrink-0" />
-          <TabButton icon={GitBranch} label="版本" tab="versions" activeTab={activeTab} onSelect={setActiveTab} />
-          <TabButton icon={MessageSquare} label="批注" tab="annotations" activeTab={activeTab} onSelect={setActiveTab}
-            badge={annotations.length > 0 ? annotations.length : undefined} />
-          <TabButton icon={Activity} label="统计" tab="stats" activeTab={activeTab} onSelect={setActiveTab} />
-          <TabButton icon={DollarSign} label="收益" tab="income" activeTab={activeTab} onSelect={setActiveTab} />
-          <TabButton icon={BarChart3} label="分析" tab="analytics" activeTab={activeTab} onSelect={setActiveTab} />
-          <TabButton icon={Layers} label="插件" tab="plugins" activeTab={activeTab} onSelect={setActiveTab} />
-        </div>
+        {compactInterface ? (
+          /* ADHD 适配：精简界面开启时，tab 条分为「内容 / 管理」两组，每组可折叠 */
+          <div className="border-b border-slate-800 bg-slate-900 shrink-0">
+            <div className="flex items-center px-2 py-1.5 border-b border-slate-800/60">
+              <button
+                onClick={() => toggleGroup('content')}
+                className="flex items-center gap-1 text-[10px] font-semibold text-slate-300 hover:text-white transition-colors"
+                aria-expanded={!contentCollapsed}
+              >
+                <ChevronDown className={`w-3 h-3 transition-transform ${contentCollapsed ? '-rotate-90' : ''}`} />
+                内容
+              </button>
+            </div>
+            {!contentCollapsed && (
+              <div className="flex items-center overflow-x-auto scrollbar-none">
+                {contentTabs}
+              </div>
+            )}
+            <div className="flex items-center px-2 py-1.5 border-y border-slate-800/60">
+              <button
+                onClick={() => toggleGroup('manage')}
+                className="flex items-center gap-1 text-[10px] font-semibold text-slate-300 hover:text-white transition-colors"
+                aria-expanded={!manageCollapsed}
+              >
+                <ChevronDown className={`w-3 h-3 transition-transform ${manageCollapsed ? '-rotate-90' : ''}`} />
+                管理
+              </button>
+            </div>
+            {!manageCollapsed && (
+              <div className="flex items-center overflow-x-auto scrollbar-none">
+                {manageTabs}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="flex items-center border-b border-slate-800 bg-slate-900 overflow-x-auto scrollbar-none shrink-0">
+            {contentTabs}
+            <div className="w-px h-5 bg-slate-700 mx-1 shrink-0" />
+            {manageTabs}
+          </div>
+        )}
 
           {activeTab === 'properties' && <div className="flex-1 overflow-y-auto p-0">
             <PropertyPanel

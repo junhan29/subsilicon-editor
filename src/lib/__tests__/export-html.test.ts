@@ -1,9 +1,9 @@
 /** export-html 单元测试 */
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import {
-  exportToHTML,
-  encryptPaidContent,
   embedAssets,
+  encryptPaidContent,
+  exportToHTML,
 } from '../export-html'
 import type { StoryGraph, StoryNode } from '@editor/types/editor'
 import type { MonetizationConfig } from '../work-monetization'

@@ -1,4 +1,4 @@
-import type { AiRequestOptions, AiProvider } from '../types'
+import type { AiProvider, AiRequestOptions } from '../types'
 
 export abstract class BaseAiProvider implements AiProvider {
   abstract id: string

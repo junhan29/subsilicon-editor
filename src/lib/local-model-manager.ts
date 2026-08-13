@@ -1,4 +1,4 @@
-import { setOllamaConfig, getOllamaConfig } from './local-ai-service'
+import { getOllamaConfig, setOllamaConfig } from './local-ai-service'
 
 export interface LocalModelInfo {
   name: string
@@ -148,11 +148,12 @@ export async function downloadModel(
 
   const decoder = new TextDecoder()
   let buffer = ''
-  let startTime = Date.now()
+  const startTime = Date.now()
   let totalBytes = 0
   let downloadedBytes = 0
 
   try {
+    // eslint-disable-next-line no-constant-condition -- 流式读取标准模式，用 break 退出
     while (true) {
       const { done, value } = await reader.read()
       if (done) break
@@ -234,7 +235,7 @@ export async function deleteModel(modelName: string): Promise<void> {
   }
 }
 
-export async function useModel(modelName: string): Promise<void> {
+export async function activateModel(modelName: string): Promise<void> {
   if (typeof localStorage !== 'undefined') {
     localStorage.setItem('subsilicon_local_model', modelName)
   }

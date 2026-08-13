@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef, memo, useMemo } from 'react'
-import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Maximize2 } from 'lucide-react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Maximize2, Pause, Play, SkipBack, SkipForward, Volume2, VolumeX } from 'lucide-react'
 import { Button } from '@editor/components/ui/button'
 import { RuntimeSceneRenderer } from './puzzle/runtime-scene-renderer'
 import { AudioManager, createAudioManager } from '@editor/lib/audio-manager'
-import type { StoryNode, StoryCharacter, ComicScene, ComicAudio } from '@editor/types/editor'
+import type { ComicAudio, ComicScene, StoryCharacter, StoryNode } from '@editor/types/editor'
 
 interface LivePreviewProps {
   nodes: StoryNode[]

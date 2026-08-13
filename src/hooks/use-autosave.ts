@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
-  AutoSaveManager,
   type AutoSaveConfig,
+  AutoSaveManager,
   type EditorState,
   type GetStateFn,
 } from '@editor/lib/auto-save'

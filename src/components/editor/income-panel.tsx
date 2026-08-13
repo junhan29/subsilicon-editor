@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import { DollarSign, Plus, Trash2, Wallet, TrendingUp, AlertCircle } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { AlertCircle, DollarSign, Plus, Trash2, TrendingUp, Wallet } from 'lucide-react'
 import { showToast } from './toast'
 import {
-  loadIncomeTracking, addIncomeRecord, deleteIncomeRecord, getComplianceStatus,
+  addIncomeRecord, deleteIncomeRecord, getComplianceStatus, loadIncomeTracking,
 } from '@editor/lib/compliance-tracker'
 import type { StoryGraph } from '@editor/types/editor'
 import { generateWorkId } from '@editor/lib/work-monetization'

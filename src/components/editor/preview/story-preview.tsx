@@ -1,13 +1,13 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { X, Play, ChevronRight, RotateCcw, Star, Lock, CheckCircle2, Music, Volume2, VolumeX, Settings, Save, FolderOpen, Trash2, Clock, Keyboard, SkipForward, Merge, GitBranch, Coins } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { CheckCircle2, ChevronRight, Clock, Coins, FolderOpen, GitBranch, Keyboard, Lock, Merge, Music, Play, RotateCcw, Save, Settings, SkipForward, Star, Trash2, Volume2, VolumeX, X } from 'lucide-react'
 import { Button } from '@editor/components/ui/button'
 import { RuntimeSceneRenderer } from '../puzzle/runtime-scene-renderer'
-import type { StoryNode, StoryEdge, StoryCharacter, StoryGraph } from '@editor/types/editor'
+import type { StoryCharacter, StoryEdge, StoryGraph, StoryNode } from '@editor/types/editor'
 import { AudioManager, createAudioManager } from '@editor/lib/audio-manager'
-import { SaveManager, formatSaveDate, loadSaveSlots, saveSaveSlots, createSaveSlot } from '@editor/lib/save-manager'
-import { TransitionManager, createTransitionManager, TRANSITION_TYPES, type TransitionType } from '@editor/lib/transition-manager'
+import { SaveManager, createSaveSlot, formatSaveDate, loadSaveSlots, saveSaveSlots } from '@editor/lib/save-manager'
+import { TRANSITION_TYPES, TransitionManager, type TransitionType, createTransitionManager } from '@editor/lib/transition-manager'
 import { ExpressionParser, createDefaultContext } from '@editor/lib/expression-parser'
 import { useReaderAnalytics } from '@editor/hooks/use-reader-analytics'
 
@@ -283,7 +283,7 @@ export function StoryPreview({ graph, open, onClose, workId }: StoryPreviewProps
     const option = options.find((o: any) => o.id === optionId)
     if (!option) return
 
-    let newVariables = { ...state.variables }
+    const newVariables = { ...state.variables }
     const applyEffect = (effect: any) => {
       if (!effect?.variableName) return
       const { variableName, operation, value } = effect
@@ -363,9 +363,13 @@ export function StoryPreview({ graph, open, onClose, workId }: StoryPreviewProps
       const expr = data?.expression
       const result = expr ? evaluateExpression(String(expr), state.variables) : true
       const handle = result ? 'true' : 'false'
-      const edge = graph.edges.find(
-        (e) => e.source === node.id && e.sourceHandle === handle
-      )
+      const edge =
+        graph.edges.find(
+          (e) => e.source === node.id && e.sourceHandle === handle
+        ) ||
+        // AI 对话等路径创建连线时 sourceHandle 为 null，找不到 true/false
+        // 分支时回退到第一条出边，避免条件节点卡死（与导出 HTML 一致）
+        graph.edges.find((e) => e.source === node.id)
       if (edge) nextNodeId = edge.target
     } else if (node.type === 'random') {
       // 随机节点：按权重选择一个选项
@@ -615,7 +619,7 @@ export function StoryPreview({ graph, open, onClose, workId }: StoryPreviewProps
     const data = currentNode.data as any
 
     switch (currentNode.type) {
-      case 'dialogue':
+      case 'dialogue': {
         const character = getCharacter(data.characterId)
         return (
           <div className={`space-y-4 ${bgImage ? 'bg-card/95 backdrop-blur-sm rounded-2xl p-6 shadow-xl' : ''}`}>
@@ -638,6 +642,7 @@ export function StoryPreview({ graph, open, onClose, workId }: StoryPreviewProps
             <p className="text-lg leading-relaxed">{data.text}</p>
           </div>
         )
+      }
 
       case 'narration':
         return (
@@ -870,7 +875,7 @@ export function StoryPreview({ graph, open, onClose, workId }: StoryPreviewProps
         )
       }
 
-      case 'ending':
+      case 'ending': {
         const endingConfig = ENDING_TYPE_CONFIG[data.endingType || 'neutral'] || ENDING_TYPE_CONFIG.neutral
         return (
           <div className={`text-center p-6 rounded-xl border-2 ${endingConfig.color} ${bgImage ? 'backdrop-blur-sm shadow-xl' : ''}`}>
@@ -891,8 +896,9 @@ export function StoryPreview({ graph, open, onClose, workId }: StoryPreviewProps
             </div>
           </div>
         )
+      }
 
-      case 'cg':
+      case 'cg': {
         const isVideo = data.mediaType === 'video'
         const hasLetterbox = data.letterbox !== false
         const displayMode: 'contain' | 'cover' | 'fill' | 'custom' = data.displayMode || 'contain'
@@ -1017,6 +1023,7 @@ export function StoryPreview({ graph, open, onClose, workId }: StoryPreviewProps
             </div>
           </div>
         )
+      }
 
       case 'gather':
         return (

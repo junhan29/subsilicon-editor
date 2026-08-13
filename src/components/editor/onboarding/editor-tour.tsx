@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { X, ChevronRight, ChevronLeft, Sparkles } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { ChevronLeft, ChevronRight, Sparkles, X } from 'lucide-react'
 import { Button } from '@editor/components/ui/button'
 import type { TourStep } from './tour-steps'
 

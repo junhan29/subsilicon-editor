@@ -1,14 +1,14 @@
 /** story-encrypt 单元测试 */
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import {
-  generateEncryptionKey,
-  encryptWithAES,
-  decryptWithAES,
-  encryptStoryData,
-  decryptStoryData,
-  encodeKeyInfo,
-  decodeKeyInfo,
   AES_ENC_PREFIX,
+  decodeKeyInfo,
+  decryptStoryData,
+  decryptWithAES,
+  encodeKeyInfo,
+  encryptStoryData,
+  encryptWithAES,
+  generateEncryptionKey,
 } from '../story-encrypt'
 
 describe('generateEncryptionKey 密钥生成', () => {

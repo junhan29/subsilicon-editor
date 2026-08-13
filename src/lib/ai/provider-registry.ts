@@ -1,7 +1,7 @@
-import type { AiConfig, AiProviderConfig, AiRequestOptions, AiProvider, AiStreamResult } from './types'
+import type { AiConfig, AiProvider, AiProviderConfig, AiRequestOptions, AiStreamResult } from './types'
 import { OpenAiCompatibleProvider } from './providers/openai-compatible'
 import { ollamaProvider } from './providers/ollama-provider'
-import { runStrictConnectivityTest, PING_PROMPT } from './request-builder'
+import { PING_PROMPT, runStrictConnectivityTest } from './request-builder'
 import { initLocalModelConfig } from '../local-model-manager'
 
 initLocalModelConfig()

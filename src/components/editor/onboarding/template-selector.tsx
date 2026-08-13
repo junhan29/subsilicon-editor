@@ -1,9 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { X, Sparkles, Clock, GitBranch, Users, Flag, Search, ChevronRight, Star, Lock, Check } from 'lucide-react'
+import { Check, ChevronRight, Clock, Flag, GitBranch, Lock, Search, Sparkles, Star, Users, X } from 'lucide-react'
 import { Button } from '@editor/components/ui/button'
-import { storyTemplates, templateCategories, type StoryTemplate } from '@editor/lib/story-templates'
+import { type StoryTemplate, storyTemplates, templateCategories } from '@editor/lib/story-templates'
 import type { StoryGraph } from '@editor/types/editor'
 
 interface TemplateSelectorProps {

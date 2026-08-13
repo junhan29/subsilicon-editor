@@ -1,4 +1,4 @@
-import type { StoryGraph, StoryNode, StoryEdge, StoryCharacter, StoryVariable, CharacterGender } from '@editor/types/editor'
+import type { CharacterGender, StoryCharacter, StoryEdge, StoryGraph, StoryNode, StoryVariable } from '@editor/types/editor'
 
 export interface StoryTemplate {
   id: string

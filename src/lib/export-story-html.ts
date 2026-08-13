@@ -10,7 +10,7 @@
 
 import type { StoryGraph } from '@editor/types/editor'
 import { embedAssets } from '@editor/lib/export-html'
-import { encryptStoryData, AES_ENC_PREFIX } from '@editor/lib/story-encrypt'
+import { AES_ENC_PREFIX, encryptStoryData, encryptStoryDataWithKey } from '@editor/lib/story-encrypt'
 import { generateWorkId } from '@editor/lib/work-monetization'
 import type { MultiChannelConfig, PreGeneratedCode } from '@editor/lib/work-monetization'
 
@@ -25,6 +25,10 @@ export interface StoryExportConfig {
   contactInfo?: string
   workId?: string
   creatorEmail?: string
+  /** 在线验码：导出物运行时可经平台解锁服务验证读者激活码 */
+  onlineCodeVerify?: boolean
+  /** 站内工单验码：读者在站内提交付款凭证，创作者审核后发放解锁 */
+  inWorkCodeRequest?: boolean
   currency?: string
   webhookUrl?: string
   webhookProvider?: string
@@ -38,8 +42,14 @@ export interface StoryExportConfig {
   preGeneratedCodes?: PreGeneratedCode[]
   /** 自定义解锁验证服务端点（留空则使用离线验证） */
   customApiUrl?: string
-  /** 离线解锁码列表（纯离线模式下使用） */
-  offlineCodes?: { code: string; maskedKeyBase64: string }[]
+  /** 离线解锁码（导出物内嵌，只含 codeHash + 掩码，不含明文码） */
+  offlineCodes?: { codeHash: string; maskedKeyBase64: string }[]
+  /** 预置 AES 加密密钥（base64）。提供时使用该密钥加密故事数据，
+   *  使离线解锁码（由同一密钥派生）与本导出物匹配；缺省时每次随机生成。 */
+  keyBase64?: string
+  /** 免费故事内嵌解密密钥。仅免费导出（price<=0 且无自定义验证端点）时由导出器注入，
+   *  运行时「免费阅读」用它解密并直接开始，无需任何解锁码。 */
+  freeKey?: string
 }
 
 export interface StoryExportResult {
@@ -51,6 +61,19 @@ export interface StoryExportResult {
 
 const DEFAULT_API_URL = 'https://subsilicon.cn/api/story-unlock'
 const STORY_STORAGE_KEY_PREFIX = 'subsilicon_story_'
+
+/**
+ * 安全 JSON 序列化（用于内联进 <script> 的配置值）：
+ * 转义 `<` 与 U+2028/U+2029，防止 `</script>` 注入与 JS 字符串截断。
+ * 值为 null/undefined 时输出 `null`（与调用处原 `x ? ... : 'null'` 语义一致）。
+ */
+const safeJSON = (v: unknown): string =>
+  v == null
+    ? 'null'
+    : JSON.stringify(v)
+        .replace(/</g, '\\u003c')
+        .replace(/\u2028/g, '\\u2028')
+        .replace(/\u2029/g, '\\u2029')
 
 const EXPRESSION_PARSER_CODE = `
 class ExpressionParser {
@@ -72,8 +95,8 @@ class ExpressionParser {
     let i = 0
     while (i < expression.length) {
       const char = expression[i]
-      if (/\s/.test(char)) { i++; continue }
-      if (/\d/.test(char) || (char === '.' && /\\d/.test(expression[i + 1]))) {
+      if (/\\s/.test(char)) { i++; continue }
+      if (/\\d/.test(char) || (char === '.' && /\\d/.test(expression[i + 1]))) {
         let num = ''
         while (i < expression.length && /[\\d.]/.test(expression[i])) { num += expression[i]; i++ }
         tokens.push({ type: 'NUMBER', value: parseFloat(num), position: i })
@@ -93,9 +116,9 @@ class ExpressionParser {
       }
       if (expression.substring(i, i + 4) === 'true') { tokens.push({ type: 'BOOLEAN', value: true, position: i }); i += 4; continue }
       if (expression.substring(i, i + 5) === 'false') { tokens.push({ type: 'BOOLEAN', value: false, position: i }); i += 5; continue }
-      if (/[a-zA-Z_]/.test(char)) {
+      if (/[a-zA-Z_\\u00C0-\\uFFFF]/.test(char)) {
         let id = ''
-        while (i < expression.length && /[a-zA-Z0-9_]/.test(expression[i])) { id += expression[i]; i++ }
+        while (i < expression.length && /[a-zA-Z0-9_\\u00C0-\\uFFFF]/.test(expression[i])) { id += expression[i]; i++ }
         tokens.push({ type: 'IDENTIFIER', value: id, position: i })
         continue
       }
@@ -103,7 +126,8 @@ class ExpressionParser {
         const twoChar = expression.substring(i, i + 2)
         if (['==', '!=', '<=', '>=', '&&', '||'].includes(twoChar)) { tokens.push({ type: 'OPERATOR', value: twoChar, position: i }); i += 2; continue }
       }
-      if ('+-*/%<>=!(),'.includes(char)) { tokens.push({ type: 'OPERATOR', value: char, position: i }); i++; continue }
+      if (char === ',') { tokens.push({ type: 'COMMA', value: char, position: i }); i++; continue }
+      if ('+-*/%<>=!()'.includes(char)) { tokens.push({ type: 'OPERATOR', value: char, position: i }); i++; continue }
       i++
     }
     tokens.push({ type: 'EOF', value: '', position: i })
@@ -177,7 +201,7 @@ class ExpressionParser {
         const args = []
         if (this.currentToken().type !== 'OPERATOR' || this.currentToken().value !== ')') {
           args.push(this.parseExpression())
-          while (this.currentToken().type === 'OPERATOR' && this.currentToken().value === ',') { this.eat('COMMA'); args.push(this.parseExpression()) }
+          while (this.currentToken().type === 'COMMA') { this.eat('COMMA'); args.push(this.parseExpression()) }
         }
         this.eat('OPERATOR')
         return this.callFunction(name, args)
@@ -417,21 +441,24 @@ function buildStoryHTML(encryptedData: string, ivBase64: string, config: StoryEx
   <div id="save-slot-panel" class="hidden"></div>
   <script>
     window.__STORY_CONFIG__ = {
-      workId: '${config.workId}',
+      workId: ${safeJSON(config.workId)},
       unlockMode: '${config.unlockMode}',
       price: ${config.price},
       freePreview: ${config.freePreview},
-      wechatQRCode: ${config.wechatQRCode ? JSON.stringify(config.wechatQRCode) : 'null'},
-      alipayQRCode: ${config.alipayQRCode ? JSON.stringify(config.alipayQRCode) : 'null'},
-      contactInfo: ${config.contactInfo ? JSON.stringify(config.contactInfo) : 'null'},
+      wechatQRCode: ${safeJSON(config.wechatQRCode)},
+      alipayQRCode: ${safeJSON(config.alipayQRCode)},
+      contactInfo: ${safeJSON(config.contactInfo)},
       encryptedData: ${JSON.stringify(encryptedData)},
-      apiUrl: ${config.customApiUrl ? JSON.stringify(config.customApiUrl) : 'null'},
-      storageKey: '${STORY_STORAGE_KEY_PREFIX}${config.workId}',
-      multiChannel: ${config.multiChannel ? JSON.stringify(config.multiChannel) : 'null'},
-      preGeneratedCodes: ${config.preGeneratedCodes ? JSON.stringify(config.preGeneratedCodes) : 'null'},
-      offlineCodes: ${config.offlineCodes ? JSON.stringify(config.offlineCodes) : 'null'},
-      isOffline: ${config.unlockMode === 'offline' || !config.customApiUrl ? 'true' : 'false'},
+      apiUrl: ${config.customApiUrl ? safeJSON(config.customApiUrl) : ((config.onlineCodeVerify || config.inWorkCodeRequest || config.unlockMode === 'semi_auto' || config.unlockMode === 'webhook' || (config.multiChannel?.thirdPartyChannels?.some((c) => c.autoVerify))) ? safeJSON(DEFAULT_API_URL) : 'null')},
+      onlineCodeVerify: ${!!config.onlineCodeVerify},
+      inWorkCodeRequest: ${!!config.inWorkCodeRequest},
+      creatorEmail: ${safeJSON(config.creatorEmail)},
+      storageKey: '${STORY_STORAGE_KEY_PREFIX}' + ${safeJSON(config.workId)},
+      multiChannel: ${safeJSON(config.multiChannel)},
+      preGeneratedCodes: ${safeJSON(config.preGeneratedCodes)},
+      offlineCodes: ${safeJSON(config.offlineCodes)},
       ivBase64: '${ivBase64}',
+      freeKey: ${safeJSON(config.freeKey)},
     };
   </script>
   <script>
@@ -639,7 +666,7 @@ function buildStoryHTML(encryptedData: string, ivBase64: string, config: StoryEx
           if (!isEmpty) html += '<button class="slot-action-btn" onclick="window.__deleteSlot(' + i + ')">删除</button>';
           html += '</div></div>';
         }
-        html += '</div><button class="close-panel" onclick="document.getElementById(\'save-slot-panel\').classList.add(\'hidden\')">关闭</button>';
+        html += '</div><button class="close-panel" onclick="document.getElementById(\\'save-slot-panel\\').classList.add(\\'hidden\\')">关闭</button>';
         savePanel.innerHTML = html;
       }
 
@@ -710,21 +737,60 @@ function buildStoryHTML(encryptedData: string, ivBase64: string, config: StoryEx
         return btoa(binary);
       }
 
+      function bytesToHex(bytes) {
+        return Array.from(bytes).map(function(b) { return b.toString(16).padStart(2, '0'); }).join('');
+      }
+
+      async function applyKey(keyBase64, ivBase64) {
+        setUnlocked(keyBase64, ivBase64);
+        decodedData = await decryptData(keyBase64, ivBase64);
+        graph = JSON.parse(decodedData);
+        initVariables();
+      }
+
+      async function tryOnlineVerify(code) {
+        if (!C.onlineCodeVerify || !C.apiUrl) return null;
+        try {
+          var resp = await fetch(C.apiUrl, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'verify-code', workId: C.workId, code: code }),
+          });
+          var r = await resp.json();
+          if (r && r.success === true) {
+            await applyKey(r.keyBase64, r.ivBase64);
+            return { success: true };
+          }
+          if (r && r.success === false) {
+            return { error: r.error || '在线验证失败' };
+          }
+          return { offline: true };
+        } catch(e) {
+          return { offline: true };
+        }
+      }
+
       async function tryOfflineUnlock(code) {
         var codes = C.offlineCodes || [];
-        var item = codes.find(function(c) { return c.code === code; });
+        if (!code) return null;
+        // 生成端码为大写；此处归一化后再哈希，避免小写输入失配
+        var normalized = String(code).trim().toUpperCase();
+        var codeHashHex = bytesToHex(await sha256Bytes(normalized));
+        // 新导出物只内嵌 codeHash（不含明文码，防白嫖）；
+        // 兼容旧导出物（内嵌明文 code）按原码比对
+        var item = codes.find(function(c) {
+          if (c.codeHash) return c.codeHash === codeHashHex;
+          return c.code === normalized;
+        });
         if (!item) return null;
+        if (!item.maskedKeyBase64) return { error: '该导出物版本过旧，请联系创作者重新导出' };
         if (item.usedAt) return { error: '该解锁码已被使用' };
         try {
-          var hashBytes = await sha256Bytes(code);
+          var hashBytes = await sha256Bytes(normalized);
           var maskedBytes = Uint8Array.from(atob(item.maskedKeyBase64), function(c) { return c.charCodeAt(0); });
           var keyBytes = xorBytes(maskedBytes, hashBytes);
           var keyBase64 = bytesToBase64(keyBytes);
           var storyIv = C.ivBase64;
-          decodedData = await decryptData(keyBase64, storyIv);
-          graph = JSON.parse(decodedData);
-          initVariables();
-          setUnlocked(keyBase64, storyIv);
+          await applyKey(keyBase64, storyIv);
           item.usedAt = Date.now();
           return { success: true };
         } catch(e) { return { error: '解锁码验证失败' }; }
@@ -756,6 +822,8 @@ function buildStoryHTML(encryptedData: string, ivBase64: string, config: StoryEx
         showPaywall();
       }
 
+      function attrEsc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
       function showPaywall() {
         var mode = C.unlockMode;
         var price = C.price;
@@ -784,7 +852,7 @@ function buildStoryHTML(encryptedData: string, ivBase64: string, config: StoryEx
             if (tabs.length > 1) {
               html += '<div class="pw-tab-row">';
               tabs.forEach(function(t, i) {
-                html += '<button class="pw-tab ' + (i === 0 ? 'active' : '') + '" data-tab="' + t.id + '" onclick="switchPaywallTab(\'' + t.id + '\')">' + t.label + '</button>';
+                html += '<button class="pw-tab ' + (i === 0 ? 'active' : '') + '" data-tab="' + t.id + '" onclick="switchPaywallTab(\\'' + t.id + '\\')">' + t.label + '</button>';
               });
               html += '</div>';
             }
@@ -798,7 +866,7 @@ function buildStoryHTML(encryptedData: string, ivBase64: string, config: StoryEx
                 var icon = ch.platform === 'afdian' ? '⚡' : ch.platform === 'mianbaoduo' ? '🍞' : '🔗';
                 var name = ch.platform === 'afdian' ? '爱发电' : ch.platform === 'mianbaoduo' ? '面包多' : ch.platform;
                 var fee = ch.platform === 'afdian' ? '抽成 6%' : ch.platform === 'mianbaoduo' ? '抽成 3%' : '';
-                html += '<a class="pw-platform-btn" href="' + (ch.link || '#') + '" target="_blank" rel="noopener">';
+                html += '<a class="pw-platform-btn" href="' + attrEsc(ch.link || '#') + '" target="_blank" rel="noopener">';
                 html += '<span class="pw-platform-icon">' + icon + '</span>';
                 html += '<span class="pw-platform-info"><span class="pw-platform-name">' + name + '</span><span class="pw-platform-desc">点击跳转支付，支付后回来输入订单号</span></span>';
                 if (fee) html += '<span class="pw-platform-fee">' + fee + '</span>';
@@ -825,11 +893,11 @@ function buildStoryHTML(encryptedData: string, ivBase64: string, config: StoryEx
               html += '<div class="pw-section ' + (tabs[0].id === 'direct' ? 'active' : '') + '" data-section="direct">';
               html += '<div class="pw-section-title">扫码支付 · 零手续费 · 钱直接到创作者</div>';
               html += '<div class="pw-qr-container">';
-              if (C.wechatQRCode) html += '<div class="pw-qr-item"><img src="' + C.wechatQRCode + '" alt="微信收款码"><div class="pw-qr-label">微信支付</div></div>';
-              if (C.alipayQRCode) html += '<div class="pw-qr-item"><img src="' + C.alipayQRCode + '" alt="支付宝收款码"><div class="pw-qr-label">支付宝</div></div>';
+              if (C.wechatQRCode) html += '<div class="pw-qr-item"><img src="' + attrEsc(C.wechatQRCode) + '" alt="微信收款码"><div class="pw-qr-label">微信支付</div></div>';
+              if (C.alipayQRCode) html += '<div class="pw-qr-item"><img src="' + attrEsc(C.alipayQRCode) + '" alt="支付宝收款码"><div class="pw-qr-label">支付宝</div></div>';
               manualChannels.forEach(function(ch) {
-                if (ch.type === 'wechat' && ch.qrCode && !C.wechatQRCode) html += '<div class="pw-qr-item"><img src="' + ch.qrCode + '" alt="微信收款码"><div class="pw-qr-label">微信支付</div></div>';
-                if (ch.type === 'alipay' && ch.qrCode && !C.alipayQRCode) html += '<div class="pw-qr-item"><img src="' + ch.qrCode + '" alt="支付宝收款码"><div class="pw-qr-label">支付宝</div></div>';
+                if (ch.type === 'wechat' && ch.qrCode && !C.wechatQRCode) html += '<div class="pw-qr-item"><img src="' + attrEsc(ch.qrCode) + '" alt="微信收款码"><div class="pw-qr-label">微信支付</div></div>';
+                if (ch.type === 'alipay' && ch.qrCode && !C.alipayQRCode) html += '<div class="pw-qr-item"><img src="' + attrEsc(ch.qrCode) + '" alt="支付宝收款码"><div class="pw-qr-label">支付宝</div></div>';
               });
               html += '</div>';
               html += '<p class="pw-footnote" style="text-align:center;margin:12px 0;">付款后截图发给创作者，获取解锁码</p>';
@@ -845,8 +913,8 @@ function buildStoryHTML(encryptedData: string, ivBase64: string, config: StoryEx
               html += '<div class="pw-divider"></div>';
               html += '<div class="pw-section-title">扫码支付 · 钱直接到创作者账户</div>';
               html += '<div class="pw-qr-container">';
-              if (C.wechatQRCode) html += '<div class="pw-qr-item"><img src="' + C.wechatQRCode + '" alt="微信收款码"><div class="pw-qr-label">微信支付</div></div>';
-              if (C.alipayQRCode) html += '<div class="pw-qr-item"><img src="' + C.alipayQRCode + '" alt="支付宝收款码"><div class="pw-qr-label">支付宝</div></div>';
+              if (C.wechatQRCode) html += '<div class="pw-qr-item"><img src="' + attrEsc(C.wechatQRCode) + '" alt="微信收款码"><div class="pw-qr-label">微信支付</div></div>';
+              if (C.alipayQRCode) html += '<div class="pw-qr-item"><img src="' + attrEsc(C.alipayQRCode) + '" alt="支付宝收款码"><div class="pw-qr-label">支付宝</div></div>';
               html += '</div>';
             }
             if (C.contactInfo) html += '<div class="pw-footnote">如有问题，联系创作者：' + C.contactInfo + '</div>';
@@ -862,8 +930,8 @@ function buildStoryHTML(encryptedData: string, ivBase64: string, config: StoryEx
               html += '<div class="pw-divider"></div>';
               html += '<div class="pw-section-title">扫码支付 · 钱直接到创作者账户</div>';
               html += '<div class="pw-qr-container">';
-              if (C.wechatQRCode) html += '<div class="pw-qr-item"><img src="' + C.wechatQRCode + '" alt="微信收款码"><div class="pw-qr-label">微信支付</div></div>';
-              if (C.alipayQRCode) html += '<div class="pw-qr-item"><img src="' + C.alipayQRCode + '" alt="支付宝收款码"><div class="pw-qr-label">支付宝</div></div>';
+              if (C.wechatQRCode) html += '<div class="pw-qr-item"><img src="' + attrEsc(C.wechatQRCode) + '" alt="微信收款码"><div class="pw-qr-label">微信支付</div></div>';
+              if (C.alipayQRCode) html += '<div class="pw-qr-item"><img src="' + attrEsc(C.alipayQRCode) + '" alt="支付宝收款码"><div class="pw-qr-label">支付宝</div></div>';
               html += '</div>';
             }
             if (C.contactInfo) html += '<div class="pw-footnote">如有问题，联系创作者：' + C.contactInfo + '</div>';
@@ -873,6 +941,14 @@ function buildStoryHTML(encryptedData: string, ivBase64: string, config: StoryEx
             html += '<input type="text" class="pw-input" id="activation-input" placeholder="粘贴创作者给你的激活码">';
             html += '<button class="pw-btn pw-btn-primary" onclick="doManualUnlock()">输入激活码解锁</button>';
             html += '<div class="pw-msg" id="manual-msg"></div>';
+            if (C.inWorkCodeRequest && C.apiUrl && C.creatorEmail) {
+              html += '<div class="pw-divider"></div>';
+              html += '<div class="pw-section-title">已付款？在作品内申请解锁码</div>';
+              html += '<input type="text" class="pw-input" id="apply-proof-input" placeholder="粘贴微信/支付宝交易单号或付款备注">';
+              html += '<button class="pw-btn pw-btn-secondary" id="apply-btn" onclick="window.__applyUnlockRequest()">我已付款，申请解锁码</button>';
+              html += '<div class="pw-msg" id="apply-msg"></div>';
+              html += '<p class="pw-footnote">申请将发给创作者，创作者确认后解锁码会自动回传到本作品，无需加好友发码</p>';
+            }
           }
         } else {
           html += '<div class="pw-btn pw-btn-primary" onclick="doUnlock()" style="margin-top:20px;">免费阅读</div>';
@@ -919,17 +995,23 @@ function buildStoryHTML(encryptedData: string, ivBase64: string, config: StoryEx
           var fingerprint = await sha256(navigator.userAgent + screen.width + 'x' + screen.height);
           var channels = (C.multiChannel && C.multiChannel.thirdPartyChannels) || [];
           var verified = false;
+          var verifiedKey = null;
 
           for (var i = 0; i < channels.length; i++) {
             var ch = channels[i];
             if (!ch.autoVerify || !ch.verifyEndpoint) continue;
             try {
+              var vBody = { orderId: orderNo, platform: ch.platform, platformUserId: ch.platformUserId, planId: ch.planId };
+              if (ch.verifyEndpoint === C.apiUrl) { vBody.action = 'verify-order'; vBody.workId = C.workId; }
               var vResp = await fetch(ch.verifyEndpoint, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ orderId: orderNo, platform: ch.platform, platformUserId: ch.platformUserId, planId: ch.planId }),
+                body: JSON.stringify(vBody),
               });
               var vData = await vResp.json();
-              if (vData.success || vData.verified) { verified = true; break; }
+              if (vData.success || vData.verified) {
+                if (vData.success === true && vData.keyBase64 && vData.ivBase64) { verifiedKey = { keyBase64: vData.keyBase64, ivBase64: vData.ivBase64 }; }
+                verified = true; break;
+              }
             } catch(ve) { /* ignore per-endpoint errors */ }
           }
 
@@ -963,15 +1045,25 @@ function buildStoryHTML(encryptedData: string, ivBase64: string, config: StoryEx
             }
           } else {
             msg.className = 'pw-msg info'; msg.textContent = '订单验证通过！正在解锁...';
-            var unlockedChannel = null;
+            if (verifiedKey) {
+              setUnlocked(verifiedKey.keyBase64, verifiedKey.ivBase64);
+              decodedData = await decryptData(verifiedKey.keyBase64, verifiedKey.ivBase64);
+              graph = JSON.parse(decodedData);
+              initVariables();
+              msg.className = 'pw-msg success'; msg.textContent = '订单验证通过！即将开始阅读...';
+              setTimeout(function() { paywall.classList.add('hidden'); startStory(); }, 1200);
+              return;
+            }
             for (var j = 0; j < channels.length; j++) {
               var ch2 = channels[j];
               if (!ch2.autoVerify) continue;
               if (ch2.verifyEndpoint) {
                 try {
+                  var vBody2 = { orderId: orderNo, platform: ch2.platform, platformUserId: ch2.platformUserId, planId: ch2.planId };
+                  if (ch2.verifyEndpoint === C.apiUrl) { vBody2.action = 'verify-order'; vBody2.workId = C.workId; }
                   var vResp2 = await fetch(ch2.verifyEndpoint, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ orderId: orderNo, platform: ch2.platform, platformUserId: ch2.platformUserId, planId: ch2.planId }),
+                    body: JSON.stringify(vBody2),
                   });
                   var vData2 = await vResp2.json();
                   if (vData2.success || vData2.verified) {
@@ -984,26 +1076,13 @@ function buildStoryHTML(encryptedData: string, ivBase64: string, config: StoryEx
                       setTimeout(function() { paywall.classList.add('hidden'); startStory(); }, 1200);
                       return;
                     }
-                    unlockedChannel = ch2;
                     break;
                   }
                 } catch(ve2) { /* ignore */ }
               }
             }
-            if (unlockedChannel) {
-              var unusedOfflineCodes = C.offlineCodes ? C.offlineCodes.filter(function(c) { return !c.usedAt; }) : [];
-              if (unusedOfflineCodes.length > 0) {
-                var firstCode = unusedOfflineCodes[0];
-                var offlineUnlock = await tryOfflineUnlock(firstCode.code);
-                if (offlineUnlock && offlineUnlock.success) {
-                  msg.className = 'pw-msg success'; msg.textContent = '订单验证通过！即将开始阅读...';
-                  setTimeout(function() { paywall.classList.add('hidden'); startStory(); }, 1200);
-                  return;
-                }
-              }
-            }
             if (!C.apiUrl) {
-              msg.className = 'pw-msg error'; msg.textContent = '第三方验证通过，但缺少服务端密钥。请联系创作者';
+              msg.className = 'pw-msg error'; msg.textContent = '订单已验证，但服务端未返回解锁密钥，请联系创作者';
               btn.disabled = false; btn.textContent = '重试解锁';
               return;
             }
@@ -1031,6 +1110,22 @@ function buildStoryHTML(encryptedData: string, ivBase64: string, config: StoryEx
       };
 
       window.doUnlock = async function() {
+        // 免费故事：内嵌密钥直接解密开始，无需解锁码/支付墙
+        if (C.freeKey) {
+          try {
+            decodedData = await decryptData(C.freeKey, C.ivBase64);
+            graph = JSON.parse(decodedData);
+            initVariables();
+            setUnlocked(C.freeKey, C.ivBase64);
+            paywall.classList.add('hidden');
+            startStory();
+            return;
+          } catch(e) {
+            var msg0 = document.getElementById('unlock-msg');
+            if (msg0) { msg0.className = 'pw-msg error'; msg0.textContent = '故事数据加载失败'; }
+            return;
+          }
+        }
         var btn = document.getElementById('unlock-btn');
         var msg = document.getElementById('unlock-msg');
         if (!btn) return;
@@ -1041,6 +1136,24 @@ function buildStoryHTML(encryptedData: string, ivBase64: string, config: StoryEx
         }
         btn.disabled = true; btn.textContent = '处理中...';
         msg.className = 'pw-msg info'; msg.textContent = '正在验证...';
+
+        // 在线验码优先：服务端核验解锁码（一次一用），仅网络不可达时回退离线
+        if (C.onlineCodeVerify) {
+          var ov = await tryOnlineVerify(orderNo);
+          if (ov && ov.success) {
+            msg.className = 'pw-msg success'; msg.textContent = '解锁成功！即将开始阅读...';
+            setTimeout(function() { paywall.classList.add('hidden'); startStory(); }, 1200);
+            return;
+          }
+          if (ov && ov.error) {
+            msg.className = 'pw-msg error'; msg.textContent = ov.error;
+            btn.disabled = false; btn.textContent = '重试解锁';
+            return;
+          }
+          if (ov && ov.offline) {
+            msg.className = 'pw-msg info'; msg.textContent = '网络不可用，正在尝试离线解锁…';
+          }
+        }
 
         // 优先尝试离线验证
         var offline = await tryOfflineUnlock(orderNo);
@@ -1069,10 +1182,7 @@ function buildStoryHTML(encryptedData: string, ivBase64: string, config: StoryEx
           });
           var result = await resp.json();
           if (result.success) {
-            setUnlocked(result.keyBase64, result.ivBase64);
-            decodedData = await decryptData(result.keyBase64, result.ivBase64);
-            graph = JSON.parse(decodedData);
-            initVariables();
+            await applyKey(result.keyBase64, result.ivBase64);
             msg.className = 'pw-msg success'; msg.textContent = '解锁成功！即将开始阅读...';
             setTimeout(function() { paywall.classList.add('hidden'); startStory(); }, 1200);
           } else {
@@ -1080,7 +1190,7 @@ function buildStoryHTML(encryptedData: string, ivBase64: string, config: StoryEx
             btn.disabled = false; btn.textContent = '重试解锁';
           }
         } catch(e) {
-          msg.className = 'pw-msg error'; msg.textContent = '网络错误，请检查网络后重试';
+          msg.className = 'pw-msg error'; msg.textContent = '需要联网验证解锁码，请检查网络';
           btn.disabled = false; btn.textContent = '重试解锁';
         }
       };
@@ -1091,6 +1201,23 @@ function buildStoryHTML(encryptedData: string, ivBase64: string, config: StoryEx
         var code = (input || {}).value.trim();
         if (!code) { if(msg){msg.className = 'pw-msg error'; msg.textContent = '请输入创作者给你的激活码';} return; }
         if(msg){msg.className = 'pw-msg info'; msg.textContent = '验证中...';}
+
+        // 在线验码优先：服务端核验解锁码（一次一用），仅网络不可达时回退离线
+        if (C.onlineCodeVerify) {
+          var ov = await tryOnlineVerify(code);
+          if (ov && ov.success) {
+            if(msg){msg.className = 'pw-msg success'; msg.textContent = '解锁成功！';}
+            setTimeout(function() { paywall.classList.add('hidden'); startStory(); }, 1200);
+            return;
+          }
+          if (ov && ov.error) {
+            if(msg){msg.className = 'pw-msg error'; msg.textContent = ov.error;}
+            return;
+          }
+          if (ov && ov.offline) {
+            if(msg){msg.className = 'pw-msg info'; msg.textContent = '网络不可用，正在尝试离线解锁…';}
+          }
+        }
 
         // 优先尝试离线验证
         var offline = await tryOfflineUnlock(code);
@@ -1117,19 +1244,106 @@ function buildStoryHTML(encryptedData: string, ivBase64: string, config: StoryEx
           });
           var result = await resp.json();
           if (result.success) {
-            setUnlocked(result.keyBase64, result.ivBase64);
-            decodedData = await decryptData(result.keyBase64, result.ivBase64);
-            graph = JSON.parse(decodedData);
-            initVariables();
+            await applyKey(result.keyBase64, result.ivBase64);
             if(msg){msg.className = 'pw-msg success'; msg.textContent = '解锁成功！';}
             setTimeout(function() { paywall.classList.add('hidden'); startStory(); }, 1200);
           } else {
             if(msg){msg.className = 'pw-msg error'; msg.textContent = result.error || '激活码无效';}
           }
         } catch(e) {
-          if(msg){msg.className = 'pw-msg error'; msg.textContent = '网络错误';}
+          if(msg){msg.className = 'pw-msg error'; msg.textContent = '需要联网验证解锁码，请检查网络';}
         }
       };
+
+      var applyPollCount = 0;
+      var applyPollTimer = null;
+      var applyRequestId = null;
+
+      // 停止作品内申请解锁码的轮询（供卸载/解锁成功后清理）
+      window.__stopApplyPolling = function() {
+        applyPollCount = 0;
+        if (applyPollTimer) { clearTimeout(applyPollTimer); applyPollTimer = null; }
+      };
+
+      // 页面卸载/隐藏时清理轮询定时器，避免后台空转
+      document.addEventListener('pagehide', window.__stopApplyPolling);
+      document.addEventListener('beforeunload', window.__stopApplyPolling);
+
+      // 作品内申请解锁码：提交付款凭证，等待创作者审核发码（服务端审批后自动回传解锁）
+      window.__applyUnlockRequest = async function() {
+        var input = document.getElementById('apply-proof-input');
+        var msg = document.getElementById('apply-msg');
+        var btn = document.getElementById('apply-btn');
+        var proof = (input || {}).value.trim();
+        if (!proof) { if (msg) { msg.className = 'pw-msg error'; msg.textContent = '请填写付款凭证'; } return; }
+        if (!C.apiUrl || !C.creatorEmail) { if (msg) { msg.className = 'pw-msg error'; msg.textContent = '该作品未开启在线申请解锁码'; } return; }
+        if (btn) { btn.disabled = true; btn.textContent = '提交中…'; }
+        if (msg) { msg.className = 'pw-msg info'; msg.textContent = '正在提交申请...'; }
+        try {
+          var fingerprint = await sha256(navigator.userAgent + screen.width + 'x' + screen.height);
+          var resp = await fetch(C.apiUrl, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'request', workId: C.workId, creatorEmail: C.creatorEmail, paymentProof: proof, deviceFingerprint: fingerprint, chapterId: 'all' }),
+          });
+          var r = await resp.json();
+          if (!r || !r.success) {
+            if (msg) { msg.className = 'pw-msg error'; msg.textContent = (r && r.error) || '提交失败，请重试'; }
+            if (btn) { btn.disabled = false; btn.textContent = '我已付款，申请解锁码'; }
+            return;
+          }
+          applyRequestId = r.requestId;
+          if (msg) { msg.className = 'pw-msg info'; msg.textContent = '已提交申请，等待创作者确认发码（自动刷新）'; }
+          pollRequestStatus(applyRequestId, fingerprint);
+        } catch(e) {
+          if (msg) { msg.className = 'pw-msg error'; msg.textContent = '网络错误，请检查网络后重试'; }
+          if (btn) { btn.disabled = false; btn.textContent = '我已付款，申请解锁码'; }
+        }
+      };
+
+      // 轮询申请状态：最多 60 次、间隔 15s（setTimeout 链式递归）
+      async function pollRequestStatus(requestId, fingerprint) {
+        if (!requestId) return;
+        applyPollCount = 0;
+        var maxPolls = 60;
+        var tick = async function() {
+          if (paywall.classList.contains('hidden')) { window.__stopApplyPolling(); return; }
+          if (applyPollCount >= maxPolls) {
+            var msgTimeout = document.getElementById('apply-msg');
+            if (msgTimeout) { msgTimeout.className = 'pw-msg info'; msgTimeout.textContent = '创作者确认后请刷新页面重新打开作品解锁'; }
+            window.__stopApplyPolling();
+            return;
+          }
+          applyPollCount++;
+          try {
+            var url = C.apiUrl + '?action=request-status&requestId=' + encodeURIComponent(requestId) + '&deviceFingerprint=' + encodeURIComponent(fingerprint);
+            var resp = await fetch(url);
+            var r = await resp.json();
+            if (r && r.status === 'APPROVED' && r.keyBase64 && r.ivBase64) {
+              window.__stopApplyPolling();
+              var msgOk = document.getElementById('apply-msg');
+              if (msgOk) { msgOk.className = 'pw-msg success'; msgOk.textContent = '解锁成功！即将开始阅读…'; }
+              await applyKey(r.keyBase64, r.ivBase64);
+              setTimeout(function() { paywall.classList.add('hidden'); startStory(); }, 1200);
+              return;
+            }
+            if (r && r.status === 'REJECTED') {
+              window.__stopApplyPolling();
+              var msgRej = document.getElementById('apply-msg');
+              if (msgRej) { msgRej.className = 'pw-msg error'; msgRej.textContent = '申请被拒绝，请联系创作者'; }
+              var btnRej = document.getElementById('apply-btn');
+              if (btnRej) { btnRej.disabled = false; btnRej.textContent = '我已付款，申请解锁码'; }
+              return;
+            }
+            // PENDING：继续轮询
+            applyPollTimer = setTimeout(tick, 15000);
+          } catch(e) {
+            window.__stopApplyPolling();
+            var msgNet = document.getElementById('apply-msg');
+            if (msgNet) { msgNet.className = 'pw-msg error'; msgNet.textContent = '网络中断，请重新打开作品查看结果'; }
+          }
+        };
+        tick();
+      }
 
       document.addEventListener('contextmenu', function(e) {
         var tag = (e.target || {}).tagName;
@@ -1211,7 +1425,7 @@ function buildStoryHTML(encryptedData: string, ivBase64: string, config: StoryEx
           startId = progress.state.nodeId;
         }
         if (!startId) {
-          startId = (graph.nodes.find(function(n) { return n.type === 'dialogue' || n.type === 'narration'; }) || graph.nodes[0] || {}).id;
+          startId = (graph.nodes.find(function(n) { return n.type === 'dialogue' || n.type === 'choice'; }) || graph.nodes[0] || {}).id;
         }
         if (startId) renderNode(findNode(startId));
       }
@@ -1219,6 +1433,12 @@ function buildStoryHTML(encryptedData: string, ivBase64: string, config: StoryEx
       function findNode(id) { return (graph.nodes || []).find(function(n) { return n.id === id; }); }
       function getEdges(nodeId) { return (graph.edges || []).filter(function(e) { return e.source === nodeId; }); }
       function findCharacter(id) { return (graph.characters || []).find(function(c) { return c.id === id; }); }
+
+      // unlock 节点「解锁」按钮回调：未解锁时唤起付费墙（此前全局函数从未定义，按钮为死链）
+      window.__subsilicon_unlock = function() {
+        if (isUnlocked()) return;
+        if (paywall) paywall.classList.remove('hidden');
+      };
 
       function renderNode(node) {
         if (!node) { app.innerHTML = '<div class="node"><p class="node-text" style="text-align:center;color:#64748b;">— 故事到此结束 —</p></div>'; return; }
@@ -1408,11 +1628,23 @@ function buildStoryHTML(encryptedData: string, ivBase64: string, config: StoryEx
       }
 
       function renderJump(data) {
-        if (data.targetNodeId) renderNode(findNode(data.targetNodeId));
+        // 表达式门控：条件为假时走第一条出边（回退）；条件为空/为真且配置目标则直达。
+        if (data.expression && data.expression.trim() !== '') {
+          var gate = false;
+          try { gate = evaluateExpression(data.expression); } catch(e) { gate = false; }
+          if (!gate) {
+            var fbEdge = getEdges(currentNodeId)[0];
+            if (fbEdge) { renderNode(findNode(fbEdge.target)); return; }
+          }
+        }
+        if (data.targetNodeId) { renderNode(findNode(data.targetNodeId)); return; }
+        var edges = getEdges(currentNodeId);
+        if (edges.length > 0) renderNode(findNode(edges[0].target));
       }
 
       function renderGather() {
-        app.innerHTML = '<div class="node" style="text-align:center;opacity:0.4;"><p class="node-text">—</p></div>';
+        // 汇聚节点：仅作汇聚点，沿第一条出边继续（此前无流转，读者会卡死）
+        autoAdvance('<div class="node" style="text-align:center;opacity:0.4;"><p class="node-text">—</p></div>');
       }
 
       function renderCondition(data) {
@@ -1421,6 +1653,9 @@ function buildStoryHTML(encryptedData: string, ivBase64: string, config: StoryEx
           var result = evaluateExpression(expr);
           var edges = getEdges(currentNodeId);
           var edge = edges.find(function(e) { return e.sourceHandle === (result ? 'true' : 'false'); });
+          // AI 对话等路径创建连线时 sourceHandle 为 null，找不到 true/false 分支
+          // 时回退到第一条出边，避免条件节点卡死（与 renderJump 回退语义一致）
+          if (!edge && edges.length > 0) edge = edges[0];
           if (edge) renderNode(findNode(edge.target));
         } catch(e) { app.innerHTML = '<div class="node"><p class="node-text">条件解析错误</p></div>'; }
       }
@@ -1498,8 +1733,13 @@ export async function exportToStoryHTML(
 
   const processedGraph = await embedAssets(graph)
   const graphJSON = JSON.stringify(processedGraph)
-  const { encryptedData, keyBase64, ivBase64 } = await encryptStoryData(graphJSON)
-  const html = buildStoryHTML(encryptedData, ivBase64, { ...config, workId })
+  const { encryptedData, keyBase64, ivBase64 } = config.keyBase64
+    ? await encryptStoryDataWithKey(graphJSON, config.keyBase64)
+    : await encryptStoryData(graphJSON)
+  // 免费故事（无付费墙）：把本次加密密钥内嵌到导出物，
+  // 运行时「免费阅读」直接解密开始，避免免费故事无法阅读。
+  const isFree = config.price <= 0 && !config.customApiUrl
+  const html = buildStoryHTML(encryptedData, ivBase64, { ...config, workId, freeKey: isFree ? keyBase64 : undefined })
 
   return { html, keyBase64, ivBase64, workId }
 }
