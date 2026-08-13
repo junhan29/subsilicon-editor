@@ -101,8 +101,8 @@ jobs:
           SSH_PORT: '22022'
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          VERSION_DIR="/var/www/subsilicon/releases/v${VERSION}"
-          RELEASE_DIR="/var/www/subsilicon/releases"
+          VERSION_DIR="/var/www/subsilicon/public/releases/v${VERSION}"
+          RELEASE_DIR="/var/www/subsilicon/public/releases"
           MIRROR="https://gh-proxy.com/https://github.com/junhan29/subsilicon-editor/releases/download/${GITHUB_REF_NAME}"
 
           mkdir -p ~/.ssh
@@ -200,7 +200,7 @@ jobs:
 
           echo "Creating standalone symlink..."
           ssh -p "$SSH_PORT" "$SERVER_USER@$SERVER_HOST" "
-            STANDALONE_DIR=\"/var/www/subsilicon/.next/standalone/releases\"
+            STANDALONE_DIR=\"/var/www/subsilicon/.next/standalone/public/releases\"
             if [ -d \"\$STANDALONE_DIR\" ]; then
               ln -sf \"$VERSION_DIR\" \"\$STANDALONE_DIR/v${VERSION}\"
               echo \"Symlink created: \$STANDALONE_DIR/v${VERSION} -> $VERSION_DIR\"
