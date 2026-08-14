@@ -76,7 +76,7 @@ jobs:
           ssh -p "$SSH_PORT" "$SERVER_USER@$SERVER_HOST" "
             cd $VERSION_DIR
             for f in SubSilicon.Editor-*; do
-              [ -f \"\$f\" ] && mv -v \"\$f\" \"\${f/.Editor-/.Editor -}\" || true
+              [ -f \"\$f\" ] && mv -v \"\$f\" \"\${f/.Editor-/ Editor-}\" || true
             done
           "
 
