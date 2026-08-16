@@ -166,6 +166,23 @@ export function injectReferenceImage(workflow: ComfyWorkflow, imageName: string)
   return result
 }
 
+/**
+ * 将 seed 注入工作流中的第一个 KSampler 节点。
+ * seed 未提供时使用随机值（替代预设硬编码的 42，避免每次生成完全相同）。
+ * 返回新的工作流对象（不修改原对象）。
+ */
+export function injectSeed(workflow: ComfyWorkflow, seed?: number): ComfyWorkflow {
+  const result: ComfyWorkflow = JSON.parse(JSON.stringify(workflow))
+  const resolvedSeed = seed ?? Math.floor(Math.random() * 2 ** 53)
+  for (const node of Object.values(result)) {
+    if (node.class_type === 'KSampler' || node.class_type === 'KSamplerAdvanced') {
+      node.inputs.seed = resolvedSeed
+      break
+    }
+  }
+  return result
+}
+
 // ---------- 预设工作流 ----------
 
 /**

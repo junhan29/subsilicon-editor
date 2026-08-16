@@ -97,6 +97,7 @@ import { GatherPanel } from './panels/gather-panel'
 import { JumpPanel } from './panels/jump-panel'
 import { RandomPanel } from './panels/random-panel'
 import { AiIndependentSelfCheckPanel } from './ai-independent-self-check'
+import { CharacterCardPanel } from './character-card-panel'
 import { collectAllVideoBindingsFromGraph } from './node-video-binding'
 import type { StoryGraph } from '@editor/types/editor'
 import type { VideoBinding } from '@editor/lib/export-bilibili-interactive'
@@ -452,6 +453,9 @@ function PropertyPanel({
 
           {/* AI 独立运行自检入口 */}
           <AiIndependentSelfCheckPanel />
+
+          {/* 角色参考图（一致性锚点） */}
+          <CharacterCardPanel characters={characters} />
 
           {/* 角色管理部分 */}
           {characters.map((char) => (

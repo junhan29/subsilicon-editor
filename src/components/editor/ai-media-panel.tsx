@@ -9,6 +9,7 @@ import {
   type MediaProviderConfig,
   buildConsistentImagePrompt,
   generateMediaForTask,
+  getGlobalStylePrompt,
   getMediaProviderConfig,
   getMediaProviderConfigForTask,
   optimizePrompt,
@@ -63,7 +64,9 @@ export function AiMediaPanel({ characters, onImageGenerated }: AiMediaPanelProps
     setGenerating(true)
     try {
       const selectedCharacters = characters.filter(c => selectedChars.includes(c.id))
+      const globalStyle = getGlobalStylePrompt()
       const enhancedPrompt = buildConsistentImagePrompt(prompt, selectedCharacters, style)
+        + (globalStyle ? `, ${globalStyle}` : '')
       const optimized = await optimizePrompt(enhancedPrompt, mediaType, style)
 
       const result = await generateMediaForTask(

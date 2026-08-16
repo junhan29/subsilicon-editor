@@ -57,6 +57,8 @@ export {
   optimizePrompt,
   generateCharacterPrompt,
   buildConsistentImagePrompt,
+  getGlobalStylePrompt,
+  saveGlobalStylePrompt,
   getMediaProviderConfig,
   getMediaProviderConfigForTask,
   saveMediaProviderConfig,

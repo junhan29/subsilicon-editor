@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AlertCircle, Bot, Bug, Check, ChevronDown, ChevronRight, Eye, Image, ListChecks, Loader2, Music, Send, Settings, Sparkles, Trash2, User, Video, X } from 'lucide-react'
 import { showToast } from './toast'
 import { AiSettingsDialog } from './ai-settings-dialog'
-import { buildConsistentImagePrompt, callAiStreamForTask, generateMediaForTask, getMediaProviderConfigForTask, isAiAvailable, optimizePrompt, refreshAiConfig } from '@editor/lib/ai'
+import { buildConsistentImagePrompt, callAiStreamForTask, generateMediaForTask, getGlobalStylePrompt, getMediaProviderConfigForTask, isAiAvailable, optimizePrompt, refreshAiConfig } from '@editor/lib/ai'
 import { serializeGraphContext } from '@editor/lib/ai/chat-graph-context'
 import { getChatSystemPrompt } from '@editor/lib/ai/chat-system-prompt'
 import { getAssistantName, useAssistantName } from '@editor/lib/assistant-name'
@@ -601,8 +601,10 @@ export function AiChatPanel(props: AiChatPanelProps) {
     )
 
     try {
-      // 优化 prompt
-      const optimized = await optimizePrompt(request.prompt, request.mediaType as 'image' | 'video', request.style || 'anime')
+      // 优化 prompt（注入全局画面风格锁，保持整部作品画面一致）
+      const globalStyle = getGlobalStylePrompt()
+      const basePrompt = request.prompt + (globalStyle ? `, ${globalStyle}` : '')
+      const optimized = await optimizePrompt(basePrompt, request.mediaType as 'image' | 'video', request.style || 'anime')
 
       // 查找参考图（标注为 reference 的素材），用于 ComfyUI IP-Adapter 一致性锚点
       // 优先角色参考图（characterId），其次场景参考图（sceneTag）；仅 image 类型启用

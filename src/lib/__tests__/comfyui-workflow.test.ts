@@ -5,6 +5,7 @@ import {
   getWorkflowPreset,
   injectPrompt,
   injectReferenceImage,
+  injectSeed,
   validateWorkflow,
 } from '../ai/comfyui-workflow'
 
@@ -155,6 +156,39 @@ describe('injectReferenceImage', () => {
   it('无 LoadImage 时原样返回', () => {
     const wf: ComfyWorkflow = { '1': { class_type: 'SaveImage', inputs: {} } }
     const result = injectReferenceImage(wf, 'test.png')
+    expect(result).toEqual(wf)
+  })
+})
+
+describe('injectSeed', () => {
+  it('注入指定 seed 到第一个 KSampler', () => {
+    const result = injectSeed(validWorkflow, 12345)
+    expect(result['3'].inputs.seed).toBe(12345)
+  })
+
+  it('未指定 seed 时使用随机值（不再固定 42）', () => {
+    const result = injectSeed(validWorkflow)
+    expect(typeof result['3'].inputs.seed).toBe('number')
+    expect(result['3'].inputs.seed).not.toBe(42)
+  })
+
+  it('不修改原对象', () => {
+    const original = JSON.parse(JSON.stringify(validWorkflow))
+    injectSeed(validWorkflow, 999)
+    expect(validWorkflow['3'].inputs.seed).toBe(original['3'].inputs.seed)
+  })
+
+  it('支持 KSamplerAdvanced 节点', () => {
+    const wf: ComfyWorkflow = {
+      '1': { class_type: 'KSamplerAdvanced', inputs: { seed: 1, steps: 20 } },
+    }
+    const result = injectSeed(wf, 777)
+    expect(result['1'].inputs.seed).toBe(777)
+  })
+
+  it('无 KSampler 时原样返回', () => {
+    const wf: ComfyWorkflow = { '1': { class_type: 'SaveImage', inputs: {} } }
+    const result = injectSeed(wf, 5)
     expect(result).toEqual(wf)
   })
 })

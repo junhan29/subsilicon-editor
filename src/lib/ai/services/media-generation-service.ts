@@ -2,7 +2,7 @@ import type { AiConfig } from '../../ai/types'
 import { callAiForTask } from '../../ai/provider-registry'
 import { getAsset } from '../../local-db'
 import { getTaskSkillPrompt, resolveMediaProviderForTask, type MediaTaskType } from '../task-routing'
-import { injectPrompt, injectReferenceImage, type ComfyWorkflow } from '../comfyui-workflow'
+import { injectPrompt, injectReferenceImage, injectSeed, type ComfyWorkflow } from '../comfyui-workflow'
 import { encryptApiKeyField, decryptApiKeyField } from '../ai-key-vault'
 import type { ComicScene, StoryCharacter } from '@editor/types/editor'
 
@@ -13,8 +13,10 @@ export interface ImageGenerationParams {
   height?: number
   style?: 'anime' | 'realistic' | 'illustration' | 'pixel' | '3d'
   characterRef?: string
-  /** 参考图素材 hash（ComfyUI IP-Adapter 一致性锚点）。在 ai-chat-panel 中由角色参考图自动填充。 */
+  /** 参考图素材 hash（ComfyUI IP-Adapter / 云端图生图 的一致性锚点）。在 ai-chat-panel 中由角色参考图自动填充。 */
   referenceImageHash?: string
+  /** 固定随机种子：相同 seed + 相同参数可复现同一张图；不传则随机（ComfyUI 预设不再固定 42） */
+  seed?: number
 }
 
 export interface VideoGenerationParams {
@@ -22,6 +24,8 @@ export interface VideoGenerationParams {
   imageUrl?: string
   duration?: number
   motionStrength?: number
+  /** 固定随机种子（部分视频 API 支持，用于画面稳定复现） */
+  seed?: number
 }
 
 export interface AudioGenerationParams {
@@ -46,6 +50,29 @@ export interface MediaProviderConfig {
   model?: string
   /** ComfyUI 专用：用户导出的工作流 JSON（API 格式）。编辑器会自动注入 prompt 和参考图。 */
   workflowJson?: string
+}
+
+// ---------- 一致性辅助 ----------
+
+/** 生成结果基础校验：url 必须非空；失败抛出可读错误 */
+export function validateMediaResult(result: MediaGenerationResult): MediaGenerationResult {
+  if (!result.url) {
+    throw new Error('生成结果为空（未返回有效的图片/视频地址），请重试或更换服务商')
+  }
+  if (!/^(https?|blob|data):/.test(result.url)) {
+    throw new Error('生成结果地址格式异常，请重试')
+  }
+  return result
+}
+
+/** 将 Blob 转为 base64 data URL（用于云端图生图参考图参数） */
+export function blobToDataURL(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result))
+    reader.onerror = () => reject(new Error('参考图读取失败'))
+    reader.readAsDataURL(blob)
+  })
 }
 
 // 从角色信息生成一致性 prompt
@@ -128,11 +155,11 @@ async function generateWithOpenAI(
   }
 
   const data = await response.json()
-  return {
+  return validateMediaResult({
     url: data.data[0].url,
     type: 'image',
     prompt: params.prompt,
-  }
+  })
 }
 
 // 调用 Stability AI 生成图片
@@ -154,6 +181,7 @@ async function generateWithStability(
       width: params.width || 1024,
       height: params.height || 1024,
       output_format: 'webp',
+      seed: params.seed,
     }),
   })
 
@@ -165,13 +193,13 @@ async function generateWithStability(
   const blob = await response.blob()
   const url = URL.createObjectURL(blob)
 
-  return {
+  return validateMediaResult({
     url,
     type: 'image',
     prompt: params.prompt,
     // 提供清理函数，调用方在不需要时应调用
     cleanup: () => URL.revokeObjectURL(url),
-  }
+  })
 }
 
 // 调用 ComfyUI 生成图片：用户在工作流里预留 LoadImage + CLIPTextEncode 节点，编辑器自动注入参考图与 prompt
@@ -210,7 +238,10 @@ async function generateWithComfyUI(
   // 2. 注入 prompt（优先 title 含 positive/正向 的 CLIPTextEncode）
   workflow = injectPrompt(workflow, params.prompt)
 
-  // 3. 提交任务
+  // 3. 注入 seed：未指定时随机（预设不再固定 42，避免每次生成完全相同）
+  workflow = injectSeed(workflow, params.seed)
+
+  // 4. 提交任务
   const promptResp = await fetch(`${base}/prompt`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -247,7 +278,7 @@ async function generateWithComfyUI(
         if (!viewResp.ok) throw new Error(`ComfyUI /view 失败: ${viewResp.status}`)
         const blob = await viewResp.blob()
         const url = URL.createObjectURL(blob)
-        return { url, type: 'image' as const, prompt: params.prompt, cleanup: () => URL.revokeObjectURL(url) }
+        return validateMediaResult({ url, type: 'image' as const, prompt: params.prompt, cleanup: () => URL.revokeObjectURL(url) })
       }
     }
   }
@@ -255,6 +286,7 @@ async function generateWithComfyUI(
 }
 
 // 调用 OpenAI 兼容接口生成图片（用于 wan/custom 等供应商）
+// 支持：固定 seed；参考图（image 字段，wan/custom 图生图）——若服务商不支持图生图参数则自动回退为纯 prompt
 async function generateWithOpenAICompatible(
   params: ImageGenerationParams,
   apiUrl: string,
@@ -262,31 +294,63 @@ async function generateWithOpenAICompatible(
   model: string = 'dall-e-3'
 ): Promise<MediaGenerationResult> {
   const baseUrl = apiUrl.replace(/\/+$/, '')
-  const response = await fetch(`${baseUrl}/images/generations`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
+
+  // 参考图 → base64 data URL（云端图生图），供 wan/custom 图生图模型使用
+  let refImage: string | undefined
+  if (params.referenceImageHash) {
+    try {
+      const asset = await getAsset(params.referenceImageHash)
+      if (asset) refImage = await blobToDataURL(asset.blob)
+    } catch {
+      refImage = undefined
+    }
+  }
+
+  const buildBody = (withImage: boolean): Record<string, unknown> => {
+    const body: Record<string, unknown> = {
       model,
       prompt: params.prompt,
       n: 1,
       size: `${params.width || 1024}x${params.height || 1024}`,
       response_format: 'url',
-    }),
-  })
-
-  if (!response.ok) {
-    const error = await response.text()
-    throw new Error(`API error: ${error}`)
+    }
+    if (params.seed != null) body.seed = params.seed
+    if (withImage && refImage) body.image = refImage
+    return body
   }
 
-  const data = await response.json()
-  return {
-    url: data.data?.[0]?.url || data.url || '',
-    type: 'image',
-    prompt: params.prompt,
+  const doRequest = async (body: Record<string, unknown>): Promise<MediaGenerationResult> => {
+    const response = await fetch(`${baseUrl}/images/generations`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(body),
+    })
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw Object.assign(new Error(`API error: ${errorText}`), { status: response.status })
+    }
+    const data = await response.json() as { data?: Array<{ url?: string }>; url?: string }
+    return validateMediaResult({
+      url: data.data?.[0]?.url || data.url || '',
+      type: 'image',
+      prompt: params.prompt,
+    })
+  }
+
+  try {
+    return await doRequest(buildBody(true))
+  } catch (e) {
+    // 图生图参数不被服务商支持（4xx）时，回退为纯 prompt 重试，不阻断生成
+    if (refImage && e instanceof Error && typeof (e as { status?: unknown }).status === 'number') {
+      const status = (e as unknown as { status: number }).status
+      if (status >= 400 && status < 500) {
+        return doRequest(buildBody(false))
+      }
+    }
+    throw e
   }
 }
 
@@ -303,6 +367,7 @@ async function generateVideoWithOpenAICompatible(
   if (params.imageUrl) body.image_url = params.imageUrl
   if (params.duration) body.duration = params.duration
   if (params.motionStrength != null) body.motion_strength = params.motionStrength
+  if (params.seed != null) body.seed = params.seed
 
   const resp = await fetch(`${base}/videos/generations`, {
     method: 'POST',
@@ -317,7 +382,7 @@ async function generateVideoWithOpenAICompatible(
     || (data.url as string | undefined)
     || (data.video_url as string | undefined)
     || (data.output as Array<{ url?: string }> | undefined)?.[0]?.url
-  if (syncUrl) return { url: syncUrl, type: 'video', prompt: params.prompt }
+  if (syncUrl) return validateMediaResult({ url: syncUrl, type: 'video', prompt: params.prompt })
 
   // 异步任务：轮询
   const taskId = (data.task_id || data.id || data.request_id) as string | undefined
@@ -336,7 +401,7 @@ async function generateVideoWithOpenAICompatible(
       const url = (pd.video_url as string | undefined)
         || (pd.output as Array<{ url?: string }> | undefined)?.[0]?.url
         || (pd.result as { url?: string } | undefined)?.url
-      if (url) return { url, type: 'video', prompt: params.prompt }
+      if (url) return validateMediaResult({ url, type: 'video', prompt: params.prompt })
       throw new Error('视频生成完成但未返回 url')
     }
     if (['failed', 'error'].includes(status)) {
@@ -368,12 +433,12 @@ async function generateAudioWithOpenAICompatible(
 
   const blob = await resp.blob()
   const url = URL.createObjectURL(blob)
-  return {
+  return validateMediaResult({
     url,
     type: 'audio' as const,
     prompt: params.prompt,
     cleanup: () => URL.revokeObjectURL(url),
-  }
+  })
 }
 
 // 生成音频（音乐/音效/语音）
@@ -470,6 +535,28 @@ export function getMediaProviderConfig(): MediaProviderConfig | null {
 
 export async function saveMediaProviderConfig(config: MediaProviderConfig) {
   localStorage.setItem('subsilicon_media_provider', JSON.stringify(await encryptApiKeyField(config)))
+}
+
+// ---------- 全局画面风格锁 ----------
+
+const GLOBAL_STYLE_KEY = 'subsilicon-global-style'
+
+/** 读取全局画面风格描述（创作助手设置中配置，生成图片/视频时统一注入，保持整部作品画面风格一致） */
+export function getGlobalStylePrompt(): string {
+  try {
+    return localStorage.getItem(GLOBAL_STYLE_KEY) || ''
+  } catch {
+    return ''
+  }
+}
+
+/** 保存全局画面风格描述 */
+export function saveGlobalStylePrompt(style: string): void {
+  try {
+    localStorage.setItem(GLOBAL_STYLE_KEY, style)
+  } catch {
+    // ignore
+  }
 }
 
 // ---------- 任务路由（image / video / audio） ----------

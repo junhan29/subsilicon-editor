@@ -16,6 +16,10 @@ import {
   generateMedia,
   generateAudio,
   generateMediaForTask,
+  validateMediaResult,
+  blobToDataURL,
+  getGlobalStylePrompt,
+  saveGlobalStylePrompt,
   type MediaProviderConfig,
 } from '../ai/services/media-generation-service'
 import { encryptAiKey } from '../ai/ai-key-vault'
@@ -150,5 +154,96 @@ describe('generateMediaForTask（任务路由）', () => {
     await expect(
       generateMediaForTask('image', { prompt: 'x' })
     ).rejects.toThrow('未配置图片生成服务商')
+  })
+})
+
+describe('seed 支持', () => {
+  it('wan 图片生成请求携带 seed', async () => {
+    await generateMedia({ prompt: 'a cat', seed: 42 }, wanProvider)
+    const init = mockFetch.mock.calls[0][1] as RequestInit
+    const body = JSON.parse(String(init.body)) as Record<string, unknown>
+    expect(body.seed).toBe(42)
+  })
+
+  it('未传 seed 时不携带 seed 字段', async () => {
+    await generateMedia({ prompt: 'a cat' }, wanProvider)
+    const init = mockFetch.mock.calls[0][1] as RequestInit
+    const body = JSON.parse(String(init.body)) as Record<string, unknown>
+    expect('seed' in body).toBe(false)
+  })
+
+  it('wan 视频生成请求携带 seed', async () => {
+    await generateMedia({ prompt: 'a clip', duration: 5, seed: 7 }, wanProvider)
+    const init = mockFetch.mock.calls[0][1] as RequestInit
+    const body = JSON.parse(String(init.body)) as Record<string, unknown>
+    expect(body.seed).toBe(7)
+  })
+})
+
+describe('参考图云端注入（wan/custom 图生图）', () => {
+  it('有参考图时 body 携带 image（base64 data URL）', async () => {
+    const { getAsset } = await import('../local-db')
+    vi.mocked(getAsset).mockResolvedValueOnce({
+      hash: 'abc',
+      name: 'ref.png',
+      type: 'image/png',
+      size: 10,
+      blob: new Blob(['fake-img'], { type: 'image/png' }),
+      createdAt: 1,
+    } as never)
+    await generateMedia({ prompt: 'a cat', referenceImageHash: 'abc' }, wanProvider)
+    const init = mockFetch.mock.calls[0][1] as RequestInit
+    const body = JSON.parse(String(init.body)) as Record<string, unknown>
+    expect(body.image).toContain('data:image/png;base64,')
+  })
+
+  it('服务商不支持 image 参数（400）时回退纯 prompt 重试', async () => {
+    const { getAsset } = await import('../local-db')
+    vi.mocked(getAsset).mockResolvedValueOnce({
+      hash: 'abc',
+      name: 'ref.png',
+      type: 'image/png',
+      size: 10,
+      blob: new Blob(['fake-img'], { type: 'image/png' }),
+      createdAt: 1,
+    } as never)
+    mockFetch
+      .mockResolvedValueOnce(mockResponse({ error: { message: 'image not supported' } }, { ok: false, status: 400 }))
+      .mockResolvedValueOnce(mockResponse({ data: [{ url: 'https://img.example.com/retry.png' }] }))
+    const res = await generateMedia({ prompt: 'a cat', referenceImageHash: 'abc' }, wanProvider)
+    expect(res.url).toBe('https://img.example.com/retry.png')
+    const init2 = mockFetch.mock.calls[1][1] as RequestInit
+    const body2 = JSON.parse(String(init2.body)) as Record<string, unknown>
+    expect('image' in body2).toBe(false)
+  })
+
+  it('无参考图时不携带 image 字段', async () => {
+    await generateMedia({ prompt: 'a cat' }, wanProvider)
+    const init = mockFetch.mock.calls[0][1] as RequestInit
+    const body = JSON.parse(String(init.body)) as Record<string, unknown>
+    expect('image' in body).toBe(false)
+  })
+})
+
+describe('validateMediaResult / blobToDataURL / 全局画面风格', () => {
+  it('url 为空时抛可读错误', () => {
+    expect(() => validateMediaResult({ url: '', type: 'image', prompt: 'x' })).toThrow('生成结果为空')
+  })
+
+  it('url 格式异常时抛错', () => {
+    expect(() => validateMediaResult({ url: 'not-a-url', type: 'image', prompt: 'x' })).toThrow('地址格式异常')
+  })
+
+  it('blobToDataURL 返回 base64 data URL', async () => {
+    const url = await blobToDataURL(new Blob(['hi'], { type: 'text/plain' }))
+    expect(url).toContain('data:text/plain;base64,')
+  })
+
+  it('全局画面风格存取', () => {
+    expect(getGlobalStylePrompt()).toBe('')
+    saveGlobalStylePrompt('赛博朋克城市夜景')
+    expect(getGlobalStylePrompt()).toBe('赛博朋克城市夜景')
+    saveGlobalStylePrompt('')
+    expect(getGlobalStylePrompt()).toBe('')
   })
 })

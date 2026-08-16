@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Accessibility, ArrowLeft, Cpu, Globe, Info, Key, Monitor, Moon, Sparkles, Sun } from 'lucide-react'
 import { Toggle } from '@editor/components/ui/toggle'
 import { refreshAiConfig } from '@editor/lib/ai'
+import { getGlobalStylePrompt, saveGlobalStylePrompt } from '@editor/lib/ai/services/media-generation-service'
 import { getDefaultModel, getModelsForProvider } from '@editor/lib/ai/model-presets'
 import { decryptAiConfig } from '@editor/lib/ai/ai-key-vault'
 import { saveAiConfigEncrypted } from '@editor/lib/ai/ai-config-store'
@@ -40,6 +41,9 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
     }
   })
   const [showApiKey, setShowApiKey] = useState(false)
+
+  // 全局画面风格（一致性锁）：生成图片/视频时统一注入
+  const [styleInput, setStyleInput] = useState(() => getGlobalStylePrompt())
 
   // 主题状态：跟随全局主题切换
   const [theme, setThemeState] = useState<Theme>(() => getCurrentTheme())
@@ -287,6 +291,22 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
                             <option key={m.id} value={m.id}>{m.name}</option>
                           ))}
                         </select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-[10px] text-[hsl(var(--muted-foreground))] font-medium">全局画面风格（一致性锁）</label>
+                        <textarea
+                          value={styleInput}
+                          onChange={(e) => {
+                            setStyleInput(e.target.value)
+                            saveGlobalStylePrompt(e.target.value)
+                          }}
+                          placeholder="如：赛博朋克城市夜景，霓虹灯，蓝紫调，电影级光影，高细节"
+                          className="w-full h-16 text-xs rounded border border-[hsl(var(--border))] bg-[hsl(var(--input))] px-2 py-1.5 text-[hsl(var(--foreground))] resize-none"
+                        />
+                        <p className="text-[10px] text-[hsl(var(--muted-foreground))] leading-relaxed">
+                          生成图片/视频时自动注入该风格描述，让整部作品的画面风格保持一致。留空则不注入。
+                        </p>
                       </div>
                     </div>
                   </>
