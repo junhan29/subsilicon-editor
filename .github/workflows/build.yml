@@ -111,10 +111,10 @@ jobs:
           ssh-keyscan -p "$SSH_PORT" -H "$SERVER_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
 
           echo "Creating version directory on server..."
-          ssh -p "$SSH_PORT" "$SERVER_USER@$SERVER_HOST" "mkdir -p $VERSION_DIR"
+          ssh -p "$SSH_PORT" -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$SERVER_USER@$SERVER_HOST" "mkdir -p $VERSION_DIR"
 
           echo "Downloading release assets on server via gh-proxy.com mirror..."
-          ssh -p "$SSH_PORT" "$SERVER_USER@$SERVER_HOST" "
+          ssh -p "$SSH_PORT" -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$SERVER_USER@$SERVER_HOST" "
             cd $VERSION_DIR
             FILES=(
               'SubSilicon.Editor-${VERSION}-macos-arm64.dmg'
@@ -127,23 +127,47 @@ jobs:
               'SubSilicon.Editor-${VERSION}-linux-x64.tar.gz'
               'SubSilicon.Editor-${VERSION}-linux-x86_64.AppImage'
             )
+            FAILED=0
             for f in \"\${FILES[@]}\"; do
-              if [ -f \"\$f\" ] || [ -f \"\${f/.Editor-/ Editor-}\" ]; then
+              g=\"\${f/.Editor-/ Editor-}\"
+              # 幂等：仅当文件存在且非空时才跳过，避免上次断连遗留的不完整文件被误判为已存在
+              if [ -s \"\$g\" ] || [ -s \"\$f\" ]; then
                 echo \"Skipping \$f (already exists)\"
                 continue
               fi
-              echo \"Downloading \$f...\"
-              curl -sL --max-time 300 -o \"\$f\" \"${MIRROR}/\$f\"
-              if [ \$? -eq 0 ] && [ -s \"\$f\" ]; then
-                echo \"  Done: \$(ls -lh \$f | awk '{print \$5}')\"
-              else
-                echo \"  Failed: \$f\"
+              ok=0
+              for i in 1 2 3 4 5 6; do
+                echo \"Downloading \$f (attempt \$i)...\"
+                rm -f \"\$f\"
+                if curl -sL --max-time 600 -o \"\$f\" \"${MIRROR}/\$f\" && [ -s \"\$f\" ]; then
+                  # 与远端 Content-Length 比对，防止下载不完整（清理行尾 \r 避免误判）
+                  expected=\$(curl -sI --max-time 60 \"${MIRROR}/\$f\" | awk 'tolower(\$1)==\"content-length:\" {gsub(/\\r/,\"\",\$2); print \$2; exit}')
+                  actual=\$(stat -c%s \"\$f\" 2>/dev/null || echo 0)
+                  if [ -z \"\$expected\" ] || [ \"\$expected\" = \"\$actual\" ]; then
+                    echo \"  Done: \$f (\$(ls -lh \$f | awk '{print \$5}'))\"
+                    ok=1
+                    break
+                  fi
+                  echo \"  Size mismatch (expected \$expected, got \$actual), retrying...\"
+                else
+                  echo \"  Download failed, retrying...\"
+                fi
+                rm -f \"\$f\"
+                sleep 3
+              done
+              if [ \"\$ok\" -ne 1 ]; then
+                echo \"  FAILED after retries: \$f\"
+                FAILED=1
               fi
             done
+            if [ \"\$FAILED\" -eq 1 ]; then
+              echo \"Some assets failed to download, aborting to avoid publishing bad metadata\"
+              exit 1
+            fi
           "
 
           echo "Renaming files (dot to space in product name)..."
-          ssh -p "$SSH_PORT" "$SERVER_USER@$SERVER_HOST" "
+          ssh -p "$SSH_PORT" -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$SERVER_USER@$SERVER_HOST" "
             cd $VERSION_DIR
             for f in SubSilicon.Editor-*; do
               [ -f \"\$f\" ] && mv -v \"\$f\" \"\${f/.Editor-/ Editor-}\" || true
@@ -151,7 +175,7 @@ jobs:
           "
 
           echo "Generating update metadata yml files..."
-          ssh -p "$SSH_PORT" "$SERVER_USER@$SERVER_HOST" "
+          ssh -p "$SSH_PORT" -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$SERVER_USER@$SERVER_HOST" "
             cd $VERSION_DIR
 
             MAC_X64_ZIP_SHA=\$(sha512sum \"SubSilicon Editor-${VERSION}-macos-x64.zip\" | awk '{print \$1}')
@@ -199,7 +223,7 @@ jobs:
           "
 
           echo "Creating standalone symlink..."
-          ssh -p "$SSH_PORT" "$SERVER_USER@$SERVER_HOST" "
+          ssh -p "$SSH_PORT" -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$SERVER_USER@$SERVER_HOST" "
             STANDALONE_DIR=\"/var/www/subsilicon/.next/standalone/public/releases\"
             if [ -d \"\$STANDALONE_DIR\" ]; then
               ln -sf \"$VERSION_DIR\" \"\$STANDALONE_DIR/v${VERSION}\"
@@ -208,7 +232,7 @@ jobs:
           "
 
           echo "Copying root yml files and restarting PM2..."
-          ssh -p "$SSH_PORT" "$SERVER_USER@$SERVER_HOST" "
+          ssh -p "$SSH_PORT" -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$SERVER_USER@$SERVER_HOST" "
             cp $VERSION_DIR/latest-mac.yml $RELEASE_DIR/latest-mac.yml
             cp $VERSION_DIR/latest.yml $RELEASE_DIR/latest.yml
             pm2 restart subsilicon 2>&1 || true
@@ -216,7 +240,7 @@ jobs:
           "
 
           echo "=== Verification ==="
-          ssh -p "$SSH_PORT" "$SERVER_USER@$SERVER_HOST" "ls -lh $VERSION_DIR/"
+          ssh -p "$SSH_PORT" -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$SERVER_USER@$SERVER_HOST" "ls -lh $VERSION_DIR/"
           echo "=== Sync complete ==="
 
       - uses: geekyeggo/delete-artifact@v5
