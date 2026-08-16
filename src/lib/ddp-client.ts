@@ -1,3 +1,25 @@
+/** DDP 1.1 类型化统计（按作品类型；旧字段保留向后兼容） */
+export interface DDPWorkStats {
+  // 互动叙事
+  nodeCount?: number
+  endingCount?: number
+  estimatedReadTime?: number
+  // 小说
+  wordCount?: number
+  chapterCount?: number
+  paidChapterCount?: number
+  // 视频
+  durationSec?: number
+  clipCount?: number
+  paidClipCount?: number
+  previewSeconds?: number
+  // 漫画
+  panelCount?: number
+  pageCount?: number
+  /** 类型自定义统计（透传） */
+  [key: string]: unknown
+}
+
 export interface DDPSummary {
   workId: string
   title: string
@@ -9,11 +31,9 @@ export interface DDPSummary {
   monetizationType: 'free' | 'paid' | 'donation'
   price?: number
   currency?: string
-  stats?: {
-    nodeCount: number
-    endingCount: number
-    estimatedReadTime?: number
-  }
+  /** DDP 1.1：作品类型（旧墙无此字段时缺省） */
+  workType?: string
+  stats?: DDPWorkStats
   publishedAt: number
   directoryId: string
   directoryName: string
@@ -39,12 +59,7 @@ export interface DDPWorkDetail {
   }
   coverImage: string
   screenshots?: string[]
-  stats: {
-    nodeCount: number
-    endingCount: number
-    estimatedReadTime?: number
-    wordCount?: number
-  }
+  stats: DDPWorkStats
   monetization: {
     type: 'free' | 'paid' | 'donation'
     price?: number

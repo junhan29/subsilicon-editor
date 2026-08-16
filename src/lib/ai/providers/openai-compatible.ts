@@ -5,9 +5,13 @@ import {
   parseRemoteCompletionResponse,
   runStrictConnectivityTest,
 } from '../request-builder'
+import { decryptAiKey } from '../ai-key-vault'
 
 export class OpenAiCompatibleProvider extends BaseAiProvider {
   readonly type = 'remote' as const
+
+  private plainConfig: AiProviderConfig | null = null
+  private keyPromise: Promise<string> | null = null
 
   constructor(
     public readonly id: string,
@@ -21,6 +25,22 @@ export class OpenAiCompatibleProvider extends BaseAiProvider {
     return !!this.config.apiKey && this.config.enabled && !!this.config.model
   }
 
+  /**
+   * 解析 apiKey 为明文（localStorage 中为 AES-256 加密值，兼容旧明文）。
+   * 解密结果缓存；解密失败视为无 Key。
+   */
+  private async getPlainConfig(): Promise<AiProviderConfig> {
+    if (this.plainConfig) return this.plainConfig
+    if (!this.keyPromise) {
+      this.keyPromise = decryptAiKey(this.config.apiKey || '').then((apiKey) => {
+        this.plainConfig = { ...this.config, apiKey }
+        return apiKey
+      })
+    }
+    await this.keyPromise
+    return this.plainConfig!
+  }
+
   /** 严格同源连通性测试（与业务调用共用请求构建 / 解析逻辑） */
   async testConnectivity(): Promise<{
     ok: boolean
@@ -29,11 +49,11 @@ export class OpenAiCompatibleProvider extends BaseAiProvider {
     error?: string
     content?: string
   }> {
-    return runStrictConnectivityTest(this.config)
+    return runStrictConnectivityTest(await this.getPlainConfig())
   }
 
   async generate(options: AiRequestOptions): Promise<string> {
-    const req = buildChatCompletionRequest(this.config, options)
+    const req = buildChatCompletionRequest(await this.getPlainConfig(), options)
     const response = await fetch(req.url, {
       method: req.method,
       headers: req.headers,
@@ -59,7 +79,7 @@ export class OpenAiCompatibleProvider extends BaseAiProvider {
   }
 
   async *generateStream(options: AiRequestOptions): AsyncGenerator<string, void, unknown> {
-    const req = buildChatCompletionRequest(this.config, options, { stream: true })
+    const req = buildChatCompletionRequest(await this.getPlainConfig(), options, { stream: true })
     const response = await fetch(req.url, {
       method: req.method,
       headers: req.headers,

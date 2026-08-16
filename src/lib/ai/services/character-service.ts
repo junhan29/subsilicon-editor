@@ -1,5 +1,5 @@
 import type { AiCharacter, AiCharacterResult, AiConfig, AiGenerateResult } from '../types'
-import { callAi } from '../provider-registry'
+import { callAiForTask } from '../provider-registry'
 
 export const CHARACTER_DETAIL_SYSTEM_PROMPT = `你是一个专业的角色设计师。请根据角色名称、性格特点和故事类型，生成一个详细的角色设定。输出必须是严格的 JSON 格式，不要包含任何 markdown 标记或额外文字。
 
@@ -35,14 +35,13 @@ export async function generateCharacterSimple(
   const systemPrompt = `请根据以下信息生成一个角色的详细描述，包括外貌、性格、背景故事，约 150 字：`
   const userPrompt = `角色名：${name}\n性格特点：${personality}`
 
-  const result = await callAi(
+  const result = await callAiForTask('text',
     {
       systemPrompt,
       userPrompt,
       temperature: 0.7,
       maxTokens: 300,
-    },
-    config
+    }
   )
 
   return { result }
@@ -56,14 +55,13 @@ export async function generateCharacterDetail(
 ): Promise<AiCharacterResult> {
   const userPrompt = `角色名：${name}\n性格特点：${personality}\n故事类型：${genre}`
 
-  const rawResult = await callAi(
+  const rawResult = await callAiForTask('text',
     {
       systemPrompt: CHARACTER_DETAIL_SYSTEM_PROMPT,
       userPrompt,
       temperature: 0.7,
       maxTokens: 800,
-    },
-    config
+    }
   )
 
   try {

@@ -3,6 +3,8 @@ import { Accessibility, ArrowLeft, Cpu, Globe, Info, Key, Monitor, Moon, Sparkle
 import { Toggle } from '@editor/components/ui/toggle'
 import { refreshAiConfig } from '@editor/lib/ai'
 import { getDefaultModel, getModelsForProvider } from '@editor/lib/ai/model-presets'
+import { decryptAiConfig } from '@editor/lib/ai/ai-key-vault'
+import { saveAiConfigEncrypted } from '@editor/lib/ai/ai-config-store'
 import { useAccessibilityStore } from '@editor/stores/accessibility-store'
 
 interface SettingsPageProps {
@@ -47,10 +49,29 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
   const setSimpleShortcuts = useAccessibilityStore((s) => s.setSimpleShortcuts)
   const setLongFeedback = useAccessibilityStore((s) => s.setLongFeedback)
 
+  // 挂载时解密回显 apiKey（落盘为密文，输入框需明文；兼容旧明文数据）
   useEffect(() => {
-    const config = { ...aiConfig, enabled: aiEnabled }
-    localStorage.setItem('subsilicon_ai_config', JSON.stringify(config))
-    refreshAiConfig()
+    let cancelled = false
+    ;(async () => {
+      try {
+        const saved = localStorage.getItem('subsilicon_ai_config')
+        if (!saved) return
+        const decrypted = await decryptAiConfig(JSON.parse(saved))
+        if (!cancelled) setAiConfig((prev) => ({ ...prev, ...decrypted }))
+      } catch { /* ignore */ }
+    })()
+    return () => { cancelled = true }
+  }, [])
+
+  // 保存（落盘前 AES-256 加密全部 apiKey）
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      const config = { ...aiConfig, enabled: aiEnabled }
+      await saveAiConfigEncrypted(config)
+      if (!cancelled) refreshAiConfig()
+    })()
+    return () => { cancelled = true }
   }, [aiConfig, aiEnabled])
 
   const updateProvider = (provider: string) => {
@@ -203,6 +224,9 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
                             {showApiKey ? '隐藏' : '显示'}
                           </button>
                         </div>
+                        <p className="text-[10px] text-slate-500 leading-relaxed">
+                          Key 加密存储在本机，不上传服务器。若更换浏览器或屏幕分辨率变化导致无法识别，请重新填写。
+                        </p>
                       </div>
 
                       <div className="space-y-2">

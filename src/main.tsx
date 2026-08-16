@@ -5,6 +5,7 @@ import { NovelEditor } from './components/editor/novel-editor'
 import { VideoEditor } from './components/editor/video-editor'
 import { ComicEditor } from './components/editor/comic-editor'
 import { ProjectManager } from './components/project-manager'
+import { BoothWorkbench } from './components/booth/booth-workbench'
 import { SettingsPage } from './components/settings-page'
 import { PanelWindow } from './components/editor/panel-window'
 import { ErrorBoundary } from './components/error-boundary'
@@ -52,7 +53,7 @@ function logError(type: ErrorLogEntry['type'], message: string, stack?: string) 
 }
 
 function App() {
-  const [appMode, setAppMode] = useState<'project-manager' | 'editor' | 'settings' | 'panel'>('project-manager')
+  const [appMode, setAppMode] = useState<'project-manager' | 'editor' | 'booth' | 'settings' | 'panel'>('project-manager')
   const [currentWork, setCurrentWork] = useState<StoredWork | null>(null)
   const [showTour, setShowTour] = useState(false)
 
@@ -191,6 +192,11 @@ function App() {
     setCurrentWork(null)
   }
 
+  const handleOpenBooth = () => {
+    setAppMode('booth')
+    setCurrentWork(null)
+  }
+
   // 按作品类型获取编辑器组件：互动叙事用 StoryCanvas，其他类型用对应编辑器
   const workType = currentWork
     ? currentWork.workType || getDocumentFromWork(currentWork).workType
@@ -204,7 +210,11 @@ function App() {
             onOpenProject={handleOpenProject}
             onNewProject={handleNewProject}
             onOpenSettings={() => setAppMode('settings')}
+            onOpenBooth={handleOpenBooth}
           />
+        )}
+        {appMode === 'booth' && (
+          <BoothWorkbench onBack={handleBackToProjects} />
         )}
         {appMode === 'editor' && currentWork && workType === 'novel' && (
           <NovelEditor

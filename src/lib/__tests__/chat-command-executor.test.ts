@@ -3,6 +3,7 @@ import {
   type AiAction,
   type EditorCanvasCallbacks,
   type MediaGenerationRequest,
+  describeAiActions,
   executeAiActions,
   parseAiCommands,
   parseAllAiCommands,
@@ -180,5 +181,52 @@ describe('executeAiActions', () => {
     ]
     await executeAiActions(actions, callbacks)
     expect(callbacks.onNodeSelect).toHaveBeenCalledWith('node-1')
+  })
+})
+
+describe('describeAiActions', () => {
+  it('生成节点类型的中文描述', () => {
+    const actions: AiAction[] = [
+      { type: 'createNode', payload: { nodeType: 'dialogue', data: { text: '你好' } } },
+      { type: 'createNode', payload: { nodeType: 'narration' } },
+    ]
+    const previews = describeAiActions(actions)
+    expect(previews[0].description).toContain('创建')
+    expect(previews[0].description).toContain('对话')
+    expect(previews[0].description).toContain('你好')
+    expect(previews[1].description).toContain('旁白')
+  })
+
+  it('角色、媒体、保存、撤销等动作均有可读描述', () => {
+    const actions: AiAction[] = [
+      { type: 'addCharacter', payload: { name: '小明', gender: '男' } },
+      { type: 'requestMediaGeneration', payload: { mediaType: 'image', prompt: '黄昏下的城堡' } },
+      { type: 'saveWork', payload: {} },
+      { type: 'undo', payload: {} },
+      { type: 'previewWork', payload: {} },
+    ]
+    const previews = describeAiActions(actions)
+    expect(previews[0].description).toContain('创建角色 小明')
+    expect(previews[0].description).toContain('男')
+    expect(previews[1].description).toContain('生成图片')
+    expect(previews[1].description).toContain('黄昏下的城堡')
+    expect(previews[2].description).toBe('保存当前作品')
+    expect(previews[3].description).toBe('撤销上一步操作')
+    expect(previews[4].description).toBe('打开作品预览')
+  })
+
+  it('长文本被截断', () => {
+    const actions: AiAction[] = [
+      { type: 'requestMediaGeneration', payload: { mediaType: 'video', prompt: 'a'.repeat(100) } },
+    ]
+    const previews = describeAiActions(actions)
+    expect(previews[0].description.length).toBeLessThan(60)
+    expect(previews[0].description.endsWith('…')).toBe(true)
+  })
+
+  it('未知操作类型返回占位描述', () => {
+    const actions: AiAction[] = [{ type: 'bogus' as any, payload: {} }]
+    const previews = describeAiActions(actions)
+    expect(previews[0].description).toContain('未知操作')
   })
 })

@@ -1,6 +1,9 @@
 import type { AiConfig } from '../../ai/types'
-import { callAi } from '../../ai/provider-registry'
+import { callAiForTask } from '../../ai/provider-registry'
 import { getAsset } from '../../local-db'
+import { getTaskSkillPrompt, resolveMediaProviderForTask, type MediaTaskType } from '../task-routing'
+import { injectPrompt, injectReferenceImage, type ComfyWorkflow } from '../comfyui-workflow'
+import { encryptApiKeyField, decryptApiKeyField } from '../ai-key-vault'
 import type { ComicScene, StoryCharacter } from '@editor/types/editor'
 
 export interface ImageGenerationParams {
@@ -21,9 +24,17 @@ export interface VideoGenerationParams {
   motionStrength?: number
 }
 
+export interface AudioGenerationParams {
+  prompt: string
+  /** 人声/音色提示（可选，部分 API 支持） */
+  voice?: string
+  /** 时长秒数（可选，部分 API 支持） */
+  duration?: number
+}
+
 export interface MediaGenerationResult {
   url: string
-  type: 'image' | 'video'
+  type: 'image' | 'video' | 'audio'
   prompt: string
   cleanup?: () => void // 用于释放 blob URL 内存
 }
@@ -173,9 +184,9 @@ async function generateWithComfyUI(
     throw new Error('ComfyUI 需要在创境设置中粘贴工作流 JSON（API 格式）。请在 ComfyUI 里 Save (API Format) 后粘贴。')
   }
 
-  let workflow: Record<string, { class_type: string; inputs: Record<string, unknown> }>
+  let workflow: ComfyWorkflow
   try {
-    workflow = JSON.parse(workflowJson)
+    workflow = JSON.parse(workflowJson) as ComfyWorkflow
   } catch {
     throw new Error('工作流 JSON 解析失败，请确认是 ComfyUI 的 API 格式输出')
   }
@@ -192,30 +203,12 @@ async function generateWithComfyUI(
       if (!upResp.ok) throw new Error(`ComfyUI 上传参考图失败: ${upResp.status}`)
       const upData = await upResp.json() as { name: string; subfolder?: string }
       const imageName = upData.subfolder ? `${upData.subfolder}/${upData.name}` : upData.name
-
-      // 找第一个 LoadImage 节点注入参考图
-      let injected = false
-      for (const node of Object.values(workflow)) {
-        if (node.class_type === 'LoadImage' && !injected) {
-          node.inputs.image = imageName
-          injected = true
-        }
-      }
-      if (!injected) {
-        throw new Error('工作流中未找到 LoadImage 节点，无法注入参考图。请在工作流中添加 LoadImage 节点。')
-      }
+      workflow = injectReferenceImage(workflow, imageName)
     }
   }
 
-  // 2. 注入 prompt：优先找 title 含 positive/正向 的 CLIPTextEncode，否则注入第一个 CLIPTextEncode
-  const clipNodes = Object.values(workflow).filter((n) => n.class_type === 'CLIPTextEncode')
-  if (clipNodes.length > 0) {
-    const positive = clipNodes.find((n) => {
-      const t = n.inputs.title as string | undefined
-      return t && (/positive|正向/i.test(t))
-    }) || clipNodes[0]
-    positive.inputs.text = params.prompt
-  }
+  // 2. 注入 prompt（优先 title 含 positive/正向 的 CLIPTextEncode）
+  workflow = injectPrompt(workflow, params.prompt)
 
   // 3. 提交任务
   const promptResp = await fetch(`${base}/prompt`, {
@@ -354,36 +347,88 @@ async function generateVideoWithOpenAICompatible(
   throw new Error('视频生成超时（5 分钟）')
 }
 
+// 调用 OpenAI 兼容接口生成音乐/音效/语音（用于 wan/custom 等供应商）
+// 端点：POST {base}/audio/speech，返回音频字节流
+async function generateAudioWithOpenAICompatible(
+  params: AudioGenerationParams,
+  apiUrl: string,
+  apiKey: string,
+  model: string = 'gpt-4o-mini-tts'
+): Promise<MediaGenerationResult> {
+  const base = apiUrl.replace(/\/+$/, '')
+  const body: Record<string, unknown> = { model, input: params.prompt }
+  if (params.voice) body.voice = params.voice
+
+  const resp = await fetch(`${base}/audio/speech`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify(body),
+  })
+  if (!resp.ok) throw new Error(`音频 API 错误: ${await resp.text()}`)
+
+  const blob = await resp.blob()
+  const url = URL.createObjectURL(blob)
+  return {
+    url,
+    type: 'audio' as const,
+    prompt: params.prompt,
+    cleanup: () => URL.revokeObjectURL(url),
+  }
+}
+
+// 生成音频（音乐/音效/语音）
+export async function generateAudio(
+  params: AudioGenerationParams,
+  provider: MediaProviderConfig
+): Promise<MediaGenerationResult> {
+  const resolved = await decryptApiKeyField(provider)
+  if (resolved.type === 'comfyui') {
+    throw new Error('ComfyUI 不支持音频生成，请选择 wan/custom 类型服务商')
+  }
+  if (resolved.type === 'openai' || resolved.type === 'stability') {
+    // OpenAI/Stability 走各自官方音频端点；此处统一走 OpenAI 兼容格式
+    return generateAudioWithOpenAICompatible(params, resolved.apiUrl || 'https://api.openai.com/v1', resolved.apiKey, resolved.model)
+  }
+  if (resolved.type === 'wan' || resolved.type === 'custom') {
+    if (!resolved.apiUrl || !resolved.apiKey) {
+      throw new Error(`${resolved.type} 供应商需要配置 apiUrl 和 apiKey`)
+    }
+    return generateAudioWithOpenAICompatible(params, resolved.apiUrl, resolved.apiKey, resolved.model)
+  }
+  throw new Error(`Unsupported provider type: ${resolved.type}`)
+}
+
 // 主生成函数
 export async function generateMedia(
   params: ImageGenerationParams | VideoGenerationParams,
   provider: MediaProviderConfig
 ): Promise<MediaGenerationResult> {
   const isVideo = 'imageUrl' in params || 'duration' in params
+  const resolved = await decryptApiKeyField(provider)
   // 视频生成仅支持 wan/custom（云端视频 API）
-  if (isVideo && provider.type !== 'wan' && provider.type !== 'custom') {
+  if (isVideo && resolved.type !== 'wan' && resolved.type !== 'custom') {
     throw new Error('视频生成仅支持 wan/custom 类型服务商（云端视频 API），请在创境设置中配置')
   }
 
-  switch (provider.type) {
+  switch (resolved.type) {
     case 'openai':
-      return generateWithOpenAI(params as ImageGenerationParams, provider.apiKey, provider.model)
+      return generateWithOpenAI(params as ImageGenerationParams, resolved.apiKey, resolved.model)
     case 'stability':
-      return generateWithStability(params as ImageGenerationParams, provider.apiKey, provider.model)
+      return generateWithStability(params as ImageGenerationParams, resolved.apiKey, resolved.model)
     case 'comfyui':
-      return generateWithComfyUI(params as ImageGenerationParams, provider.apiUrl || 'http://localhost:8188', provider.workflowJson)
+      return generateWithComfyUI(params as ImageGenerationParams, resolved.apiUrl || 'http://localhost:8188', resolved.workflowJson)
     case 'wan':
     case 'custom': {
-      if (!provider.apiUrl || !provider.apiKey) {
-        throw new Error(`${provider.type} 供应商需要配置 apiUrl 和 apiKey`)
+      if (!resolved.apiUrl || !resolved.apiKey) {
+        throw new Error(`${resolved.type} 供应商需要配置 apiUrl 和 apiKey`)
       }
       if (isVideo) {
-        return generateVideoWithOpenAICompatible(params as VideoGenerationParams, provider.apiUrl, provider.apiKey, provider.model)
+        return generateVideoWithOpenAICompatible(params as VideoGenerationParams, resolved.apiUrl, resolved.apiKey, resolved.model)
       }
-      return generateWithOpenAICompatible(params as ImageGenerationParams, provider.apiUrl, provider.apiKey, provider.model)
+      return generateWithOpenAICompatible(params as ImageGenerationParams, resolved.apiUrl, resolved.apiKey, resolved.model)
     }
     default:
-      throw new Error(`Unsupported provider type: ${provider.type}`)
+      throw new Error(`Unsupported provider type: ${resolved.type}`)
   }
 }
 
@@ -405,9 +450,8 @@ export async function optimizePrompt(
 
   const userPrompt = `类型：${type === 'image' ? '图片生成' : '视频生成'}\n风格：${style || '默认'}\n描述：${basePrompt}\n\n请优化为高质量提示词。`
 
-  return callAi(
-    { systemPrompt, userPrompt, temperature: 0.7, maxTokens: 500 },
-    config
+  return callAiForTask('text',
+    { systemPrompt, userPrompt, temperature: 0.7, maxTokens: 500 }
   )
 }
 
@@ -424,6 +468,41 @@ export function getMediaProviderConfig(): MediaProviderConfig | null {
   return null
 }
 
-export function saveMediaProviderConfig(config: MediaProviderConfig) {
-  localStorage.setItem('subsilicon_media_provider', JSON.stringify(config))
+export async function saveMediaProviderConfig(config: MediaProviderConfig) {
+  localStorage.setItem('subsilicon_media_provider', JSON.stringify(await encryptApiKeyField(config)))
+}
+
+// ---------- 任务路由（image / video / audio） ----------
+
+/** 按任务取媒体生成配置：路由指定 > 旧版单一配置回退（仅 image/video） */
+export function getMediaProviderConfigForTask(task: MediaTaskType): MediaProviderConfig | null {
+  return resolveMediaProviderForTask(task, getMediaProviderConfig)
+}
+
+/**
+ * 按任务路由生成媒体（image / video / audio 槽）。
+ * 使用该任务槽配置的服务商；槽未配置时回退旧版媒体配置（仅 image/video）。
+ * 槽的技能 prompt（skillPrompt）会自动拼接在生成 prompt 前。
+ */
+export async function generateMediaForTask(
+  task: MediaTaskType,
+  params: ImageGenerationParams | VideoGenerationParams | AudioGenerationParams
+): Promise<MediaGenerationResult> {
+  const provider = getMediaProviderConfigForTask(task)
+  if (!provider) {
+    throw new Error(
+      task === 'image' ? '未配置图片生成服务商，请在创境设置中配置'
+      : task === 'video' ? '未配置视频生成服务商，请在创境设置中配置'
+      : '未配置音乐/音效生成服务商，请在创境设置中配置'
+    )
+  }
+  const skill = getTaskSkillPrompt(task)
+  const merged = skill
+    ? { ...params, prompt: `${skill}。${params.prompt}` }
+    : params
+
+  if (task === 'audio') {
+    return generateAudio(merged as AudioGenerationParams, provider)
+  }
+  return generateMedia(merged, provider)
 }

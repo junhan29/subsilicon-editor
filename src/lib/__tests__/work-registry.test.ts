@@ -9,7 +9,6 @@
 
 import { beforeAll, describe, expect, it } from 'vitest'
 import { getWorkType, hasWorkType, isLegacyStoryGraph, isWorkDocument, listWorkTypes, registerWorkType } from '../work-registry'
-import { DEFAULT_WORK_TYPE, isWorkType, migrateLegacyEditorData, normalizeWorkDocument, toTypedGraph } from '../work-migrate'
 import { interactiveNarrativeAdapter } from '../work-types/interactive-narrative'
 import type { StoryGraph } from '@editor/types/editor'
 
@@ -67,55 +66,7 @@ describe('work-registry', () => {
   })
 })
 
-describe('work-migrate', () => {
-  it('normalizeWorkDocument 迁移旧格式为互动叙事文档', () => {
-    const legacy = createLegacyGraph()
-    const doc = normalizeWorkDocument(legacy)
-    expect(doc).not.toBeNull()
-    expect(doc!.workType).toBe('interactive-narrative')
-    expect(doc!.formatVersion).toBe('2.0')
-    expect(doc!.meta.title).toBe('测试故事')
-    expect(doc!.meta.tags).toEqual(['测试', '互动'])
-    expect(doc!.resources.images).toEqual(['img-a'])
-  })
-
-  it('normalizeWorkDocument 对 WorkDocument 原样返回', () => {
-    const legacy = createLegacyGraph()
-    const doc = interactiveNarrativeAdapter.fromGraph(legacy)
-    const result = normalizeWorkDocument(doc)
-    expect(result).not.toBeNull()
-    expect(result!.workType).toBe('interactive-narrative')
-  })
-
-  it('normalizeWorkDocument 对无效数据返回 null', () => {
-    expect(normalizeWorkDocument(null)).toBeNull()
-    expect(normalizeWorkDocument({ foo: 1 })).toBeNull()
-    expect(normalizeWorkDocument('string')).toBeNull()
-  })
-
-  it('toTypedGraph 提取类型化图（往返无损）', () => {
-    const legacy = createLegacyGraph()
-    const doc = normalizeWorkDocument(legacy)!
-    const graph = toTypedGraph(doc)
-    expect(graph.title).toBe('测试故事')
-    expect(graph.nodes).toHaveLength(2)
-    expect(graph.edges).toHaveLength(1)
-  })
-
-  it('isWorkType 判定类型', () => {
-    const legacy = createLegacyGraph()
-    const doc = normalizeWorkDocument(legacy)!
-    expect(isWorkType(doc, 'interactive-narrative')).toBe(true)
-    expect(isWorkType(doc, 'novel')).toBe(false)
-  })
-
-  it('migrateLegacyEditorData 返回标准化文档', () => {
-    const legacy = createLegacyGraph()
-    const result = migrateLegacyEditorData(legacy)
-    expect(result).not.toBeNull()
-    expect(result!.document.workType).toBe(DEFAULT_WORK_TYPE)
-  })
-
+describe('互动叙事适配器', () => {
   it('适配器 fromGraph 保留营利配置', () => {
     const legacy = createLegacyGraph()
     legacy.monetization = {

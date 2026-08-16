@@ -3,6 +3,7 @@ import { OpenAiCompatibleProvider } from './providers/openai-compatible'
 import { ollamaProvider } from './providers/ollama-provider'
 import { PING_PROMPT, runStrictConnectivityTest } from './request-builder'
 import { initLocalModelConfig } from '../local-model-manager'
+import { getTaskRoutingConfig, getTaskSkillPrompt, resolveTextProviderForTask, type AiTaskType, type TaskTextSlot } from './task-routing'
 
 initLocalModelConfig()
 
@@ -228,6 +229,71 @@ async function* fallbackStream(text: string): AsyncGenerator<string, void, unkno
     yield text.slice(i, i + chunkSize)
     await new Promise((r) => setTimeout(r, 10))
   }
+}
+
+// ---------- 任务路由调用（editor / text） ----------
+
+function buildProviderFor(p: AiProviderConfig): OpenAiCompatibleProvider {
+  return new OpenAiCompatibleProvider(p.id, p.name, p)
+}
+
+/** 合并任务槽的覆盖参数与技能 prompt 到请求选项 */
+function mergeTaskOptions(task: AiTaskType, options: AiRequestOptions): AiRequestOptions {
+  const routing = getTaskRoutingConfig()
+  const slot = routing[task] as TaskTextSlot | undefined
+  const skill = getTaskSkillPrompt(task)
+  const merged: AiRequestOptions = {
+    ...options,
+    systemPrompt: skill ? `${options.systemPrompt || ''}\n\n${skill}`.trim() : options.systemPrompt,
+    temperature: slot?.temperature ?? options.temperature,
+    maxTokens: slot?.maxTokens ?? options.maxTokens,
+  }
+  return merged
+}
+
+/**
+ * 按任务路由调用文本 AI（editor / text 槽）。
+ * 优先使用该任务槽指定的 provider；槽未配置或调用失败时回退到默认回退链。
+ */
+export async function callAiForTask(
+  task: 'editor' | 'text',
+  options: AiRequestOptions
+): Promise<string> {
+  const merged = mergeTaskOptions(task, options)
+  const provider = resolveTextProviderForTask(task, () => getActiveProvider())
+  if (provider) {
+    try {
+      return await buildProviderFor(provider).generate(merged)
+    } catch (error) {
+      console.warn(`task-routing: ${task} 槽 provider ${provider.name} 失败，回退默认链路:`, error)
+    }
+  }
+  return callAi(merged)
+}
+
+/**
+ * 按任务路由调用文本 AI（流式，editor / text 槽）。
+ * 语义同 callAiForTask，返回流式结果。
+ */
+export async function callAiStreamForTask(
+  task: 'editor' | 'text',
+  options: AiRequestOptions
+): Promise<AiStreamResult> {
+  const merged = mergeTaskOptions(task, options)
+  const provider = resolveTextProviderForTask(task, () => getActiveProvider())
+  if (provider) {
+    try {
+      const p = buildProviderFor(provider)
+      if (p.generateStream) {
+        return bufferTee(p.generateStream(merged))
+      }
+      const result = await p.generate(merged)
+      return { stream: fallbackStream(result), fullText: Promise.resolve(result) }
+    } catch (error) {
+      console.warn(`task-routing: ${task} 槽 provider ${provider.name} 失败，回退默认链路:`, error)
+    }
+  }
+  return callAiStream(merged)
 }
 
 export interface ConnectivityCheckResult {

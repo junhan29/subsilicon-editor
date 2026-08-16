@@ -4,11 +4,11 @@ import {
   streamGenerateOutlineParsed,
   streamPolishText,
 } from '../ai/services/stream-service'
-import { callAiStream } from '../ai/provider-registry'
+import { callAiStreamForTask } from '../ai/provider-registry'
 import type { AiStreamResult } from '../ai/types'
 
 vi.mock('../ai/provider-registry', () => ({
-  callAiStream: vi.fn(),
+  callAiStreamForTask: vi.fn(),
 }))
 
 describe('Stream Service', () => {
@@ -23,17 +23,17 @@ describe('Stream Service', () => {
   }
 
   describe('streamPolishText', () => {
-    it('调用 callAiStream 并返回流和完整文本', async () => {
+    it('调用 callAiStreamForTask 并返回流和完整文本', async () => {
       const chunks = ['Hello', ' ', 'World']
       const mockResult: AiStreamResult = {
         stream: mockStream(chunks),
         fullText: Promise.resolve('Hello World'),
       }
-      vi.mocked(callAiStream).mockResolvedValue(mockResult)
+      vi.mocked(callAiStreamForTask).mockResolvedValue(mockResult)
 
       const result = await streamPolishText('test text', 'general')
 
-      expect(callAiStream).toHaveBeenCalledOnce()
+      expect(callAiStreamForTask).toHaveBeenCalledOnce()
       expect(await result.fullText).toBe('Hello World')
     })
 
@@ -43,7 +43,7 @@ describe('Stream Service', () => {
         stream: mockStream(chunks),
         fullText: Promise.resolve('ABC'),
       }
-      vi.mocked(callAiStream).mockResolvedValue(mockResult)
+      vi.mocked(callAiStreamForTask).mockResolvedValue(mockResult)
 
       const received: string[] = []
       await streamPolishText('test', 'general', null, {
@@ -61,7 +61,7 @@ describe('Stream Service', () => {
         stream: mockStream(chunks),
         fullText: Promise.resolve('XY'),
       }
-      vi.mocked(callAiStream).mockResolvedValue(mockResult)
+      vi.mocked(callAiStreamForTask).mockResolvedValue(mockResult)
 
       let doneText = ''
       await streamPolishText('test', 'vivid', null, {
@@ -86,7 +86,7 @@ describe('Stream Service', () => {
         stream: errorStream(),
         fullText: rejectedPromise,
       }
-      vi.mocked(callAiStream).mockResolvedValue(mockResult)
+      vi.mocked(callAiStreamForTask).mockResolvedValue(mockResult)
 
       let errorCaught: unknown = null
       await streamPolishText('test', 'general', null, {
@@ -104,12 +104,13 @@ describe('Stream Service', () => {
         stream: mockStream(['续写']),
         fullText: Promise.resolve('续写'),
       }
-      vi.mocked(callAiStream).mockResolvedValue(mockResult)
+      vi.mocked(callAiStreamForTask).mockResolvedValue(mockResult)
 
       await streamContinueText('原文', 'general')
 
-      expect(callAiStream).toHaveBeenCalledOnce()
-      const args = vi.mocked(callAiStream).mock.calls[0][0]
+      expect(callAiStreamForTask).toHaveBeenCalledOnce()
+      const [task, args] = vi.mocked(callAiStreamForTask).mock.calls[0]
+      expect(task).toBe('text')
       expect(args.maxTokens).toBe(200)
       expect(args.temperature).toBe(0.8)
     })
@@ -134,7 +135,7 @@ describe('Stream Service', () => {
         stream: mockStream([json]),
         fullText: Promise.resolve(json),
       }
-      vi.mocked(callAiStream).mockResolvedValue(mockResult)
+      vi.mocked(callAiStreamForTask).mockResolvedValue(mockResult)
 
       const result = await streamGenerateOutlineParsed('测试', '冒险')
 
@@ -150,7 +151,7 @@ describe('Stream Service', () => {
         stream: mockStream(['不是 JSON']),
         fullText: Promise.resolve('不是 JSON'),
       }
-      vi.mocked(callAiStream).mockResolvedValue(mockResult)
+      vi.mocked(callAiStreamForTask).mockResolvedValue(mockResult)
 
       const result = await streamGenerateOutlineParsed('测试', '冒险')
 
@@ -166,7 +167,7 @@ describe('Stream Service', () => {
         stream: mockStream([jsonWithMarkdown]),
         fullText: Promise.resolve(jsonWithMarkdown),
       }
-      vi.mocked(callAiStream).mockResolvedValue(mockResult)
+      vi.mocked(callAiStreamForTask).mockResolvedValue(mockResult)
 
       const result = await streamGenerateOutlineParsed('测试', '冒险')
 

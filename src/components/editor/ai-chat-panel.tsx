@@ -1,14 +1,17 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { AlertCircle, Bot, Check, ChevronDown, ChevronLeft, ChevronRight, Image, Loader2, Music, Send, Settings, Sparkles, Trash2, User, Video, X } from 'lucide-react'
+import { AlertCircle, Bot, Bug, Check, ChevronDown, ChevronRight, Eye, Image, ListChecks, Loader2, Music, Send, Settings, Sparkles, Trash2, User, Video, X } from 'lucide-react'
 import { showToast } from './toast'
 import { AiSettingsDialog } from './ai-settings-dialog'
-import { type VideoGenerationParams, buildConsistentImagePrompt, callAiStream, generateMedia, getMediaProviderConfig, isAiAvailable, optimizePrompt, refreshAiConfig } from '@editor/lib/ai'
+import { buildConsistentImagePrompt, callAiStreamForTask, generateMediaForTask, getMediaProviderConfigForTask, isAiAvailable, optimizePrompt, refreshAiConfig } from '@editor/lib/ai'
 import { serializeGraphContext } from '@editor/lib/ai/chat-graph-context'
 import { getChatSystemPrompt } from '@editor/lib/ai/chat-system-prompt'
-import { type EditorCanvasCallbacks, type MediaGenerationRequest, executeAiActions, parseAllAiCommands } from '@editor/lib/ai/chat-command-executor'
+import { type EditorCanvasCallbacks, type MediaGenerationRequest, type ActionPreview, describeAiActions, dispatchParsedCommands, executeAiActions, parseAllAiCommands } from '@editor/lib/ai/chat-command-executor'
+import { addAutomationRule, listAutomationRules, matchAutomationRules, removeAutomationRule, resetAutomationRules, updateAutomationRule, type AutomationRule } from '@editor/lib/ai/ai-automation'
+import { appendDebugEntry, clearDebugEntries, getDebugEntries, removeDebugEntry, type AiDebugEntry } from '@editor/lib/ai/ai-debug-log'
 import { getModelsForProvider } from '@editor/lib/ai/model-presets'
+import { encryptAiKey, isEncryptedAiKey } from '@editor/lib/ai/ai-key-vault'
 import { type AssetAnnotation, findAssetsByAnnotation, getAllAssets, saveBlobAsAsset, updateAssetAnnotation } from '@editor/lib/local-db'
 import type { ComicScene, StoryCharacter, StoryEdge, StoryNode } from '@editor/types/editor'
 import type { AiConfig, AiProviderConfig } from '@editor/types/ai'
@@ -101,6 +104,78 @@ export function AiChatPanel(props: AiChatPanelProps) {
   const [currentModel, setCurrentModel] = useState('')
   const [configuredProviders, setConfiguredProviders] = useState<string[]>([])
 
+  // 调试功能：命令预览模式（localStorage 持久化）+ 调试面板
+  const [previewMode, setPreviewMode] = useState(() => {
+    try {
+      return localStorage.getItem('subsilicon.ai.previewMode') === '1'
+    } catch { return false }
+  })
+  const [showDebugPanel, setShowDebugPanel] = useState(false)
+  const [pendingPreview, setPendingPreview] = useState<{
+    msgId: string
+    debugId?: string
+    previews: ActionPreview[]
+    actions: import('@editor/lib/ai/chat-command-executor').AiAction[]
+    source: 'ai' | 'automation'
+  } | null>(null)
+  const [debugEntries, setDebugEntries] = useState<AiDebugEntry[]>(() => getDebugEntries())
+  const [activeDebugId, setActiveDebugId] = useState<string | null>(null)
+
+  // 调试面板：日志 / 预设规则 两个标签页
+  const [debugTab, setDebugTab] = useState<'log' | 'rules'>('log')
+  const [automationRules, setAutomationRules] = useState<AutomationRule[]>(() => listAutomationRules())
+  const [showRuleForm, setShowRuleForm] = useState(false)
+  const [ruleName, setRuleName] = useState('')
+  const [ruleTrigger, setRuleTrigger] = useState<'keyword' | 'regex' | 'state'>('keyword')
+  const [rulePattern, setRulePattern] = useState('')
+  const [ruleStateValue, setRuleStateValue] = useState(0)
+  const [ruleAction, setRuleAction] = useState<'saveWork' | 'undo' | 'previewWork' | 'createNarration' | 'createDialogue' | 'createChoice'>('saveWork')
+
+  // 新增预设规则
+  const handleAddRule = () => {
+    const actions: import('@editor/lib/ai/chat-command-executor').AiAction[] = (() => {
+      switch (ruleAction) {
+        case 'undo': return [{ type: 'undo', payload: {} }]
+        case 'previewWork': return [{ type: 'previewWork', payload: {} }]
+        case 'createNarration': return [{ type: 'createNode', payload: { nodeType: 'narration', data: { text: '（从这里开始）' } } }]
+        case 'createDialogue': return [{ type: 'createNode', payload: { nodeType: 'dialogue', data: { text: '……' } } }]
+        case 'createChoice': return [{ type: 'createNode', payload: { nodeType: 'choice', data: { text: '你会怎么做？' } } }]
+        default: return [{ type: 'saveWork', payload: {} }]
+      }
+    })()
+    addAutomationRule({
+      name: ruleName.trim() || `规则 ${automationRules.length + 1}`,
+      description: ruleTrigger === 'state'
+        ? `画布节点数等于 ${ruleStateValue} 时触发`
+        : `${ruleTrigger === 'keyword' ? '关键词' : '正则'}: ${rulePattern}`,
+      enabled: true,
+      triggerType: ruleTrigger,
+      pattern: ruleTrigger === 'state' ? undefined : rulePattern.trim(),
+      stateCondition: ruleTrigger === 'state' ? { nodeCountEquals: ruleStateValue } : undefined,
+      actions,
+    })
+    setAutomationRules(listAutomationRules())
+    setShowRuleForm(false)
+    setRuleName('')
+    setRulePattern('')
+    showToast('success', '预设规则已添加')
+  }
+
+  // 切换规则的启用/禁用
+  const toggleRule = (rule: AutomationRule) => {
+    updateAutomationRule(rule.id, { enabled: !rule.enabled })
+    setAutomationRules(listAutomationRules())
+  }
+
+  // 切换预览模式
+  const togglePreviewMode = useCallback(() => {
+    setPreviewMode((prev) => {
+      const next = !prev
+      try { localStorage.setItem('subsilicon.ai.previewMode', next ? '1' : '0') } catch { /* ignore */ }
+      return next
+    })
+  }, [])
+
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const abortRef = useRef<AbortController | null>(null)
@@ -170,20 +245,25 @@ export function AiChatPanel(props: AiChatPanelProps) {
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
-  // 切换模型 - 更新 saved config 中对应 provider 的 model
-  const switchModel = (model: string) => {
+  // 切换模型 - 更新 saved config 中对应 provider 的 model（写回前对未加密 apiKey 加密迁移）
+  const switchModel = async (model: string) => {
     try {
       const saved = localStorage.getItem('subsilicon_ai_config')
       if (!saved) return
       const config = JSON.parse(saved)
       if (Array.isArray(config.providers)) {
         // 多 provider 格式：更新当前 provider 的 model
-        config.providers = config.providers.map((p: AiProviderConfig) =>
-          p.provider === currentProvider ? { ...p, model } : p
-        )
+        config.providers = await Promise.all(config.providers.map(async (p: AiProviderConfig) =>
+          p.provider === currentProvider
+            ? { ...p, model, apiKey: isEncryptedAiKey(p.apiKey) ? p.apiKey : await encryptAiKey(p.apiKey) }
+            : p
+        ))
       } else {
         // FlatAiConfig 格式：更新 model
         config.model = model
+        if (config.apiKey && !isEncryptedAiKey(config.apiKey)) {
+          config.apiKey = await encryptAiKey(config.apiKey)
+        }
       }
       localStorage.setItem('subsilicon_ai_config', JSON.stringify(config))
       refreshAiConfig()
@@ -270,7 +350,7 @@ export function AiChatPanel(props: AiChatPanelProps) {
         ? `以下是之前的对话：\n${conversationHistory}\n\n用户的新消息：${trimmed}`
         : trimmed
 
-      const result = await callAiStream({
+      const result = await callAiStreamForTask('editor', {
         systemPrompt,
         userPrompt,
         temperature: 0.7,
@@ -293,21 +373,81 @@ export function AiChatPanel(props: AiChatPanelProps) {
 
       // 流结束后，解析并执行命令
       let mediaRequests: MediaGenerationRequest[] = []
+      const debugEntry: Partial<AiDebugEntry> = {
+        id: `debug-${Date.now()}`,
+        timestamp: Date.now(),
+        userInput: trimmed,
+        systemPrompt,
+        graphContext,
+        rawResponse: fullText,
+        actions: [],
+        previewMode,
+      }
+
+      // 预设规则：先检查用户消息/画布状态是否命中规则，命中则并入待执行动作
+      const automationHits = matchAutomationRules(trimmed, {
+        nodeCount: nodes?.length ?? 0,
+        edgeCount: edges?.length ?? 0,
+        characterCount: characters?.length ?? 0,
+        sceneCount: scenes?.length ?? 0,
+      })
+      const automationActions = automationHits.flatMap((h) => h.rule.actions)
+      debugEntry.automation = automationHits.map((h) => `${h.rule.name}（${h.matchedBy}）`)
+
       if (fullText.trim()) {
         const commandBlocks = parseAllAiCommands(fullText)
         if (commandBlocks.length > 0) {
           const allActions = commandBlocks.flatMap((b) => b.actions)
-          if (allActions.length > 0) {
+          debugEntry.actions = allActions as unknown[]
+          const combined = [...automationActions, ...allActions]
+          if (combined.length > 0) {
             const callbacks = buildCallbacks(props)
-            const result = await executeAiActions(allActions, callbacks)
-            mediaRequests = result.mediaRequests
-            const actionSummary = `✅ 成功 ${result.success} 个操作` +
-              (result.failed > 0 ? `, ❌ 失败 ${result.failed} 个` : '') +
-              (mediaRequests.length > 0 ? `, 📋 ${mediaRequests.length} 个生成请求待确认` : '')
-            fullText += `\n\n---\n${actionSummary}`
+            if (dispatchParsedCommands(combined, previewMode).mode === 'preview') {
+              // 预览模式：暂存待批准，不直接执行
+              setPendingPreview({
+                msgId: assistantId,
+                debugId: debugEntry.id,
+                previews: describeAiActions(combined),
+                actions: combined,
+                source: 'ai',
+              })
+              appendDebugEntry(debugEntry as AiDebugEntry)
+              fullText += `\n\n---\n⏸️ ${combined.length} 个操作等待确认（预览模式）`
+            } else {
+              const result = await executeAiActions(combined, callbacks)
+              debugEntry.execution = result
+              appendDebugEntry(debugEntry as AiDebugEntry)
+              mediaRequests = result.mediaRequests
+              const actionSummary = `✅ 成功 ${result.success} 个操作` +
+                (result.failed > 0 ? `, ❌ 失败 ${result.failed} 个` : '') +
+                (mediaRequests.length > 0 ? `, 📋 ${mediaRequests.length} 个生成请求待确认` : '')
+              fullText += `\n\n---\n${actionSummary}`
+            }
           }
         }
       }
+
+      // 仅有预设规则命中（AI 未输出命令）时，也执行规则动作
+      if (automationActions.length > 0 && !parseAllAiCommands(fullText).length) {
+        const callbacks = buildCallbacks(props)
+        if (dispatchParsedCommands(automationActions, previewMode).mode === 'preview') {
+          setPendingPreview({
+            msgId: assistantId,
+            debugId: debugEntry.id,
+            previews: describeAiActions(automationActions),
+            actions: automationActions,
+            source: 'automation',
+          })
+          appendDebugEntry(debugEntry as AiDebugEntry)
+          fullText += `\n\n---\n🤖 预设规则命中 ${automationHits.map((h) => h.rule.name).join('、')}，等待确认`
+        } else {
+          const result = await executeAiActions(automationActions, callbacks)
+          debugEntry.execution = result
+          appendDebugEntry(debugEntry as AiDebugEntry)
+          fullText += `\n\n---\n🤖 预设规则已执行：成功 ${result.success} 个操作${result.failed > 0 ? `, 失败 ${result.failed} 个` : ''}`
+        }
+      }
+      setDebugEntries(getDebugEntries())
 
       setMessages((prev) => [
         ...prev,
@@ -355,6 +495,56 @@ export function AiChatPanel(props: AiChatPanelProps) {
     }
   }
 
+  // 预览批准：执行暂存的操作，并把「等待确认」替换为执行摘要
+  const handleApprovePreview = useCallback(async () => {
+    if (!pendingPreview) return
+    const { msgId, debugId, actions } = pendingPreview
+    const callbacks = buildCallbacks(props)
+    const result = await executeAiActions(actions, callbacks)
+    const summary = `✅ 成功 ${result.success} 个操作` +
+      (result.failed > 0 ? `, ❌ 失败 ${result.failed} 个` : '') +
+      (result.mediaRequests.length > 0 ? `, 📋 ${result.mediaRequests.length} 个生成请求待确认` : '')
+    setMessages((prev) =>
+      prev.map((msg) =>
+        msg.id === msgId
+          ? {
+              ...msg,
+              content: msg.content.replace(/\n\n---\n[^\n]*等待确认.*$/, `\n\n---\n${summary}`),
+              mediaRequests: result.mediaRequests.length > 0 ? result.mediaRequests : undefined,
+            }
+          : msg
+      )
+    )
+    // 同步更新调试日志中的审批结果
+    if (debugId) {
+      setDebugEntries((prev) =>
+        prev.map((entry) => (entry.id === debugId ? { ...entry, approved: true, execution: result } : entry))
+      )
+    }
+    setPendingPreview(null)
+    setActiveDebugId(null)
+  }, [pendingPreview, props])
+
+  // 预览拒绝：取消操作
+  const handleRejectPreview = useCallback(() => {
+    if (!pendingPreview) return
+    const { msgId, debugId } = pendingPreview
+    setMessages((prev) =>
+      prev.map((msg) =>
+        msg.id === msgId
+          ? { ...msg, content: msg.content.replace(/\n\n---\n[^\n]*等待确认.*$/, '\n\n---\n已取消操作') }
+          : msg
+      )
+    )
+    if (debugId) {
+      setDebugEntries((prev) =>
+        prev.map((entry) => (entry.id === debugId ? { ...entry, approved: false } : entry))
+      )
+    }
+    setPendingPreview(null)
+    setActiveDebugId(null)
+  }, [pendingPreview])
+
   // 清空对话
   const handleClear = () => {
     if (isStreaming) {
@@ -374,9 +564,11 @@ export function AiChatPanel(props: AiChatPanelProps) {
 
   // 处理媒体生成请求：生成 → 入库 → 自动标注 → 自动绑节点
   const handleGenerateMedia = useCallback(async (msgId: string, request: MediaGenerationRequest) => {
-    const provider = getMediaProviderConfig()
-    if (!provider) {
-      showToast('error', '请先在创境设置中配置媒体生成服务商')
+    const task: 'image' | 'video' | 'audio' = request.mediaType === 'video' ? 'video' : request.mediaType === 'audio' ? 'audio' : 'image'
+    if (!getMediaProviderConfigForTask(task)) {
+      showToast('error', task === 'audio'
+        ? '请先在创境设置中配置音乐/音效生成服务商'
+        : '请先在创境设置中配置媒体生成服务商')
       return
     }
 
@@ -414,21 +606,20 @@ export function AiChatPanel(props: AiChatPanelProps) {
         }
       }
 
-      const result = request.mediaType === 'video'
-        ? await generateMedia(
-            { prompt: optimized, duration: 5 } as VideoGenerationParams,
-            provider
-          )
-        : await generateMedia(
-            {
-              prompt: optimized,
-              width: request.width || 1024,
-              height: request.height || 1024,
-              style: (request.style || 'anime') as any,
-              referenceImageHash,
-            },
-            provider
-          )
+      const result = await generateMediaForTask(
+        task,
+        request.mediaType === 'video'
+          ? { prompt: optimized, duration: 5 }
+          : request.mediaType === 'audio'
+            ? { prompt: optimized }
+            : {
+                prompt: optimized,
+                width: request.width || 1024,
+                height: request.height || 1024,
+                style: (request.style || 'anime') as any,
+                referenceImageHash,
+              }
+      )
 
       // 拉取生成结果为 Blob，入库为素材（去重），自动标注 + 绑定节点
       let assetHash: string | undefined
@@ -609,6 +800,27 @@ export function AiChatPanel(props: AiChatPanelProps) {
           )}
         </div>
         <div className="flex items-center gap-1">
+          <button
+            onClick={togglePreviewMode}
+            className={`p-1.5 rounded hover:bg-slate-700 transition-colors ${
+              previewMode ? 'text-amber-400 bg-amber-500/10' : 'text-slate-400 hover:text-white'
+            }`}
+            title={previewMode ? '命令预览已开启：AI 操作前先确认' : '命令预览已关闭：AI 直接执行操作'}
+          >
+            <Eye className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={() => {
+              setShowDebugPanel(!showDebugPanel)
+              setDebugEntries(getDebugEntries())
+            }}
+            className={`p-1.5 rounded hover:bg-slate-700 transition-colors ${
+              showDebugPanel ? 'text-cyan-400 bg-cyan-500/10' : 'text-slate-400 hover:text-white'
+            }`}
+            title="调试面板"
+          >
+            <Bug className="w-3.5 h-3.5" />
+          </button>
           <button
             onClick={() => setShowSettings(true)}
             className="p-1.5 rounded hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
@@ -824,7 +1036,302 @@ export function AiChatPanel(props: AiChatPanelProps) {
         )}
 
         <div ref={messagesEndRef} />
+
+        {/* 命令预览确认卡片 */}
+        {pendingPreview && (
+          <div className="flex gap-2 justify-start">
+            <div className="w-6 h-6 rounded-full bg-cyan-500/20 flex items-center justify-center shrink-0 mt-0.5">
+              <ListChecks className="w-3 h-3 text-cyan-400" />
+            </div>
+            <div className="max-w-[85%] px-3 py-2 rounded-lg text-xs leading-relaxed bg-cyan-500/10 text-cyan-100 border border-cyan-500/30">
+              <p className="font-medium text-cyan-300 mb-1.5">
+                {pendingPreview.source === 'automation' ? '🤖 预设规则命中' : '✨ AI 请求执行操作'}（预览模式）
+              </p>
+              <ul className="space-y-1 mb-2">
+                {pendingPreview.previews.map((pv, i) => (
+                  <li key={i} className="flex items-start gap-1.5">
+                    <span className="text-cyan-500/60 mt-px">•</span>
+                    <span className="text-slate-300">{pv.description}</span>
+                  </li>
+                ))}
+              </ul>
+              <div className="flex gap-1.5">
+                <button
+                  onClick={handleApprovePreview}
+                  className="flex items-center gap-1 px-2 py-1 text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded hover:bg-emerald-500/30 transition-colors"
+                >
+                  <Check className="w-3 h-3" />
+                  批准执行
+                </button>
+                <button
+                  onClick={handleRejectPreview}
+                  className="flex items-center gap-1 px-2 py-1 text-[10px] bg-slate-600/50 text-slate-400 border border-slate-600/30 rounded hover:bg-slate-600 transition-colors"
+                >
+                  <X className="w-3 h-3" />
+                  取消
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* 调试面板 */}
+      {showDebugPanel && (
+        <div className="shrink-0 border-t border-slate-700/50 bg-slate-900/60 max-h-72 overflow-y-auto">
+          <div className="flex items-center justify-between px-3 py-1.5 border-b border-slate-700/40 sticky top-0 bg-slate-900/90 backdrop-blur">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-medium text-cyan-400 flex items-center gap-1.5 mr-1">
+                <Bug className="w-3 h-3" />
+                调试
+              </span>
+              <button
+                onClick={() => setDebugTab('log')}
+                className={`px-2 py-0.5 text-[10px] rounded transition-colors ${
+                  debugTab === 'log' ? 'bg-cyan-500/15 text-cyan-300' : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                日志 ({debugEntries.length})
+              </button>
+              <button
+                onClick={() => setDebugTab('rules')}
+                className={`px-2 py-0.5 text-[10px] rounded transition-colors ${
+                  debugTab === 'rules' ? 'bg-cyan-500/15 text-cyan-300' : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                预设规则 ({automationRules.length})
+              </button>
+            </div>
+            <div className="flex items-center gap-1">
+              {debugTab === 'log' ? (
+                <button
+                  onClick={() => {
+                    clearDebugEntries()
+                    setDebugEntries([])
+                    setActiveDebugId(null)
+                  }}
+                  className="px-1.5 py-0.5 text-[10px] text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors"
+                  title="清空日志"
+                >
+                  清空
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    resetAutomationRules()
+                    setAutomationRules(listAutomationRules())
+                  }}
+                  className="px-1.5 py-0.5 text-[10px] text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors"
+                  title="重置为内置规则"
+                >
+                  重置
+                </button>
+              )}
+              <button
+                onClick={() => setShowDebugPanel(false)}
+                className="p-1 rounded hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+                title="关闭调试面板"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          </div>
+          {debugTab === 'log' && (
+            <>
+          {debugEntries.length === 0 ? (
+            <p className="px-3 py-4 text-[10px] text-slate-500 text-center">
+              暂无记录。发送一条 AI 对话后，这里会显示完整上下文与执行结果。
+            </p>
+          ) : (
+            <ul className="divide-y divide-slate-700/30">
+              {debugEntries.map((entry) => {
+                const expanded = activeDebugId === entry.id
+                const status = entry.approved === true
+                  ? '✅ 已批准'
+                  : entry.approved === false
+                    ? '🚫 已拒绝'
+                    : entry.execution
+                      ? '✅ 已执行'
+                      : entry.actions && entry.actions.length > 0
+                        ? '⏸️ 待确认'
+                        : entry.automation && entry.automation.length > 0
+                          ? '🤖 规则'
+                          : '📝 仅对话'
+                return (
+                  <li key={entry.id}>
+                    <button
+                      onClick={() => setActiveDebugId(expanded ? null : entry.id)}
+                      className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-slate-800/50 transition-colors text-left"
+                    >
+                      <ChevronRight className={`w-3 h-3 text-slate-500 shrink-0 transition-transform ${expanded ? 'rotate-90' : ''}`} />
+                      <span className="text-[10px] text-slate-500 shrink-0">
+                        {new Date(entry.timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                      </span>
+                      <span className="text-[10px] text-slate-500 shrink-0">{status}</span>
+                      <span className="text-[10px] text-slate-300 truncate flex-1">{entry.userInput}</span>
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          removeDebugEntry(entry.id)
+                          setDebugEntries(getDebugEntries())
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.stopPropagation()
+                            removeDebugEntry(entry.id)
+                            setDebugEntries(getDebugEntries())
+                          }
+                        }}
+                        className="p-0.5 rounded text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                        title="删除这条记录"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </span>
+                    </button>
+                    {expanded && (
+                      <div className="px-3 pb-2 space-y-1.5">
+                        {entry.automation && entry.automation.length > 0 && (
+                          <DebugBlock label="预设规则" value={entry.automation.join('、')} mono={false} />
+                        )}
+                        <DebugBlock label="解析动作" value={entry.actions && entry.actions.length > 0 ? JSON.stringify(entry.actions, null, 2) : '（无 ai-action 命令）'} mono />
+                        {entry.execution && (
+                          <DebugBlock
+                            label="执行结果"
+                            value={`成功 ${entry.execution.success} / 失败 ${entry.execution.failed}${entry.execution.messages.length > 0 ? '\n' + entry.execution.messages.join('\n') : ''}`}
+                            mono
+                          />
+                        )}
+                        <DebugBlock label="System Prompt" value={entry.systemPrompt} mono />
+                        <DebugBlock label="画布上下文" value={entry.graphContext} mono />
+                        <DebugBlock label="AI 原始回复" value={entry.rawResponse || '（无输出）'} mono />
+                      </div>
+                    )}
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+            </>
+          )}
+          {debugTab === 'rules' && (
+            <>
+              {automationRules.map((rule) => (
+                <div key={rule.id} className="flex items-center gap-2 px-3 py-1.5 border-b border-slate-700/30">
+                  <span className="text-[10px] text-slate-300 truncate flex-1" title={rule.description}>
+                    {rule.name}
+                    {rule.builtin && <span className="ml-1 text-[9px] text-amber-500/80">内置</span>}
+                  </span>
+                  <span className="text-[9px] text-slate-500 shrink-0">
+                    {rule.triggerType === 'keyword' ? `关键词: ${rule.pattern}` :
+                     rule.triggerType === 'regex' ? `正则: ${rule.pattern}` :
+                     `状态: 节点=${rule.stateCondition?.nodeCountEquals ?? '-'}`}
+                  </span>
+                  <button
+                    onClick={() => toggleRule(rule)}
+                    className={`text-[10px] px-2 py-0.5 rounded shrink-0 transition-colors ${
+                      rule.enabled
+                        ? 'bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25'
+                        : 'bg-slate-600/40 text-slate-500 hover:bg-slate-600/60'
+                    }`}
+                    title={rule.enabled ? '点击禁用' : '点击启用'}
+                  >
+                    {rule.enabled ? '启用' : '停用'}
+                  </button>
+                  {!rule.builtin && (
+                    <button
+                      onClick={() => {
+                        removeAutomationRule(rule.id)
+                        setAutomationRules(listAutomationRules())
+                      }}
+                      className="p-0.5 rounded text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0"
+                      title="删除规则"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              ))}
+              {showRuleForm ? (
+                <div className="px-3 py-2 space-y-1.5">
+                  <input
+                    value={ruleName}
+                    onChange={(e) => setRuleName(e.target.value)}
+                    placeholder="规则名称（如：开始写作）"
+                    className="w-full text-[10px] rounded border border-slate-600 bg-slate-700/50 px-2 py-1 text-white placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-cyan-500/50"
+                  />
+                  <div className="flex gap-1">
+                    {(['keyword', 'regex', 'state'] as const).map((t) => (
+                      <button
+                        key={t}
+                        onClick={() => setRuleTrigger(t)}
+                        className={`px-2 py-0.5 text-[10px] rounded transition-colors ${
+                          ruleTrigger === t ? 'bg-cyan-500/15 text-cyan-300' : 'bg-slate-700/40 text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        {t === 'keyword' ? '关键词' : t === 'regex' ? '正则' : '状态'}
+                      </button>
+                    ))}
+                  </div>
+                  {ruleTrigger === 'state' ? (
+                    <label className="flex items-center gap-2 text-[10px] text-slate-400">
+                      节点数等于
+                      <input
+                        type="number"
+                        min={0}
+                        value={ruleStateValue}
+                        onChange={(e) => setRuleStateValue(Number(e.target.value) || 0)}
+                        className="w-16 text-[10px] rounded border border-slate-600 bg-slate-700/50 px-2 py-1 text-white focus:outline-none focus:ring-1 focus:ring-cyan-500/50"
+                      />
+                    </label>
+                  ) : (
+                    <input
+                      value={rulePattern}
+                      onChange={(e) => setRulePattern(e.target.value)}
+                      placeholder={ruleTrigger === 'keyword' ? '触发关键词，多个用逗号分隔' : '正则表达式，如 ^开始'}
+                      className="w-full text-[10px] rounded border border-slate-600 bg-slate-700/50 px-2 py-1 text-white placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-cyan-500/50"
+                    />
+                  )}
+                  <select
+                    value={ruleAction}
+                    onChange={(e) => setRuleAction(e.target.value as typeof ruleAction)}
+                    className="w-full text-[10px] rounded border border-slate-600 bg-slate-700/50 px-2 py-1 text-white focus:outline-none focus:ring-1 focus:ring-cyan-500/50"
+                  >
+                    <option value="saveWork">保存作品</option>
+                    <option value="undo">撤销上一步</option>
+                    <option value="previewWork">打开作品预览</option>
+                    <option value="createNarration">创建旁白节点</option>
+                    <option value="createDialogue">创建对话节点</option>
+                    <option value="createChoice">创建选择节点</option>
+                  </select>
+                  <div className="flex gap-1.5">
+                    <button
+                      onClick={handleAddRule}
+                      className="flex-1 px-2 py-1 text-[10px] bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 rounded hover:bg-cyan-500/30 transition-colors"
+                    >
+                      添加规则
+                    </button>
+                    <button
+                      onClick={() => setShowRuleForm(false)}
+                      className="px-2 py-1 text-[10px] bg-slate-600/50 text-slate-400 border border-slate-600/30 rounded hover:bg-slate-600 transition-colors"
+                    >
+                      取消
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowRuleForm(true)}
+                  className="w-full px-3 py-1.5 text-[10px] text-cyan-400 hover:bg-cyan-500/10 transition-colors"
+                >
+                  + 新增预设规则
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      )}
 
       {/* 输入区域 */}
       <div className="shrink-0 border-t border-slate-700/50 p-3">
@@ -869,6 +1376,18 @@ export function AiChatPanel(props: AiChatPanelProps) {
           loadConfigState()
         }}
       />
+    </div>
+  )
+}
+
+// 调试面板中的只读代码块
+function DebugBlock({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="text-[10px]">
+      <p className="text-slate-500 mb-0.5">{label}</p>
+      <pre className={`bg-slate-950/70 border border-slate-700/40 rounded p-1.5 text-slate-400 whitespace-pre-wrap break-all max-h-40 overflow-y-auto ${mono ? 'font-mono' : ''}`}>
+        {value}
+      </pre>
     </div>
   )
 }

@@ -4,7 +4,7 @@ import {
   getAiConfig,
   isAiAvailable,
   resetAiRegistry,
-} from '../ai-service'
+} from '../ai'
 import type { AiConfig, AiProviderConfig } from '@editor/types/ai'
 
 const localStorageMock = (() => {

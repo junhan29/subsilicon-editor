@@ -1,5 +1,5 @@
 import type { AiConfig, AiOutlineResult, OutlineScene } from '../types'
-import { callAi } from '../provider-registry'
+import { callAiForTask } from '../provider-registry'
 
 export const OUTLINE_SYSTEM_PROMPT = `你是一个专业的互动叙事设计师。请根据主题和类型生成一个结构化的互动故事大纲。输出必须是严格的 JSON 格式，不要包含任何 markdown 标记或额外文字。
 
@@ -36,14 +36,13 @@ export async function generateOutline(
 ): Promise<AiOutlineResult> {
   const userPrompt = `主题：${topic}\n类型：${genre}\n场景数量：${sceneCount}`
 
-  const rawResult = await callAi(
+  const rawResult = await callAiForTask('text',
     {
       systemPrompt: OUTLINE_SYSTEM_PROMPT,
       userPrompt,
       temperature: 0.8,
       maxTokens: 2000,
-    },
-    config
+    }
   )
 
   try {

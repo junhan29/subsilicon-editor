@@ -1,5 +1,5 @@
 import type { AiConfig } from '../../ai/types'
-import { callAi } from '../../ai/provider-registry'
+import { callAiForTask } from '../../ai/provider-registry'
 import type { StoryCharacter, StoryEdge, StoryNode } from '@editor/types/editor'
 
 export interface StoryBranchSuggestion {
@@ -66,9 +66,8 @@ ${context ? `额外要求：${context}` : ''}
 
 请提供后续剧情建议。`
 
-  const rawResult = await callAi(
-    { systemPrompt, userPrompt, temperature: 0.85, maxTokens: 2000 },
-    config
+  const rawResult = await callAiForTask('text',
+    { systemPrompt, userPrompt, temperature: 0.85, maxTokens: 2000 }
   )
 
   try {
@@ -112,9 +111,8 @@ export async function generateNodeContent(
 
 请生成内容。`
 
-  return callAi(
-    { systemPrompt, userPrompt, temperature: 0.8, maxTokens: 800 },
-    config
+  return callAiForTask('text',
+    { systemPrompt, userPrompt, temperature: 0.8, maxTokens: 800 }
   )
 }
 
@@ -150,9 +148,8 @@ export async function enhanceCharacter(
 
 请补充${enhancement === 'full' ? '完整的' : ''}角色设定。`
 
-  const rawResult = await callAi(
-    { systemPrompt, userPrompt, temperature: 0.75, maxTokens: 1200 },
-    config
+  const rawResult = await callAiForTask('text',
+    { systemPrompt, userPrompt, temperature: 0.75, maxTokens: 1200 }
   )
 
   try {

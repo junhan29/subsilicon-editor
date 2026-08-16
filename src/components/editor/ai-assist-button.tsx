@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { ArrowRight, Image, Lightbulb, Loader2, PenLine, Sparkles, Video, Wand2 } from 'lucide-react'
 import { showToast } from './toast'
 import { AiSettingsDialog } from './ai-settings-dialog'
-import { callAi, isAiAvailable } from '@editor/lib/ai'
+import { callAiForTask, isAiAvailable } from '@editor/lib/ai'
 
 export type AiAssistMode = 'polish' | 'continue' | 'generate' | 'expand' | 'suggest' | 'image' | 'video'
 
@@ -92,7 +92,7 @@ export function AiAssistButton({ mode, context, onResult, className = '', size =
         return
       }
 
-      const result = await callAi({
+      const result = await callAiForTask('text', {
         systemPrompt: config.systemPrompt,
         userPrompt: context,
         temperature: 0.75,

@@ -1,10 +1,27 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { CheckCircle2, Cpu, ExternalLink, Globe, Image, Key, Loader2, X } from 'lucide-react'
+import { createPortal } from 'react-dom'
+import { CheckCircle2, Cpu, ExternalLink, Globe, Image, Loader2, Music, Settings2, SlidersHorizontal, Sparkles, Wand2, X } from 'lucide-react'
 import { showToast } from './toast'
-import { type MediaProviderConfig, getMediaProviderConfig, refreshAiConfig, saveMediaProviderConfig } from '@editor/lib/ai'
+import { ComfyuiWorkflowDialog } from './comfyui-workflow-dialog'
+import {
+  type AiProviderConfig,
+  type AiTaskRoutingConfig,
+  type MediaProviderConfig,
+  type TaskMediaSlot,
+  type TaskTextSlot,
+  getMediaProviderConfig,
+  getSkillTemplatesForTask,
+  getTaskRoutingConfig,
+  getTaskRoutingProviders,
+  refreshAiConfig,
+  saveMediaProviderConfig,
+  saveTaskRoutingConfig,
+} from '@editor/lib/ai'
 import { getDefaultModel, getModelsForProvider } from '@editor/lib/ai/model-presets'
+import { decryptAiConfig, decryptApiKeyField, decryptAiKey } from '@editor/lib/ai/ai-key-vault'
+import { saveAiConfigEncrypted } from '@editor/lib/ai/ai-config-store'
 
 interface AiSettingsDialogProps {
   open: boolean
@@ -102,74 +119,6 @@ const MEDIA_PROVIDER_INFO: Record<string, {
   },
 }
 
-// ComfyUI 默认 IP-Adapter 工作流（API 格式）
-// 含：LoadImage（参考图，自动注入）+ CLIPTextEncode正向/负向 + IP-AdapterApply + KSampler + SaveImage
-// 用户需本地安装 ComfyUI + ComfyUI_IPAdapter_plus 插件 + IP-Adapter 模型
-const DEFAULT_COMFYUI_WORKFLOW = JSON.stringify({
-  '3': {
-    class_type: 'KSampler',
-    inputs: {
-      seed: 42,
-      steps: 25,
-      cfg: 7,
-      sampler_name: 'dpmpp_2m',
-      scheduler: 'karras',
-      denoise: 1,
-      model: ['10', 0],
-      positive: ['6', 0],
-      negative: ['7', 0],
-      latent_image: ['5', 0],
-    },
-  },
-  '4': {
-    class_type: 'CheckpointLoaderSimple',
-    inputs: { ckpt_name: 'your_model.safetensors' },
-  },
-  '5': {
-    class_type: 'EmptyLatentImage',
-    inputs: { width: 1024, height: 1024, batch_size: 1 },
-  },
-  '6': {
-    class_type: 'CLIPTextEncode',
-    inputs: { text: 'positive prompt here', clip: ['4', 1] },
-    _meta: { title: 'positive' },
-  },
-  '7': {
-    class_type: 'CLIPTextEncode',
-    inputs: { text: 'lowres, bad anatomy, deformed', clip: ['4', 1] },
-    _meta: { title: 'negative' },
-  },
-  '8': {
-    class_type: 'VAEDecode',
-    inputs: { samples: ['3', 0], vae: ['4', 2] },
-  },
-  '9': {
-    class_type: 'SaveImage',
-    inputs: { filename_prefix: 'subsilicon', images: ['8', 0] },
-  },
-  '10': {
-    class_type: 'IPAdapterApply',
-    inputs: {
-      weight: 0.85,
-      noise: 0,
-      weight_type: 'standard',
-      start_at: 0,
-      end_at: 1,
-      model: ['4', 0],
-      ipadapter: ['12', 0],
-      image: ['11', 0],
-    },
-  },
-  '11': {
-    class_type: 'LoadImage',
-    inputs: { image: 'reference_placeholder.png' },
-  },
-  '12': {
-    class_type: 'IPAdapterModelLoader',
-    inputs: { ipadapter_file: 'ip-adapter_sd15.safetensors' },
-  },
-}, null, 2)
-
 export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
   const [aiEnabled, setAiEnabled] = useState(false)
   const [aiConfig, setAiConfig] = useState<FlatAiConfig>({
@@ -193,23 +142,69 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
   const [mediaTesting, setMediaTesting] = useState(false)
   const [mediaTestResult, setMediaTestResult] = useState<{ ok: boolean; message: string } | null>(null)
 
+  // 任务路由（高级）：不同创作任务用不同模型
+  const [showRouting, setShowRouting] = useState(false)
+  const [routing, setRouting] = useState<AiTaskRoutingConfig>(() => getTaskRoutingConfig())
+  const [routingProviders, setRoutingProviders] = useState<AiProviderConfig[]>(() => getTaskRoutingProviders())
+  const [routingMediaKeys, setRoutingMediaKeys] = useState<Record<string, boolean>>({})
+  // 技能模板下拉：记录哪个任务槽打开了模板选择
+  const [skillPickerOpen, setSkillPickerOpen] = useState<string | null>(null)
+  const [pickerPos, setPickerPos] = useState<{ top: number; left: number } | null>(null)
+  // ComfyUI 独立面板：记录当前编辑哪个来源的工作流（第 2 层媒体区 或 某任务槽）
+  const [comfyEditor, setComfyEditor] = useState<'legacy' | 'image' | 'video' | 'audio' | null>(null)
+
+  // 更新文本类任务槽（editor / text）
+  const updateTextSlot = (task: 'editor' | 'text', patch: Partial<TaskTextSlot>) => {
+    setRouting((prev) => ({ ...prev, [task]: { ...prev[task], ...patch } }))
+  }
+  // 更新媒体类任务槽（image / video / audio）
+  const updateMediaSlot = (task: 'image' | 'video' | 'audio', patch: Partial<TaskMediaSlot>) => {
+    setRouting((prev) => ({ ...prev, [task]: { ...prev[task], ...patch } }))
+  }
+  // 更新媒体槽内的服务商配置
+  const updateSlotMedia = (task: 'image' | 'video' | 'audio', patch: Partial<MediaProviderConfig>) => {
+    setRouting((prev) => {
+      const current = prev[task].media || { type: 'wan' as const, apiKey: '', apiUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', model: 'wanx2.1-t2i-turbo' }
+      return { ...prev, [task]: { ...prev[task], media: { ...current, ...patch } } }
+    })
+  }
+
   useEffect(() => {
     if (open) {
-      try {
-        const saved = localStorage.getItem('subsilicon_ai_config')
-        if (saved) {
-          const parsed = JSON.parse(saved)
-          setAiEnabled(parsed.enabled ?? false)
-          setAiConfig(parsed)
+      // 加载为异步：apiKey 落盘为 AES-256 密文，回显前需解密（兼容旧明文）
+      ;(async () => {
+        try {
+          const saved = localStorage.getItem('subsilicon_ai_config')
+          if (saved) {
+            const parsed = JSON.parse(saved)
+            setAiEnabled(parsed.enabled ?? false)
+            setAiConfig((await decryptAiConfig(parsed)) as FlatAiConfig)
+          }
+        } catch {
+          // ignore
         }
-      } catch {
-        // ignore
-      }
-      // 加载媒体生成配置
-      const mp = getMediaProviderConfig()
-      if (mp) {
-        setMediaProvider(mp)
-      }
+        // 加载媒体生成配置
+        const mp = getMediaProviderConfig()
+        if (mp) {
+          setMediaProvider(await decryptApiKeyField(mp))
+          // 已配置高级服务商时自动展开高级选项，避免下拉显示与服务商不一致
+          if (mp.type === 'comfyui' || mp.type === 'custom') {
+            setShowAdvancedMedia(true)
+          }
+        }
+        // 加载任务路由配置（媒体槽 apiKey 解密回显）
+        const routing = getTaskRoutingConfig()
+        const decrypted: AiTaskRoutingConfig = { ...routing }
+        for (const task of ['image', 'video', 'audio'] as const) {
+          const slot = decrypted[task]
+          if (slot?.media?.apiKey) {
+            const { apiKey } = await decryptApiKeyField(slot.media)
+            slot.media = { ...slot.media, apiKey }
+          }
+        }
+        setRouting(decrypted)
+        setRoutingProviders(getTaskRoutingProviders())
+      })()
     }
   }, [open])
 
@@ -265,8 +260,9 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
     setTesting(true)
     setTestResult(null)
     try {
+      const apiKey = await decryptAiKey(aiConfig.apiKey)
       const resp = await fetch(aiConfig.apiUrl + '/models', {
-        headers: { Authorization: `Bearer ${aiConfig.apiKey}` },
+        headers: { Authorization: `Bearer ${apiKey}` },
       })
       if (resp.ok) {
         setTestResult({ ok: true, message: '连接成功，可以开始使用了' })
@@ -286,19 +282,275 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
     setTesting(false)
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const config = { ...aiConfig, enabled: aiEnabled }
-    localStorage.setItem('subsilicon_ai_config', JSON.stringify(config))
+    // 落盘前 AES-256 加密全部 apiKey
+    await saveAiConfigEncrypted(config)
     refreshAiConfig()
-    // 保存媒体生成配置（仅当填了 apiKey 才保存）
-    if (mediaProvider.apiKey.trim()) {
-      saveMediaProviderConfig(mediaProvider)
+    // 保存媒体生成配置（有 apiKey，或 ComfyUI 工作流——ComfyUI 无 apiKey 但需持久化工作流）
+    if (mediaProvider.apiKey.trim() || mediaProvider.type === 'comfyui') {
+      await saveMediaProviderConfig(mediaProvider)
     }
+    // 保存任务路由配置（内部对媒体槽 apiKey 加密）
+    await saveTaskRoutingConfig(routing)
     showToast('success', '创境设置已保存')
     onClose()
   }
 
   const currentProvider = PROVIDER_INFO[aiConfig.provider]
+
+  // 技能模板选择器（通过 Portal 渲染到 body，绕过 overflow-y-auto 容器裁剪）
+  const renderSkillPicker = (task: string, onPick: (prompt: string) => void) => {
+    const templates = getSkillTemplatesForTask(task as never)
+    if (templates.length === 0) return null
+    const isOpen = skillPickerOpen === task
+    return (
+      <div className="relative">
+        <button
+          onClick={(e) => {
+            if (isOpen) {
+              setSkillPickerOpen(null)
+            } else {
+              const rect = e.currentTarget.getBoundingClientRect()
+              setPickerPos({ top: rect.bottom + 4, left: rect.left })
+              setSkillPickerOpen(task)
+            }
+          }}
+          className="flex items-center gap-1 text-[10px] text-cyan-400 hover:text-cyan-300"
+        >
+          <Sparkles className="w-3 h-3" />
+          技能模板
+        </button>
+        {isOpen && pickerPos && createPortal(
+          <>
+            <div className="fixed inset-0 z-[99]" onClick={() => setSkillPickerOpen(null)} />
+            <div
+              className="fixed z-[100] w-72 max-h-60 overflow-y-auto rounded border border-slate-600 bg-slate-800 shadow-xl"
+              style={{ top: pickerPos.top, left: pickerPos.left }}
+            >
+              {templates.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => {
+                    onPick(t.skillPrompt)
+                    setSkillPickerOpen(null)
+                  }}
+                  className="w-full text-left px-2.5 py-1.5 hover:bg-slate-700 border-b border-slate-700/50 last:border-0"
+                >
+                  <p className="text-[11px] font-medium text-cyan-300">{t.name}</p>
+                  <p className="text-[9px] text-slate-500 leading-relaxed">{t.desc}</p>
+                </button>
+              ))}
+            </div>
+          </>,
+          document.body,
+        )}
+      </div>
+    )
+  }
+
+  // 渲染文本类任务槽（editor / text）
+  const renderTextSlot = (task: 'editor' | 'text', label: string, desc: string) => {
+    const slot = routing[task] as TaskTextSlot
+    const useCustom = !!(slot.providerId || slot.skillPrompt || slot.temperature != null || slot.maxTokens != null)
+    return (
+      <div className="p-2 rounded border border-slate-700/60 space-y-1.5">
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-medium text-slate-300">{label}</span>
+          <label className="flex items-center gap-1.5 text-[10px] text-slate-400 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={useCustom}
+              onChange={(e) => {
+                if (e.target.checked) {
+                  updateTextSlot(task, { providerId: routingProviders[0]?.id })
+                } else {
+                  updateTextSlot(task, { providerId: undefined, skillPrompt: undefined, temperature: undefined, maxTokens: undefined })
+                }
+              }}
+              className="accent-cyan-500"
+            />
+            独立配置
+          </label>
+        </div>
+        <p className="text-[9px] text-slate-500 leading-relaxed">{desc}</p>
+        {useCustom && (
+          <>
+            <select
+              value={slot.providerId || ''}
+              onChange={(e) => updateTextSlot(task, { providerId: e.target.value || undefined })}
+              className="w-full h-8 text-xs rounded border border-slate-600 bg-slate-700 px-2 text-white"
+            >
+              <option value="">智能默认（第一个启用服务商）</option>
+              {routingProviders.map((p) => (
+                <option key={p.id} value={p.id}>{p.name} · {p.model}</option>
+              ))}
+            </select>
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-slate-400">技能指令</span>
+                {renderSkillPicker(task, (p) => updateTextSlot(task, { skillPrompt: p }))}
+              </div>
+              <textarea
+                value={slot.skillPrompt || ''}
+                onChange={(e) => updateTextSlot(task, { skillPrompt: e.target.value })}
+                placeholder="给该任务注入的额外系统提示词（可选），或点上方「技能模板」一键套用"
+                rows={2}
+                className="w-full text-[10px] rounded border border-slate-600 bg-slate-700 px-2 py-1.5 text-white placeholder:text-slate-500 resize-y"
+              />
+            </div>
+            <div className="flex gap-2">
+              <label className="flex-1 flex items-center gap-1.5 text-[10px] text-slate-400">
+                温度
+                <input
+                  type="number"
+                  min={0}
+                  max={2}
+                  step={0.1}
+                  value={slot.temperature ?? ''}
+                  onChange={(e) => updateTextSlot(task, { temperature: e.target.value === '' ? undefined : Number(e.target.value) })}
+                  placeholder="默认"
+                  className="w-full h-7 text-xs rounded border border-slate-600 bg-slate-700 px-2 text-white placeholder:text-slate-500"
+                />
+              </label>
+              <label className="flex-1 flex items-center gap-1.5 text-[10px] text-slate-400">
+                最大 token
+                <input
+                  type="number"
+                  min={0}
+                  step={100}
+                  value={slot.maxTokens ?? ''}
+                  onChange={(e) => updateTextSlot(task, { maxTokens: e.target.value === '' ? undefined : Number(e.target.value) })}
+                  placeholder="默认"
+                  className="w-full h-7 text-xs rounded border border-slate-600 bg-slate-700 px-2 text-white placeholder:text-slate-500"
+                />
+              </label>
+            </div>
+          </>
+        )}
+      </div>
+    )
+  }
+
+  // 渲染媒体类任务槽（image / video / audio）
+  const renderMediaSlot = (task: 'image' | 'video' | 'audio', label: string, desc: string) => {
+    const media = routing[task].media
+    const useCustom = !!media
+    const isComfyui = media?.type === 'comfyui'
+    return (
+      <div className="p-2 rounded border border-slate-700/60 space-y-1.5">
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-medium text-slate-300 flex items-center gap-1.5">
+            {task === 'image' ? <Image className="w-3 h-3 text-pink-400" /> : task === 'video' ? <Wand2 className="w-3 h-3 text-purple-400" /> : <Music className="w-3 h-3 text-green-400" />}
+            {label}
+          </span>
+          <label className="flex items-center gap-1.5 text-[10px] text-slate-400 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={useCustom}
+              onChange={(e) => {
+                if (e.target.checked) {
+                  updateMediaSlot(task, { media: { type: 'wan', apiKey: '', apiUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', model: 'wanx2.1-t2i-turbo' } })
+                } else {
+                  updateMediaSlot(task, { media: undefined })
+                }
+              }}
+              className="accent-cyan-500"
+            />
+            独立配置
+          </label>
+        </div>
+        <p className="text-[9px] text-slate-500 leading-relaxed">{desc}</p>
+        {useCustom && media && (
+          <>
+            <select
+              value={media.type}
+              onChange={(e) => {
+                const newType = e.target.value as MediaProviderConfig['type']
+                // 切换到 comfyui 时自动填入默认地址
+                if (newType === 'comfyui') {
+                  updateSlotMedia(task, { type: newType, apiUrl: 'http://localhost:8188', apiKey: '', model: '' })
+                } else {
+                  updateSlotMedia(task, { type: newType, workflowJson: undefined })
+                }
+              }}
+              className="w-full h-8 text-xs rounded border border-slate-600 bg-slate-700 px-2 text-white"
+            >
+              <option value="wan">通义万相（国内直连）</option>
+              <option value="openai">OpenAI（需翻墙）</option>
+              <option value="stability">Stability AI</option>
+              <option value="custom">自定义（OpenAI 兼容）</option>
+              <option value="comfyui">ComfyUI（本地高级）</option>
+            </select>
+
+            {/* ComfyUI 专属配置：独立面板入口 */}
+            {isComfyui ? (
+              <div className="space-y-1.5 p-2 rounded border border-amber-500/20 bg-amber-500/5">
+                <p className="text-[10px] text-amber-300 leading-relaxed">
+                  ComfyUI 需本地部署。编辑器自动注入 prompt（CLIPTextEncode）和参考图（LoadImage）。
+                </p>
+                <button
+                  onClick={() => setComfyEditor(task)}
+                  className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 rounded transition-colors"
+                >
+                  <Settings2 className="w-3 h-3" />
+                  {media.workflowJson ? '编辑工作流' : '配置工作流'}
+                </button>
+              </div>
+            ) : (
+              <>
+                {/* 非ComfyUI的标准配置 */}
+                <div className="relative">
+                  <input
+                    type={routingMediaKeys[task] ? 'text' : 'password'}
+                    value={media.apiKey || ''}
+                    onChange={(e) => updateSlotMedia(task, { apiKey: e.target.value })}
+                    placeholder="API Key"
+                    className="w-full h-8 text-xs rounded border border-slate-600 bg-slate-700 px-2 pr-12 text-white placeholder:text-slate-500"
+                  />
+                  <button
+                    onClick={() => setRoutingMediaKeys((prev) => ({ ...prev, [task]: !prev[task] }))}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 hover:text-slate-200"
+                  >
+                    {routingMediaKeys[task] ? '隐藏' : '显示'}
+                  </button>
+                </div>
+                {media.type !== 'openai' && media.type !== 'stability' && (
+                  <input
+                    value={media.apiUrl || ''}
+                    onChange={(e) => updateSlotMedia(task, { apiUrl: e.target.value })}
+                    placeholder="API 地址，如 https://dashscope.aliyuncs.com/compatible-mode/v1"
+                    className="w-full h-8 text-xs rounded border border-slate-600 bg-slate-700 px-2 text-white placeholder:text-slate-500"
+                  />
+                )}
+                <input
+                  value={media.model || ''}
+                  onChange={(e) => updateSlotMedia(task, { model: e.target.value })}
+                  placeholder="模型名，如 wanx2.1-t2i-turbo"
+                  className="w-full h-8 text-xs rounded border border-slate-600 bg-slate-700 px-2 text-white placeholder:text-slate-500"
+                />
+              </>
+            )}
+
+            {/* 技能指令（所有服务商通用） */}
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-slate-400">技能指令</span>
+                {renderSkillPicker(task, (p) => updateMediaSlot(task, { skillPrompt: p }))}
+              </div>
+              <textarea
+                value={routing[task].skillPrompt || ''}
+                onChange={(e) => updateMediaSlot(task, { skillPrompt: e.target.value })}
+                placeholder={isComfyui ? "附加风格指令（可选），如 'anime style, masterpiece'" : "如「统一 3D 卡通风格」（可选）"}
+                rows={2}
+                className="w-full text-[10px] rounded border border-slate-600 bg-slate-700 px-2 py-1.5 text-white placeholder:text-slate-500 resize-y"
+              />
+            </div>
+          </>
+        )}
+      </div>
+    )
+  }
 
   if (!open) return null
 
@@ -405,6 +657,9 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
                     </button>
                   </div>
                 </div>
+                <p className="text-[10px] text-slate-500 leading-relaxed">
+                  Key 加密存储在本机，不上传服务器。若更换浏览器或屏幕分辨率变化导致无法识别，请重新填写。
+                </p>
               </div>
 
               {/* API URL */}
@@ -597,46 +852,65 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
               </div>
             )}
 
-            {/* ComfyUI 专属配置（高级） */}
+            {/* ComfyUI 专属配置（高级）：独立面板入口 */}
             {mediaProvider.type === 'comfyui' && (
-              <div className="space-y-2 p-2 rounded border border-amber-500/20 bg-amber-500/5">
+              <div className="space-y-1.5 p-2 rounded border border-amber-500/20 bg-amber-500/5">
                 <p className="text-[10px] text-amber-300 leading-relaxed">
-                  ⚠️ ComfyUI 需要你已在本地装好 ComfyUI + IP-Adapter 插件。新手请选「通义万相」。
+                  ⚠️ ComfyUI 需要你已在本地装好 ComfyUI。新手请选「通义万相」。
                 </p>
-                <div className="space-y-1.5">
-                  <label className="text-xs text-slate-400">ComfyUI 地址</label>
-                  <input
-                    value={mediaProvider.apiUrl}
-                    onChange={(e) => setMediaProvider((prev) => ({ ...prev, apiUrl: e.target.value }))}
-                    className="w-full h-8 text-xs rounded border border-slate-600 bg-slate-700 px-2 text-white"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs text-slate-400">工作流 JSON（API 格式）</label>
-                    <button
-                      onClick={() => setMediaProvider((prev) => ({ ...prev, workflowJson: DEFAULT_COMFYUI_WORKFLOW }))}
-                      className="text-[10px] text-pink-400 hover:text-pink-300 underline"
-                    >
-                      填入默认 IP-Adapter 工作流
-                    </button>
-                  </div>
-                  <textarea
-                    value={mediaProvider.workflowJson || ''}
-                    onChange={(e) => setMediaProvider((prev) => ({ ...prev, workflowJson: e.target.value }))}
-                    placeholder={'点上方按钮填入默认工作流，或自行从 ComfyUI Save (API Format) 粘贴。'}
-                    className="w-full h-24 text-[10px] font-mono rounded border border-slate-600 bg-slate-700 px-2 py-1.5 text-white resize-y"
-                  />
-                  <p className="text-[10px] text-slate-500 leading-relaxed">
-                    默认工作流含 LoadImage（参考图）+ CLIPTextEncode（prompt）+ IP-Adapter 节点。
-                    需你本地已安装 IP-Adapter 模型和插件。
-                  </p>
-                </div>
+                <button
+                  onClick={() => setComfyEditor('legacy')}
+                  className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 rounded transition-colors"
+                >
+                  <Settings2 className="w-3 h-3" />
+                  {mediaProvider.workflowJson ? '编辑工作流' : '配置工作流'}
+                </button>
+              </div>
+            )}
+          </div>
+          {/* AI 任务路由（高级）：不同创作任务用不同模型 */}
+          <div className="border-t border-slate-700 pt-3 space-y-3">
+            <button
+              onClick={() => setShowRouting(!showRouting)}
+              className="w-full flex items-center gap-1.5 text-left"
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+              <span className="text-xs font-semibold text-white">AI 任务路由</span>
+              <span className="text-[9px] text-slate-500 bg-slate-700 px-1.5 py-0.5 rounded">高级</span>
+              <span className={`ml-auto text-slate-400 transition-transform ${showRouting ? 'rotate-180' : ''}`}>▾</span>
+            </button>
+            <p className="text-[10px] text-slate-500 -mt-1.5 leading-relaxed">
+              默认智能分配：所有 AI 功能共用你上面配置的服务商，开箱即用。
+              <br />如需让「编辑器操作 / 文本生成 / 图片 / 视频 / 音乐」各用不同的模型，逐个打开「独立配置」即可。
+              <br />每个任务还可设置专属技能指令（系统提示词），实现"植入技能"的效果。
+            </p>
+
+            {showRouting && (
+              <div className="space-y-3">
+                {/* 文本类任务槽：editor / text */}
+                {renderTextSlot(
+                  'editor',
+                  '编辑器操作',
+                  'AI 对话面板：写故事、建节点、连线、生成命令'
+                )}
+                {renderTextSlot(
+                  'text',
+                  '文本生成',
+                  '润色、续写、大纲、角色设定、故事生成等'
+                )}
+
+                {/* 媒体类任务槽：image / video / audio */}
+                {renderMediaSlot('image', '图片生成', '角色立绘、背景图、CG 过场')}
+                {renderMediaSlot('video', '视频生成', '文生视频（需云端视频 API）')}
+                {renderMediaSlot('audio', '音乐 / 音效', '音乐、音效、语音（OpenAI 兼容音频接口）')}
+
+                <p className="text-[9px] text-slate-600 leading-relaxed">
+                  提示：媒体任务若不打开独立配置，图片/视频回退使用上方「图片/视频生成」的服务商；音乐/音效必须独立配置。
+                </p>
               </div>
             )}
           </div>
         </div>
-
         {/* Footer */}
         <div className="flex justify-end gap-2 px-4 py-3 border-t border-slate-700">
           <button
@@ -653,6 +927,29 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
           </button>
         </div>
       </div>
+
+      {/* ComfyUI 工作流独立编辑面板 */}
+      <ComfyuiWorkflowDialog
+        open={comfyEditor !== null}
+        initialApiUrl={comfyEditor === 'legacy'
+          ? mediaProvider.apiUrl || 'http://localhost:8188'
+          : comfyEditor
+            ? routing[comfyEditor].media?.apiUrl || 'http://localhost:8188'
+            : 'http://localhost:8188'}
+        initialWorkflowJson={comfyEditor === 'legacy'
+          ? mediaProvider.workflowJson
+          : comfyEditor
+            ? routing[comfyEditor].media?.workflowJson
+            : undefined}
+        onClose={() => setComfyEditor(null)}
+        onSave={(data) => {
+          if (comfyEditor === 'legacy') {
+            setMediaProvider((prev) => ({ ...prev, apiUrl: data.apiUrl, workflowJson: data.workflowJson }))
+          } else if (comfyEditor) {
+            updateSlotMedia(comfyEditor, { apiUrl: data.apiUrl, workflowJson: data.workflowJson })
+          }
+        }}
+      />
     </div>
   )
 }

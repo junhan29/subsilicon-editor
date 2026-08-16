@@ -4,10 +4,12 @@ import { useState } from 'react'
 import { AlertCircle, Check, Image, Loader2, Settings, Video, Wand2 } from 'lucide-react'
 import { showToast } from './toast'
 import {
+  type MediaGenerationResult,
   type MediaProviderConfig,
   buildConsistentImagePrompt,
-  generateMedia,
+  generateMediaForTask,
   getMediaProviderConfig,
+  getMediaProviderConfigForTask,
   optimizePrompt,
   saveMediaProviderConfig,
 } from '@editor/lib/ai'
@@ -40,12 +42,12 @@ export function AiMediaPanel({ characters, onImageGenerated }: AiMediaPanelProps
   const [prompt, setPrompt] = useState('')
   const [style, setStyle] = useState('anime')
   const [generating, setGenerating] = useState(false)
-  const [results, setResults] = useState<Array<{ url: string; type: 'image' | 'video'; prompt: string }>>([])
+  const [results, setResults] = useState<MediaGenerationResult[]>([])
   const [selectedChars, setSelectedChars] = useState<string[]>([])
   const [mediaType, setMediaType] = useState<'image' | 'video'>('image')
 
   const handleGenerate = async () => {
-    if (!provider) {
+    if (!getMediaProviderConfigForTask(mediaType)) {
       showToast('error', '请先配置媒体生成服务商')
       setShowSettings(true)
       return
@@ -62,14 +64,14 @@ export function AiMediaPanel({ characters, onImageGenerated }: AiMediaPanelProps
       const enhancedPrompt = buildConsistentImagePrompt(prompt, selectedCharacters, style)
       const optimized = await optimizePrompt(enhancedPrompt, mediaType, style)
 
-      const result = await generateMedia(
+      const result = await generateMediaForTask(
+        mediaType,
         {
           prompt: optimized,
           width: 1024,
           height: 1024,
           style: style as any,
-        },
-        provider
+        }
       )
 
       setResults(prev => [result, ...prev])

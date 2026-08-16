@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { AlertCircle, AlertTriangle, BookOpen, CheckCircle, CheckCircle2, Clock, Copy, Download, Edit3, ExternalLink, FileText, FolderOpen, FolderSync, Grid, HardDrive, Hash, List, MoreHorizontal, Plus, RefreshCw, Search, Settings, Sparkles, Star, Trash2, X } from 'lucide-react'
+import { AlertCircle, AlertTriangle, BookOpen, CheckCircle, CheckCircle2, Clock, Copy, Download, Edit3, ExternalLink, FileText, FolderOpen, FolderSync, Grid, HardDrive, Hash, List, MoreHorizontal, Plus, RefreshCw, Search, Settings, Sparkles, Star, Store, Trash2, X } from 'lucide-react'
 import type { StoryGraph } from '@editor/types/editor'
 import type { WorkDocument, WorkTypeId } from '@editor/types/work'
 import { type StoredWork, deleteWork, generateProjectId, getAllWorks, loadWork, saveWork } from '@editor/lib/local-db/work-store'
@@ -16,9 +16,10 @@ interface ProjectManagerProps {
   onOpenProject: (work: StoredWork) => void
   onNewProject: (work: StoredWork) => void
   onOpenSettings: () => void
+  onOpenBooth: () => void
 }
 
-export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings }: ProjectManagerProps) {
+export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings, onOpenBooth }: ProjectManagerProps) {
   const [works, setWorks] = useState<StoredWork[]>([])
   const [loading, setLoading] = useState(true)
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null)
@@ -407,6 +408,14 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings }: 
              updateStatus === 'available' ? '有更新' :
              updateStatus === 'not-available' ? '已是最新' :
              '检查更新'}
+          </button>
+          <button
+            onClick={onOpenBooth}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-amber-300 hover:text-amber-200 hover:bg-amber-500/10 rounded-lg transition-colors"
+            title="摊位工作台：管理摊位资料、作品陈列、试阅与价目，一键摆摊"
+          >
+            <Store className="w-4 h-4" />
+            摊位工作台
           </button>
           <button
             onClick={onOpenSettings}

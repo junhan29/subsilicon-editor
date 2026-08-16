@@ -250,7 +250,8 @@ export async function publishToPlatform(
   contactInfo: string,
   externalLink: string,
   previewHtml: string,
-  account: Omit<CreatorAccount, 'passwordHash'>
+  account: Omit<CreatorAccount, 'passwordHash'>,
+  extraFields?: Record<string, string>
 ): Promise<{ success: boolean; error?: string; record?: PublishRecord }> {
   const configs = await getAllPlatformConfigs()
   const config = configs.find((c) => c.id === platformConfigId)
@@ -305,6 +306,14 @@ export async function publishToPlatform(
     formData.append('externalLink', externalLink.trim())
     formData.append('previewHtml', new Blob([previewHtml], { type: 'text/html;charset=utf-8' }), 'preview.html')
     if (workId) formData.append('workId', workId)
+    // DDP 1.1：摊位层元数据（可选，旧接收方忽略）
+    if (extraFields) {
+      for (const [key, value] of Object.entries(extraFields)) {
+        if (value !== undefined && value !== null) {
+          formData.append(key, value)
+        }
+      }
+    }
 
     const headers: Record<string, string> = {}
     if (platform.submitTokenKey) {

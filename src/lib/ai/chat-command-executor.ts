@@ -42,6 +42,106 @@ export interface ExecuteResult {
   mediaRequests: MediaGenerationRequest[]
 }
 
+/**
+ * 审批决策：预览模式开启时动作暂存待批准（不执行），否则直接执行。
+ * 空动作永不进入预览（避免出现空确认卡片）。
+ * 独立成纯函数便于单测：防止预览审批被绕过或出现空卡片。
+ */
+export function dispatchParsedCommands(
+  actions: AiAction[],
+  previewMode: boolean
+): { mode: 'execute' | 'preview'; actions: AiAction[] } {
+  if (actions.length === 0) return { mode: 'execute', actions: [] }
+  return previewMode ? { mode: 'preview', actions } : { mode: 'execute', actions }
+}
+
+/** 单条动作的可读描述（用于命令预览卡片） */
+export interface ActionPreview {
+  action: AiAction
+  /** 人类可读的中文描述，如「创建 对话 节点：你好」 */
+  description: string
+}
+
+/** 节点类型的中文标签（与画布一致） */
+export const AI_NODE_TYPE_LABELS: Record<string, string> = {
+  dialogue: '对话',
+  narration: '旁白',
+  choice: '选择',
+  ending: '结局',
+  gather: '汇聚',
+  condition: '条件',
+  unlock: '付费解锁',
+  cg: 'CG 过场',
+  jump: '跳转',
+  random: '随机',
+  group: '分组',
+}
+
+const MEDIA_TYPE_LABELS: Record<string, string> = {
+  image: '图片',
+  video: '视频',
+  audio: '音频',
+}
+
+function truncate(text: string | undefined, max = 24): string {
+  if (!text) return ''
+  const t = text.trim().replace(/\s+/g, ' ')
+  return t.length > max ? `${t.slice(0, max)}…` : t
+}
+
+/**
+ * 将动作数组转为人类可读的中文描述列表。
+ * 供「命令预览」卡片展示，让用户在 AI 真正操作画布前看清楚要做什么。
+ */
+export function describeAiActions(actions: AiAction[]): ActionPreview[] {
+  return actions.map((action) => {
+    const p = (action.payload || {}) as Record<string, any>
+    switch (action.type) {
+      case 'createNode': {
+        const type = (p.nodeType as string) || 'unknown'
+        const label = AI_NODE_TYPE_LABELS[type] || type
+        const text = truncate((p.data as any)?.text) || truncate((p.data as any)?.prompt) || truncate((p.data as any)?.title)
+        return { action, description: `创建 ${label} 节点${text ? `：${text}` : ''}` }
+      }
+      case 'updateNode':
+        return { action, description: `修改节点 ${p.nodeId ?? '?'}` }
+      case 'deleteNode':
+        return { action, description: `删除节点 ${p.nodeId ?? '?'}` }
+      case 'connectNodes':
+        return { action, description: `连接节点 ${p.source ?? '?'} → ${p.target ?? '?'}` }
+      case 'updateEdge':
+        return { action, description: `修改连线 ${p.edgeId ?? '?'}` }
+      case 'deleteEdge':
+        return { action, description: `删除连线 ${p.edgeId ?? '?'}` }
+      case 'selectNode':
+        return { action, description: `选中节点 ${p.nodeId ?? '?'}` }
+      case 'addCharacter': {
+        const name = (p.name as string) || '?'
+        const gender = p.gender ? `（${p.gender}）` : ''
+        return { action, description: `创建角色 ${name}${gender}` }
+      }
+      case 'bindAsset':
+        return { action, description: `绑定素材 ${truncate(p.assetHash as string, 12)} 到节点 ${p.nodeId ?? '?'}` }
+      case 'requestMediaGeneration': {
+        const type = MEDIA_TYPE_LABELS[(p.mediaType as string) || 'image'] || '媒体'
+        return { action, description: `生成${type}：${truncate(p.prompt as string)}` }
+      }
+      case 'saveWork':
+        return { action, description: '保存当前作品' }
+      case 'exportWork':
+        return { action, description: '打开导出对话框' }
+      case 'previewWork':
+        return { action, description: '打开作品预览' }
+      case 'undo':
+        return { action, description: '撤销上一步操作' }
+      case 'redo':
+        return { action, description: '重做操作' }
+      default:
+        return { action, description: `未知操作：${action.type}` }
+    }
+  })
+}
+
 export interface EditorCanvasCallbacks {
   onUpdateNode?: (nodeId: string, data: Partial<StoryNode['data']>) => void
   onDeleteNode?: (nodeId: string) => void

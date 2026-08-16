@@ -1,5 +1,5 @@
 import type { AiConfig, AiDialogueResult } from '../types'
-import { callAi } from '../provider-registry'
+import { callAiForTask } from '../provider-registry'
 
 export const DIALOGUE_SYSTEM_PROMPT = `你是一个专业的剧本创作助手。请根据角色列表和上下文，生成一段自然流畅的对话。输出必须是严格的 JSON 格式，不要包含任何 markdown 标记或额外文字。
 
@@ -25,14 +25,13 @@ export async function generateDialogue(
   const emotionPrompt = emotion ? `\n整体情绪：${emotion}` : ''
   const userPrompt = `角色：${characterNames.join('、')}\n上下文：${context}${emotionPrompt}`
 
-  const rawResult = await callAi(
+  const rawResult = await callAiForTask('text',
     {
       systemPrompt: DIALOGUE_SYSTEM_PROMPT,
       userPrompt,
       temperature: 0.7,
       maxTokens: 800,
-    },
-    config
+    }
   )
 
   try {

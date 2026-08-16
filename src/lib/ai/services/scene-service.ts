@@ -1,5 +1,5 @@
 import type { AiConfig, AiGenerateResult, AiSceneDescriptionResult } from '../types'
-import { callAi } from '../provider-registry'
+import { callAiForTask } from '../provider-registry'
 
 export const SCENE_DESCRIPTION_SYSTEM_PROMPT = `你是一个专业的场景描述师。请根据地点、时间和氛围，生成详细的场景描述。输出必须是严格的 JSON 格式，不要包含任何 markdown 标记或额外文字。
 
@@ -25,14 +25,13 @@ export async function generateSceneSimple(
   const systemPrompt = `请根据以下信息生成一个场景的详细描述，包括环境、氛围、细节，约 100 字：`
   const userPrompt = `地点：${location}\n氛围：${atmosphere}`
 
-  const result = await callAi(
+  const result = await callAiForTask('text',
     {
       systemPrompt,
       userPrompt,
       temperature: 0.7,
       maxTokens: 200,
-    },
-    config
+    }
   )
 
   return { result }
@@ -46,14 +45,13 @@ export async function generateSceneDescription(
 ): Promise<AiSceneDescriptionResult> {
   const userPrompt = `地点：${location}\n时间：${timeOfDay}\n氛围：${mood}`
 
-  const rawResult = await callAi(
+  const rawResult = await callAiForTask('text',
     {
       systemPrompt: SCENE_DESCRIPTION_SYSTEM_PROMPT,
       userPrompt,
       temperature: 0.7,
       maxTokens: 600,
-    },
-    config
+    }
   )
 
   try {

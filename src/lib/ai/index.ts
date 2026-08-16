@@ -6,11 +6,30 @@ export {
   checkLocalAiAvailability,
   callAi,
   callAiStream,
+  callAiForTask,
+  callAiStreamForTask,
   getAvailableProviders,
   refreshAiConfig,
   resetAiRegistry,
   AiConfigNeededError,
 } from './provider-registry'
+
+export {
+  getTaskRoutingConfig,
+  saveTaskRoutingConfig,
+  resetTaskRoutingConfig,
+  getTaskRoutingProviders,
+  resolveTextProviderForTask,
+  resolveMediaProviderForTask,
+  getTaskSkillPrompt,
+  isMediaTask,
+  isTextTask,
+  type AiTaskRoutingConfig,
+  type AiTaskType,
+  type MediaTaskType,
+  type TaskTextSlot,
+  type TaskMediaSlot,
+} from './task-routing'
 
 export { polishText, layoutText, continueText } from './services/text-service'
 export {
@@ -33,13 +52,17 @@ export type { PlotSuggestion, StoryBranchSuggestion } from './services/story-ass
 
 export {
   generateMedia,
+  generateAudio,
+  generateMediaForTask,
   optimizePrompt,
   generateCharacterPrompt,
   buildConsistentImagePrompt,
   getMediaProviderConfig,
+  getMediaProviderConfigForTask,
   saveMediaProviderConfig,
 } from './services/media-generation-service'
 export type {
+  AudioGenerationParams,
   ImageGenerationParams,
   VideoGenerationParams,
   MediaGenerationResult,
@@ -65,3 +88,25 @@ export {
   PROMPT_TEMPLATES,
 } from './prompt-templates'
 export type { PromptTemplate } from './prompt-templates'
+
+export {
+  BUILTIN_SKILL_TEMPLATES,
+  getSkillTemplate,
+  getSkillTemplatesForTask,
+} from './skill-templates'
+export type { SkillTemplate } from './skill-templates'
+
+export {
+  WORKFLOW_PRESETS,
+  getWorkflowPreset,
+  injectPrompt,
+  injectReferenceImage,
+  validateWorkflow,
+} from './comfyui-workflow'
+export type {
+  ComfyWorkflow,
+  ComfyWorkflowNode,
+  WorkflowNodeInfo,
+  WorkflowPreset,
+  WorkflowValidationResult,
+} from './comfyui-workflow'

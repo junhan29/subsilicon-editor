@@ -11,7 +11,7 @@ import type {
   AiSceneDescriptionResult,
   AiStreamResult,
 } from '../types'
-import { callAiStream } from '../provider-registry'
+import { callAiStreamForTask } from '../provider-registry'
 import {
   CONTINUE_STYLE_PROMPTS,
   LAYOUT_PROMPTS,
@@ -38,13 +38,12 @@ export async function streamPolishText(
   config?: AiConfig | null,
   callbacks?: StreamCallbacks
 ): Promise<AiStreamResult> {
-  const { stream, fullText } = await callAiStream(
+  const { stream, fullText } = await callAiStreamForTask('text',
     {
       systemPrompt: STYLE_PROMPTS[style] || STYLE_PROMPTS.general,
       userPrompt: text,
       temperature: 0.7,
-    },
-    config
+    }
   )
 
   pipeStream(stream, callbacks)
@@ -58,13 +57,12 @@ export async function streamLayoutText(
   config?: AiConfig | null,
   callbacks?: StreamCallbacks
 ): Promise<AiStreamResult> {
-  const { stream, fullText } = await callAiStream(
+  const { stream, fullText } = await callAiStreamForTask('text',
     {
       systemPrompt: LAYOUT_PROMPTS[layoutType] || LAYOUT_PROMPTS.dialogue,
       userPrompt: text,
       temperature: 0.5,
-    },
-    config
+    }
   )
 
   pipeStream(stream, callbacks)
@@ -78,14 +76,13 @@ export async function streamContinueText(
   config?: AiConfig | null,
   callbacks?: StreamCallbacks
 ): Promise<AiStreamResult> {
-  const { stream, fullText } = await callAiStream(
+  const { stream, fullText } = await callAiStreamForTask('text',
     {
       systemPrompt: CONTINUE_STYLE_PROMPTS[style] || CONTINUE_STYLE_PROMPTS.general,
       userPrompt: text,
       temperature: 0.8,
       maxTokens: 200,
-    },
-    config
+    }
   )
 
   pipeStream(stream, callbacks)
@@ -102,14 +99,13 @@ export async function streamGenerateOutline(
 ): Promise<AiStreamResult> {
   const userPrompt = `主题：${topic}\n类型：${genre}\n场景数量：${sceneCount}`
 
-  const { stream, fullText } = await callAiStream(
+  const { stream, fullText } = await callAiStreamForTask('text',
     {
       systemPrompt: OUTLINE_SYSTEM_PROMPT,
       userPrompt,
       temperature: 0.8,
       maxTokens: 2000,
-    },
-    config
+    }
   )
 
   pipeStream(stream, callbacks)
@@ -185,14 +181,13 @@ export async function streamGenerateCharacterDetail(
 ): Promise<AiCharacterResult> {
   const userPrompt = `角色名：${name}\n性格特点：${personality}\n故事类型：${genre}`
 
-  const { fullText } = await callAiStream(
+  const { fullText } = await callAiStreamForTask('text',
     {
       systemPrompt: CHARACTER_DETAIL_SYSTEM_PROMPT,
       userPrompt,
       temperature: 0.7,
       maxTokens: 800,
-    },
-    config
+    }
   )
 
   const rawResult = await fullText
@@ -225,14 +220,13 @@ export async function streamGenerateDialogue(
   const emotionPrompt = emotion ? `\n整体情绪：${emotion}` : ''
   const userPrompt = `角色：${characterNames.join('、')}\n上下文：${context}${emotionPrompt}`
 
-  const { fullText } = await callAiStream(
+  const { fullText } = await callAiStreamForTask('text',
     {
       systemPrompt: DIALOGUE_SYSTEM_PROMPT,
       userPrompt,
       temperature: 0.7,
       maxTokens: 800,
-    },
-    config
+    }
   )
 
   const rawResult = await fullText
@@ -280,14 +274,13 @@ export async function streamGenerateSceneDescription(
 ): Promise<AiSceneDescriptionResult> {
   const userPrompt = `地点：${location}\n时间：${timeOfDay}\n氛围：${mood}`
 
-  const { fullText } = await callAiStream(
+  const { fullText } = await callAiStreamForTask('text',
     {
       systemPrompt: SCENE_DESCRIPTION_SYSTEM_PROMPT,
       userPrompt,
       temperature: 0.7,
       maxTokens: 600,
-    },
-    config
+    }
   )
 
   const rawResult = await fullText

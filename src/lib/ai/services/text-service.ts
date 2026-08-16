@@ -1,5 +1,5 @@
 import type { AiConfig, AiGenerateResult, AiLayoutResult, AiLayoutType, AiPolishResult, AiPolishStyle } from '../types'
-import { callAi } from '../provider-registry'
+import { callAiForTask } from '../provider-registry'
 
 export const STYLE_PROMPTS: Record<AiPolishStyle, string> = {
   general: '请润色以下文字，使表达更流畅自然，保持原意：',
@@ -26,13 +26,12 @@ export async function polishText(
   style: AiPolishStyle = 'general',
   config?: AiConfig | null
 ): Promise<AiPolishResult> {
-  const result = await callAi(
+  const result = await callAiForTask('text',
     {
       systemPrompt: STYLE_PROMPTS[style] || STYLE_PROMPTS.general,
       userPrompt: text,
       temperature: 0.7,
-    },
-    config
+    }
   )
 
   return { result }
@@ -43,13 +42,12 @@ export async function layoutText(
   layoutType: AiLayoutType = 'dialogue',
   config?: AiConfig | null
 ): Promise<AiLayoutResult> {
-  const result = await callAi(
+  const result = await callAiForTask('text',
     {
       systemPrompt: LAYOUT_PROMPTS[layoutType] || LAYOUT_PROMPTS.dialogue,
       userPrompt: text,
       temperature: 0.5,
-    },
-    config
+    }
   )
 
   return { result }
@@ -60,14 +58,13 @@ export async function continueText(
   style: AiPolishStyle = 'general',
   config?: AiConfig | null
 ): Promise<AiGenerateResult> {
-  const result = await callAi(
+  const result = await callAiForTask('text',
     {
       systemPrompt: CONTINUE_STYLE_PROMPTS[style] || CONTINUE_STYLE_PROMPTS.general,
       userPrompt: text,
       temperature: 0.8,
       maxTokens: 200,
-    },
-    config
+    }
   )
 
   return { result }
