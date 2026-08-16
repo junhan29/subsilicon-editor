@@ -91,7 +91,8 @@ import {
 } from '@editor/lib/annotation-store'
 import { AnnotationMarkerProvider, withAnnotationMarker } from './annotation-marker'
 import { matchShortcut } from '@editor/lib/shortcut-manager'
-import { type Theme, initTheme, subscribeTheme, toggleTheme } from '@editor/lib/theme-manager'
+import { type Theme, THEME_LABELS, initTheme, subscribeTheme, toggleTheme } from '@editor/lib/theme-manager'
+import { useAssistantName } from '@editor/lib/assistant-name'
 import { endSession, estimateWordCount, recordAction, startSession } from '@editor/lib/writing-stats'
 
 // 为所有节点类型包裹批注标记（random 在组件内动态包装以传入 updateNodeData）
@@ -257,6 +258,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, onStartTour, wo
 
   // 主题状态（订阅变化以触发重渲染）
   const [currentTheme, setCurrentTheme] = useState<Theme>('dark')
+  const assistantName = useAssistantName()
   const annotationAuthor = useMemo(() => getAnnotationAuthor(), [])
   const { screenToFlowPosition, fitView, getNodes, zoomIn, zoomOut } = useReactFlow()
   const canvasRef = useRef<HTMLDivElement>(null)
@@ -345,7 +347,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, onStartTour, wo
   // 主题切换：由快捷键或外部按钮触发
   const handleToggleTheme = useCallback(() => {
     const next = toggleTheme()
-    showToast('info', `已切换到${next === 'dark' ? '深色' : '浅色'}主题`)
+    showToast('info', `已切换到${THEME_LABELS[next]}`)
   }, [])
 
   // 批注：从 localStorage 加载（按 workId 隔离）
@@ -1912,6 +1914,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, onStartTour, wo
       edges={edges as StoryEdge[]}
       characters={characters}
       scenes={scenesRef.current}
+      variables={variables}
       onUpdateNode={updateNodeData}
       onDeleteNode={deleteNode}
       onUpdateEdge={updateEdgeData}
@@ -1944,6 +1947,34 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, onStartTour, wo
       onAddCharacter={(char) => {
         addCharacter(char)
         showToast('success', `角色「${char.name}」已创建`)
+      }}
+      onUpdateCharacter={(characterId, data) => {
+        const existing = characters.find((c) => c.id === characterId)
+        if (!existing) return
+        updateCharacter({ ...existing, ...data, id: characterId })
+      }}
+      onDeleteCharacter={(characterId) => {
+        deleteCharacter(characterId)
+      }}
+      onRenameWork={(t) => {
+        setTitle(t)
+        pushHistory('UPDATE_TITLE', `作品重命名为「${t}」`)
+        showToast('success', `作品已重命名为「${t}」`)
+      }}
+      onAddVariable={(variable) => {
+        setVariables((prev) => [...prev, variable])
+        pushHistory('UPDATE_VARIABLES', `新增变量「${variable.name}」`)
+        showToast('success', `变量「${variable.name}」已创建`)
+      }}
+      onUpdateVariable={(variableId, data) => {
+        setVariables((prev) => prev.map((v) => (v.id === variableId ? { ...v, ...data, id: variableId } : v)))
+        pushHistory('UPDATE_VARIABLES', `修改变量 ${variableId}`)
+        showToast('success', '变量已更新')
+      }}
+      onDeleteVariable={(variableId) => {
+        setVariables((prev) => prev.filter((v) => v.id !== variableId))
+        pushHistory('UPDATE_VARIABLES', `删除变量 ${variableId}`)
+        showToast('info', '变量已删除')
       }}
       onBindAsset={async (nodeId, assetHash, usageType) => {
         try {
@@ -2111,7 +2142,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, onStartTour, wo
                     onClick={() => { setShowAiSettings(true); setActiveLeftActivity(null) }}
                     className="w-full text-left text-xs text-foreground hover:bg-muted rounded px-2 py-1.5 transition-colors"
                   >
-                    亚硅（AI）设置
+                    {assistantName}（AI）设置
                   </button>
                   <button
                     onClick={() => { setShowShortcutsModal(true); setActiveLeftActivity(null) }}
@@ -2381,7 +2412,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, onStartTour, wo
                     setCharacters(newChars)
                     setTitle(newTitle)
                     setSelectedNodeIds(newNodes.map((n) => n.id))
-                    pushHistory('BATCH', `应用亚硅生成故事「${newTitle}」`)
+                    pushHistory('BATCH', `应用创作助理生成故事「${newTitle}」`)
                     showToast('success', `故事「${newTitle}」已应用到画布`)
                     setTimeout(() => {
                       fitView({ padding: 0.3, duration: 500 })
@@ -2400,7 +2431,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, onStartTour, wo
                     }
                     setNodes((nds) => [...nds, newNode as StoryNode])
                     setSelectedNodeIds([id])
-                    pushHistory('ADD_NODE', `亚硅添加 ${nodeTypeLabels[type] || type} 节点`)
+                    pushHistory('ADD_NODE', `创作助理添加 ${nodeTypeLabels[type] || type} 节点`)
                     return id
                   }}
                   onAddEdge={(source, target) => {
@@ -2411,7 +2442,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, onStartTour, wo
                       edgeId = newEdges[newEdges.length - 1]?.id || ''
                       return newEdges as StoryEdge[]
                     })
-                    pushHistory('ADD_EDGE', '亚硅创建连线')
+                    pushHistory('ADD_EDGE', '创作助理创建连线')
                     return edgeId
                   }}
                 />

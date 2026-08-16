@@ -181,7 +181,7 @@ async function generateWithComfyUI(
   workflowJson?: string
 ): Promise<MediaGenerationResult> {
   if (!workflowJson) {
-    throw new Error('ComfyUI 需要在亚硅设置中粘贴工作流 JSON（API 格式）。请在 ComfyUI 里 Save (API Format) 后粘贴。')
+    throw new Error('ComfyUI 需要在创作助理设置中粘贴工作流 JSON（API 格式）。请在 ComfyUI 里 Save (API Format) 后粘贴。')
   }
 
   let workflow: ComfyWorkflow
@@ -407,7 +407,7 @@ export async function generateMedia(
   const resolved = await decryptApiKeyField(provider)
   // 视频生成仅支持 wan/custom（云端视频 API）
   if (isVideo && resolved.type !== 'wan' && resolved.type !== 'custom') {
-    throw new Error('视频生成仅支持 wan/custom 类型服务商（云端视频 API），请在亚硅设置中配置')
+    throw new Error('视频生成仅支持 wan/custom 类型服务商（云端视频 API），请在创作助理设置中配置')
   }
 
   switch (resolved.type) {
@@ -432,14 +432,14 @@ export async function generateMedia(
   }
 }
 
-// 使用亚硅优化 prompt
+// 使用创作助理优化 prompt
 export async function optimizePrompt(
   basePrompt: string,
   type: 'image' | 'video',
   style?: string,
   config?: AiConfig | null
 ): Promise<string> {
-  const systemPrompt = `你是一位专业的亚硅绘画/视频提示词工程师。请将用户的简单描述转化为高质量的英文提示词。
+  const systemPrompt = `你是一位专业的创作助理绘画/视频提示词工程师。请将用户的简单描述转化为高质量的英文提示词。
 
 要求：
 1. 使用英文输出
@@ -491,9 +491,9 @@ export async function generateMediaForTask(
   const provider = getMediaProviderConfigForTask(task)
   if (!provider) {
     throw new Error(
-      task === 'image' ? '未配置图片生成服务商，请在亚硅设置中配置'
-      : task === 'video' ? '未配置视频生成服务商，请在亚硅设置中配置'
-      : '未配置音乐/音效生成服务商，请在亚硅设置中配置'
+      task === 'image' ? '未配置图片生成服务商，请在创作助理设置中配置'
+      : task === 'video' ? '未配置视频生成服务商，请在创作助理设置中配置'
+      : '未配置音乐/音效生成服务商，请在创作助理设置中配置'
     )
   }
   const skill = getTaskSkillPrompt(task)

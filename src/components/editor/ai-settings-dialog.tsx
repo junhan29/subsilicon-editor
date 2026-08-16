@@ -22,6 +22,7 @@ import {
 import { getDefaultModel, getModelsForProvider } from '@editor/lib/ai/model-presets'
 import { decryptAiConfig, decryptApiKeyField, decryptAiKey } from '@editor/lib/ai/ai-key-vault'
 import { saveAiConfigEncrypted } from '@editor/lib/ai/ai-config-store'
+import { useAssistantName } from '@editor/lib/assistant-name'
 
 interface AiSettingsDialogProps {
   open: boolean
@@ -120,6 +121,7 @@ const MEDIA_PROVIDER_INFO: Record<string, {
 }
 
 export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
+  const assistantName = useAssistantName()
   const [aiEnabled, setAiEnabled] = useState(false)
   const [aiConfig, setAiConfig] = useState<FlatAiConfig>({
     enabled: false,
@@ -293,7 +295,7 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
     }
     // 保存任务路由配置（内部对媒体槽 apiKey 加密）
     await saveTaskRoutingConfig(routing)
-    showToast('success', '亚硅设置已保存')
+    showToast('success', `${assistantName}设置已保存`)
     onClose()
   }
 
@@ -564,7 +566,7 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
               <Cpu className="w-4 h-4 text-amber-300" />
             </div>
             <div>
-              <h3 className="text-sm font-semibold yasgui-gradient-text leading-tight">亚硅服务设置</h3>
+              <h3 className="text-sm font-semibold yasgui-gradient-text leading-tight">{assistantName}服务设置</h3>
               <p className="text-[9px] text-slate-500 leading-none">创作搭档 · 配置对话与媒体生成服务</p>
             </div>
           </div>
@@ -581,8 +583,8 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
           {/* Enable Toggle */}
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-white">启用亚硅</p>
-              <p className="text-[10px] text-slate-500">开启后将使用亚硅辅助创作</p>
+              <p className="text-xs font-medium text-white">启用{assistantName}</p>
+              <p className="text-[10px] text-slate-500">开启后将使用{assistantName}辅助创作</p>
             </div>
             <button
               onClick={() => setAiEnabled(!aiEnabled)}
@@ -706,7 +708,7 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
                 <button
                   onClick={testConnection}
                   disabled={testing || !aiConfig.apiKey}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/20 rounded transition-colors disabled:opacity-50"
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-amber-500 text-amber-950 hover:bg-amber-400 rounded transition-colors disabled:opacity-50"
                 >
                   {testing ? (
                     <Loader2 className="w-3 h-3 animate-spin" />
@@ -845,7 +847,7 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
                 <button
                   onClick={testMediaConnection}
                   disabled={mediaTesting || !mediaProvider.apiKey}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/20 rounded transition-colors disabled:opacity-50"
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-cyan-500 text-cyan-950 hover:bg-cyan-400 rounded transition-colors disabled:opacity-50"
                 >
                   {mediaTesting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Image className="w-3 h-3" />}
                   测试生成

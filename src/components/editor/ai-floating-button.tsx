@@ -1,6 +1,7 @@
 'use client'
 
 import { MessageSquare } from 'lucide-react'
+import { useAssistantName } from '@editor/lib/assistant-name'
 
 interface AiFloatingButtonProps {
   onClick: () => void
@@ -8,6 +9,7 @@ interface AiFloatingButtonProps {
 }
 
 export function AiFloatingButton({ onClick, isOpen }: AiFloatingButtonProps) {
+  const assistantName = useAssistantName()
   return (
     <button
       onClick={onClick}
@@ -19,7 +21,7 @@ export function AiFloatingButton({ onClick, isOpen }: AiFloatingButtonProps) {
           : 'bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-xl hover:scale-105'
         }
       `}
-      title="AI 亚硅 (Ctrl+K)"
+      title={`AI ${assistantName} (Ctrl+K)`}
     >
       <MessageSquare className="h-5 w-5" />
     </button>

@@ -182,6 +182,61 @@ describe('executeAiActions', () => {
     await executeAiActions(actions, callbacks)
     expect(callbacks.onNodeSelect).toHaveBeenCalledWith('node-1')
   })
+
+  it('updateCharacter / deleteCharacter 调用对应回调', async () => {
+    const onUpdateCharacter = vi.fn()
+    const onDeleteCharacter = vi.fn()
+    const callbacks: EditorCanvasCallbacks = { ...createMockCallbacks(), onUpdateCharacter, onDeleteCharacter }
+    const actions: AiAction[] = [
+      { type: 'updateCharacter', payload: { characterId: 'char-1', data: { personality: ['冷静'] } } },
+      { type: 'deleteCharacter', payload: { characterId: 'char-1' } },
+    ]
+    const result = await executeAiActions(actions, callbacks)
+    expect(result.success).toBe(2)
+    expect(onUpdateCharacter).toHaveBeenCalledWith('char-1', { personality: ['冷静'] })
+    expect(onDeleteCharacter).toHaveBeenCalledWith('char-1')
+  })
+
+  it('renameWork 调用 onRenameWork', async () => {
+    const onRenameWork = vi.fn()
+    const callbacks: EditorCanvasCallbacks = { ...createMockCallbacks(), onRenameWork }
+    const result = await executeAiActions(
+      [{ type: 'renameWork', payload: { title: '夜航星' } }],
+      callbacks
+    )
+    expect(result.success).toBe(1)
+    expect(onRenameWork).toHaveBeenCalledWith('夜航星')
+  })
+
+  it('addVariable 自动补全变量字段', async () => {
+    const onAddVariable = vi.fn()
+    const callbacks: EditorCanvasCallbacks = { ...createMockCallbacks(), onAddVariable }
+    const result = await executeAiActions(
+      [{ type: 'addVariable', payload: { name: '好感度', initialValue: 0, type: 'number' } }],
+      callbacks
+    )
+    expect(result.success).toBe(1)
+    const variable = onAddVariable.mock.calls[0][0]
+    expect(variable.name).toBe('好感度')
+    expect(variable.initialValue).toBe(0)
+    expect(variable.defaultValue).toBe(0)
+    expect(variable.type).toBe('number')
+    expect(variable.id).toBeTruthy()
+  })
+
+  it('updateVariable / deleteVariable 调用对应回调', async () => {
+    const onUpdateVariable = vi.fn()
+    const onDeleteVariable = vi.fn()
+    const callbacks: EditorCanvasCallbacks = { ...createMockCallbacks(), onUpdateVariable, onDeleteVariable }
+    const actions: AiAction[] = [
+      { type: 'updateVariable', payload: { variableId: 'var-1', data: { initialValue: 10 } } },
+      { type: 'deleteVariable', payload: { variableId: 'var-1' } },
+    ]
+    const result = await executeAiActions(actions, callbacks)
+    expect(result.success).toBe(2)
+    expect(onUpdateVariable).toHaveBeenCalledWith('var-1', { initialValue: 10 })
+    expect(onDeleteVariable).toHaveBeenCalledWith('var-1')
+  })
 })
 
 describe('describeAiActions', () => {

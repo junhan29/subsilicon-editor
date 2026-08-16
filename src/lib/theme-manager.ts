@@ -1,24 +1,31 @@
-export type Theme = 'dark' | 'light'
+export type Theme = 'dark' | 'light' | 'sepia'
+
+export const THEME_LABELS: Record<Theme, string> = {
+  dark: '深色（深空硅基）',
+  light: '浅色（暖纸）',
+  sepia: '复古暖棕',
+}
 
 const STORAGE_KEY = 'subsilicon-editor-theme'
 
-/** 获取当前生效的主题（默认深色） */
+const THEME_ORDER: Theme[] = ['dark', 'light', 'sepia']
+
+/** 获取当前生效的主题（浅色即 :root 基础值，不挂 class） */
 export function getCurrentTheme(): Theme {
   if (typeof document === 'undefined') return 'dark'
-  return document.documentElement.classList.contains('light') ? 'light' : 'dark'
+  const root = document.documentElement
+  if (root.classList.contains('dark')) return 'dark'
+  if (root.classList.contains('sepia')) return 'sepia'
+  return 'light'
 }
 
-/** 设置主题：更新 DOM class 并持久化到 localStorage */
+/** 设置主题：清理全部主题 class 后应用目标 class，并持久化 */
 export function setTheme(theme: Theme): void {
   if (typeof document === 'undefined') return
   const root = document.documentElement
-  if (theme === 'light') {
-    root.classList.add('light')
-    root.classList.remove('dark')
-  } else {
-    root.classList.remove('light')
-    root.classList.add('dark')
-  }
+  root.classList.remove('dark', 'light', 'sepia')
+  if (theme === 'dark') root.classList.add('dark')
+  else if (theme === 'sepia') root.classList.add('sepia')
   try {
     window.localStorage.setItem(STORAGE_KEY, theme)
   } catch {
@@ -28,7 +35,7 @@ export function setTheme(theme: Theme): void {
 }
 
 export function toggleTheme(): Theme {
-  const next: Theme = getCurrentTheme() === 'dark' ? 'light' : 'dark'
+  const next = THEME_ORDER[(THEME_ORDER.indexOf(getCurrentTheme()) + 1) % THEME_ORDER.length]
   setTheme(next)
   return next
 }
@@ -38,7 +45,7 @@ export function getStoredTheme(): Theme | null {
   if (typeof window === 'undefined') return null
   try {
     const v = window.localStorage.getItem(STORAGE_KEY)
-    if (v === 'dark' || v === 'light') return v
+    if (v === 'dark' || v === 'light' || v === 'sepia') return v
   } catch {
   }
   return null
@@ -46,7 +53,7 @@ export function getStoredTheme(): Theme | null {
 
 /**
  * 初始化主题：在编辑器挂载时调用，根据 localStorage 偏好应用主题。
- * 若无偏好，保持当前 DOM 状态（默认深色）。
+ * 若无偏好，保持当前 DOM 状态（默认浅色）。
  */
 export function initTheme(): Theme {
   const stored = getStoredTheme()

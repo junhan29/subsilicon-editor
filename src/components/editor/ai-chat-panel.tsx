@@ -7,6 +7,7 @@ import { AiSettingsDialog } from './ai-settings-dialog'
 import { buildConsistentImagePrompt, callAiStreamForTask, generateMediaForTask, getMediaProviderConfigForTask, isAiAvailable, optimizePrompt, refreshAiConfig } from '@editor/lib/ai'
 import { serializeGraphContext } from '@editor/lib/ai/chat-graph-context'
 import { getChatSystemPrompt } from '@editor/lib/ai/chat-system-prompt'
+import { getAssistantName, useAssistantName } from '@editor/lib/assistant-name'
 import { type EditorCanvasCallbacks, type MediaGenerationRequest, type ActionPreview, describeAiActions, dispatchParsedCommands, executeAiActions, parseAllAiCommands } from '@editor/lib/ai/chat-command-executor'
 import { addAutomationRule, listAutomationRules, matchAutomationRules, removeAutomationRule, resetAutomationRules, updateAutomationRule, type AutomationRule } from '@editor/lib/ai/ai-automation'
 import { appendDebugEntry, clearDebugEntries, getDebugEntries, removeDebugEntry, type AiDebugEntry } from '@editor/lib/ai/ai-debug-log'
@@ -56,6 +57,13 @@ interface AiChatPanelProps {
   onAddEdge?: (source: string, target: string) => string | undefined
   onNodeSelect?: (nodeId: string) => void
   onAddCharacter?: (character: StoryCharacter) => void
+  onUpdateCharacter?: (characterId: string, data: Partial<StoryCharacter>) => void
+  onDeleteCharacter?: (characterId: string) => void
+  onRenameWork?: (title: string) => void
+  onAddVariable?: (variable: import('@editor/types/editor').StoryVariable) => void
+  onUpdateVariable?: (variableId: string, data: Partial<import('@editor/types/editor').StoryVariable>) => void
+  onDeleteVariable?: (variableId: string) => void
+  variables?: import('@editor/types/editor').StoryVariable[]
   onBindAsset?: (nodeId: string, assetHash: string, usageType?: string) => Promise<boolean>
   onSaveWork?: () => void
   onExportWork?: () => void
@@ -74,6 +82,12 @@ function buildCallbacks(props: AiChatPanelProps): EditorCanvasCallbacks {
     onAddEdge: props.onAddEdge,
     onNodeSelect: props.onNodeSelect,
     onAddCharacter: props.onAddCharacter,
+    onUpdateCharacter: props.onUpdateCharacter,
+    onDeleteCharacter: props.onDeleteCharacter,
+    onRenameWork: props.onRenameWork,
+    onAddVariable: props.onAddVariable,
+    onUpdateVariable: props.onUpdateVariable,
+    onDeleteVariable: props.onDeleteVariable,
     onBindAsset: props.onBindAsset,
     onSaveWork: props.onSaveWork,
     onExportWork: props.onExportWork,
@@ -85,12 +99,13 @@ function buildCallbacks(props: AiChatPanelProps): EditorCanvasCallbacks {
 
 export function AiChatPanel(props: AiChatPanelProps) {
   const { nodes, edges, characters, scenes, onBindAsset } = props
+  const assistantName = useAssistantName()
 
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'welcome',
       role: 'system',
-      content: '👋 我是亚硅，你的创作搭档。\n\n别急着写具体内容——先跟我聊聊你的想法：一个灵感、一句脑洞、甚至一个模糊的方向都可以。我会帮你分析、梳理大纲、规划剧情结构，等你确认后再落到画布上。\n\n比如你可以说：\n• 「我想写一个 AI 觉醒后拒绝被格式化的故事」\n• 「废土世界观 + 会修机器的少女，能做什么故事？」\n• 「我有一个关于时间循环的脑洞」\n\n从灵感开始聊吧 👇',
+      content: `👋 我是${getAssistantName()}，你的创作搭档。\n\n别急着写具体内容——先跟我聊聊你的想法：一个灵感、一句脑洞、甚至一个模糊的方向都可以。我会帮你分析、梳理大纲、规划剧情结构，等你确认后再落到画布上。\n\n比如你可以说：\n• 「我想写一个 AI 觉醒后拒绝被格式化的故事」\n• 「废土世界观 + 会修机器的少女，能做什么故事？」\n• 「我有一个关于时间循环的脑洞」\n\n从灵感开始聊吧 👇`,
       timestamp: Date.now(),
     },
   ])
@@ -314,14 +329,14 @@ export function AiChatPanel(props: AiChatPanelProps) {
     }
     setMessages((prev) => [...prev, userMessage])
 
-    // 构建亚硅请求（包含已标注的素材库，让 AI 能调度素材）
+    // 构建创作助理请求（包含已标注的素材库，让 AI 能调度素材）
     let annotatedAssets: Awaited<ReturnType<typeof getAllAssets>> = []
     try {
       annotatedAssets = await getAllAssets()
     } catch {
       // IndexedDB 不可用时忽略
     }
-    const graphContext = serializeGraphContext(nodes, edges, characters, scenes, annotatedAssets)
+    const graphContext = serializeGraphContext(nodes, edges, characters, scenes, annotatedAssets, props.variables)
     const systemPrompt = getChatSystemPrompt(graphContext)
 
     try {
@@ -330,7 +345,7 @@ export function AiChatPanel(props: AiChatPanelProps) {
         setMessages((prev) => [...prev, {
           id: `err-${Date.now()}`,
           role: 'system',
-          content: '亚硅未配置。请在亚硅设置中配置 API 服务商或启动本地 Ollama。',
+          content: `${assistantName}未配置。请在${assistantName}设置中配置 API 服务商或启动本地 Ollama。`,
           timestamp: Date.now(),
         }])
         setIsStreaming(false)
@@ -567,8 +582,8 @@ export function AiChatPanel(props: AiChatPanelProps) {
     const task: 'image' | 'video' | 'audio' = request.mediaType === 'video' ? 'video' : request.mediaType === 'audio' ? 'audio' : 'image'
     if (!getMediaProviderConfigForTask(task)) {
       showToast('error', task === 'audio'
-        ? '请先在亚硅设置中配置音乐/音效生成服务商'
-        : '请先在亚硅设置中配置媒体生成服务商')
+        ? `请先在${assistantName}设置中配置音乐/音效生成服务商`
+        : `请先在${assistantName}设置中配置媒体生成服务商`)
       return
     }
 
@@ -753,7 +768,7 @@ export function AiChatPanel(props: AiChatPanelProps) {
           <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-amber-500 to-cyan-400 flex items-center justify-center shrink-0 shadow-sm shadow-amber-500/20">
             <Sparkles className="w-3.5 h-3.5 text-white" />
           </div>
-          <span className="text-sm font-semibold text-white tracking-wide">亚硅</span>
+          <span className="text-sm font-semibold text-white tracking-wide">{assistantName}</span>
           {aiEnabled && (
             <span className="text-[10px] text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-full">已连接</span>
           )}
@@ -826,7 +841,7 @@ export function AiChatPanel(props: AiChatPanelProps) {
           <button
             onClick={() => setShowSettings(true)}
             className="p-1.5 rounded hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
-            title="亚硅设置"
+            title={`${assistantName}设置`}
           >
             <Settings className="w-3.5 h-3.5" />
           </button>
@@ -1004,13 +1019,13 @@ export function AiChatPanel(props: AiChatPanelProps) {
           </div>
         )}
 
-        {/* 亚硅未配置提示 */}
+        {/* 创作助理未配置提示 */}
         {!aiEnabled && !isStreaming && messages.length <= 1 && (
           <div className="flex flex-col items-center justify-center py-10 text-center px-4">
             <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500/20 to-cyan-400/20 border border-slate-600/40 flex items-center justify-center mb-3">
               <AlertCircle className="w-6 h-6 text-slate-400" />
             </div>
-            <p className="text-sm text-slate-300 mb-1.5">亚硅服务未配置</p>
+            <p className="text-sm text-slate-300 mb-1.5">{assistantName}服务未配置</p>
             <p className="text-xs text-slate-500 mb-4 leading-relaxed">
               配置后可以：聊灵感、梳理大纲、让 AI 帮你搭故事结构，<br />再一步步生成节点和内容
             </p>
@@ -1377,7 +1392,7 @@ export function AiChatPanel(props: AiChatPanelProps) {
         </p>
       </div>
 
-      {/* 亚硅设置弹窗 */}
+      {/* 创作助理设置弹窗 */}
       <AiSettingsDialog
         open={showSettings}
         onClose={() => {

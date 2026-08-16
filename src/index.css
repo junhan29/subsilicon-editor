@@ -259,6 +259,109 @@
     --shadow-glow-silicon: 0 0 20px hsl(var(--silicon-cyan) / 0.25);
   }
 
+  /* 复古暖棕：早期暖棕深色主题，保留为第三主题 */
+  .sepia {
+    --background: 25 20% 10%;
+    --foreground: 35 20% 85%;
+
+    --card: 25 18% 14%;
+    --card-foreground: 35 20% 85%;
+
+    --popover: 25 18% 12%;
+    --popover-foreground: 35 20% 85%;
+
+    --primary: 28 70% 55%;
+    --primary-foreground: 25 20% 10%;
+
+    --secondary: 25 15% 18%;
+    --secondary-foreground: 35 20% 85%;
+
+    --muted: 25 12% 20%;
+    --muted-foreground: 30 10% 60%;
+
+    --accent: 18 60% 55%;
+    --accent-foreground: 25 20% 10%;
+
+    --destructive: 0 60% 50%;
+    --destructive-foreground: 35 20% 85%;
+
+    --border: 25 12% 22%;
+    --input: 25 12% 18%;
+    --ring: 28 70% 55%;
+
+    --ochre-50: 25 15% 16%;
+    --ochre-100: 26 18% 20%;
+    --ochre-200: 27 22% 28%;
+    --ochre-300: 28 30% 40%;
+    --ochre-400: 29 45% 52%;
+    --ochre-500: 30 65% 58%;
+    --ochre-600: 32 70% 50%;
+    --ochre-700: 28 65% 42%;
+    --ochre-800: 24 55% 35%;
+    --ochre-900: 20 45% 28%;
+
+    --ochre: var(--ochre-500);
+    --sienna: 18 60% 50%;
+    --terracotta: 15 60% 60%;
+
+    --silicon-50: 220 15% 16%;
+    --silicon-100: 218 18% 20%;
+    --silicon-200: 215 20% 28%;
+    --silicon-300: 212 22% 38%;
+    --silicon-400: 208 25% 50%;
+    --silicon-500: 205 30% 58%;
+    --silicon-600: 202 32% 50%;
+    --silicon-700: 208 28% 42%;
+    --silicon-800: 212 22% 32%;
+    --silicon-900: 218 18% 22%;
+
+    --silicon-925: 220 18% 16%;
+    --silicon-950: 220 20% 12%;
+    --silicon-975: 222 22% 8%;
+
+    --silicon-blue: var(--silicon-500);
+    --silicon-cyan: 185 45% 60%;
+    --silicon-slate: 210 15% 55%;
+    --silicon-glow: 200 40% 65%;
+
+    --silicon-cool: 270 8% 55%;
+    --silicon-warm: 250 6% 65%;
+    --silicon-neon: 260 12% 75%;
+    --silicon-foreground: 220 15% 90%;
+
+    --sage-50: 80 10% 14%;
+    --sage-100: 82 12% 18%;
+    --sage-200: 85 15% 24%;
+    --sage-300: 88 18% 35%;
+    --sage-400: 92 20% 48%;
+    --sage-500: 95 25% 55%;
+    --sage-600: 90 28% 48%;
+    --sage-700: 85 25% 40%;
+    --sage-800: 80 20% 32%;
+    --sage-900: 75 15% 24%;
+
+    --sage: var(--sage-500);
+
+    --cream: 35 15% 20%;
+    --parchment: 30 18% 16%;
+    --ink: 35 20% 85%;
+    --pencil: 30 10% 55%;
+
+    --teal-warm: 180 25% 45%;
+
+    --shadow-xs: 0 1px 2px hsl(0 0% 0% / 0.3);
+    --shadow-sm: 0 2px 4px -2px hsl(0 0% 0% / 0.4);
+    --shadow-md: 0 4px 12px -4px hsl(0 0% 0% / 0.5);
+    --shadow-lg: 0 8px 24px -8px hsl(0 0% 0% / 0.6);
+    --shadow-xl: 0 16px 48px -12px hsl(0 0% 0% / 0.7);
+
+    --shadow-inset-paper: inset 0 1px 0 hsl(35 20% 100% / 0.06);
+    --shadow-inset-deep: inset 0 2px 4px hsl(0 0% 0% / 0.3);
+
+    --shadow-glow-primary: 0 0 20px hsl(var(--primary) / 0.25);
+    --shadow-glow-silicon: 0 0 20px hsl(var(--silicon-cyan) / 0.25);
+  }
+
   @keyframes fade-in {
     from { opacity: 0; }
     to { opacity: 1; }
@@ -351,6 +454,18 @@ body {
       radial-gradient(hsl(222 14% 16% / 0.5) 1px, transparent 1px),
       radial-gradient(hsl(222 12% 14% / 0.4) 1px, transparent 1px);
     border-color: hsl(222 12% 18% / 0.8);
+    box-shadow:
+      0 1px 2px hsl(0 0% 0% / 0.3),
+      0 4px 12px -4px hsl(0 0% 0% / 0.5),
+      inset 0 1px 0 hsl(35 20% 100% / 0.06);
+  }
+
+  .sepia .paper-card {
+    background: hsl(25 18% 14%);
+    background-image:
+      radial-gradient(hsl(25 15% 22% / 0.5) 1px, transparent 1px),
+      radial-gradient(hsl(25 12% 18% / 0.4) 1px, transparent 1px);
+    border-color: hsl(25 12% 22% / 0.8);
     box-shadow:
       0 1px 2px hsl(0 0% 0% / 0.3),
       0 4px 12px -4px hsl(0 0% 0% / 0.5),

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { AlertCircle, Check, Image, Loader2, Settings, Video, Wand2 } from 'lucide-react'
 import { showToast } from './toast'
+import { useAssistantName } from '@editor/lib/assistant-name'
 import {
   type MediaGenerationResult,
   type MediaProviderConfig,
@@ -37,6 +38,7 @@ const PROVIDER_OPTIONS: Array<{ value: 'openai' | 'stability' | 'comfyui' | 'wan
 ]
 
 export function AiMediaPanel({ characters, onImageGenerated }: AiMediaPanelProps) {
+  const assistantName = useAssistantName()
   const [provider, setProvider] = useState<MediaProviderConfig | null>(getMediaProviderConfig)
   const [showSettings, setShowSettings] = useState(!getMediaProviderConfig())
   const [prompt, setPrompt] = useState('')
@@ -79,7 +81,7 @@ export function AiMediaPanel({ characters, onImageGenerated }: AiMediaPanelProps
       showToast('success', `${mediaType === 'image' ? '图片' : '视频'}生成完成`)
     } catch (e) {
       if (e instanceof Error && 'needsConfig' in e && (e as { needsConfig: boolean }).needsConfig) {
-        showToast('error', '亚硅未配置，请在设置中配置 API Key 或启动本地 Ollama')
+        showToast('error', `${assistantName}未配置，请在设置中配置 API Key 或启动本地 Ollama`)
       } else {
         showToast('error', '生成失败: ' + (e instanceof Error ? e.message : '未知错误'))
       }
@@ -100,7 +102,7 @@ export function AiMediaPanel({ characters, onImageGenerated }: AiMediaPanelProps
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           {mediaType === 'image' ? <Image className="w-4 h-4 text-pink-400" /> : <Video className="w-4 h-4 text-purple-400" />}
-          <h3 className="text-sm font-medium text-white">亚硅媒体生成</h3>
+          <h3 className="text-sm font-medium text-white">{assistantName}媒体生成</h3>
         </div>
         <button
           onClick={() => setShowSettings(!showSettings)}

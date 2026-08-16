@@ -1,6 +1,6 @@
 {
   "name": "subsilicon-editor",
-  "version": "1.14.0",
+  "version": "1.15.0",
   "license": "MIT",
   "description": "零代码可视化互动叙事编辑器 | Zero-code visual interactive narrative editor",
   "keywords": [
@@ -152,14 +152,12 @@
         {
           "target": "dmg",
           "arch": [
-            "x64",
             "arm64"
           ]
         },
         {
           "target": "zip",
           "arch": [
-            "x64",
             "arm64"
           ]
         }

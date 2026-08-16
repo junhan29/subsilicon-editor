@@ -42,7 +42,7 @@ const GUIDE_STEPS: GuideStep[] = [
   {
     id: 'ai',
     title: '在中间与 AI 协作',
-    description: '中间是亚硅 AI 面板，用自然语言描述你想要的剧情、角色或节点，AI 会自动生成并应用到画布。',
+    description: '中间是创作助理 AI 面板，用自然语言描述你想要的剧情、角色或节点，AI 会自动生成并应用到画布。',
     hint: '中间 AI 面板',
     icon: <MessageSquare className="w-5 h-5" />,
     direction: 'center',

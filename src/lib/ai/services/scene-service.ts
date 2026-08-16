@@ -6,7 +6,7 @@ export const SCENE_DESCRIPTION_SYSTEM_PROMPT = `你是一个专业的场景描�
 JSON 格式要求：
 {
   "description": "场景详细描述，150字左右",
-  "backgroundImage": "适合作为背景的图片描述，用于亚硅图像生成",
+  "backgroundImage": "适合作为背景的图片描述，用于创作助理图像生成",
   "mood": "场景的整体氛围",
   "lighting": "光线描述"
 }

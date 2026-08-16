@@ -1,4 +1,4 @@
-import type { ComicScene, StoryCharacter, StoryEdge, StoryNode } from '@editor/types/editor'
+import type { ComicScene, StoryCharacter, StoryEdge, StoryNode, StoryVariable } from '@editor/types/editor'
 import type { AssetAnnotation, StoredAsset } from '@editor/lib/local-db'
 
 const NODE_TYPE_LABELS: Record<string, string> = {
@@ -88,7 +88,8 @@ export function serializeGraphContext(
   edges: StoryEdge[],
   characters: StoryCharacter[],
   scenes: ComicScene[],
-  annotatedAssets?: StoredAsset[]
+  annotatedAssets?: StoredAsset[],
+  variables?: StoryVariable[]
 ): string {
   const parts: string[] = []
 
@@ -107,6 +108,7 @@ export function serializeGraphContext(
   parts.push(`- 边总数: ${edges.length}`)
   parts.push(`- 角色数: ${characters.length}`)
   parts.push(`- 场景数: ${scenes.length}`)
+  parts.push(`- 变量数: ${(variables || []).length}`)
   parts.push('')
 
   if (nodes.length > 0) {
@@ -129,6 +131,14 @@ export function serializeGraphContext(
     parts.push(`### 角色列表`)
     for (const char of characters) {
       parts.push(serializeCharacter(char))
+    }
+    parts.push('')
+  }
+
+  if (variables && variables.length > 0) {
+    parts.push(`### 变量列表（可用 addVariable / updateVariable / deleteVariable 管理）`)
+    for (const v of variables) {
+      parts.push(`- ${v.name} (ID: ${v.id}), 类型: ${v.type}, 初始值: ${String(v.initialValue)}${v.description ? `, 说明: ${v.description}` : ''}`)
     }
     parts.push('')
   }

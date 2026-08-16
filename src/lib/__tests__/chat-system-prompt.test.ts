@@ -1,20 +1,23 @@
 import { describe, it, expect } from 'vitest'
 import { getChatSystemPrompt } from '../ai/chat-system-prompt'
+import { DEFAULT_ASSISTANT_NAME } from '@editor/lib/assistant-name'
 
 const OPERATIONS = [
   'createNode', 'updateNode', 'deleteNode', 'connectNodes', 'updateEdge', 'deleteEdge',
-  'selectNode', 'addCharacter', 'bindAsset', 'requestMediaGeneration',
+  'selectNode', 'addCharacter', 'updateCharacter', 'deleteCharacter',
+  'bindAsset', 'requestMediaGeneration',
+  'renameWork', 'addVariable', 'updateVariable', 'deleteVariable',
   'saveWork', 'exportWork', 'previewWork', 'undo', 'redo',
 ]
 
 describe('chat-system-prompt', () => {
-  it('包含亚硅命令格式（ai-action 代码块）', () => {
+  it('包含创作助理命令格式（ai-action 代码块）', () => {
     const p = getChatSystemPrompt('')
     expect(p).toContain('ai-action')
-    expect(p).toContain('## 亚硅命令格式')
+    expect(p).toContain(`## ${DEFAULT_ASSISTANT_NAME}命令格式`)
   })
 
-  it('操作规则覆盖全部 15 种操作', () => {
+  it('操作规则覆盖全部 21 种操作', () => {
     const p = getChatSystemPrompt('')
     for (const op of OPERATIONS) {
       expect(p).toContain(`**${op}**:`)

@@ -49,8 +49,6 @@ jobs:
             FILES=(
               'SubSilicon.Editor-${VERSION_NO_V}-macos-arm64.dmg'
               'SubSilicon.Editor-${VERSION_NO_V}-macos-arm64.zip'
-              'SubSilicon.Editor-${VERSION_NO_V}-macos-x64.dmg'
-              'SubSilicon.Editor-${VERSION_NO_V}-macos-x64.zip'
               'SubSilicon.Editor-${VERSION_NO_V}-windows-x64.exe'
               'SubSilicon.Editor-${VERSION_NO_V}-windows-x64.zip'
               'SubSilicon.Editor-${VERSION_NO_V}-linux-amd64.deb'
@@ -85,32 +83,22 @@ jobs:
             cd $VERSION_DIR
 
             # Generate latest-mac.yml
-            MAC_X64_ZIP_SHA=\$(sha512sum \"SubSilicon Editor-${VERSION_NO_V}-macos-x64.zip\" | awk '{print \$1}')
             MAC_ARM64_ZIP_SHA=\$(sha512sum \"SubSilicon Editor-${VERSION_NO_V}-macos-arm64.zip\" | awk '{print \$1}')
-            MAC_X64_DMG_SHA=\$(sha512sum \"SubSilicon Editor-${VERSION_NO_V}-macos-x64.dmg\" | awk '{print \$1}')
             MAC_ARM64_DMG_SHA=\$(sha512sum \"SubSilicon Editor-${VERSION_NO_V}-macos-arm64.dmg\" | awk '{print \$1}')
-            MAC_X64_ZIP_SIZE=\$(stat -c%s \"SubSilicon Editor-${VERSION_NO_V}-macos-x64.zip\")
             MAC_ARM64_ZIP_SIZE=\$(stat -c%s \"SubSilicon Editor-${VERSION_NO_V}-macos-arm64.zip\")
-            MAC_X64_DMG_SIZE=\$(stat -c%s \"SubSilicon Editor-${VERSION_NO_V}-macos-x64.dmg\")
             MAC_ARM64_DMG_SIZE=\$(stat -c%s \"SubSilicon Editor-${VERSION_NO_V}-macos-arm64.dmg\")
 
             cat > latest-mac.yml << EOF
           version: ${VERSION_NO_V}
           files:
-            - url: SubSilicon Editor-${VERSION_NO_V}-macos-x64.zip
-              sha512: \${MAC_X64_ZIP_SHA}
-              size: \${MAC_X64_ZIP_SIZE}
             - url: SubSilicon Editor-${VERSION_NO_V}-macos-arm64.zip
               sha512: \${MAC_ARM64_ZIP_SHA}
               size: \${MAC_ARM64_ZIP_SIZE}
-            - url: SubSilicon Editor-${VERSION_NO_V}-macos-x64.dmg
-              sha512: \${MAC_X64_DMG_SHA}
-              size: \${MAC_X64_DMG_SIZE}
             - url: SubSilicon Editor-${VERSION_NO_V}-macos-arm64.dmg
               sha512: \${MAC_ARM64_DMG_SHA}
               size: \${MAC_ARM64_DMG_SIZE}
-          path: SubSilicon Editor-${VERSION_NO_V}-macos-x64.zip
-          sha512: \${MAC_X64_ZIP_SHA}
+          path: SubSilicon Editor-${VERSION_NO_V}-macos-arm64.zip
+          sha512: \${MAC_ARM64_ZIP_SHA}
           releaseDate: '\$(date -u +%Y-%m-%dT%H:%M:%SZ)'
           EOF
 

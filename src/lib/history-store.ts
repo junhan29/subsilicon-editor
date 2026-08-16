@@ -15,6 +15,7 @@ export type HistoryActionType =
   | 'DELETE_AUDIO'
   | 'UPDATE_AUDIO'
   | 'UPDATE_VARIABLES'
+  | 'UPDATE_TITLE'
   | 'ADD_GROUP'
   | 'DELETE_GROUP'
   | 'UPDATE_GROUP'

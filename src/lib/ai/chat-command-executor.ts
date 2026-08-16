@@ -1,7 +1,7 @@
-import type { StoryCharacter, StoryEdge, StoryNode } from '@editor/types/editor'
+import type { StoryCharacter, StoryEdge, StoryNode, StoryVariable } from '@editor/types/editor'
 
 export interface AiAction {
-  type: 'createNode' | 'updateNode' | 'deleteNode' | 'connectNodes' | 'updateEdge' | 'deleteEdge' | 'addCharacter' | 'selectNode' | 'requestMediaGeneration' | 'bindAsset' | 'saveWork' | 'exportWork' | 'previewWork' | 'undo' | 'redo'
+  type: 'createNode' | 'updateNode' | 'deleteNode' | 'connectNodes' | 'updateEdge' | 'deleteEdge' | 'addCharacter' | 'updateCharacter' | 'deleteCharacter' | 'selectNode' | 'requestMediaGeneration' | 'bindAsset' | 'saveWork' | 'exportWork' | 'previewWork' | 'undo' | 'redo' | 'renameWork' | 'addVariable' | 'updateVariable' | 'deleteVariable'
   payload: Record<string, unknown>
 }
 
@@ -120,6 +120,18 @@ export function describeAiActions(actions: AiAction[]): ActionPreview[] {
         const gender = p.gender ? `（${p.gender}）` : ''
         return { action, description: `创建角色 ${name}${gender}` }
       }
+      case 'updateCharacter':
+        return { action, description: `修改角色 ${truncate(p.characterId as string, 16)}` }
+      case 'deleteCharacter':
+        return { action, description: `删除角色 ${truncate(p.characterId as string, 16)}` }
+      case 'renameWork':
+        return { action, description: `作品重命名为「${truncate(p.title as string)}」` }
+      case 'addVariable':
+        return { action, description: `新增变量 ${truncate((p.name as string) || (p.variable as any)?.name, 16)}` }
+      case 'updateVariable':
+        return { action, description: `修改变量 ${truncate(p.variableId as string, 16)}` }
+      case 'deleteVariable':
+        return { action, description: `删除变量 ${truncate(p.variableId as string, 16)}` }
       case 'bindAsset':
         return { action, description: `绑定素材 ${truncate(p.assetHash as string, 12)} 到节点 ${p.nodeId ?? '?'}` }
       case 'requestMediaGeneration': {
@@ -151,6 +163,18 @@ export interface EditorCanvasCallbacks {
   onAddEdge?: (source: string, target: string) => string | undefined
   onNodeSelect?: (nodeId: string) => void
   onAddCharacter?: (character: StoryCharacter) => void
+  /** AI 编辑角色（局部字段合并） */
+  onUpdateCharacter?: (characterId: string, data: Partial<StoryCharacter>) => void
+  /** AI 删除角色 */
+  onDeleteCharacter?: (characterId: string) => void
+  /** AI 重命名作品 */
+  onRenameWork?: (title: string) => void
+  /** AI 新增变量 */
+  onAddVariable?: (variable: StoryVariable) => void
+  /** AI 修改变量（局部字段合并） */
+  onUpdateVariable?: (variableId: string, data: Partial<StoryVariable>) => void
+  /** AI 删除变量 */
+  onDeleteVariable?: (variableId: string) => void
   /** AI 把已标注的素材绑定到节点（assetHash 前 12 位匹配 + blob URL 生成） */
   onBindAsset?: (nodeId: string, assetHash: string, usageType?: string) => Promise<boolean>
   /** 保存当前作品到本地 */
@@ -166,7 +190,7 @@ export interface EditorCanvasCallbacks {
 }
 
 /**
- * 解析亚硅响应文本中的 JSON 命令块。
+ * 解析创作助理响应文本中的 JSON 命令块。
  * 格式：```ai-action { "actions": [...] } ```
  */
 export function parseAiCommands(text: string): AiCommandBlock | null {
@@ -184,7 +208,7 @@ export function parseAiCommands(text: string): AiCommandBlock | null {
 }
 
 /**
- * 提取亚硅响应中的所有 JSON 命令块（支持多个命令块）。
+ * 提取创作助理响应中的所有 JSON 命令块（支持多个命令块）。
  */
 export function parseAllAiCommands(text: string): AiCommandBlock[] {
   const regex = /```ai-action\s*\n?([\s\S]*?)```/g
@@ -206,7 +230,7 @@ export function parseAllAiCommands(text: string): AiCommandBlock[] {
 }
 
 /**
- * 逐一执行亚硅命令操作。
+ * 逐一执行创作助理命令操作。
  * 每个操作独立执行，单个失败不影响后续操作。
  * 返回执行结果摘要。
  */
@@ -318,6 +342,72 @@ export async function executeAiActions(
           }
           callbacks.onAddCharacter?.(char)
           messages.push(`创建角色 ${name} (ID: ${char.id})`)
+          success++
+          break
+        }
+
+        case 'updateCharacter': {
+          const characterId = action.payload.characterId as string
+          if (!characterId) throw new Error('缺少 characterId')
+          callbacks.onUpdateCharacter?.(characterId, (action.payload.data as Partial<StoryCharacter>) || {})
+          messages.push(`修改角色 ${characterId}`)
+          success++
+          break
+        }
+
+        case 'deleteCharacter': {
+          const characterId = action.payload.characterId as string
+          if (!characterId) throw new Error('缺少 characterId')
+          callbacks.onDeleteCharacter?.(characterId)
+          messages.push(`删除角色 ${characterId}`)
+          success++
+          break
+        }
+
+        case 'renameWork': {
+          const title = action.payload.title as string
+          if (!title) throw new Error('缺少 title')
+          callbacks.onRenameWork?.(title)
+          messages.push(`作品重命名为「${title}」`)
+          success++
+          break
+        }
+
+        case 'addVariable': {
+          const raw = (action.payload.variable as Partial<StoryVariable>) || {
+            name: action.payload.name as string,
+            initialValue: action.payload.initialValue,
+            type: (action.payload.type as StoryVariable['type']) || 'string',
+          }
+          if (!raw.name) throw new Error('缺少变量 name')
+          const variable: StoryVariable = {
+            id: (raw.id as string) || `var-${Date.now()}`,
+            name: raw.name,
+            initialValue: raw.initialValue ?? '',
+            defaultValue: raw.defaultValue ?? raw.initialValue ?? '',
+            type: raw.type || 'string',
+            description: raw.description,
+          }
+          callbacks.onAddVariable?.(variable)
+          messages.push(`新增变量 ${variable.name} (ID: ${variable.id})`)
+          success++
+          break
+        }
+
+        case 'updateVariable': {
+          const variableId = action.payload.variableId as string
+          if (!variableId) throw new Error('缺少 variableId')
+          callbacks.onUpdateVariable?.(variableId, (action.payload.data as Partial<StoryVariable>) || {})
+          messages.push(`修改变量 ${variableId}`)
+          success++
+          break
+        }
+
+        case 'deleteVariable': {
+          const variableId = action.payload.variableId as string
+          if (!variableId) throw new Error('缺少 variableId')
+          callbacks.onDeleteVariable?.(variableId)
+          messages.push(`删除变量 ${variableId}`)
           success++
           break
         }

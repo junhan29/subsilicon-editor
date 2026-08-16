@@ -15,6 +15,7 @@ import { AiMediaPanel } from './ai-media-panel'
 import { AnalyticsPanel } from './analytics-panel'
 import { PluginManagerPanel } from './plugin-manager-panel'
 import { generateDefaultAvatar } from '@editor/lib/avatar-utils'
+import { getAssistantName } from '@editor/lib/assistant-name'
 import type { AnnotationType, ComicAudio, ComicScene, NodeAnnotation, StoryCharacter, StoryEdge, StoryGraph, StoryNode, StoryVariable } from '@editor/types/editor'
 import type { StoryGraphSnapshot } from '@editor/lib/history-store'
 import type { VersionSnapshot } from '@editor/lib/version-store'
@@ -530,14 +531,14 @@ function EditorRightPanel({
                 <p className="text-[10px] text-slate-600 mt-0.5">JPG / PNG / WebP，支持批量</p>
               </div>
 
-              {/* 亚硅媒体生成 */}
+              {/* 创作助理媒体生成 */}
               <div className="border border-slate-700 rounded-lg p-3 bg-slate-800/30">
                 <AiMediaPanel
                   characters={characters}
                   onImageGenerated={(url, name) => {
                     const newScene: ComicScene = {
                       id: `scene-${Date.now()}`,
-                      name: `亚硅生成-${name.slice(0, 20)}`,
+                      name: `${getAssistantName()}生成-${name.slice(0, 20)}`,
                       backgroundImage: url,
                     }
                     onScenesChange?.([...scenes, newScene])
