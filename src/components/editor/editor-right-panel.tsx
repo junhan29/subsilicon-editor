@@ -530,14 +530,14 @@ function EditorRightPanel({
                 <p className="text-[10px] text-slate-600 mt-0.5">JPG / PNG / WebP，支持批量</p>
               </div>
 
-              {/* 创境媒体生成 */}
+              {/* 亚硅媒体生成 */}
               <div className="border border-slate-700 rounded-lg p-3 bg-slate-800/30">
                 <AiMediaPanel
                   characters={characters}
                   onImageGenerated={(url, name) => {
                     const newScene: ComicScene = {
                       id: `scene-${Date.now()}`,
-                      name: `创境生成-${name.slice(0, 20)}`,
+                      name: `亚硅生成-${name.slice(0, 20)}`,
                       backgroundImage: url,
                     }
                     onScenesChange?.([...scenes, newScene])

@@ -87,7 +87,7 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
 
   const sections = [
     { id: 'general' as const, label: '通用', icon: Monitor },
-    { id: 'ai' as const, label: '创境服务', icon: Cpu },
+    { id: 'ai' as const, label: '亚硅服务', icon: Cpu },
     { id: 'accessibility' as const, label: '无障碍', icon: Accessibility },
     { id: 'about' as const, label: '关于', icon: Info },
   ]
@@ -177,14 +177,21 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
         {activeSection === 'ai' && (
           <div className="p-6 max-w-2xl space-y-6">
             <div>
-              <h3 className="text-sm font-semibold text-white mb-4">创境服务配置</h3>
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-6 h-6 rounded-md bg-gradient-to-br from-amber-500/30 to-cyan-400/30 flex items-center justify-center">
+                  <Cpu className="w-3.5 h-3.5 text-amber-300" />
+                </div>
+                <h3 className="text-sm font-semibold text-white">亚硅服务配置</h3>
+              </div>
               <div className="space-y-4">
                 <div className="flex items-center justify-between p-3 rounded-lg bg-slate-800/50 border border-slate-700">
                   <div className="flex items-center gap-2">
-                    <Cpu className="w-4 h-4 text-purple-400" />
+                    <div className="w-7 h-7 rounded-md bg-gradient-to-br from-amber-500/20 to-cyan-400/20 flex items-center justify-center">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                    </div>
                     <div>
-                      <p className="text-xs font-medium text-white">启用创境功能</p>
-                      <p className="text-[10px] text-slate-400 mt-0.5">开启后可访问创境故事生成、角色生成等功能</p>
+                      <p className="text-xs font-medium text-white">启用亚硅功能</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">开启后可访问亚硅故事生成、角色生成等功能</p>
                     </div>
                   </div>
                   <Toggle checked={aiEnabled} onChange={setAiEnabled} />
@@ -194,7 +201,7 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
                   <>
                     <div className="p-3 rounded-lg bg-slate-800/50 border border-slate-700 space-y-3">
                       <div className="space-y-2">
-                        <label className="text-[10px] text-slate-400 font-medium">创境服务商</label>
+                        <label className="text-[10px] text-slate-400 font-medium">亚硅服务商</label>
                         <select
                           value={aiConfig.provider}
                           onChange={(e) => updateProvider(e.target.value)}
@@ -316,7 +323,7 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
                 </div>
                 <p className="text-xs text-slate-400 leading-relaxed">
                   SubSilicon（硅基之下）是一个互动叙事编辑器，
-                  支持可视化故事编辑、分支剧情设计、创境辅助创作等功能。
+                  支持可视化故事编辑、分支剧情设计、亚硅辅助创作等功能。
                 </p>
                 <div className="text-[10px] text-slate-500 space-y-1">
                   <p>使用技术：React 19 + TypeScript + XYFlow + Vite + Electron</p>

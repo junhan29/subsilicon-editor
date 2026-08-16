@@ -24,12 +24,12 @@ export interface ChatMessage {
   mediaRequests?: MediaGenerationRequest[]
 }
 
-// 新手示例问题 —— 点击即填入输入框
+// 新手示例问题 —— 点击即填入输入框（先聊灵感/大纲，AI 分析后落到画布）
 const EXAMPLE_PROMPTS = [
-  '帮我写一个悬疑故事的开场',
-  '创建一个对话节点，角色是小明和小红在教室聊天',
-  '设计一个有三个选项的选择节点',
-  '保存一下我的作品',
+  '我想写一个关于「AI 觉醒后拒绝被格式化」的故事，帮我梳理一下大纲',
+  '我想做一个废土世界观的互动叙事，主角是个会修机器的少女',
+  '帮我把「赛博朋克 + 乡村爱情」这个离谱组合变成一个完整的故事框架',
+  '我有一个关于「时间循环」的灵感，帮我分析怎么把它做成互动剧情',
 ]
 
 // 标签中文化映射 —— 让媒体请求卡片对新手友好
@@ -90,7 +90,7 @@ export function AiChatPanel(props: AiChatPanelProps) {
     {
       id: 'welcome',
       role: 'system',
-      content: '👋 我是创境助手，可以帮你写故事、建节点、设计分支。\n\n直接用大白话告诉我想做什么就行，比如：\n• 「帮我写一个校园恋爱故事的开场」\n• 「创建一个角色叫小明的对话节点」\n• 「设计两个选项让玩家选择」\n\n下面有几个示例，点一下就能用 👇',
+      content: '👋 我是亚硅，你的创作搭档。\n\n别急着写具体内容——先跟我聊聊你的想法：一个灵感、一句脑洞、甚至一个模糊的方向都可以。我会帮你分析、梳理大纲、规划剧情结构，等你确认后再落到画布上。\n\n比如你可以说：\n• 「我想写一个 AI 觉醒后拒绝被格式化的故事」\n• 「废土世界观 + 会修机器的少女，能做什么故事？」\n• 「我有一个关于时间循环的脑洞」\n\n从灵感开始聊吧 👇',
       timestamp: Date.now(),
     },
   ])
@@ -314,7 +314,7 @@ export function AiChatPanel(props: AiChatPanelProps) {
     }
     setMessages((prev) => [...prev, userMessage])
 
-    // 构建创境请求（包含已标注的素材库，让 AI 能调度素材）
+    // 构建亚硅请求（包含已标注的素材库，让 AI 能调度素材）
     let annotatedAssets: Awaited<ReturnType<typeof getAllAssets>> = []
     try {
       annotatedAssets = await getAllAssets()
@@ -330,7 +330,7 @@ export function AiChatPanel(props: AiChatPanelProps) {
         setMessages((prev) => [...prev, {
           id: `err-${Date.now()}`,
           role: 'system',
-          content: '创境未配置。请在创境设置中配置 API 服务商或启动本地 Ollama。',
+          content: '亚硅未配置。请在亚硅设置中配置 API 服务商或启动本地 Ollama。',
           timestamp: Date.now(),
         }])
         setIsStreaming(false)
@@ -555,7 +555,7 @@ export function AiChatPanel(props: AiChatPanelProps) {
       {
         id: 'welcome-' + Date.now(),
         role: 'system',
-        content: '👋 对话已清空。直接用大白话告诉我想做什么就行！\n\n下面有几个示例，点一下就能用 👇',
+        content: '👋 对话已清空。\n\n想聊点什么？一个灵感、一个脑洞、或者一个故事方向都可以。我会帮你分析、梳理大纲，再一起落到画布上 👇',
         timestamp: Date.now(),
       },
     ])
@@ -567,8 +567,8 @@ export function AiChatPanel(props: AiChatPanelProps) {
     const task: 'image' | 'video' | 'audio' = request.mediaType === 'video' ? 'video' : request.mediaType === 'audio' ? 'audio' : 'image'
     if (!getMediaProviderConfigForTask(task)) {
       showToast('error', task === 'audio'
-        ? '请先在创境设置中配置音乐/音效生成服务商'
-        : '请先在创境设置中配置媒体生成服务商')
+        ? '请先在亚硅设置中配置音乐/音效生成服务商'
+        : '请先在亚硅设置中配置媒体生成服务商')
       return
     }
 
@@ -748,12 +748,14 @@ export function AiChatPanel(props: AiChatPanelProps) {
   return (
     <div className="flex flex-col h-full min-w-0">
       {/* 顶部工具栏 */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-slate-700/50 shrink-0">
-        <div className="flex items-center gap-1.5 min-w-0">
-          <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-          <span className="text-xs font-medium text-white shrink-0">创境</span>
+      <div className="flex items-center justify-between px-3 py-2.5 border-b border-slate-700/40 shrink-0 bg-slate-900/40 backdrop-blur-sm">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-amber-500 to-cyan-400 flex items-center justify-center shrink-0 shadow-sm shadow-amber-500/20">
+            <Sparkles className="w-3.5 h-3.5 text-white" />
+          </div>
+          <span className="text-sm font-semibold text-white tracking-wide">亚硅</span>
           {aiEnabled && (
-            <span className="text-[10px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">已连接</span>
+            <span className="text-[10px] text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-full">已连接</span>
           )}
           {/* 模型切换器 */}
           {aiEnabled && currentModel && (
@@ -824,7 +826,7 @@ export function AiChatPanel(props: AiChatPanelProps) {
           <button
             onClick={() => setShowSettings(true)}
             className="p-1.5 rounded hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
-            title="创境设置"
+            title="亚硅设置"
           >
             <Settings className="w-3.5 h-3.5" />
           </button>
@@ -840,28 +842,28 @@ export function AiChatPanel(props: AiChatPanelProps) {
       </div>
 
       {/* 消息列表 */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-3">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((msg) => (
           <div
             key={msg.id}
-            className={`flex gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            className={`flex gap-2.5 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             {msg.role !== 'user' && (
-              <div className="w-6 h-6 rounded-full bg-amber-500/20 flex items-center justify-center shrink-0 mt-0.5">
+              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-amber-500/30 to-cyan-400/30 border border-slate-600/50 flex items-center justify-center shrink-0 mt-0.5">
                 {msg.role === 'system' ? (
-                  <Sparkles className="w-3 h-3 text-amber-400" />
+                  <Sparkles className="w-3.5 h-3.5 text-amber-300" />
                 ) : (
-                  <Bot className="w-3 h-3 text-amber-400" />
+                  <Bot className="w-3.5 h-3.5 text-cyan-300" />
                 )}
               </div>
             )}
             <div
-              className={`max-w-[85%] px-3 py-2 rounded-lg text-xs leading-relaxed ${
+              className={`max-w-[85%] px-3.5 py-2.5 rounded-2xl text-[13px] leading-relaxed ${
                 msg.role === 'user'
-                  ? 'bg-amber-500/20 text-amber-100 border border-amber-500/20'
+                  ? 'bg-gradient-to-br from-amber-500/25 to-amber-600/15 text-amber-50 border border-amber-500/25 rounded-tr-sm'
                   : msg.role === 'system'
-                    ? 'bg-slate-700/50 text-slate-300 border border-slate-600/50'
-                    : 'bg-slate-700/30 text-slate-200 border border-slate-600/30'
+                    ? 'yasgui-ai-bubble text-slate-200'
+                    : 'yasgui-ai-bubble text-slate-100'
               }`}
             >
               {renderContent(msg.content)}
@@ -982,8 +984,8 @@ export function AiChatPanel(props: AiChatPanelProps) {
               )}
             </div>
             {msg.role === 'user' && (
-              <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center shrink-0 mt-0.5">
-                <User className="w-3 h-3 text-blue-400" />
+              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-amber-600/40 to-orange-500/30 border border-amber-500/30 flex items-center justify-center shrink-0 mt-0.5">
+                <User className="w-3.5 h-3.5 text-amber-200" />
               </div>
             )}
           </div>
@@ -991,28 +993,30 @@ export function AiChatPanel(props: AiChatPanelProps) {
 
         {/* 流式响应 */}
         {streamingContent && (
-          <div className="flex gap-2 justify-start">
-            <div className="w-6 h-6 rounded-full bg-amber-500/20 flex items-center justify-center shrink-0 mt-0.5">
-              <Bot className="w-3 h-3 text-amber-400" />
+          <div className="flex gap-2.5 justify-start">
+            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-amber-500/30 to-cyan-400/30 border border-slate-600/50 flex items-center justify-center shrink-0 mt-0.5">
+              <Bot className="w-3.5 h-3.5 text-cyan-300" />
             </div>
-            <div className="max-w-[85%] px-3 py-2 rounded-lg text-xs leading-relaxed bg-slate-700/30 text-slate-200 border border-slate-600/30">
+            <div className="max-w-[85%] px-3.5 py-2.5 rounded-2xl text-[13px] leading-relaxed yasgui-ai-bubble text-slate-100">
               {renderContent(streamingContent)}
-              <span className="inline-block w-1.5 h-4 bg-amber-400/70 ml-0.5 animate-pulse" />
+              <span className="inline-block w-1.5 h-4 bg-gradient-to-b from-amber-400 to-cyan-400 ml-0.5 animate-pulse" />
             </div>
           </div>
         )}
 
-        {/* 创境未配置提示 */}
+        {/* 亚硅未配置提示 */}
         {!aiEnabled && !isStreaming && messages.length <= 1 && (
-          <div className="flex flex-col items-center justify-center py-8 text-center px-4">
-            <AlertCircle className="w-8 h-8 text-slate-500 mb-2" />
-            <p className="text-xs text-slate-400 mb-1">创境服务未配置</p>
-            <p className="text-[10px] text-slate-500 mb-3 leading-relaxed">
-              配置后可以：让 AI 帮你写故事、自动创建节点、<br />设计分支选项、生成图片和视频
+          <div className="flex flex-col items-center justify-center py-10 text-center px-4">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500/20 to-cyan-400/20 border border-slate-600/40 flex items-center justify-center mb-3">
+              <AlertCircle className="w-6 h-6 text-slate-400" />
+            </div>
+            <p className="text-sm text-slate-300 mb-1.5">亚硅服务未配置</p>
+            <p className="text-xs text-slate-500 mb-4 leading-relaxed">
+              配置后可以：聊灵感、梳理大纲、让 AI 帮你搭故事结构，<br />再一步步生成节点和内容
             </p>
             <button
               onClick={() => setShowSettings(true)}
-              className="px-4 py-2 text-xs bg-amber-500/15 text-amber-400 border border-amber-500/30 rounded-lg hover:bg-amber-500/25 transition-colors"
+              className="px-5 py-2.5 text-sm bg-gradient-to-r from-amber-500/20 to-cyan-400/20 text-amber-200 border border-amber-500/30 rounded-xl hover:from-amber-500/30 hover:to-cyan-400/30 transition-all"
             >
               ⚙️ 点这里配置（约 1 分钟）
             </button>
@@ -1021,14 +1025,17 @@ export function AiChatPanel(props: AiChatPanelProps) {
 
         {/* 示例问题按钮 —— 仅 AI 已启用、非流式、消息很少时显示 */}
         {aiEnabled && !isStreaming && messages.length <= 1 && (
-          <div className="flex flex-col gap-1.5 px-1">
+          <div className="flex flex-col gap-2 px-1">
+            <p className="text-[11px] text-slate-500 text-center">试试从这些方向聊起：</p>
             {EXAMPLE_PROMPTS.map((prompt, i) => (
               <button
                 key={i}
                 onClick={() => handleExampleClick(prompt)}
-                className="text-left text-[11px] text-slate-300 bg-slate-700/30 hover:bg-slate-700/60 border border-slate-600/40 hover:border-amber-500/30 rounded-lg px-2.5 py-2 transition-colors"
+                className="text-left text-xs text-slate-300 bg-slate-800/50 hover:bg-slate-700/60 border border-slate-600/30 hover:border-amber-500/40 rounded-xl px-3 py-2.5 transition-colors group"
               >
-                <Sparkles className="w-3 h-3 inline mr-1.5 text-amber-400/60" />
+                <span className="inline-flex w-5 h-5 items-center justify-center rounded-md bg-gradient-to-br from-amber-500/20 to-cyan-400/20 text-amber-300 mr-2 text-[10px] group-hover:scale-110 transition-transform">
+                  {i + 1}
+                </span>
                 {prompt}
               </button>
             ))}
@@ -1334,22 +1341,22 @@ export function AiChatPanel(props: AiChatPanelProps) {
       )}
 
       {/* 输入区域 */}
-      <div className="shrink-0 border-t border-slate-700/50 p-3">
+      <div className="shrink-0 border-t border-slate-700/40 p-3 bg-slate-900/40 backdrop-blur-sm">
         <div className="flex items-end gap-2">
           <textarea
             ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="用大白话说你想做什么，比如「帮我写一个对话」...（Enter 发送）"
+            placeholder="聊聊你的灵感或故事大纲……（Enter 发送）"
             rows={1}
             disabled={isStreaming}
-            className="flex-1 text-xs rounded-lg border border-slate-600 bg-slate-700/50 px-3 py-2 text-white placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-500/50 resize-none min-h-[34px] max-h-[120px] disabled:opacity-50"
+            className="flex-1 text-[13px] rounded-xl border border-slate-600/60 bg-slate-800/60 px-3.5 py-2.5 text-white placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-500/40 focus:border-amber-500/40 resize-none min-h-[38px] max-h-[120px] disabled:opacity-50 transition-shadow"
           />
           {isStreaming ? (
             <button
               onClick={handleStop}
-              className="px-3 py-2 bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/30 transition-colors shrink-0"
+              className="px-3.5 py-2.5 bg-red-500/15 text-red-300 border border-red-500/30 rounded-xl hover:bg-red-500/25 transition-colors shrink-0"
               title="停止生成"
             >
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -1358,16 +1365,19 @@ export function AiChatPanel(props: AiChatPanelProps) {
             <button
               onClick={handleSend}
               disabled={!input.trim() || !aiEnabled}
-              className="px-3 py-2 bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-lg hover:bg-amber-500/30 transition-colors disabled:opacity-30 shrink-0"
+              className="px-3.5 py-2.5 bg-gradient-to-br from-amber-500 to-amber-600 text-white rounded-xl hover:opacity-90 active:scale-95 transition-all disabled:opacity-30 disabled:active:scale-100 shrink-0 shadow-sm shadow-amber-500/20"
               title="发送"
             >
               <Send className="w-4 h-4" />
             </button>
           )}
         </div>
+        <p className="mt-1.5 text-[10px] text-slate-600 text-center">
+          先聊想法，我会帮你分析并梳理大纲，确认后再落到画布
+        </p>
       </div>
 
-      {/* 创境设置弹窗 */}
+      {/* 亚硅设置弹窗 */}
       <AiSettingsDialog
         open={showSettings}
         onClose={() => {

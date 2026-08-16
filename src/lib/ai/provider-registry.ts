@@ -72,7 +72,7 @@ function refreshProviders() {
 export class AiConfigNeededError extends Error {
   needsConfig = true
   constructor() {
-    super('请先配置创境服务商或启动本地 Ollama')
+    super('请先配置亚硅服务商或启动本地 Ollama')
     this.name = 'AiConfigNeededError'
   }
 }
@@ -342,9 +342,9 @@ export async function runAiIndependentSelfCheck(
 
   // --- 第 1 步：配置完整度 ---
   if (!cfg) {
-    suggestions.push('尚未保存任何创境配置，请到创境设置填写 API Key / 启动本地 Ollama')
+    suggestions.push('尚未保存任何亚硅配置，请到亚硅设置填写 API Key / 启动本地 Ollama')
   } else if (!cfg.enabled) {
-    suggestions.push('创境开关为"关闭"状态，请在创境设置中启用')
+    suggestions.push('亚硅开关为"关闭"状态，请在亚硅设置中启用')
   } else {
     if (isFlatConfig(cfg)) {
       if (!cfg.apiKey) suggestions.push('Flat 配置缺失 apiKey 字段')
@@ -352,7 +352,7 @@ export async function runAiIndependentSelfCheck(
       configReady = !!(cfg.apiKey && cfg.model)
     } else if (Array.isArray(cfg.providers)) {
       const enabled = cfg.providers.filter((p) => p.enabled)
-      if (enabled.length === 0) suggestions.push('未启用任何一个远程创境服务商')
+      if (enabled.length === 0) suggestions.push('未启用任何一个远程亚硅服务商')
       for (const p of enabled) {
         if (!p.apiKey) suggestions.push(`服务商 ${p.name} 未填 API Key`)
         if (!p.model) suggestions.push(`服务商 ${p.name} 未选择模型`)

@@ -158,93 +158,93 @@
   }
 
   .dark {
-    --background: 25 20% 10%;
-    --foreground: 35 20% 85%;
+    --background: 222 20% 7%;
+    --foreground: 35 25% 88%;
 
-    --card: 25 18% 14%;
-    --card-foreground: 35 20% 85%;
+    --card: 222 18% 10%;
+    --card-foreground: 35 25% 88%;
 
-    --popover: 25 18% 12%;
-    --popover-foreground: 35 20% 85%;
+    --popover: 222 18% 9%;
+    --popover-foreground: 35 25% 88%;
 
-    --primary: 28 70% 55%;
-    --primary-foreground: 25 20% 10%;
+    --primary: 30 80% 60%;
+    --primary-foreground: 25 25% 8%;
 
-    --secondary: 25 15% 18%;
-    --secondary-foreground: 35 20% 85%;
+    --secondary: 222 14% 15%;
+    --secondary-foreground: 35 25% 88%;
 
-    --muted: 25 12% 20%;
-    --muted-foreground: 30 10% 60%;
+    --muted: 222 12% 14%;
+    --muted-foreground: 222 8% 55%;
 
-    --accent: 18 60% 55%;
-    --accent-foreground: 25 20% 10%;
+    --accent: 188 55% 55%;
+    --accent-foreground: 220 30% 8%;
 
     --destructive: 0 60% 50%;
-    --destructive-foreground: 35 20% 85%;
+    --destructive-foreground: 35 25% 90%;
 
-    --border: 25 12% 22%;
-    --input: 25 12% 18%;
-    --ring: 28 70% 55%;
+    --border: 222 12% 18%;
+    --input: 222 12% 15%;
+    --ring: 30 80% 60%;
 
-    --ochre-50: 25 15% 16%;
-    --ochre-100: 26 18% 20%;
-    --ochre-200: 27 22% 28%;
-    --ochre-300: 28 30% 40%;
-    --ochre-400: 29 45% 52%;
-    --ochre-500: 30 65% 58%;
-    --ochre-600: 32 70% 50%;
-    --ochre-700: 28 65% 42%;
-    --ochre-800: 24 55% 35%;
-    --ochre-900: 20 45% 28%;
+    --ochre-50: 220 14% 12%;
+    --ochre-100: 28 20% 15%;
+    --ochre-200: 29 24% 20%;
+    --ochre-300: 30 32% 30%;
+    --ochre-400: 30 50% 42%;
+    --ochre-500: 30 70% 55%;
+    --ochre-600: 30 80% 60%;
+    --ochre-700: 28 70% 48%;
+    --ochre-800: 25 60% 38%;
+    --ochre-900: 22 45% 28%;
 
     --ochre: var(--ochre-500);
     --sienna: 18 60% 50%;
     --terracotta: 15 60% 60%;
 
-    --silicon-50: 220 15% 16%;
-    --silicon-100: 218 18% 20%;
-    --silicon-200: 215 20% 28%;
-    --silicon-300: 212 22% 38%;
-    --silicon-400: 208 25% 50%;
-    --silicon-500: 205 30% 58%;
-    --silicon-600: 202 32% 50%;
-    --silicon-700: 208 28% 42%;
-    --silicon-800: 212 22% 32%;
-    --silicon-900: 218 18% 22%;
+    --silicon-50: 220 15% 12%;
+    --silicon-100: 218 18% 15%;
+    --silicon-200: 215 20% 20%;
+    --silicon-300: 212 22% 28%;
+    --silicon-400: 208 25% 38%;
+    --silicon-500: 205 30% 48%;
+    --silicon-600: 202 45% 55%;
+    --silicon-700: 200 40% 45%;
+    --silicon-800: 208 28% 30%;
+    --silicon-900: 212 22% 20%;
 
-    --silicon-925: 220 18% 16%;
-    --silicon-950: 220 20% 12%;
-    --silicon-975: 222 22% 8%;
+    --silicon-925: 220 20% 14%;
+    --silicon-950: 220 22% 10%;
+    --silicon-975: 222 24% 7%;
 
-    --silicon-blue: var(--silicon-500);
-    --silicon-cyan: 185 45% 60%;
-    --silicon-slate: 210 15% 55%;
-    --silicon-glow: 200 40% 65%;
+    --silicon-blue: var(--silicon-600);
+    --silicon-cyan: 188 60% 58%;
+    --silicon-slate: 210 12% 50%;
+    --silicon-glow: 200 40% 60%;
 
-    --silicon-cool: 270 8% 55%;
-    --silicon-warm: 250 6% 65%;
-    --silicon-neon: 260 12% 75%;
+    --silicon-cool: 240 10% 55%;
+    --silicon-warm: 250 8% 62%;
+    --silicon-neon: 260 14% 72%;
     --silicon-foreground: 220 15% 90%;
 
-    --sage-50: 80 10% 14%;
-    --sage-100: 82 12% 18%;
-    --sage-200: 85 15% 24%;
-    --sage-300: 88 18% 35%;
-    --sage-400: 92 20% 48%;
-    --sage-500: 95 25% 55%;
-    --sage-600: 90 28% 48%;
-    --sage-700: 85 25% 40%;
-    --sage-800: 80 20% 32%;
-    --sage-900: 75 15% 24%;
+    --sage-50: 220 10% 12%;
+    --sage-100: 218 12% 15%;
+    --sage-200: 215 14% 20%;
+    --sage-300: 210 16% 28%;
+    --sage-400: 205 20% 38%;
+    --sage-500: 200 25% 48%;
+    --sage-600: 195 30% 52%;
+    --sage-700: 190 28% 42%;
+    --sage-800: 190 22% 30%;
+    --sage-900: 190 16% 22%;
 
     --sage: var(--sage-500);
 
-    --cream: 35 15% 20%;
-    --parchment: 30 18% 16%;
-    --ink: 35 20% 85%;
-    --pencil: 30 10% 55%;
+    --cream: 222 15% 13%;
+    --parchment: 222 14% 11%;
+    --ink: 35 25% 88%;
+    --pencil: 222 8% 52%;
 
-    --teal-warm: 180 25% 45%;
+    --teal-warm: 188 30% 45%;
 
     --shadow-xs: 0 1px 2px hsl(0 0% 0% / 0.3);
     --shadow-sm: 0 2px 4px -2px hsl(0 0% 0% / 0.4);
@@ -346,11 +346,11 @@ body {
   }
 
   .dark .paper-card {
-    background: hsl(25 18% 14%);
+    background: hsl(222 18% 10%);
     background-image:
-      radial-gradient(hsl(25 15% 22% / 0.5) 1px, transparent 1px),
-      radial-gradient(hsl(25 12% 18% / 0.4) 1px, transparent 1px);
-    border-color: hsl(25 12% 22% / 0.8);
+      radial-gradient(hsl(222 14% 16% / 0.5) 1px, transparent 1px),
+      radial-gradient(hsl(222 12% 14% / 0.4) 1px, transparent 1px);
+    border-color: hsl(222 12% 18% / 0.8);
     box-shadow:
       0 1px 2px hsl(0 0% 0% / 0.3),
       0 4px 12px -4px hsl(0 0% 0% / 0.5),
@@ -529,3 +529,40 @@ body {
   animation-iteration-count: 1 !important;
 }
 .low-stimulus .animate-slide-in-toast { animation-name: none !important; }
+
+/* 全局滚动条（亚硅主题） */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(222 12% 26%) transparent;
+}
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  background: hsl(222 12% 26%);
+  border-radius: 9999px;
+}
+*::-webkit-scrollbar-thumb:hover { background: hsl(222 12% 34%); }
+
+/* 亚硅聊天面板主题 */
+@layer components {
+  .yasgui-gradient-text {
+    background: linear-gradient(120deg, hsl(30 80% 65%), hsl(188 60% 65%));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .yasgui-ai-bubble {
+    background: linear-gradient(160deg, hsl(222 18% 12%), hsl(222 16% 10%));
+    border: 1px solid hsl(222 12% 20%);
+    box-shadow: 0 2px 8px -2px hsl(0 0% 0% / 0.3);
+  }
+  .yasgui-user-bubble {
+    background: linear-gradient(160deg, hsl(30 70% 22%), hsl(30 60% 18%));
+    border: 1px solid hsl(30 60% 32%);
+    box-shadow: 0 2px 8px -2px hsl(0 0% 0% / 0.3);
+  }
+  .yasgui-panel {
+    background: hsl(222 20% 8%);
+    border: 1px solid hsl(222 12% 16%);
+  }
+}

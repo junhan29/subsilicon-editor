@@ -108,7 +108,7 @@ export function AiIndependentSelfCheckPanel() {
       } else if (r.configReady) {
         showToast('info', '部分链路失败，详见下方自检报告')
       } else {
-        showToast('info', '尚未完整配置 AI，请先到创境设置里填写 API Key')
+        showToast('info', '尚未完整配置 AI，请先到亚硅设置里填写 API Key')
       }
     } catch (e) {
       showToast('error', `自检失败：${e instanceof Error ? e.message : String(e)}`)

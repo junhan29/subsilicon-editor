@@ -166,7 +166,7 @@ export interface EditorCanvasCallbacks {
 }
 
 /**
- * 解析创境响应文本中的 JSON 命令块。
+ * 解析亚硅响应文本中的 JSON 命令块。
  * 格式：```ai-action { "actions": [...] } ```
  */
 export function parseAiCommands(text: string): AiCommandBlock | null {
@@ -184,7 +184,7 @@ export function parseAiCommands(text: string): AiCommandBlock | null {
 }
 
 /**
- * 提取创境响应中的所有 JSON 命令块（支持多个命令块）。
+ * 提取亚硅响应中的所有 JSON 命令块（支持多个命令块）。
  */
 export function parseAllAiCommands(text: string): AiCommandBlock[] {
   const regex = /```ai-action\s*\n?([\s\S]*?)```/g
@@ -206,7 +206,7 @@ export function parseAllAiCommands(text: string): AiCommandBlock[] {
 }
 
 /**
- * 逐一执行创境命令操作。
+ * 逐一执行亚硅命令操作。
  * 每个操作独立执行，单个失败不影响后续操作。
  * 返回执行结果摘要。
  */

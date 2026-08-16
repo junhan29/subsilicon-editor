@@ -52,7 +52,7 @@ const DEFAULT_BINDINGS: ShortcutBinding[] = [
 
   { id: 'toggleSidebar', action: '切换左侧栏', description: '显示或隐藏左侧节点面板', defaultKeys: ['B'], category: 'view', icon: 'PanelLeft' },
   { id: 'toggleRightPanel', action: '切换属性面板', description: '显示或隐藏右栏内属性面板', defaultKeys: ['P'], category: 'view', icon: 'PanelRight' },
-  { id: 'toggleAiPanel', action: '切换 AI 面板', description: '显示或隐藏 AI 创境面板 (Ctrl+K)', defaultKeys: ['Ctrl', 'K'], category: 'view', icon: 'MessageSquare' },
+  { id: 'toggleAiPanel', action: '切换 AI 面板', description: '显示或隐藏 AI 亚硅面板 (Ctrl+K)', defaultKeys: ['Ctrl', 'K'], category: 'view', icon: 'MessageSquare' },
   { id: 'toggleRightFullscreen', action: '画布全屏', description: '将右栏画布展开或退出全屏', defaultKeys: [], category: 'view', icon: 'Maximize' },
   // 专注模式（ADHD 适配）已取代画布全屏：toggleRightFullscreen 条目保留以兼容旧版自定义绑定，不做删除。
   // 默认键用 Ctrl+Shift+L 而非 Ctrl+Shift+F：后者在 macOS 是系统级「全屏切换」，会被系统拦截导致编辑器内快捷键失效

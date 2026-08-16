@@ -2111,7 +2111,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, onStartTour, wo
                     onClick={() => { setShowAiSettings(true); setActiveLeftActivity(null) }}
                     className="w-full text-left text-xs text-foreground hover:bg-muted rounded px-2 py-1.5 transition-colors"
                   >
-                    创境（AI）设置
+                    亚硅（AI）设置
                   </button>
                   <button
                     onClick={() => { setShowShortcutsModal(true); setActiveLeftActivity(null) }}
@@ -2381,7 +2381,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, onStartTour, wo
                     setCharacters(newChars)
                     setTitle(newTitle)
                     setSelectedNodeIds(newNodes.map((n) => n.id))
-                    pushHistory('BATCH', `应用创境生成故事「${newTitle}」`)
+                    pushHistory('BATCH', `应用亚硅生成故事「${newTitle}」`)
                     showToast('success', `故事「${newTitle}」已应用到画布`)
                     setTimeout(() => {
                       fitView({ padding: 0.3, duration: 500 })
@@ -2400,7 +2400,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, onStartTour, wo
                     }
                     setNodes((nds) => [...nds, newNode as StoryNode])
                     setSelectedNodeIds([id])
-                    pushHistory('ADD_NODE', `创境添加 ${nodeTypeLabels[type] || type} 节点`)
+                    pushHistory('ADD_NODE', `亚硅添加 ${nodeTypeLabels[type] || type} 节点`)
                     return id
                   }}
                   onAddEdge={(source, target) => {
@@ -2411,7 +2411,7 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, onStartTour, wo
                       edgeId = newEdges[newEdges.length - 1]?.id || ''
                       return newEdges as StoryEdge[]
                     })
-                    pushHistory('ADD_EDGE', '创境创建连线')
+                    pushHistory('ADD_EDGE', '亚硅创建连线')
                     return edgeId
                   }}
                 />

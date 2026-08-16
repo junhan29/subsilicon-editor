@@ -25,7 +25,7 @@ export function AiPanelFlyout({ open, pinned, onClose, onPin, children }: AiPane
       `}
     >
       <div className="flex items-center justify-between border-b border-border px-3 py-2">
-        <span className="text-xs font-semibold text-foreground">AI 创境</span>
+        <span className="text-xs font-semibold text-foreground">AI 亚硅</span>
         <div className="flex items-center gap-1">
           <button
             onClick={onPin}

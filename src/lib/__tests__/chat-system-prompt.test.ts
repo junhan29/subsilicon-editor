@@ -8,10 +8,10 @@ const OPERATIONS = [
 ]
 
 describe('chat-system-prompt', () => {
-  it('包含创境命令格式（ai-action 代码块）', () => {
+  it('包含亚硅命令格式（ai-action 代码块）', () => {
     const p = getChatSystemPrompt('')
     expect(p).toContain('ai-action')
-    expect(p).toContain('## 创境命令格式')
+    expect(p).toContain('## 亚硅命令格式')
   })
 
   it('操作规则覆盖全部 15 种操作', () => {
@@ -25,6 +25,13 @@ describe('chat-system-prompt', () => {
     const p = getChatSystemPrompt('')
     expect(p).toContain('全能创作工作流')
     expect(p).toContain('每轮 3-6')
+  })
+
+  it('包含先聊后做策略（先聊灵感、分析提炼、确认后再落画布）', () => {
+    const p = getChatSystemPrompt('')
+    expect(p).toContain('先聊后做')
+    expect(p).toContain('征询确认')
+    expect(p).toContain('不要一上来就创建节点')
   })
 
   it('媒体生成必须先说明意图并等待用户授权', () => {

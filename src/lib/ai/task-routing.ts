@@ -2,7 +2,7 @@
  * AI 任务路由（Task Routing）
  *
  * 让不同创作任务使用不同的大模型 API，并可为每个任务槽植入技能（自定义 system prompt）与参数限制：
- * - editor：编辑器画布对话（AI 创境面板）
+ * - editor：编辑器画布对话（AI 亚硅面板）
  * - text：文本生成（润色/大纲/角色/故事等）
  * - image：图片生成
  * - video：视频生成

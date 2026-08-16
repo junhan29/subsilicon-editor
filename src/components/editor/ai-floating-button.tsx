@@ -19,7 +19,7 @@ export function AiFloatingButton({ onClick, isOpen }: AiFloatingButtonProps) {
           : 'bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-xl hover:scale-105'
         }
       `}
-      title="AI 创境 (Ctrl+K)"
+      title="AI 亚硅 (Ctrl+K)"
     >
       <MessageSquare className="h-5 w-5" />
     </button>

@@ -293,7 +293,7 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
     }
     // 保存任务路由配置（内部对媒体槽 apiKey 加密）
     await saveTaskRoutingConfig(routing)
-    showToast('success', '创境设置已保存')
+    showToast('success', '亚硅设置已保存')
     onClose()
   }
 
@@ -441,7 +441,7 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
       <div className="p-2 rounded border border-slate-700/60 space-y-1.5">
         <div className="flex items-center justify-between">
           <span className="text-[11px] font-medium text-slate-300 flex items-center gap-1.5">
-            {task === 'image' ? <Image className="w-3 h-3 text-pink-400" /> : task === 'video' ? <Wand2 className="w-3 h-3 text-purple-400" /> : <Music className="w-3 h-3 text-green-400" />}
+            {task === 'image' ? <Image className="w-3 h-3 text-amber-400" /> : task === 'video' ? <Wand2 className="w-3 h-3 text-purple-400" /> : <Music className="w-3 h-3 text-green-400" />}
             {label}
           </span>
           <label className="flex items-center gap-1.5 text-[10px] text-slate-400 cursor-pointer select-none">
@@ -556,12 +556,17 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-      <div className="bg-slate-800 rounded-xl w-full max-w-md border border-slate-700 shadow-2xl">
+      <div className="yasgui-panel rounded-xl w-full max-w-md shadow-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700">
-          <div className="flex items-center gap-2">
-            <Cpu className="w-4 h-4 text-pink-400" />
-            <h3 className="text-sm font-semibold text-white">创境服务设置</h3>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-500/30 to-cyan-400/30 flex items-center justify-center">
+              <Cpu className="w-4 h-4 text-amber-300" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold yasgui-gradient-text leading-tight">亚硅服务设置</h3>
+              <p className="text-[9px] text-slate-500 leading-none">创作搭档 · 配置对话与媒体生成服务</p>
+            </div>
           </div>
           <button
             onClick={onClose}
@@ -576,13 +581,13 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
           {/* Enable Toggle */}
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-white">启用创境</p>
-              <p className="text-[10px] text-slate-500">开启后将使用创境辅助创作</p>
+              <p className="text-xs font-medium text-white">启用亚硅</p>
+              <p className="text-[10px] text-slate-500">开启后将使用亚硅辅助创作</p>
             </div>
             <button
               onClick={() => setAiEnabled(!aiEnabled)}
               className={`w-10 h-5 rounded-full transition-colors ${
-                aiEnabled ? 'bg-pink-500' : 'bg-slate-600'
+                aiEnabled ? 'bg-gradient-to-r from-amber-500 to-amber-600 shadow shadow-amber-500/30' : 'bg-slate-600'
               }`}
             >
               <div className={`w-4 h-4 rounded-full bg-white shadow transition-transform ${
@@ -594,12 +599,12 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
           {aiEnabled && (
             <>
               {/* 新手三步引导 */}
-              <div className="bg-pink-500/5 border border-pink-500/20 rounded-lg p-2.5 space-y-1">
-                <p className="text-[10px] text-pink-300 font-medium">📖 第一次使用？三步搞定：</p>
+              <div className="bg-amber-500/5 border border-amber-500/20 rounded-lg p-2.5 space-y-1">
+                <p className="text-[10px] text-amber-300 font-medium">📖 第一次使用？三步搞定：</p>
                 <p className="text-[10px] text-slate-400 leading-relaxed">
-                  <span className="text-pink-400">①</span> 点下方链接注册账号 →
-                  <span className="text-pink-400"> ②</span> 创建 API Key 并复制 →
-                  <span className="text-pink-400"> ③</span> 粘贴到下方框框，点「测试连接」
+                  <span className="text-amber-400">①</span> 点下方链接注册账号 →
+                  <span className="text-amber-400"> ②</span> 创建 API Key 并复制 →
+                  <span className="text-amber-400"> ③</span> 粘贴到下方框框，点「测试连接」
                 </p>
               </div>
 
@@ -625,7 +630,7 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
                       href={currentProvider.website}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-[10px] text-pink-400 hover:text-pink-300"
+                      className="inline-flex items-center gap-1 text-[10px] text-amber-400 hover:text-amber-300"
                     >
                       <ExternalLink className="w-3 h-3" />
                       点这里去注册 / 申请 API Key →
@@ -701,7 +706,7 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
                 <button
                   onClick={testConnection}
                   disabled={testing || !aiConfig.apiKey}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded transition-colors disabled:opacity-50"
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/20 rounded transition-colors disabled:opacity-50"
                 >
                   {testing ? (
                     <Loader2 className="w-3 h-3 animate-spin" />
@@ -723,11 +728,13 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
           )}
 
           {/* 媒体生成（图片/视频）配置 —— 独立于文本 AI，可单独配置 */}
-          <div className="border-t border-slate-700 pt-3 space-y-3">
-            <div className="flex items-center gap-1.5">
-              <Image className="w-3.5 h-3.5 text-pink-400" />
+          <div className="border-t border-slate-800 pt-3 space-y-3">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-md bg-gradient-to-br from-cyan-400/25 to-cyan-400/10 flex items-center justify-center">
+                <Image className="w-3.5 h-3.5 text-cyan-300" />
+              </div>
               <span className="text-xs font-semibold text-white">图片/视频生成</span>
-              <span className="text-[9px] text-slate-500 bg-slate-700 px-1.5 py-0.5 rounded">可选</span>
+              <span className="text-[9px] text-slate-400 bg-slate-800 border border-slate-700 px-1.5 py-0.5 rounded">可选</span>
             </div>
             <p className="text-[10px] text-slate-500 -mt-2 leading-relaxed">
               这是<span className="text-slate-400">可选功能</span>。不配置也能用 AI 写故事、建节点。
@@ -760,7 +767,7 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
                   href={MEDIA_PROVIDER_INFO[mediaProvider.type].website}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-[10px] text-pink-400 hover:text-pink-300"
+                  className="inline-flex items-center gap-1 text-[10px] text-cyan-400 hover:text-cyan-300"
                 >
                   <ExternalLink className="w-3 h-3" />
                   点这里去申请 API Key →
@@ -838,7 +845,7 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
                 <button
                   onClick={testMediaConnection}
                   disabled={mediaTesting || !mediaProvider.apiKey}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded transition-colors disabled:opacity-50"
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/20 rounded transition-colors disabled:opacity-50"
                 >
                   {mediaTesting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Image className="w-3 h-3" />}
                   测试生成
@@ -869,14 +876,16 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
             )}
           </div>
           {/* AI 任务路由（高级）：不同创作任务用不同模型 */}
-          <div className="border-t border-slate-700 pt-3 space-y-3">
+          <div className="border-t border-slate-800 pt-3 space-y-3">
             <button
               onClick={() => setShowRouting(!showRouting)}
-              className="w-full flex items-center gap-1.5 text-left"
+              className="w-full flex items-center gap-2 text-left"
             >
-              <SlidersHorizontal className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+              <div className="w-6 h-6 rounded-md bg-gradient-to-br from-cyan-400/25 to-cyan-400/10 flex items-center justify-center shrink-0">
+                <SlidersHorizontal className="w-3.5 h-3.5 text-cyan-300" />
+              </div>
               <span className="text-xs font-semibold text-white">AI 任务路由</span>
-              <span className="text-[9px] text-slate-500 bg-slate-700 px-1.5 py-0.5 rounded">高级</span>
+              <span className="text-[9px] text-slate-400 bg-slate-800 border border-slate-700 px-1.5 py-0.5 rounded">高级</span>
               <span className={`ml-auto text-slate-400 transition-transform ${showRouting ? 'rotate-180' : ''}`}>▾</span>
             </button>
             <p className="text-[10px] text-slate-500 -mt-1.5 leading-relaxed">
@@ -921,7 +930,7 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
           </button>
           <button
             onClick={handleSave}
-            className="px-4 py-1.5 text-xs bg-pink-500/20 hover:bg-pink-500/30 text-pink-400 rounded transition-colors"
+            className="px-4 py-1.5 text-xs font-medium bg-gradient-to-br from-amber-500 to-amber-600 hover:brightness-110 text-white rounded shadow-lg shadow-amber-500/20 transition-all"
           >
             保存设置
           </button>
