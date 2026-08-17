@@ -80,15 +80,15 @@ jobs:
           VERSION="${GITHUB_REF_NAME#v}"
           gh release create "${{ github.ref_name }}" \
             --title "Release ${{ github.ref_name }}" \
-            --notes "## SubSilicon Editor v$VERSION
+            --notes "## SubSilicon Editor v${VERSION}
 
           ### 下载
 
           | 平台 | 文件 |
           |------|------|
-          | macOS (Apple Silicon) | SubSilicon Editor-$VERSION-macos-arm64.dmg |
-          | Windows | SubSilicon Editor-$VERSION-windows-x64.exe |
-          | Linux | SubSilicon Editor-$VERSION-linux-x86_64.AppImage |
+          | macOS (Apple Silicon) | SubSilicon Editor-${VERSION}-macos-arm64.dmg |
+          | Windows | SubSilicon Editor-${VERSION}-windows-x64.exe |
+          | Linux | SubSilicon Editor-${VERSION}-linux-x86_64.AppImage |
           " \
             release/*.dmg release/*.exe release/*.AppImage release/*.zip release/*.deb release/*.tar.gz
 
@@ -100,106 +100,119 @@ jobs:
           SSH_PORT: '22022'
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
+          TAG="${GITHUB_REF_NAME}"
           VERSION_DIR="/var/www/subsilicon/public/releases/v${VERSION}"
           RELEASE_DIR="/var/www/subsilicon/public/releases"
-          MIRROR="https://gh-proxy.com/https://github.com/junhan29/subsilicon-editor/releases/download/${GITHUB_REF_NAME}"
+          GITHUB_REPO="junhan29/subsilicon-editor"
+          BASE_URL="https://github.com/${GITHUB_REPO}/releases/download/${TAG}"
 
           mkdir -p ~/.ssh
           echo "$SERVER_SSH_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -p "$SSH_PORT" -H "$SERVER_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
 
-          echo "Creating version directory on server..."
+          echo "=== Step 1: Create version directory ==="
           ssh -p "$SSH_PORT" -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$SERVER_USER@$SERVER_HOST" "mkdir -p $VERSION_DIR"
 
-          echo "Uploading release assets from runner to server via scp (GitHub native, stable)..."
-          scp -P "$SSH_PORT" -o ServerAliveInterval=30 -o ServerAliveCountMax=3 release/* "$SERVER_USER@$SERVER_HOST:$VERSION_DIR/"
+          echo "=== Step 2: Server downloads release assets directly from GitHub Release ==="
+          ssh -p "$SSH_PORT" -o ServerAliveInterval=60 -o ServerAliveCountMax=5 "$SERVER_USER@$SERVER_HOST" \
+            "VERSION=$VERSION BASE_URL=$BASE_URL VERSION_DIR=$VERSION_DIR RELEASE_DIR=$RELEASE_DIR bash -s" << 'REMOTE_SCRIPT'
+          set -e
+          cd "$VERSION_DIR"
 
-          echo "Verifying all assets present on server..."
-          ssh -p "$SSH_PORT" -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$SERVER_USER@$SERVER_HOST" "
-            cd $VERSION_DIR
-            FAILED=0
-            for g in 'SubSilicon Editor-${VERSION}-macos-arm64.dmg' 'SubSilicon Editor-${VERSION}-macos-arm64.zip' 'SubSilicon Editor-${VERSION}-windows-x64.exe' 'SubSilicon Editor-${VERSION}-windows-x64.zip' 'SubSilicon Editor-${VERSION}-linux-amd64.deb' 'SubSilicon Editor-${VERSION}-linux-x64.tar.gz' 'SubSilicon Editor-${VERSION}-linux-x86_64.AppImage'; do
-              f=\"\${g// Editor-/Editor-}\"
-              if [ -s \"\$g\" ] || [ -s \"\$f\" ]; then
-                echo \"OK: \$g\"
-              else
-                echo \"MISSING: \$g\"
-                FAILED=1
-              fi
-            done
-            if [ \"\$FAILED\" -eq 1 ]; then
-              echo 'Some assets are missing after upload, aborting to avoid publishing bad metadata'
-              exit 1
+          echo "Downloading from $BASE_URL ..."
+
+          # macOS
+          curl -L --fail --retry 3 --retry-delay 5 --connect-timeout 30 \
+            -o "SubSilicon Editor-${VERSION}-macos-arm64.dmg" \
+            "$BASE_URL/SubSilicon.Editor-${VERSION}-macos-arm64.dmg"
+          curl -L --fail --retry 3 --retry-delay 5 --connect-timeout 30 \
+            -o "SubSilicon Editor-${VERSION}-macos-arm64.zip" \
+            "$BASE_URL/SubSilicon.Editor-${VERSION}-macos-arm64.zip"
+
+          # Windows
+          curl -L --fail --retry 3 --retry-delay 5 --connect-timeout 30 \
+            -o "SubSilicon Editor-${VERSION}-windows-x64.exe" \
+            "$BASE_URL/SubSilicon.Editor-${VERSION}-windows-x64.exe"
+          curl -L --fail --retry 3 --retry-delay 5 --connect-timeout 30 \
+            -o "SubSilicon Editor-${VERSION}-windows-x64.zip" \
+            "$BASE_URL/SubSilicon.Editor-${VERSION}-windows-x64.zip"
+
+          # Linux
+          curl -L --fail --retry 3 --retry-delay 5 --connect-timeout 30 \
+            -o "SubSilicon Editor-${VERSION}-linux-amd64.deb" \
+            "$BASE_URL/SubSilicon.Editor-${VERSION}-linux-amd64.deb"
+          curl -L --fail --retry 3 --retry-delay 5 --connect-timeout 30 \
+            -o "SubSilicon Editor-${VERSION}-linux-x64.tar.gz" \
+            "$BASE_URL/SubSilicon.Editor-${VERSION}-linux-x64.tar.gz"
+          curl -L --fail --retry 3 --retry-delay 5 --connect-timeout 30 \
+            -o "SubSilicon Editor-${VERSION}-linux-x86_64.AppImage" \
+            "$BASE_URL/SubSilicon.Editor-${VERSION}-linux-x86_64.AppImage"
+
+          echo "=== Step 3: Verify downloads ==="
+          FAILED=0
+          for f in "SubSilicon Editor-${VERSION}-macos-arm64.dmg" "SubSilicon Editor-${VERSION}-macos-arm64.zip" "SubSilicon Editor-${VERSION}-windows-x64.exe" "SubSilicon Editor-${VERSION}-windows-x64.zip" "SubSilicon Editor-${VERSION}-linux-amd64.deb" "SubSilicon Editor-${VERSION}-linux-x64.tar.gz" "SubSilicon Editor-${VERSION}-linux-x86_64.AppImage"; do
+            if [ -s "$f" ]; then
+              echo "OK: $f ($(stat -c%s "$f") bytes)"
+            else
+              echo "MISSING: $f"
+              FAILED=1
             fi
-          "
+          done
+          if [ "$FAILED" -eq 1 ]; then
+            echo "Some assets missing, aborting"
+            exit 1
+          fi
 
-          echo "Renaming files (dot to space in product name)..."
-          ssh -p "$SSH_PORT" -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$SERVER_USER@$SERVER_HOST" "
-            cd $VERSION_DIR
-            for f in SubSilicon.Editor-*; do
-              [ -f \"\$f\" ] && mv -v \"\$f\" \"\${f/.Editor-/ Editor-}\" || true
-            done
-          "
+          echo "=== Step 4: Generate update metadata ==="
+          MAC_ZIP_SHA=$(sha512sum "SubSilicon Editor-${VERSION}-macos-arm64.zip" | awk '{print $1}')
+          MAC_DMG_SHA=$(sha512sum "SubSilicon Editor-${VERSION}-macos-arm64.dmg" | awk '{print $1}')
+          MAC_ZIP_SIZE=$(stat -c%s "SubSilicon Editor-${VERSION}-macos-arm64.zip")
+          MAC_DMG_SIZE=$(stat -c%s "SubSilicon Editor-${VERSION}-macos-arm64.dmg")
 
-          echo "Generating update metadata yml files..."
-          ssh -p "$SSH_PORT" -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$SERVER_USER@$SERVER_HOST" "
-            cd $VERSION_DIR
-
-            MAC_ARM64_ZIP_SHA=\$(sha512sum \"SubSilicon Editor-${VERSION}-macos-arm64.zip\" | awk '{print \$1}')
-            MAC_ARM64_DMG_SHA=\$(sha512sum \"SubSilicon Editor-${VERSION}-macos-arm64.dmg\" | awk '{print \$1}')
-            MAC_ARM64_ZIP_SIZE=\$(stat -c%s \"SubSilicon Editor-${VERSION}-macos-arm64.zip\")
-            MAC_ARM64_DMG_SIZE=\$(stat -c%s \"SubSilicon Editor-${VERSION}-macos-arm64.dmg\")
-
-            cat > latest-mac.yml << EOF
+          cat > latest-mac.yml << YML
           version: ${VERSION}
           files:
             - url: SubSilicon Editor-${VERSION}-macos-arm64.zip
-              sha512: \${MAC_ARM64_ZIP_SHA}
-              size: \${MAC_ARM64_ZIP_SIZE}
+              sha512: ${MAC_ZIP_SHA}
+              size: ${MAC_ZIP_SIZE}
             - url: SubSilicon Editor-${VERSION}-macos-arm64.dmg
-              sha512: \${MAC_ARM64_DMG_SHA}
-              size: \${MAC_ARM64_DMG_SIZE}
+              sha512: ${MAC_DMG_SHA}
+              size: ${MAC_DMG_SIZE}
           path: SubSilicon Editor-${VERSION}-macos-arm64.zip
-          sha512: \${MAC_ARM64_ZIP_SHA}
-          releaseDate: '\$(date -u +%Y-%m-%dT%H:%M:%SZ)'
-          EOF
+          sha512: ${MAC_ZIP_SHA}
+          releaseDate: '$(date -u +%Y-%m-%dT%H:%M:%SZ)'
+          YML
 
-            WIN_EXE_SHA=\$(sha512sum \"SubSilicon Editor-${VERSION}-windows-x64.exe\" | awk '{print \$1}')
-            WIN_EXE_SIZE=\$(stat -c%s \"SubSilicon Editor-${VERSION}-windows-x64.exe\")
+          WIN_EXE_SHA=$(sha512sum "SubSilicon Editor-${VERSION}-windows-x64.exe" | awk '{print $1}')
+          WIN_EXE_SIZE=$(stat -c%s "SubSilicon Editor-${VERSION}-windows-x64.exe")
 
-            cat > latest.yml << EOF
+          cat > latest.yml << YML
           version: ${VERSION}
           files:
             - url: SubSilicon Editor-${VERSION}-windows-x64.exe
-              sha512: \${WIN_EXE_SHA}
-              size: \${WIN_EXE_SIZE}
+              sha512: ${WIN_EXE_SHA}
+              size: ${WIN_EXE_SIZE}
           path: SubSilicon Editor-${VERSION}-windows-x64.exe
-          sha512: \${WIN_EXE_SHA}
-          releaseDate: '\$(date -u +%Y-%m-%dT%H:%M:%SZ)'
-          EOF
-          "
+          sha512: ${WIN_EXE_SHA}
+          releaseDate: '$(date -u +%Y-%m-%dT%H:%M:%SZ)'
+          YML
 
-          echo "Creating standalone symlink..."
-          ssh -p "$SSH_PORT" -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$SERVER_USER@$SERVER_HOST" "
-            STANDALONE_DIR=\"/var/www/subsilicon/.next/standalone/public/releases\"
-            if [ -d \"\$STANDALONE_DIR\" ]; then
-              ln -sf \"$VERSION_DIR\" \"\$STANDALONE_DIR/v${VERSION}\"
-              echo \"Symlink created: \$STANDALONE_DIR/v${VERSION} -> $VERSION_DIR\"
-            fi
-          "
+          echo "=== Step 5: Publish ==="
+          cp latest-mac.yml "$RELEASE_DIR/latest-mac.yml"
+          cp latest.yml "$RELEASE_DIR/latest.yml"
 
-          echo "Copying root yml files and restarting PM2..."
-          ssh -p "$SSH_PORT" -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$SERVER_USER@$SERVER_HOST" "
-            cp $VERSION_DIR/latest-mac.yml $RELEASE_DIR/latest-mac.yml
-            cp $VERSION_DIR/latest.yml $RELEASE_DIR/latest.yml
-            pm2 restart subsilicon 2>&1 || true
-            echo 'PM2 restarted'
-          "
+          STANDALONE_DIR="/var/www/subsilicon/.next/standalone/public/releases"
+          if [ -d "$STANDALONE_DIR" ]; then
+            ln -sf "$VERSION_DIR" "$STANDALONE_DIR/v${VERSION}"
+          fi
 
-          echo "=== Verification ==="
-          ssh -p "$SSH_PORT" -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$SERVER_USER@$SERVER_HOST" "ls -lh $VERSION_DIR/"
+          cd /var/www/subsilicon && pm2 restart subsilicon 2>&1 || true
+
+          echo "=== Final verification ==="
+          ls -lh "$VERSION_DIR/"
           echo "=== Sync complete ==="
+          REMOTE_SCRIPT
 
       - uses: geekyeggo/delete-artifact@v5
         with:
