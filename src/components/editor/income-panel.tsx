@@ -119,24 +119,24 @@ export function IncomePanel({ graph, workId }: IncomePanelProps) {
       </div>
 
       {showAdd && (
-        <div className="p-3 bg-slate-800/50 rounded-lg border border-slate-700 space-y-2.5">
+        <div className="p-3 bg-muted/50 rounded-lg border border-border space-y-2.5">
           <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-400 w-12">金额</span>
+            <span className="text-xs text-muted-foreground w-12">金额</span>
             <input
               type="number"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="0.00"
-              className="flex-1 h-7 text-xs rounded border border-slate-600 bg-slate-700 px-2 text-white"
+              className="flex-1 h-7 text-xs rounded border border-border bg-secondary px-2 text-white"
             />
-            <span className="text-xs text-slate-400">元</span>
+            <span className="text-xs text-muted-foreground">元</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-400 w-12">渠道</span>
+            <span className="text-xs text-muted-foreground w-12">渠道</span>
             <select
               value={channel}
               onChange={(e) => setChannel(e.target.value)}
-              className="flex-1 h-7 text-xs rounded border border-slate-600 bg-slate-700 px-1.5 text-white"
+              className="flex-1 h-7 text-xs rounded border border-border bg-secondary px-1.5 text-white"
             >
               <option value="wechat">微信</option>
               <option value="alipay">支付宝</option>
@@ -145,19 +145,19 @@ export function IncomePanel({ graph, workId }: IncomePanelProps) {
             </select>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-400 w-12">备注</span>
+            <span className="text-xs text-muted-foreground w-12">备注</span>
             <input
               type="text"
               value={note}
               onChange={(e) => setNote(e.target.value)}
               placeholder="作品名称或来源"
-              className="flex-1 h-7 text-xs rounded border border-slate-600 bg-slate-700 px-2 text-white"
+              className="flex-1 h-7 text-xs rounded border border-border bg-secondary px-2 text-white"
             />
           </div>
           <div className="flex justify-end gap-2 pt-1">
             <button
               onClick={() => setShowAdd(false)}
-              className="px-2 py-1 text-[10px] text-slate-400 hover:text-slate-200"
+              className="px-2 py-1 text-[10px] text-muted-foreground hover:text-foreground"
             >
               取消
             </button>
@@ -172,8 +172,8 @@ export function IncomePanel({ graph, workId }: IncomePanelProps) {
       )}
 
       <div className="grid grid-cols-2 gap-3">
-        <div className="p-3 rounded-lg bg-slate-800/50 border border-slate-700">
-          <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-1">
+        <div className="p-3 rounded-lg bg-muted/50 border border-border">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
             <Wallet className="w-3.5 h-3.5" />
             年度总收入
           </div>
@@ -181,8 +181,8 @@ export function IncomePanel({ graph, workId }: IncomePanelProps) {
             ¥{yearlyTotal.toFixed(2)}
           </div>
         </div>
-        <div className="p-3 rounded-lg bg-slate-800/50 border border-slate-700">
-          <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-1">
+        <div className="p-3 rounded-lg bg-muted/50 border border-border">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
             <TrendingUp className="w-3.5 h-3.5" />
             合规状态
           </div>
@@ -190,25 +190,25 @@ export function IncomePanel({ graph, workId }: IncomePanelProps) {
             <span className={`text-xs px-1.5 py-0.5 rounded-full ${
               compliance.warningLevel === 'safe'
                 ? 'bg-emerald-500/20 text-emerald-400'
-                : 'bg-amber-500/20 text-amber-400'
+                : 'bg-gold-400/20 text-gold-400'
             }`}>
               {compliance.warningLevel === 'safe' ? '安全' : '关注'}
             </span>
             {compliance.warningLevel !== 'safe' && (
-              <AlertCircle className="w-3 h-3 text-amber-400" />
+              <AlertCircle className="w-3 h-3 text-gold-400" />
             )}
           </div>
         </div>
       </div>
 
       {compliance.warnings.length > 0 && (
-        <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
+        <div className="p-2.5 rounded-lg bg-gold-400/10 border border-gold-400/20">
           <div className="flex items-center gap-1.5 mb-1">
-            <AlertCircle className="w-3 h-3 text-amber-400" />
-            <span className="text-[10px] text-amber-400 font-medium">合规提示</span>
+            <AlertCircle className="w-3 h-3 text-gold-400" />
+            <span className="text-[10px] text-gold-400 font-medium">合规提示</span>
           </div>
           {compliance.warnings.map((w, i) => (
-            <p key={i} className="text-[10px] text-amber-400/80 ml-5">{w.title}: {w.message}</p>
+            <p key={i} className="text-[10px] text-gold-400/80 ml-5">{w.title}: {w.message}</p>
           ))}
         </div>
       )}
@@ -216,23 +216,23 @@ export function IncomePanel({ graph, workId }: IncomePanelProps) {
       {visibleRecords.length > 0 && (
         <div className="grid grid-cols-2 gap-3">
           {/* 渠道聚合 */}
-          <div className="p-3 rounded-lg bg-slate-800/50 border border-slate-700">
-            <h4 className="text-xs font-medium text-slate-300 mb-1">渠道占比</h4>
+          <div className="p-3 rounded-lg bg-muted/50 border border-border">
+            <h4 className="text-xs font-medium text-foreground mb-1">渠道占比</h4>
             <div className="flex justify-center">
               <PieChart data={channelAgg.map(a => ({ label: a.label, value: a.total }))} size={130} />
             </div>
             <ul className="mt-1 space-y-1">
               {channelAgg.map(a => (
                 <li key={a.channel} className="flex items-center justify-between text-[10px]">
-                  <span className="text-slate-400">{a.label}（{a.count}笔）</span>
-                  <span className="text-slate-300">¥{a.total.toFixed(2)} · {a.percent.toFixed(1)}%</span>
+                  <span className="text-muted-foreground">{a.label}（{a.count}笔）</span>
+                  <span className="text-foreground">¥{a.total.toFixed(2)} · {a.percent.toFixed(1)}%</span>
                 </li>
               ))}
             </ul>
           </div>
           {/* 月度聚合 */}
-          <div className="p-3 rounded-lg bg-slate-800/50 border border-slate-700">
-            <h4 className="text-xs font-medium text-slate-300 mb-1">月度收入</h4>
+          <div className="p-3 rounded-lg bg-muted/50 border border-border">
+            <h4 className="text-xs font-medium text-foreground mb-1">月度收入</h4>
             <div className="overflow-x-auto pb-1">
               <BarChart
                 data={monthAgg.map(m => ({ label: m.month.slice(2), value: m.total }))}
@@ -241,7 +241,7 @@ export function IncomePanel({ graph, workId }: IncomePanelProps) {
               />
             </div>
             {monthAgg.length === 0 && (
-              <div className="text-center py-6 text-slate-500 text-xs">暂无数据</div>
+              <div className="text-center py-6 text-muted-foreground text-xs">暂无数据</div>
             )}
           </div>
         </div>
@@ -250,18 +250,18 @@ export function IncomePanel({ graph, workId }: IncomePanelProps) {
       {/* 备注搜索与导入导出 */}
       <div className="space-y-2">
         <div className="flex items-center gap-1.5">
-          <Search className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+          <Search className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
           <input
             type="text"
             value={noteQuery}
             onChange={(e) => setNoteQuery(e.target.value)}
             placeholder="按备注筛选记录"
-            className="flex-1 h-7 text-xs rounded border border-slate-600 bg-slate-700 px-2 text-white placeholder:text-slate-500 focus:outline-none focus:border-emerald-500/50"
+            className="flex-1 h-7 text-xs rounded border border-border bg-secondary px-2 text-white placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500/50"
           />
           {noteQuery && (
             <button
               onClick={() => setNoteQuery('')}
-              className="text-[10px] text-slate-400 hover:text-slate-200 shrink-0"
+              className="text-[10px] text-muted-foreground hover:text-foreground shrink-0"
             >
               清除
             </button>
@@ -271,20 +271,20 @@ export function IncomePanel({ graph, workId }: IncomePanelProps) {
           <button
             onClick={handleExportJSON}
             disabled={visibleRecords.length === 0}
-            className="flex items-center gap-1 px-2 py-1 text-[10px] bg-slate-700/60 hover:bg-slate-600/60 text-slate-300 rounded disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="flex items-center gap-1 px-2 py-1 text-[10px] bg-secondary/60 hover:bg-accent/60 text-foreground rounded disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             <Download className="w-3 h-3" /> 导出 JSON
           </button>
           <button
             onClick={handleExportCSV}
             disabled={visibleRecords.length === 0}
-            className="flex items-center gap-1 px-2 py-1 text-[10px] bg-slate-700/60 hover:bg-slate-600/60 text-slate-300 rounded disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="flex items-center gap-1 px-2 py-1 text-[10px] bg-secondary/60 hover:bg-accent/60 text-foreground rounded disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             <Download className="w-3 h-3" /> 导出 CSV
           </button>
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-1 px-2 py-1 text-[10px] bg-slate-700/60 hover:bg-slate-600/60 text-slate-300 rounded transition-colors"
+            className="flex items-center gap-1 px-2 py-1 text-[10px] bg-secondary/60 hover:bg-accent/60 text-foreground rounded transition-colors"
           >
             <Upload className="w-3 h-3" /> 导入
           </button>
@@ -302,15 +302,15 @@ export function IncomePanel({ graph, workId }: IncomePanelProps) {
       </div>
 
       <div>
-        <h4 className="text-xs font-medium text-slate-300 mb-2">
+        <h4 className="text-xs font-medium text-foreground mb-2">
           收入记录{noteQuery.trim() ? `（${visibleRecords.length}）` : ''}
         </h4>
         {records.length === 0 ? (
-          <div className="text-center py-6 text-slate-500 text-xs">
+          <div className="text-center py-6 text-muted-foreground text-xs">
             暂无收入记录，点击上方「添加记录」开始记录
           </div>
         ) : visibleRecords.length === 0 ? (
-          <div className="text-center py-6 text-slate-500 text-xs">
+          <div className="text-center py-6 text-muted-foreground text-xs">
             没有匹配「{noteQuery.trim()}」的记录
           </div>
         ) : (
@@ -318,16 +318,16 @@ export function IncomePanel({ graph, workId }: IncomePanelProps) {
             {[...visibleRecords].reverse().map((r) => (
               <div
                 key={r.id}
-                className="flex items-center gap-2 p-2 rounded bg-slate-800/30 border border-slate-700/50 group"
+                className="flex items-center gap-2 p-2 rounded bg-muted/30 border border-border/50 group"
               >
                 <span className="text-emerald-400 text-sm font-medium w-16 shrink-0">
                   ¥{r.amount.toFixed(2)}
                 </span>
-                <span className="text-[10px] text-slate-500 w-12 shrink-0">
+                <span className="text-[10px] text-muted-foreground w-12 shrink-0">
                   {(r.channel === 'wechat' ? '微信' : r.channel === 'alipay' ? '支付宝' : r.channel === 'other' ? '其他' : '第三方') as string}
                 </span>
-                <span className="text-[10px] text-slate-400 flex-1 truncate">{r.note}</span>
-                <span className="text-[10px] text-slate-600 shrink-0">
+                <span className="text-[10px] text-muted-foreground flex-1 truncate">{r.note}</span>
+                <span className="text-[10px] text-muted-foreground shrink-0">
                   {new Date(r.date).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' })}
                 </span>
                 <button

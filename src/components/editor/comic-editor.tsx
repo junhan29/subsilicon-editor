@@ -710,7 +710,7 @@ export function ComicEditor({ work, onBack }: ComicEditorProps) {
                       </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); deletePanel(panel.id) }}
-                        className="p-1 text-muted-foreground hover:text-red-500 rounded"
+                        className="p-1 text-muted-foreground hover:text-primary rounded"
                         title="删除画格"
                       >
                         <Trash2 className="w-3 h-3" />
@@ -788,7 +788,7 @@ export function ComicEditor({ work, onBack }: ComicEditorProps) {
                       />
                       <button
                         onClick={() => removeDialogue(d.id)}
-                        className="p-1 text-muted-foreground hover:text-red-500 rounded shrink-0"
+                        className="p-1 text-muted-foreground hover:text-primary rounded shrink-0"
                       >
                         <X className="w-3 h-3" />
                       </button>

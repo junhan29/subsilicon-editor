@@ -120,7 +120,7 @@ function RandomNodeComponent({ id, data, selected, onUpdateNode }: RandomNodePro
             <button
               onClick={() => removeOption(opt.id)}
               disabled={options.length <= 2}
-              className={`p-0.5 rounded transition-colors ${options.length <= 2 ? 'text-cyan-300/30 cursor-not-allowed' : 'text-cyan-400/70 hover:text-red-400 hover:bg-red-500/20'}`}
+              className={`p-0.5 rounded transition-colors ${options.length <= 2 ? 'text-cyan-300/30 cursor-not-allowed' : 'text-cyan-400/70 hover:text-red-400 hover:bg-primary/20'}`}
             >
               <Trash2 className="w-3 h-3" />
             </button>

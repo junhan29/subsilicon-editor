@@ -36,7 +36,7 @@ function ResultGroup({ title, items, summary }: ResultGroupProps) {
               ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
               : total === 0
               ? 'bg-muted text-muted-foreground border-border'
-              : 'bg-amber-500/10 text-amber-600 border-amber-500/20'
+              : 'bg-gold-400/10 text-amber-600 border-gold-400/20'
           }`}
         >
           {summary(ok, total)}
@@ -158,7 +158,7 @@ export function AiIndependentSelfCheckPanel() {
                 {report.configReady ? (
                   <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                 ) : (
-                  <AlertTriangle className="w-4 h-4 text-amber-500" />
+                  <AlertTriangle className="w-4 h-4 text-gold-400" />
                 )}
                 <span className="text-xs font-medium">
                   {report.configReady ? '通过' : '待补全'}
@@ -171,7 +171,7 @@ export function AiIndependentSelfCheckPanel() {
                 {report.remoteResults.every((r) => r.ok) && report.remoteResults.length > 0 ? (
                   <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                 ) : report.remoteResults.some((r) => r.ok) ? (
-                  <AlertTriangle className="w-4 h-4 text-amber-500" />
+                  <AlertTriangle className="w-4 h-4 text-gold-400" />
                 ) : (
                   <XCircle className="w-4 h-4 text-rose-500" />
                 )}
@@ -212,7 +212,7 @@ export function AiIndependentSelfCheckPanel() {
           />
 
           {report.suggestions.length > 0 && (
-            <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-2.5">
+            <div className="rounded-lg border border-gold-400/30 bg-gold-400/5 p-2.5">
               <div className="flex items-center gap-1.5 text-[11px] font-medium text-amber-700 mb-1">
                 <AlertTriangle className="w-3.5 h-3.5" />
                 修复建议（{report.suggestions.length} 条）

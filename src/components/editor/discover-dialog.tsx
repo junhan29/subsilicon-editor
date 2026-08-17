@@ -124,34 +124,34 @@ function DiscoverDialog({ open, onClose }: DiscoverDialogProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="w-full max-w-4xl max-h-[85vh] bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+      <div className="w-full max-w-4xl max-h-[85vh] bg-card border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="px-5 py-3.5 border-b border-slate-700 flex items-center justify-between">
+        <div className="px-5 py-3.5 border-b border-border flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
               <Globe className="w-4.5 h-4.5 text-white" />
             </div>
             <div>
-              <h2 className="text-sm font-semibold text-slate-100">作品发现</h2>
-              <p className="text-[10px] text-slate-500">探索去中心化作品生态</p>
+              <h2 className="text-sm font-semibold text-foreground">作品发现</h2>
+              <p className="text-[10px] text-muted-foreground">探索去中心化作品生态</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-lg hover:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-slate-200 transition-colors"
+            className="w-8 h-8 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Tabs */}
-        <div className="px-5 py-2 border-b border-slate-700 flex items-center gap-1">
+        <div className="px-5 py-2 border-b border-border flex items-center gap-1">
           <button
             onClick={() => setActiveTab('discover')}
             className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
               activeTab === 'discover'
-                ? 'bg-amber-500/20 text-amber-400'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                ? 'bg-gold-400/20 text-gold-400'
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted'
             }`}
           >
             发现作品
@@ -160,8 +160,8 @@ function DiscoverDialog({ open, onClose }: DiscoverDialogProps) {
             onClick={() => setActiveTab('sources')}
             className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
               activeTab === 'sources'
-                ? 'bg-amber-500/20 text-amber-400'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                ? 'bg-gold-400/20 text-gold-400'
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted'
             }`}
           >
             名录源
@@ -170,7 +170,7 @@ function DiscoverDialog({ open, onClose }: DiscoverDialogProps) {
           <button
             onClick={loadWorks}
             disabled={loading || activeTab !== 'discover'}
-            className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors disabled:opacity-40"
+            className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           </button>
@@ -182,17 +182,17 @@ function DiscoverDialog({ open, onClose }: DiscoverDialogProps) {
             <div className="p-5">
               {/* Search bar */}
               <div className="relative mb-4">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="搜索作品..."
-                  className="w-full pl-10 pr-10 py-2.5 text-sm bg-slate-800 border border-slate-700 rounded-xl text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-amber-500/60"
+                  className="w-full pl-10 pr-10 py-2.5 text-sm bg-muted border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-gold-400/60"
                 />
                 <button
                   onClick={() => setShowFilters(!showFilters)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <Filter className="w-4 h-4" />
                 </button>
@@ -200,9 +200,9 @@ function DiscoverDialog({ open, onClose }: DiscoverDialogProps) {
 
               {/* Filters */}
               {showFilters && (
-                <div className="mb-4 p-3 rounded-xl bg-slate-800/50 border border-slate-700 space-y-3">
+                <div className="mb-4 p-3 rounded-xl bg-muted/50 border border-border space-y-3">
                   <div>
-                    <p className="text-[11px] font-medium text-slate-400 mb-2">排序方式</p>
+                    <p className="text-[11px] font-medium text-muted-foreground mb-2">排序方式</p>
                     <div className="flex gap-2">
                       {(['newest', 'popular'] as const).map(s => (
                         <button
@@ -210,8 +210,8 @@ function DiscoverDialog({ open, onClose }: DiscoverDialogProps) {
                           onClick={() => setSortBy(s)}
                           className={`px-2.5 py-1 text-[11px] rounded-lg transition-colors ${
                             sortBy === s
-                              ? 'bg-amber-500 text-slate-900 font-medium'
-                              : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                              ? 'bg-gold-400 text-slate-900 font-medium'
+                              : 'bg-secondary text-foreground hover:bg-accent'
                           }`}
                         >
                           {s === 'newest' ? '最新发布' : '最受欢迎'}
@@ -221,14 +221,14 @@ function DiscoverDialog({ open, onClose }: DiscoverDialogProps) {
                   </div>
                   {allTags.length > 0 && (
                     <div>
-                      <p className="text-[11px] font-medium text-slate-400 mb-2">热门标签</p>
+                      <p className="text-[11px] font-medium text-muted-foreground mb-2">热门标签</p>
                       <div className="flex flex-wrap gap-1.5">
                         <button
                           onClick={() => setSelectedTag(null)}
                           className={`px-2 py-0.5 text-[11px] rounded-full transition-colors ${
                             !selectedTag
-                              ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                              : 'bg-slate-700/50 text-slate-400 border border-slate-600 hover:border-slate-500'
+                              ? 'bg-gold-400/20 text-gold-400 border border-gold-400/30'
+                              : 'bg-secondary/50 text-muted-foreground border border-border hover:border-slate-500'
                           }`}
                         >
                           全部
@@ -239,8 +239,8 @@ function DiscoverDialog({ open, onClose }: DiscoverDialogProps) {
                             onClick={() => setSelectedTag(tag === selectedTag ? null : tag)}
                             className={`px-2 py-0.5 text-[11px] rounded-full transition-colors flex items-center gap-1 ${
                               selectedTag === tag
-                                ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                                : 'bg-slate-700/50 text-slate-400 border border-slate-600 hover:border-slate-500'
+                                ? 'bg-gold-400/20 text-gold-400 border border-gold-400/30'
+                                : 'bg-secondary/50 text-muted-foreground border border-border hover:border-slate-500'
                             }`}
                           >
                             <Tag className="w-2.5 h-2.5" />
@@ -256,19 +256,19 @@ function DiscoverDialog({ open, onClose }: DiscoverDialogProps) {
               {/* Works grid */}
               {loading ? (
                 <div className="flex flex-col items-center justify-center py-16">
-                  <Loader2 className="w-8 h-8 text-amber-400 animate-spin mb-3" />
-                  <p className="text-xs text-slate-400">正在加载作品...</p>
+                  <Loader2 className="w-8 h-8 text-gold-400 animate-spin mb-3" />
+                  <p className="text-xs text-muted-foreground">正在加载作品...</p>
                 </div>
               ) : works.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 text-center">
-                  <div className="w-16 h-16 rounded-2xl bg-slate-800 flex items-center justify-center mb-4">
-                    <Sparkles className="w-8 h-8 text-slate-600" />
+                  <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-4">
+                    <Sparkles className="w-8 h-8 text-muted-foreground" />
                   </div>
-                  <p className="text-sm text-slate-300 mb-1">暂无作品</p>
-                  <p className="text-xs text-slate-500 mb-4">添加更多名录源发现更多作品</p>
+                  <p className="text-sm text-foreground mb-1">暂无作品</p>
+                  <p className="text-xs text-muted-foreground mb-4">添加更多名录源发现更多作品</p>
                   <button
                     onClick={() => setActiveTab('sources')}
-                    className="px-3 py-1.5 text-xs rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-900 font-medium"
+                    className="px-3 py-1.5 text-xs rounded-lg bg-gold-400 hover:bg-amber-400 text-slate-900 font-medium"
                   >
                     管理名录源
                   </button>
@@ -287,12 +287,12 @@ function DiscoverDialog({ open, onClose }: DiscoverDialogProps) {
             <div className="p-5">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <p className="text-sm font-medium text-slate-200">名录源管理</p>
-                  <p className="text-[11px] text-slate-500">添加多个名录源，发现更多作品</p>
+                  <p className="text-sm font-medium text-foreground">名录源管理</p>
+                  <p className="text-[11px] text-muted-foreground">添加多个名录源，发现更多作品</p>
                 </div>
                 <button
                   onClick={() => setShowAddSource(!showAddSource)}
-                  className="px-3 py-1.5 text-xs rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-900 font-medium flex items-center gap-1"
+                  className="px-3 py-1.5 text-xs rounded-lg bg-gold-400 hover:bg-amber-400 text-slate-900 font-medium flex items-center gap-1"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   添加名录源
@@ -300,25 +300,25 @@ function DiscoverDialog({ open, onClose }: DiscoverDialogProps) {
               </div>
 
               {showAddSource && (
-                <div className="mb-4 p-3 rounded-xl bg-slate-800/50 border border-slate-700 space-y-2">
+                <div className="mb-4 p-3 rounded-xl bg-muted/50 border border-border space-y-2">
                   <input
                     type="text"
                     value={newSource.name}
                     onChange={(e) => setNewSource(s => ({ ...s, name: e.target.value }))}
                     placeholder="名录源名称"
-                    className="w-full px-3 py-2 text-sm bg-slate-900 border border-slate-700 rounded-lg text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-amber-500/60"
+                    className="w-full px-3 py-2 text-sm bg-card border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-gold-400/60"
                   />
                   <input
                     type="url"
                     value={newSource.url}
                     onChange={(e) => setNewSource(s => ({ ...s, url: e.target.value }))}
                     placeholder="API 地址（https://...）"
-                    className="w-full px-3 py-2 text-sm bg-slate-900 border border-slate-700 rounded-lg text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-amber-500/60"
+                    className="w-full px-3 py-2 text-sm bg-card border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-gold-400/60"
                   />
                   <select
                     value={newSource.type}
                     onChange={(e) => setNewSource(s => ({ ...s, type: e.target.value as DDPSource['type'] }))}
-                    className="w-full px-3 py-2 text-sm bg-slate-900 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:border-amber-500/60"
+                    className="w-full px-3 py-2 text-sm bg-card border border-border rounded-lg text-foreground focus:outline-none focus:border-gold-400/60"
                   >
                     <option value="official">官方</option>
                     <option value="community">社区</option>
@@ -327,13 +327,13 @@ function DiscoverDialog({ open, onClose }: DiscoverDialogProps) {
                   <div className="flex gap-2">
                     <button
                       onClick={handleAddSource}
-                      className="px-3 py-1.5 text-xs rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-900 font-medium"
+                      className="px-3 py-1.5 text-xs rounded-lg bg-gold-400 hover:bg-amber-400 text-slate-900 font-medium"
                     >
                       添加
                     </button>
                     <button
                       onClick={() => setShowAddSource(false)}
-                      className="px-3 py-1.5 text-xs rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200"
+                      className="px-3 py-1.5 text-xs rounded-lg bg-secondary hover:bg-accent text-foreground"
                     >
                       取消
                     </button>
@@ -345,23 +345,23 @@ function DiscoverDialog({ open, onClose }: DiscoverDialogProps) {
                 {sources.map(source => (
                   <div
                     key={source.id}
-                    className="p-3 rounded-xl bg-slate-800/30 border border-slate-700 flex items-center gap-3"
+                    className="p-3 rounded-xl bg-muted/30 border border-border flex items-center gap-3"
                   >
-                    <div className="w-10 h-10 rounded-lg bg-slate-700 flex items-center justify-center flex-shrink-0">
-                      <Globe className="w-5 h-5 text-slate-400" />
+                    <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
+                      <Globe className="w-5 h-5 text-muted-foreground" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium text-slate-200 truncate">{source.name}</p>
+                        <p className="text-sm font-medium text-foreground truncate">{source.name}</p>
                         <span className={`px-1.5 py-0.5 text-xs font-medium rounded-full ${
-                          source.type === 'official' ? 'bg-amber-500/20 text-amber-400' :
+                          source.type === 'official' ? 'bg-gold-400/20 text-gold-400' :
                           source.type === 'community' ? 'bg-blue-500/20 text-blue-400' :
-                          'bg-slate-600/50 text-slate-400'
+                          'bg-slate-600/50 text-muted-foreground'
                         }`}>
                           {source.type === 'official' ? '官方' : source.type === 'community' ? '社区' : '个人'}
                         </span>
                       </div>
-                      <p className="text-[11px] text-slate-500 truncate">{source.url}</p>
+                      <p className="text-[11px] text-muted-foreground truncate">{source.url}</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input
@@ -373,7 +373,7 @@ function DiscoverDialog({ open, onClose }: DiscoverDialogProps) {
                         }}
                         className="sr-only peer"
                       />
-                      <div className="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500" />
+                      <div className="w-9 h-5 bg-secondary peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-gold-400" />
                     </label>
                     {!source.builtin && (
                       <button
@@ -382,7 +382,7 @@ function DiscoverDialog({ open, onClose }: DiscoverDialogProps) {
                           loadSources()
                           showToast('info', '已移除名录源')
                         }}
-                        className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-500 hover:text-red-400 transition-colors"
+                        className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-red-400 transition-colors"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -391,9 +391,9 @@ function DiscoverDialog({ open, onClose }: DiscoverDialogProps) {
                 ))}
               </div>
 
-              <div className="mt-6 p-4 rounded-xl bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-500/20">
-                <h4 className="text-xs font-medium text-amber-400 mb-2">关于去中心化名录</h4>
-                <p className="text-[11px] text-slate-400 leading-relaxed">
+              <div className="mt-6 p-4 rounded-xl bg-gradient-to-br from-gold-400/10 to-orange-500/10 border border-gold-400/20">
+                <h4 className="text-xs font-medium text-gold-400 mb-2">关于去中心化名录</h4>
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
                   SubSilicon 采用去中心化作品名录协议 (DDP)，任何人都可以搭建自己的作品展示墙。
                   添加多个名录源可以发现更多创作者的作品，也可以搭建自己的展示墙发布作品。
                 </p>
@@ -413,8 +413,8 @@ function WorkCard({ work }: { work: DDPSummary }) {
   }
 
   return (
-    <div className="group rounded-xl overflow-hidden bg-slate-800/50 border border-slate-700 hover:border-amber-500/40 transition-all cursor-pointer">
-      <div className="aspect-video bg-slate-700 relative overflow-hidden">
+    <div className="group rounded-xl overflow-hidden bg-muted/50 border border-border hover:border-gold-400/40 transition-all cursor-pointer">
+      <div className="aspect-video bg-secondary relative overflow-hidden">
         {work.coverImage ? (
           <img
             src={work.coverImage}
@@ -423,12 +423,12 @@ function WorkCard({ work }: { work: DDPSummary }) {
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-          <Sparkles className="w-8 h-8 text-slate-600" />
+          <Sparkles className="w-8 h-8 text-muted-foreground" />
           </div>
         )}
         <div className="absolute top-2 right-2">
           {work.monetizationType === 'paid' && work.price && (
-            <span className="px-1.5 py-0.5 text-[10px] font-medium rounded-md bg-amber-500 text-slate-900">
+            <span className="px-1.5 py-0.5 text-[10px] font-medium rounded-md bg-gold-400 text-slate-900">
               ¥{work.price}
             </span>
           )}
@@ -445,11 +445,11 @@ function WorkCard({ work }: { work: DDPSummary }) {
         </div>
       </div>
       <div className="p-3">
-        <h3 className="text-sm font-medium text-slate-200 truncate mb-1">{work.title}</h3>
-        <p className="text-[11px] text-slate-500 line-clamp-2 mb-2 h-8">{work.summary}</p>
+        <h3 className="text-sm font-medium text-foreground truncate mb-1">{work.title}</h3>
+        <p className="text-[11px] text-muted-foreground line-clamp-2 mb-2 h-8">{work.summary}</p>
         <div className="flex items-center justify-between">
-          <span className="text-[10px] text-slate-500">{work.creatorName}</span>
-          <div className="flex items-center gap-1 text-[10px] text-slate-500">
+          <span className="text-[10px] text-muted-foreground">{work.creatorName}</span>
+          <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
             <Clock className="w-3 h-3" />
             {formatDate(work.publishedAt)}
           </div>
@@ -457,15 +457,15 @@ function WorkCard({ work }: { work: DDPSummary }) {
         {work.tags && work.tags.length > 0 && (
           <div className="flex flex-wrap gap-1 mt-2">
             {work.tags.slice(0, 3).map(tag => (
-              <span key={tag} className="px-1.5 py-0.5 text-xs rounded-full bg-slate-700/50 text-slate-400">
+              <span key={tag} className="px-1.5 py-0.5 text-xs rounded-full bg-secondary/50 text-muted-foreground">
                 {tag}
               </span>
             ))}
           </div>
         )}
-        <div className="mt-2 pt-2 border-t border-slate-700/50 flex items-center justify-between">
-          <span className="text-[10px] text-slate-600">来自 {work.directoryName}</span>
-          <ExternalLink className="w-3 h-3 text-slate-500 group-hover:text-amber-400 transition-colors" />
+        <div className="mt-2 pt-2 border-t border-border/50 flex items-center justify-between">
+          <span className="text-[10px] text-muted-foreground">来自 {work.directoryName}</span>
+          <ExternalLink className="w-3 h-3 text-muted-foreground group-hover:text-gold-400 transition-colors" />
         </div>
       </div>
     </div>

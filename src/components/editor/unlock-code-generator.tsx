@@ -236,13 +236,13 @@ export function UnlockCodeGenerator({ workId, paidChapters }: UnlockCodeGenerato
           maxLength={UNLOCK_REQUEST_PREFIX.length + 8}
           className={`w-full px-3 py-2 bg-muted border rounded-lg text-sm font-mono focus:outline-none focus:ring-2 ${
             requestCodeInput.length > 0 && !requestCodeValid
-              ? 'border-red-500 focus:ring-red-500/50'
+              ? 'border-primary focus:ring-red-500/50'
               : 'border-border focus:ring-primary/50'
           }`}
         />
         {requestCodeInput.length > 0 && (
           <p className={`text-xs mt-1 flex items-center gap-1 ${
-            requestCodeValid ? 'text-green-500' : 'text-red-500'
+            requestCodeValid ? 'text-green-500' : 'text-primary'
           }`}>
             {requestCodeValid ? (
               <>

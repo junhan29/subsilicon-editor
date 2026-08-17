@@ -348,8 +348,8 @@ const I18nExportPanel = memo(function I18nExportPanel({ graph, onImport }: I18nE
                   <div className="text-lg font-bold text-green-600">{importPreview.appliedCount}</div>
                   <div className="text-[10px] text-green-600/80">将应用的文本</div>
                 </div>
-                <div className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/10 text-center">
-                  <AlertCircle className="w-5 h-5 text-amber-500 mx-auto mb-1" />
+                <div className="p-3 rounded-lg border border-gold-400/30 bg-gold-400/10 text-center">
+                  <AlertCircle className="w-5 h-5 text-gold-400 mx-auto mb-1" />
                   <div className="text-lg font-bold text-amber-600">{importPreview.skippedCount}</div>
                   <div className="text-[10px] text-amber-600/80">跳过/未匹配</div>
                 </div>

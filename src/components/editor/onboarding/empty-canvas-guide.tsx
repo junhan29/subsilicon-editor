@@ -66,12 +66,12 @@ const GUIDE_STEPS: GuideStep[] = [
 ]
 
 const QUICK_ACTIONS = [
-  { type: 'dialogue', label: '对话', desc: '角色台词', color: 'text-amber-300 border-amber-500/40 hover:border-amber-400 hover:bg-amber-500/10' },
-  { type: 'choice', label: '选择', desc: '玩家分支', color: 'text-amber-300 border-amber-500/40 hover:border-amber-400 hover:bg-amber-500/10' },
-  { type: 'condition', label: '条件', desc: '分支判断', color: 'text-amber-300 border-amber-500/40 hover:border-amber-400 hover:bg-amber-500/10' },
-  { type: 'jump', label: '跳转', desc: '跳转节点', color: 'text-amber-300 border-amber-500/40 hover:border-amber-400 hover:bg-amber-500/10' },
-  { type: 'random', label: '随机', desc: '随机选择', color: 'text-amber-300 border-amber-500/40 hover:border-amber-400 hover:bg-amber-500/10' },
-  { type: 'ending', label: '结局', desc: '故事终点', color: 'text-amber-300 border-amber-500/40 hover:border-amber-400 hover:bg-amber-500/10' },
+  { type: 'dialogue', label: '对话', desc: '角色台词', color: 'text-gold-400 border-gold-400/40 hover:border-amber-400 hover:bg-gold-400/10' },
+  { type: 'choice', label: '选择', desc: '玩家分支', color: 'text-gold-400 border-gold-400/40 hover:border-amber-400 hover:bg-gold-400/10' },
+  { type: 'condition', label: '条件', desc: '分支判断', color: 'text-gold-400 border-gold-400/40 hover:border-amber-400 hover:bg-gold-400/10' },
+  { type: 'jump', label: '跳转', desc: '跳转节点', color: 'text-gold-400 border-gold-400/40 hover:border-amber-400 hover:bg-gold-400/10' },
+  { type: 'random', label: '随机', desc: '随机选择', color: 'text-gold-400 border-gold-400/40 hover:border-amber-400 hover:bg-gold-400/10' },
+  { type: 'ending', label: '结局', desc: '故事终点', color: 'text-gold-400 border-gold-400/40 hover:border-amber-400 hover:bg-gold-400/10' },
 ]
 
 const EMPTY_GUIDE_COMPLETED_KEY = 'subsilicon_empty_guide_completed'
@@ -148,7 +148,7 @@ function GuideCard({ step, total, guide, onNext, onSkip, isLast }: GuideCardProp
   const DirectionArrow = () => {
     if (guide.direction === 'left') {
       return (
-        <div className="flex items-center gap-1 text-amber-400 animate-pulse">
+        <div className="flex items-center gap-1 text-gold-400 animate-pulse">
           <ArrowLeft className="w-4 h-4" />
           <span className="text-xs font-medium">{guide.hint}</span>
         </div>
@@ -156,14 +156,14 @@ function GuideCard({ step, total, guide, onNext, onSkip, isLast }: GuideCardProp
     }
     if (guide.direction === 'right') {
       return (
-        <div className="flex items-center gap-1 text-amber-400 animate-pulse">
+        <div className="flex items-center gap-1 text-gold-400 animate-pulse">
           <span className="text-xs font-medium">{guide.hint}</span>
           <ArrowRight className="w-4 h-4" />
         </div>
       )
     }
     return (
-      <div className="flex items-center gap-1 text-amber-400 animate-pulse">
+      <div className="flex items-center gap-1 text-gold-400 animate-pulse">
         <span className="text-xs font-medium">{guide.hint}</span>
       </div>
     )
@@ -171,9 +171,9 @@ function GuideCard({ step, total, guide, onNext, onSkip, isLast }: GuideCardProp
 
   return (
     <div className="pointer-events-auto w-[min(92vw,420px)]">
-      <div className="relative overflow-hidden rounded-2xl border border-amber-500/30 bg-gradient-to-b from-slate-800/95 to-slate-900/95 shadow-2xl shadow-amber-500/10 backdrop-blur">
+      <div className="relative overflow-hidden rounded-2xl border border-gold-400/30 bg-gradient-to-b from-slate-800/95 to-slate-900/95 shadow-2xl shadow-amber-500/10 backdrop-blur">
         {/* 顶部进度条 */}
-        <div className="h-1 w-full bg-slate-700/60">
+        <div className="h-1 w-full bg-secondary/60">
           <div
             className="h-full bg-gradient-to-r from-amber-400 to-amber-500 transition-all duration-300"
             style={{ width: `${((step + 1) / total) * 100}%` }}
@@ -184,7 +184,7 @@ function GuideCard({ step, total, guide, onNext, onSkip, isLast }: GuideCardProp
         <button
           onClick={onSkip}
           aria-label="跳过引导"
-          className="absolute top-3 right-3 z-10 w-7 h-7 rounded-full bg-slate-700/50 hover:bg-slate-700 flex items-center justify-center text-slate-300 hover:text-white transition-colors"
+          className="absolute top-3 right-3 z-10 w-7 h-7 rounded-full bg-secondary/50 hover:bg-secondary flex items-center justify-center text-foreground hover:text-white transition-colors"
         >
           <X className="w-3.5 h-3.5" />
         </button>
@@ -192,11 +192,11 @@ function GuideCard({ step, total, guide, onNext, onSkip, isLast }: GuideCardProp
         <div className="p-5">
           {/* 步骤标签 + 进度 */}
           <div className="flex items-center gap-2 mb-4">
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 text-[10px] font-semibold tracking-wide">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gold-400/15 text-gold-400 text-[10px] font-semibold tracking-wide">
               <Sparkles className="w-3 h-3" />
               新手引导
             </span>
-            <span className="text-[10px] font-mono text-slate-400">
+            <span className="text-[10px] font-mono text-muted-foreground">
               {step + 1} / {total}
             </span>
             {/* 圆点进度指示 */}
@@ -208,7 +208,7 @@ function GuideCard({ step, total, guide, onNext, onSkip, isLast }: GuideCardProp
                     i === step
                       ? 'w-4 bg-amber-400'
                       : i < step
-                      ? 'w-1.5 bg-amber-500/60'
+                      ? 'w-1.5 bg-gold-400/60'
                       : 'w-1.5 bg-slate-600'
                   }`}
                 />
@@ -218,7 +218,7 @@ function GuideCard({ step, total, guide, onNext, onSkip, isLast }: GuideCardProp
 
           {/* 图标 + 标题 */}
           <div className="flex items-start gap-3 mb-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center shrink-0 text-amber-300">
+            <div className="w-10 h-10 rounded-xl bg-gold-400/15 border border-gold-400/30 flex items-center justify-center shrink-0 text-gold-400">
               {guide.icon}
             </div>
             <div className="flex-1 min-w-0 pt-0.5">
@@ -229,12 +229,12 @@ function GuideCard({ step, total, guide, onNext, onSkip, isLast }: GuideCardProp
           </div>
 
           {/* 描述 */}
-          <p className="text-xs text-slate-300 leading-relaxed mb-4 pl-13">
+          <p className="text-xs text-foreground leading-relaxed mb-4 pl-13">
             {guide.description}
           </p>
 
           {/* 方向提示 */}
-          <div className="mb-4 px-3 py-2 rounded-lg bg-slate-800/60 border border-slate-700/60">
+          <div className="mb-4 px-3 py-2 rounded-lg bg-muted/60 border border-border/60">
             <DirectionArrow />
           </div>
 
@@ -244,14 +244,14 @@ function GuideCard({ step, total, guide, onNext, onSkip, isLast }: GuideCardProp
               variant="ghost"
               size="sm"
               onClick={onSkip}
-              className="text-slate-400 hover:text-slate-200 hover:bg-slate-700/50"
+              className="text-muted-foreground hover:text-foreground hover:bg-secondary/50"
             >
               跳过
             </Button>
             <Button
               size="sm"
               onClick={onNext}
-              className="flex-1 gap-1.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white border-amber-400/40"
+              className="flex-1 gap-1.5 bg-gradient-to-r from-gold-400 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white border-amber-400/40"
             >
               {isLast ? (
                 <>
@@ -282,18 +282,18 @@ function QuickAddPanel({ onQuickAdd, onStartTour }: QuickAddPanelProps) {
     <div className="text-center pointer-events-auto">
       {/* 主图标 */}
       <div className="relative inline-block mb-6">
-        <div className="w-20 h-20 rounded-3xl bg-slate-800/60 border-2 border-dashed border-amber-500/40 flex items-center justify-center">
-          <MousePointerClick className="w-9 h-9 text-amber-300/70" />
+        <div className="w-20 h-20 rounded-3xl bg-muted/60 border-2 border-dashed border-gold-400/40 flex items-center justify-center">
+          <MousePointerClick className="w-9 h-9 text-gold-400/70" />
         </div>
-        <div className="absolute -right-8 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-amber-300/70">
+        <div className="absolute -right-8 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-gold-400/70">
           <span className="text-xs">从左侧拖拽</span>
           <ArrowRight className="w-4 h-4 animate-pulse" />
         </div>
       </div>
 
       {/* 提示文字 */}
-      <h3 className="text-base font-semibold text-slate-200 mb-1">开始你的故事</h3>
-      <p className="text-xs text-slate-400 mb-5 max-w-xs mx-auto">
+      <h3 className="text-base font-semibold text-foreground mb-1">开始你的故事</h3>
+      <p className="text-xs text-muted-foreground mb-5 max-w-xs mx-auto">
         从左侧面板拖拽节点到画布，或点击下方快速添加
       </p>
 
@@ -303,7 +303,7 @@ function QuickAddPanel({ onQuickAdd, onStartTour }: QuickAddPanelProps) {
           <button
             key={action.type}
             onClick={() => onQuickAdd(action.type)}
-            className={`flex flex-col items-center gap-1 px-3 py-2.5 rounded-xl border-2 border-dashed transition-all bg-slate-800/40 ${action.color}`}
+            className={`flex flex-col items-center gap-1 px-3 py-2.5 rounded-xl border-2 border-dashed transition-all bg-muted/40 ${action.color}`}
           >
             <span className="text-sm font-medium">{action.label}</span>
             <span className="text-[10px] opacity-70">{action.desc}</span>
@@ -316,7 +316,7 @@ function QuickAddPanel({ onQuickAdd, onStartTour }: QuickAddPanelProps) {
         variant="ghost"
         size="sm"
         onClick={onStartTour}
-        className="gap-1.5 text-slate-400 hover:text-amber-300 hover:bg-slate-800/50"
+        className="gap-1.5 text-muted-foreground hover:text-gold-400 hover:bg-muted/50"
       >
         <Play className="w-3.5 h-3.5" />
         重新播放引导

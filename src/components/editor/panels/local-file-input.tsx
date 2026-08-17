@@ -108,7 +108,7 @@ export function LocalFileInput({
         )}
       </div>
       {error && (
-        <div className="flex items-center gap-1 text-[10px] text-red-500">
+        <div className="flex items-center gap-1 text-[10px] text-primary">
           <AlertCircle className="w-3 h-3" />
           {error}
         </div>

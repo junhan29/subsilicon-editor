@@ -124,7 +124,7 @@ export function AiAssistButton({ mode, context, onResult, className = '', size =
         onClick={handleClick}
         disabled={loading}
         title={config.tooltip}
-        className={`inline-flex items-center gap-1 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 transition-colors disabled:opacity-50 ${sizeClasses} ${className}`}
+        className={`inline-flex items-center gap-1 rounded-md bg-gold-400/10 text-gold-400 border border-gold-400/20 hover:bg-gold-400/20 transition-colors disabled:opacity-50 ${sizeClasses} ${className}`}
       >
         {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : config.icon}
         {label || config.label}

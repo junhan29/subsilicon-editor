@@ -196,12 +196,12 @@ export function PuzzleEditor({ scene, characters, onClose, onSave }: PuzzleEdito
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="w-full h-full max-w-[1400px] max-h-[90vh] bg-slate-900 rounded-xl border border-slate-700 shadow-2xl flex flex-col overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800 bg-slate-900">
+      <div className="w-full h-full max-w-[1400px] max-h-[90vh] bg-card rounded-xl border border-border shadow-2xl flex flex-col overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-card">
           <div className="flex items-center gap-3">
             <button
               onClick={onClose}
-              className="p-1.5 rounded-md hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
+              className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-white transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
             </button>
@@ -209,27 +209,27 @@ export function PuzzleEditor({ scene, characters, onClose, onSave }: PuzzleEdito
               type="text"
               value={sceneName}
               onChange={(e) => setSceneName(e.target.value)}
-              className="bg-transparent text-sm font-semibold text-white border border-transparent hover:border-slate-700 focus:border-pink-500 focus:outline-none px-2 py-1 rounded transition-colors"
+              className="bg-transparent text-sm font-semibold text-white border border-transparent hover:border-border focus:border-primary focus:outline-none px-2 py-1 rounded transition-colors"
             />
-            <span className="text-[10px] text-slate-500">{puzzle.layers.length} 个图层</span>
+            <span className="text-[10px] text-muted-foreground">{puzzle.layers.length} 个图层</span>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={onClose}
-              className="px-3 py-1.5 text-xs text-slate-400 hover:text-white hover:bg-slate-800 rounded-md transition-colors"
+              className="px-3 py-1.5 text-xs text-muted-foreground hover:text-white hover:bg-muted rounded-md transition-colors"
             >
               取消
             </button>
             <button
               onClick={handleSave}
-              className="px-3 py-1.5 text-xs bg-pink-500 hover:bg-pink-600 text-white rounded-md flex items-center gap-1 transition-colors"
+              className="px-3 py-1.5 text-xs bg-primary hover:bg-primary/90 text-white rounded-md flex items-center gap-1 transition-colors"
             >
               <Check className="w-3.5 h-3.5" />
               完成
             </button>
             <button
               onClick={onClose}
-              className="p-1.5 rounded-md hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
+              className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-white transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
@@ -257,11 +257,11 @@ export function PuzzleEditor({ scene, characters, onClose, onSave }: PuzzleEdito
           />
         </div>
 
-        <div className="px-4 py-2 border-t border-slate-800 bg-slate-900 flex items-center justify-between">
-          <div className="text-[10px] text-slate-600">
+        <div className="px-4 py-2 border-t border-border bg-card flex items-center justify-between">
+          <div className="text-[10px] text-muted-foreground">
             提示：拖拽素材到画布 · 选中图层按 Delete 删除 · Ctrl+D 复制
           </div>
-          <div className="text-[10px] text-slate-600">
+          <div className="text-[10px] text-muted-foreground">
             {puzzle.width} × {puzzle.height}
           </div>
         </div>

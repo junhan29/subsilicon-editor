@@ -14,7 +14,7 @@ function GatherNodeComponent({ data, selected }: NodeProps) {
         transition-all duration-150
         ${selected
           ? 'border-primary dark:border-primary bg-primary/5 dark:bg-primary/10 shadow-md'
-          : 'border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/50 hover:border-slate-400 dark:hover:border-slate-500'
+          : 'border-slate-300 dark:border-border bg-slate-50 dark:bg-card/50 hover:border-slate-400 dark:hover:border-slate-500'
         }
       `}
       style={{ minWidth: 72 }}
@@ -31,7 +31,7 @@ function GatherNodeComponent({ data, selected }: NodeProps) {
           <div className="w-1 h-1 rounded-full bg-slate-400 dark:bg-slate-500" />
           <div className="w-1 h-1 rounded-full bg-slate-400 dark:bg-slate-500" />
         </div>
-        <span className="text-[11px] font-medium text-slate-600 dark:text-slate-300">{label}</span>
+        <span className="text-[11px] font-medium text-muted-foreground dark:text-foreground">{label}</span>
       </div>
 
       <Handle

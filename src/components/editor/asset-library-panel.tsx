@@ -71,7 +71,7 @@ const LICENSE_LABELS: Record<string, string> = {
 const LICENSE_STYLES: Record<string, string> = {
   free: 'bg-green-500/15 text-green-400 border-green-500/30',
   cc0: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
-  'cc-by': 'bg-amber-500/15 text-amber-400 border-amber-500/30',
+  'cc-by': 'bg-gold-400/15 text-gold-400 border-gold-400/30',
   commercial: 'bg-purple-500/15 text-purple-400 border-purple-500/30',
 }
 
@@ -471,7 +471,7 @@ function AssetLibraryPanelImpl({ selectedNode, onInsertAsset, characters = [], i
       )}
 
       {errorMsg && (
-        <div className="px-2.5 py-2 border-b bg-red-500/10">
+        <div className="px-2.5 py-2 border-b bg-primary/10">
           <div className="flex items-start gap-1.5 text-[10px] text-red-400">
             <AlertCircle className="w-3 h-3 mt-0.5 shrink-0" />
             <span className="leading-relaxed">{errorMsg}</span>
@@ -778,7 +778,7 @@ const MyAssetItem = memo(function MyAssetItem({
         </button>
         <button
           onClick={onDelete}
-          className="w-6 h-6 rounded flex items-center justify-center text-muted-foreground hover:text-red-400 hover:bg-red-500/10"
+          className="w-6 h-6 rounded flex items-center justify-center text-muted-foreground hover:text-red-400 hover:bg-primary/10"
           title="删除"
         >
           <Trash2 className="w-3 h-3" />
@@ -944,7 +944,7 @@ function AssetPreviewModal({ asset, selectedNode, onClose, onInsert }: AssetPrev
             {canInsert ? (
               <Check className="w-3 h-3 mt-0.5 shrink-0 text-green-500" />
             ) : (
-              <AlertCircle className="w-3 h-3 mt-0.5 shrink-0 text-amber-500" />
+              <AlertCircle className="w-3 h-3 mt-0.5 shrink-0 text-gold-400" />
             )}
             <span className="leading-relaxed">{insertHint}</span>
           </div>
@@ -1021,7 +1021,7 @@ function DeleteConfirmModal({ asset, onConfirm, onCancel }: DeleteConfirmModalPr
           </Button>
           <Button
             size="sm"
-            className="flex-1 h-8 text-xs bg-red-500 hover:bg-red-600 text-white"
+            className="flex-1 h-8 text-xs bg-primary hover:bg-red-600 text-white"
             onClick={onConfirm}
           >
             确认删除
@@ -1153,7 +1153,7 @@ function AssetAnnotationModal({ asset, characters, onClose, onSaved }: AssetAnno
                 ))}
               </select>
               {annotation.usageType === 'reference' && (
-                <p className="text-[10px] text-amber-600 dark:text-amber-400 bg-amber-500/10 rounded px-2 py-1.5 leading-relaxed">
+                <p className="text-[10px] text-amber-600 dark:text-gold-400 bg-gold-400/10 rounded px-2 py-1.5 leading-relaxed">
                   💡 参考图 = 角色的「长相模板」，AI 生成立绘时保持五官、服饰一致。
                   <br />建议：正面、清晰、单人照。需配合 ComfyUI 使用（云服务仅靠文字，长相可能不一致）。
                 </p>

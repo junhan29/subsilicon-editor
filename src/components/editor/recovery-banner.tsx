@@ -15,7 +15,7 @@ interface RecoveryBannerProps {
  */
 export function RecoveryBanner({ time, onRestore, onDiscard }: RecoveryBannerProps) {
   return (
-    <div className="flex items-center justify-between gap-3 px-4 py-1.5 border-b border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400 text-xs shrink-0">
+    <div className="flex items-center justify-between gap-3 px-4 py-1.5 border-b border-gold-400/30 bg-gold-400/10 text-amber-700 dark:text-gold-400 text-xs shrink-0">
       <span className="flex items-center gap-1.5 min-w-0 truncate">
         <History className="h-3.5 w-3.5 shrink-0" />
         <span className="truncate">检测到上次未保存的编辑（{formatRecoveryTime(time)}），是否恢复？</span>
@@ -23,13 +23,13 @@ export function RecoveryBanner({ time, onRestore, onDiscard }: RecoveryBannerPro
       <div className="flex items-center gap-1.5 shrink-0">
         <button
           onClick={onRestore}
-          className="rounded px-2 py-0.5 text-xs font-medium bg-amber-500 text-white hover:bg-amber-600 transition-colors"
+          className="rounded px-2 py-0.5 text-xs font-medium bg-gold-400 text-white hover:bg-gold-500 transition-colors"
         >
           恢复
         </button>
         <button
           onClick={onDiscard}
-          className="rounded px-2 py-0.5 text-xs text-amber-700 dark:text-amber-400 hover:bg-amber-500/15 transition-colors"
+          className="rounded px-2 py-0.5 text-xs text-amber-700 dark:text-gold-400 hover:bg-gold-400/15 transition-colors"
         >
           放弃
         </button>

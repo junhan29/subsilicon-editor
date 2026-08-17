@@ -53,7 +53,7 @@ function EndingNodeComponent({ data, selected }: any) {
 
   return (
     <div
-      className={`min-w-[200px] max-w-[280px] rounded-lg border-2 bg-green-50 dark:bg-green-950/30 shadow-sm transition-all relative hover:shadow-md hover:border-slate-600 ${
+      className={`min-w-[200px] max-w-[280px] rounded-lg border-2 bg-green-50 dark:bg-green-950/30 shadow-sm transition-all relative hover:shadow-md hover:border-border ${
         selected
           ? 'border-green-400 ring-2 ring-green-400/50 shadow-lg shadow-green-500/20 dark:border-green-400'
           : 'border-green-200 dark:border-green-800'
@@ -65,7 +65,7 @@ function EndingNodeComponent({ data, selected }: any) {
       <Handle
         type="target"
         position={Position.Top}
-        className="!w-4 !h-4 !rounded-full !z-20 !bg-card !border-2 !border-green-500 !-top-2 !transition-all hover:!scale-125 hover:!shadow-lg hover:!shadow-green-500/30 dark:!bg-slate-900 dark:!border-green-400"
+        className="!w-4 !h-4 !rounded-full !z-20 !bg-card !border-2 !border-green-500 !-top-2 !transition-all hover:!scale-125 hover:!shadow-lg hover:!shadow-green-500/30 dark:!bg-card dark:!border-green-400"
       />
 
       <div className="pl-3.5 pr-3 pt-3 pb-3">
@@ -74,7 +74,7 @@ function EndingNodeComponent({ data, selected }: any) {
           <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${meta.iconBg}`}>
             <TypeIcon className={`w-3.5 h-3.5 ${meta.iconColor}`} />
           </div>
-          <p className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate flex-1">
+          <p className="text-sm font-bold text-slate-800 dark:text-foreground truncate flex-1">
             {data.title || '未命名结局'}
           </p>
           <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-medium shrink-0 ${meta.color}`}>
@@ -83,7 +83,7 @@ function EndingNodeComponent({ data, selected }: any) {
         </div>
 
         {/* 结局描述 */}
-        <div className="bg-white/60 dark:bg-slate-900/60 rounded-md p-2">
+        <div className="bg-white/60 dark:bg-card/60 rounded-md p-2">
           <p className="text-xs text-green-900 dark:text-green-100 line-clamp-3 leading-relaxed">
             {data.text || '点击编辑结局描述...'}
           </p>

@@ -419,7 +419,7 @@ export function NovelEditor({ work, onBack }: NovelEditorProps) {
                     </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); deleteChapter(ch.id) }}
-                      className="p-1 text-muted-foreground hover:text-red-500 rounded"
+                      className="p-1 text-muted-foreground hover:text-primary rounded"
                       title="删除章节"
                     >
                       <Trash2 className="w-3 h-3" />

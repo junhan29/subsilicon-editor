@@ -108,30 +108,30 @@ export function PuzzleCanvas({
 
   return (
     <div className="flex-1 flex flex-col bg-slate-950 overflow-hidden">
-      <div className="flex items-center justify-between px-3 py-2 border-b border-slate-800 bg-slate-900">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-card">
         <div className="flex items-center gap-1">
           <button
             onClick={() => setZoom((z) => Math.max(25, z - 25))}
-            className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
+            className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-white transition-colors"
           >
             <ZoomOut className="w-4 h-4" />
           </button>
-          <span className="text-xs text-slate-400 min-w-[50px] text-center">{zoom}%</span>
+          <span className="text-xs text-muted-foreground min-w-[50px] text-center">{zoom}%</span>
           <button
             onClick={() => setZoom((z) => Math.min(200, z + 25))}
-            className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
+            className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-white transition-colors"
           >
             <ZoomIn className="w-4 h-4" />
           </button>
           <button
             onClick={() => setZoom(100)}
-            className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white transition-colors ml-1"
+            className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-white transition-colors ml-1"
             title="1:1"
           >
             <Maximize2 className="w-3.5 h-3.5" />
           </button>
         </div>
-        <div className="text-[10px] text-slate-500">
+        <div className="text-[10px] text-muted-foreground">
           {scene.width} × {scene.height}
         </div>
       </div>
@@ -139,7 +139,7 @@ export function PuzzleCanvas({
       <div
         ref={canvasRef}
         className={`flex-1 flex items-center justify-center overflow-auto p-8 transition-colors ${
-          isDragOver ? 'bg-pink-500/10' : ''
+          isDragOver ? 'bg-primary/10' : ''
         }`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -156,7 +156,7 @@ export function PuzzleCanvas({
           className="shadow-2xl"
         >
           <div
-            className="relative bg-slate-800 rounded overflow-hidden"
+            className="relative bg-muted rounded overflow-hidden"
             style={{
               aspectRatio: `${scene.width}/${scene.height}`,
               backgroundImage: 'linear-gradient(45deg, #1e293b 25%, transparent 25%), linear-gradient(-45deg, #1e293b 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #1e293b 75%), linear-gradient(-45deg, transparent 75%, #1e293b 75%)',
@@ -172,7 +172,7 @@ export function PuzzleCanvas({
                   key={layer.id}
                   className={`absolute inset-0 cursor-pointer ${
                     selectedLayerId === layer.id ? 'ring-2 ring-pink-500 ring-inset' : ''
-                  } ${layer.clickable ? 'border-2 border-dashed border-pink-500' : ''}`}
+                  } ${layer.clickable ? 'border-2 border-dashed border-primary' : ''}`}
                   style={{ zIndex: layer.zIndex, opacity: layer.opacity }}
                   onClick={(e) => {
                     e.stopPropagation()
@@ -180,7 +180,7 @@ export function PuzzleCanvas({
                   }}
                 >
                   {layer.clickable && (
-                    <div className="absolute -top-2 -right-2 z-10 px-1 py-0.5 text-[9px] font-medium text-white bg-pink-500 rounded shadow-md pointer-events-none">
+                    <div className="absolute -top-2 -right-2 z-10 px-1 py-0.5 text-[9px] font-medium text-white bg-primary rounded shadow-md pointer-events-none">
                       点击
                     </div>
                   )}
@@ -202,7 +202,7 @@ export function PuzzleCanvas({
                   className={`absolute cursor-move select-none ${
                     selectedLayerId === layer.id ? 'ring-2 ring-pink-500' : ''
                   } ${!layer.visible ? 'opacity-30' : ''} ${
-                    layer.clickable ? 'border-2 border-dashed border-pink-500' : ''
+                    layer.clickable ? 'border-2 border-dashed border-primary' : ''
                   }`}
                   style={{
                     left: `${layer.x}%`,
@@ -217,7 +217,7 @@ export function PuzzleCanvas({
                   onMouseDown={(e) => handleLayerMouseDown(e, layer.id)}
                 >
                   {layer.clickable && (
-                    <div className="absolute -top-2 -right-2 z-10 px-1 py-0.5 text-[9px] font-medium text-white bg-pink-500 rounded shadow-md pointer-events-none">
+                    <div className="absolute -top-2 -right-2 z-10 px-1 py-0.5 text-[9px] font-medium text-white bg-primary rounded shadow-md pointer-events-none">
                       点击
                     </div>
                   )}
@@ -249,14 +249,14 @@ export function PuzzleCanvas({
       </div>
 
       {selectedLayer && selectedLayer.type !== 'background' && (
-        <div className="px-3 py-2 border-t border-slate-800 bg-slate-900 flex items-center justify-between">
-          <span className="text-[10px] text-slate-500">
+        <div className="px-3 py-2 border-t border-border bg-card flex items-center justify-between">
+          <span className="text-[10px] text-muted-foreground">
             X: {selectedLayer.x.toFixed(1)}% · Y: {selectedLayer.y.toFixed(1)}% · W: {selectedLayer.width.toFixed(0)}%
           </span>
           <div className="flex items-center gap-1">
             <button
               onClick={() => onUpdateLayer(selectedLayer.id, { rotation: (selectedLayer.rotation + 90) % 360 })}
-              className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
+              className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-white transition-colors"
               title="旋转90°"
             >
               <RotateCw className="w-3.5 h-3.5" />

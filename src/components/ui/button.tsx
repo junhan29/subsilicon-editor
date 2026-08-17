@@ -11,28 +11,28 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        /* 主按钮 - 赭石渐变，创意工坊核心风格 */
+        /* 主按钮 - P5 红渐变 */
         default:
-          'bg-gradient-to-r from-ochre-500 to-terracotta text-primary-foreground shadow-soft-md shadow-ochre-500/20 hover:shadow-soft-lg hover:shadow-ochre-500/30 hover:brightness-110 border border-ochre-400/30 btn-stroke',
-        /* 次要按钮 - 纸面效果 */
+          'bg-gradient-to-r from-primary to-gold-400 text-primary-foreground shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 hover:brightness-110 border border-primary/30',
+        /* 次要按钮 */
         secondary:
-          'bg-ochre-50/80 text-ochre-900 shadow-soft-xs hover:bg-ochre-100 border border-ochre-200/50 paper-card',
+          'bg-secondary text-secondary-foreground shadow-xs hover:bg-secondary/80 border border-border',
         /* 危险按钮 */
         destructive:
-          'bg-destructive text-destructive-foreground shadow-soft-sm hover:bg-destructive/90',
-        /* 描边按钮 - 手绘风格 */
+          'bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90',
+        /* 描边按钮 */
         outline:
-          'border-2 border-ochre-300/60 bg-transparent text-ochre-700 hover:bg-ochre-50 hover:border-ochre-400/80 sketch-border',
+          'border-2 border-primary/60 bg-transparent text-primary hover:bg-primary/10 hover:border-primary',
         /* 幽灵按钮 */
-        ghost: 'hover:bg-ochre-50 hover:text-ochre-800 text-foreground',
+        ghost: 'hover:bg-accent hover:text-accent-foreground text-foreground',
         /* 链接按钮 */
-        link: 'text-ochre-600 underline-offset-4 hover:underline',
-        /* 硅基科技风 - 用于创作助理相关功能 */
+        link: 'text-primary underline-offset-4 hover:underline',
+        /* 硅基科技风 */
         silicon:
-          'bg-gradient-to-r from-silicon-600 to-silicon-500 text-white shadow-soft-md shadow-silicon-500/20 hover:shadow-soft-lg hover:shadow-silicon-500/30 hover:brightness-110 border border-silicon-400/30 btn-stroke',
-        /* 艺术家手绘风 - 用于创作相关 */
+          'bg-gradient-to-r from-silver-600 to-silver-500 text-foreground shadow-md hover:shadow-lg hover:brightness-110 border border-silver-400/30',
+        /* 艺术家手绘风 */
         artist:
-          'bg-gradient-to-br from-sage-500 to-ochre-400 text-white shadow-soft-md hover:shadow-soft-lg hover:brightness-105 border border-sage-400/30',
+          'bg-gradient-to-br from-gold-500 to-gold-400 text-white shadow-md hover:shadow-lg hover:brightness-105 border border-gold-400/30',
       },
       size: {
         default: 'h-10 px-5 py-2.5 rounded-lg',

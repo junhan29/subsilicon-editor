@@ -95,8 +95,8 @@ function TabButton({ icon: Icon, label, tab, activeTab, onSelect, badge, classNa
       title={label || tab}
       className={`flex items-center gap-1.5 px-3 py-2 text-[11px] font-medium whitespace-nowrap transition-colors shrink-0 ${
         isActive
-          ? 'bg-slate-800 text-white border-b-2 border-amber-500'
-          : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 border-b-2 border-transparent'
+          ? 'bg-muted text-white border-b-2 border-gold-400'
+          : 'text-muted-foreground hover:text-foreground hover:bg-muted/40 border-b-2 border-transparent'
       } ${className}`}
     >
       <Icon className="w-3.5 h-3.5" />
@@ -289,16 +289,16 @@ function EditorRightPanel({
   )
 
   return (
-    <div role="region" aria-label="右侧属性面板" className="w-[300px] flex flex-col bg-slate-800 border-l border-slate-700 h-full">
+    <div role="region" aria-label="右侧属性面板" className="w-[300px] flex flex-col bg-muted border-l border-border h-full">
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* VS Code 风格标签栏：单行紧凑标签，图标+文字 */}
         {compactInterface ? (
           /* ADHD 适配：精简界面开启时，tab 条分为「内容 / 管理」两组，每组可折叠 */
-          <div className="border-b border-slate-800 bg-slate-900 shrink-0">
-            <div className="flex items-center px-2 py-1.5 border-b border-slate-800/60">
+          <div className="border-b border-border bg-card shrink-0">
+            <div className="flex items-center px-2 py-1.5 border-b border-border/60">
               <button
                 onClick={() => toggleGroup('content')}
-                className="flex items-center gap-1 text-[10px] font-semibold text-slate-300 hover:text-white transition-colors"
+                className="flex items-center gap-1 text-[10px] font-semibold text-foreground hover:text-white transition-colors"
                 aria-expanded={!contentCollapsed}
               >
                 <ChevronDown className={`w-3 h-3 transition-transform ${contentCollapsed ? '-rotate-90' : ''}`} />
@@ -310,10 +310,10 @@ function EditorRightPanel({
                 {contentTabs}
               </div>
             )}
-            <div className="flex items-center px-2 py-1.5 border-y border-slate-800/60">
+            <div className="flex items-center px-2 py-1.5 border-y border-border/60">
               <button
                 onClick={() => toggleGroup('manage')}
-                className="flex items-center gap-1 text-[10px] font-semibold text-slate-300 hover:text-white transition-colors"
+                className="flex items-center gap-1 text-[10px] font-semibold text-foreground hover:text-white transition-colors"
                 aria-expanded={!manageCollapsed}
               >
                 <ChevronDown className={`w-3 h-3 transition-transform ${manageCollapsed ? '-rotate-90' : ''}`} />
@@ -327,9 +327,9 @@ function EditorRightPanel({
             )}
           </div>
         ) : (
-          <div className="flex items-center border-b border-slate-800 bg-slate-900 overflow-x-auto scrollbar-none shrink-0">
+          <div className="flex items-center border-b border-border bg-card overflow-x-auto scrollbar-none shrink-0">
             {contentTabs}
-            <div className="w-px h-5 bg-slate-700 mx-1 shrink-0" />
+            <div className="w-px h-5 bg-secondary mx-1 shrink-0" />
             {manageTabs}
           </div>
         )}
@@ -397,7 +397,7 @@ function EditorRightPanel({
                     setEditCharId(newChar.id)
                     setActiveTab('properties')
                   }}
-                  className="flex items-center gap-1 px-2 py-1 text-xs bg-pink-500 hover:bg-pink-600 text-white rounded-md transition-colors"
+                  className="flex items-center gap-1 px-2 py-1 text-xs bg-primary hover:bg-primary/90 text-white rounded-md transition-colors"
                 >
                   <Plus className="w-3 h-3" />
                   新建角色
@@ -438,7 +438,7 @@ function EditorRightPanel({
                       setEditCharId(newChar.id)
                       setActiveTab('properties')
                     }}
-                    className="px-2 py-1 text-[10px] rounded-md border border-slate-600 bg-slate-700/50 hover:bg-slate-700 transition-colors"
+                    className="px-2 py-1 text-[10px] rounded-md border border-border bg-secondary/50 hover:bg-secondary transition-colors"
                     style={{ color: preset.color }}
                   >
                     {preset.name}
@@ -453,18 +453,18 @@ function EditorRightPanel({
                       setEditCharId(char.id)
                       setActiveTab('properties')
                     }}
-                    className="flex items-center gap-3 p-3 bg-slate-700/30 rounded-lg border border-slate-600/50 hover:border-pink-500/50 cursor-pointer transition-colors"
+                    className="flex items-center gap-3 p-3 bg-secondary/30 rounded-lg border border-border/50 hover:border-primary/50 cursor-pointer transition-colors"
                   >
                     <img src={char.avatar} alt={char.name} className="w-10 h-10 rounded-full object-cover border-2" style={{ borderColor: char.color }} />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-white truncate">{char.name}</p>
-                      <p className="text-xs text-slate-400">{char.occupation || '未设定'} · {char.gender === 'male' ? '男' : char.gender === 'female' ? '女' : '其他'}</p>
+                      <p className="text-xs text-muted-foreground">{char.occupation || '未设定'} · {char.gender === 'male' ? '男' : char.gender === 'female' ? '女' : '其他'}</p>
                     </div>
-                    <span className="text-xs text-slate-500">{char.personality?.slice?.(0, 2).join('、') || '无标签'}</span>
+                    <span className="text-xs text-muted-foreground">{char.personality?.slice?.(0, 2).join('、') || '无标签'}</span>
                   </div>
                 ))}
                 {characters.length === 0 && (
-                  <div className="text-center py-8 text-slate-500 text-sm">
+                  <div className="text-center py-8 text-muted-foreground text-sm">
                     暂无角色，点击上方按钮添加
                   </div>
                 )}
@@ -486,14 +486,14 @@ function EditorRightPanel({
                     }
                     onScenesChange?.([...scenes, newScene])
                   }}
-                  className="flex items-center gap-1 px-2 py-1 text-xs bg-pink-500 hover:bg-pink-600 text-white rounded-md transition-colors"
+                  className="flex items-center gap-1 px-2 py-1 text-xs bg-primary hover:bg-primary/90 text-white rounded-md transition-colors"
                 >
                   <Plus className="w-3 h-3" />
                   新建场景
                 </button>
               </div>
 
-              <div className="border-2 border-dashed border-slate-700 rounded-lg p-4 text-center hover:border-pink-500/50 transition-colors cursor-pointer relative">
+              <div className="border-2 border-dashed border-border rounded-lg p-4 text-center hover:border-primary/50 transition-colors cursor-pointer relative">
                 <input
                   type="file"
                   accept="image/*"
@@ -527,13 +527,13 @@ function EditorRightPanel({
                     }
                   }}
                 />
-                <Image className="w-6 h-6 text-slate-500 mx-auto mb-1" />
-                <p className="text-xs text-slate-400">拖拽或点击上传图片</p>
-                <p className="text-[10px] text-slate-600 mt-0.5">JPG / PNG / WebP，支持批量</p>
+                <Image className="w-6 h-6 text-muted-foreground mx-auto mb-1" />
+                <p className="text-xs text-muted-foreground">拖拽或点击上传图片</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">JPG / PNG / WebP，支持批量</p>
               </div>
 
               {/* 创作助理媒体生成 */}
-              <div className="border border-slate-700 rounded-lg p-3 bg-slate-800/30">
+              <div className="border border-border rounded-lg p-3 bg-muted/30">
                 <AiMediaPanel
                   characters={characters}
                   onImageGenerated={(url, name) => {
@@ -552,41 +552,41 @@ function EditorRightPanel({
                 {scenes.map((scene) => (
                   <div
                     key={scene.id}
-                    className="relative group rounded-lg overflow-hidden border border-slate-700 hover:border-pink-500/50 transition-colors"
+                    className="relative group rounded-lg overflow-hidden border border-border hover:border-primary/50 transition-colors"
                   >
                     <div className="relative h-24">
                       <img src={scene.backgroundImage} alt={scene.name} className="w-full h-full object-cover" />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
                       {scene.puzzleData && (
-                        <div className="absolute top-2 left-2 flex items-center gap-1 px-1.5 py-0.5 bg-pink-500/80 rounded text-[9px] text-white">
+                        <div className="absolute top-2 left-2 flex items-center gap-1 px-1.5 py-0.5 bg-primary/80 rounded text-[9px] text-white">
                           <Layers className="w-2.5 h-2.5" />
                           拼图
                         </div>
                       )}
                       <button
                         onClick={() => deleteScene(scene.id)}
-                        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-1 bg-black/60 hover:bg-red-500/80 rounded transition-all"
+                        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-1 bg-black/60 hover:bg-primary/80 rounded transition-all"
                       >
                         <X className="w-3 h-3 text-white" />
                       </button>
                       <button
                         onClick={() => handleEditScene(scene)}
-                        className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 flex items-center gap-1 px-2 py-1 bg-pink-500 hover:bg-pink-600 text-white rounded text-[10px] transition-all"
+                        className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 flex items-center gap-1 px-2 py-1 bg-primary hover:bg-primary/90 text-white rounded text-[10px] transition-all"
                       >
                         <Edit3 className="w-2.5 h-2.5" />
                         {scene.puzzleData ? '编辑' : '拼图'}
                       </button>
                     </div>
-                    <div className="p-2 bg-slate-800/50">
+                    <div className="p-2 bg-muted/50">
                       <p className="text-xs font-medium text-white truncate">{scene.name}</p>
                       {scene.puzzleData && (
-                        <p className="text-[10px] text-slate-500">{scene.puzzleData.layers?.length ?? 0} 个图层</p>
+                        <p className="text-[10px] text-muted-foreground">{scene.puzzleData.layers?.length ?? 0} 个图层</p>
                       )}
                     </div>
                   </div>
                 ))}
                 {scenes.length === 0 && (
-                  <div className="text-center py-8 text-slate-500 text-sm">
+                  <div className="text-center py-8 text-muted-foreground text-sm">
                     暂无场景，上传图片即可创建
                   </div>
                 )}
@@ -598,7 +598,7 @@ function EditorRightPanel({
             <div className="p-4 space-y-4">
               <h3 className="text-sm font-semibold text-white">音频库</h3>
 
-              <div className="border-2 border-dashed border-slate-700 rounded-lg p-4 text-center hover:border-pink-500/50 transition-colors cursor-pointer relative">
+              <div className="border-2 border-dashed border-border rounded-lg p-4 text-center hover:border-primary/50 transition-colors cursor-pointer relative">
                 <input
                   type="file"
                   accept="audio/*"
@@ -634,9 +634,9 @@ function EditorRightPanel({
                     }
                   }}
                 />
-                <Music className="w-6 h-6 text-slate-500 mx-auto mb-1" />
-                <p className="text-xs text-slate-400">拖拽或点击上传音频</p>
-                <p className="text-[10px] text-slate-600 mt-0.5">MP3 / WAV / OGG</p>
+                <Music className="w-6 h-6 text-muted-foreground mx-auto mb-1" />
+                <p className="text-xs text-muted-foreground">拖拽或点击上传音频</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">MP3 / WAV / OGG</p>
               </div>
 
               <div className="flex gap-2">
@@ -644,8 +644,8 @@ function EditorRightPanel({
                   onClick={() => setAudioType('bgm')}
                   className={`flex-1 py-1.5 text-xs rounded-md transition-colors ${
                     audioType === 'bgm'
-                      ? 'bg-pink-500/20 text-pink-400 border border-pink-500/50'
-                      : 'bg-slate-800 text-slate-400 border border-slate-700 hover:border-slate-600'
+                      ? 'bg-primary/20 text-primary border border-primary/50'
+                      : 'bg-muted text-muted-foreground border border-border hover:border-border'
                   }`}
                 >
                   BGM ({audios.filter((a) => a.type === 'bgm').length})
@@ -654,8 +654,8 @@ function EditorRightPanel({
                   onClick={() => setAudioType('sfx')}
                   className={`flex-1 py-1.5 text-xs rounded-md transition-colors ${
                     audioType === 'sfx'
-                      ? 'bg-pink-500/20 text-pink-400 border border-pink-500/50'
-                      : 'bg-slate-800 text-slate-400 border border-slate-700 hover:border-slate-600'
+                      ? 'bg-primary/20 text-primary border border-primary/50'
+                      : 'bg-muted text-muted-foreground border border-border hover:border-border'
                   }`}
                 >
                   音效 ({audios.filter((a) => a.type === 'sfx').length})
@@ -664,18 +664,18 @@ function EditorRightPanel({
 
               <div className="space-y-1.5">
                 {audios.filter((a) => a.type === audioType).length === 0 && (
-                  <div className="text-center py-6 text-slate-600 text-xs">
+                  <div className="text-center py-6 text-muted-foreground text-xs">
                     暂无{audioType === 'bgm' ? '背景音乐' : '音效'}
                   </div>
                 )}
                 {audios.filter((a) => a.type === audioType).map((audio) => (
-                  <div key={audio.id} className="flex items-center gap-2 p-2 bg-slate-800/50 rounded-lg border border-slate-700 group">
+                  <div key={audio.id} className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg border border-border group">
                     <div className="w-8 h-8 rounded-md bg-purple-500/20 flex items-center justify-center shrink-0">
                       <Music className="w-3.5 h-3.5 text-purple-400" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium text-white truncate">{audio.name}</p>
-                      <p className="text-[10px] text-slate-500 truncate">{audio.url?.startsWith('data:') ? '本地文件' : '在线'}</p>
+                      <p className="text-[10px] text-muted-foreground truncate">{audio.url?.startsWith('data:') ? '本地文件' : '在线'}</p>
                     </div>
                     <button
                       onClick={() => deleteAudio(audio.id)}

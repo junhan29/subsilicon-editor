@@ -484,7 +484,7 @@ export function CGPanel({ node, onOpenAssets, onUpdateNode }: BasePanelProps) {
                     key={color}
                     onClick={() => updateData({ fillColor: color })}
                     className={`w-6 h-6 rounded-md border-2 transition-all ${
-                      d.fillColor === color ? 'border-purple-500 scale-110' : 'border-slate-600'
+                      d.fillColor === color ? 'border-purple-500 scale-110' : 'border-border'
                     }`}
                     style={{ backgroundColor: color === 'transparent' ? 'repeating-linear-gradient(45deg, #334155, #334155 3px, #475569 3px, #475569 6px)' : color }}
                     title={color === 'transparent' ? '透明' : color}

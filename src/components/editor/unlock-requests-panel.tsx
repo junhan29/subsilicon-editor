@@ -151,11 +151,11 @@ export function UnlockRequestsPanel({ onRequireLogin }: UnlockRequestsPanelProps
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <p className="text-xs text-slate-400">共 {requests.length} 条待处理的发码申请。</p>
+        <p className="text-xs text-muted-foreground">共 {requests.length} 条待处理的发码申请。</p>
         <button
           onClick={loadRequests}
           disabled={loading || tokenMissing}
-          className="px-3 py-1.5 text-xs rounded-lg border border-slate-700 text-slate-300 hover:bg-slate-800 transition-colors disabled:opacity-40 flex items-center gap-1.5"
+          className="px-3 py-1.5 text-xs rounded-lg border border-border text-foreground hover:bg-muted transition-colors disabled:opacity-40 flex items-center gap-1.5"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           刷新
@@ -165,10 +165,10 @@ export function UnlockRequestsPanel({ onRequireLogin }: UnlockRequestsPanelProps
       {tokenMissing ? (
         <div className="p-4 rounded-xl border border-amber-700/50 bg-amber-900/20">
           <div className="flex items-start gap-2.5">
-            <AlertCircle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+            <AlertCircle className="w-5 h-5 text-gold-400 shrink-0 mt-0.5" />
             <div className="space-y-1">
               <div className="text-sm font-medium text-amber-200">未配置提交令牌</div>
-              <p className="text-[12px] text-amber-300/80 leading-relaxed">未配置提交令牌，无法获取发码申请。</p>
+              <p className="text-[12px] text-gold-400/80 leading-relaxed">未配置提交令牌，无法获取发码申请。</p>
             </div>
           </div>
         </div>
@@ -186,12 +186,12 @@ export function UnlockRequestsPanel({ onRequireLogin }: UnlockRequestsPanelProps
             </div>
           )}
           {loading ? (
-            <div className="py-10 text-center text-sm text-slate-500 flex items-center justify-center gap-2">
+            <div className="py-10 text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
               <Loader2 className="w-4 h-4 animate-spin" />
               加载中...
             </div>
           ) : requests.length === 0 ? (
-            <div className="py-10 text-center text-sm text-slate-500">
+            <div className="py-10 text-center text-sm text-muted-foreground">
               暂无发码申请。导出开启「在线解锁服务」的作品后，读者的申请会出现在这里
             </div>
           ) : (
@@ -200,24 +200,24 @@ export function UnlockRequestsPanel({ onRequireLogin }: UnlockRequestsPanelProps
                 const workTitle = workTitles[req.workId] || req.workId || '未知作品'
                 const submitting = submittingId === req.id
                 return (
-                  <div key={req.id} className="p-3 rounded-xl border border-slate-700 bg-slate-800/40">
+                  <div key={req.id} className="p-3 rounded-xl border border-border bg-muted/40">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
-                        <div className="text-sm font-medium text-slate-100 truncate">{workTitle}</div>
-                        <div className="text-[11px] text-slate-500 mt-0.5 truncate">作品 ID：{req.workId}</div>
-                        <div className="flex items-center gap-1 mt-1 text-[11px] text-slate-500">
+                        <div className="text-sm font-medium text-foreground truncate">{workTitle}</div>
+                        <div className="text-[11px] text-muted-foreground mt-0.5 truncate">作品 ID：{req.workId}</div>
+                        <div className="flex items-center gap-1 mt-1 text-[11px] text-muted-foreground">
                           <Clock className="w-3 h-3" />
                           <span>申请于 {formatRequestTime(req.createdAt)}</span>
                         </div>
                       </div>
                     </div>
                     <div className="mt-2">
-                      <div className="text-[11px] text-slate-400 mb-1">付款凭证</div>
-                      <div className="text-[12px] text-slate-300 bg-slate-900/60 border border-slate-700/60 rounded-lg px-2.5 py-1.5 whitespace-pre-wrap break-words">
+                      <div className="text-[11px] text-muted-foreground mb-1">付款凭证</div>
+                      <div className="text-[12px] text-foreground bg-card/60 border border-border/60 rounded-lg px-2.5 py-1.5 whitespace-pre-wrap break-words">
                         {req.paymentProof || '（无凭证内容）'}
                       </div>
                     </div>
-                    <div className="flex items-center justify-end gap-2 mt-2 pt-2 border-t border-slate-700/60">
+                    <div className="flex items-center justify-end gap-2 mt-2 pt-2 border-t border-border/60">
                       <button
                         onClick={() => handleRespond(req.id, req.workId, 'reject')}
                         disabled={submitting || loading}
@@ -233,7 +233,7 @@ export function UnlockRequestsPanel({ onRequireLogin }: UnlockRequestsPanelProps
                       <button
                         onClick={() => handleRespond(req.id, req.workId, 'approve')}
                         disabled={submitting || loading}
-                        className="px-2.5 py-1 text-[11px] rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-900 font-medium transition-colors disabled:opacity-60 flex items-center gap-1"
+                        className="px-2.5 py-1 text-[11px] rounded-lg bg-gold-400 hover:bg-amber-400 text-slate-900 font-medium transition-colors disabled:opacity-60 flex items-center gap-1"
                       >
                         {submitting ? (
                           <Loader2 className="w-3 h-3 animate-spin" />

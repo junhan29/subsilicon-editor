@@ -106,16 +106,16 @@ export function ResizableSplitter({
         className={clsx(
           'h-full w-px transition-colors',
           isDragging
-            ? 'bg-amber-500'
-            : 'bg-slate-800 group-hover:bg-slate-600'
+            ? 'bg-gold-400'
+            : 'bg-muted group-hover:bg-accent'
         )}
       />
       <div
         className={clsx(
           'absolute h-8 w-1 rounded-full transition-colors',
           isDragging
-            ? 'bg-amber-500'
-            : 'bg-slate-700 group-hover:bg-slate-500'
+            ? 'bg-gold-400'
+            : 'bg-secondary group-hover:bg-slate-500'
         )}
       />
     </div>

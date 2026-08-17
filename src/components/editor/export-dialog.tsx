@@ -1040,7 +1040,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                       </label>
 
                       {(drmOnlineCodeVerify || drmInWorkCodeRequest) && (
-                        <div className="text-[11px] text-amber-600 bg-amber-500/10 border border-amber-500/20 rounded-md px-2.5 py-2 leading-relaxed">
+                        <div className="text-[11px] text-amber-600 bg-gold-400/10 border border-gold-400/20 rounded-md px-2.5 py-2 leading-relaxed">
                           需要联网使用 SubSilicon 解锁服务；导出时会向服务端注册解锁信息（不含作品内容）。离线码模式仍作为兜底保留
                         </div>
                       )}

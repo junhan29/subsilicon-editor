@@ -10,10 +10,10 @@ function NarrationNodeComponent({ data, selected }: any) {
 
   return (
     <div
-      className={`min-w-[200px] max-w-[280px] rounded-lg border-2 bg-card shadow-sm transition-all relative hover:shadow-md hover:border-slate-600 dark:bg-slate-900/80 ${
+      className={`min-w-[200px] max-w-[280px] rounded-lg border-2 bg-card shadow-sm transition-all relative hover:shadow-md hover:border-border dark:bg-card/80 ${
         selected
-          ? 'border-amber-400 ring-2 ring-amber-400/50 shadow-lg shadow-amber-500/20'
-          : 'border-slate-300 dark:border-slate-700'
+          ? 'border-amber-400 ring-2 ring-amber-400/50 shadow-lg shadow-gold-400/20'
+          : 'border-slate-300 dark:border-border'
       }`}
     >
       <div className="absolute left-0 top-0 bottom-0 w-1 bg-slate-500 dark:bg-slate-400 z-10 rounded-l-md" />
@@ -21,7 +21,7 @@ function NarrationNodeComponent({ data, selected }: any) {
       <Handle
         type="target"
         position={Position.Top}
-        className="!w-4 !h-4 !rounded-full !z-20 !bg-card !border-2 !border-slate-500 !-top-2 !transition-all hover:!scale-125 hover:!shadow-lg hover:!shadow-slate-500/30 dark:!bg-slate-900 dark:!border-slate-400"
+        className="!w-4 !h-4 !rounded-full !z-20 !bg-card !border-2 !border-slate-500 !-top-2 !transition-all hover:!scale-125 hover:!shadow-lg hover:!shadow-slate-500/30 dark:!bg-card dark:!border-slate-400"
       />
 
       <div className="pl-3.5 pr-3 pt-3 pb-3">
@@ -39,22 +39,22 @@ function NarrationNodeComponent({ data, selected }: any) {
         )}
 
         <div className="flex items-center gap-1.5 mb-2">
-          <div className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
-            <AlignLeft className="w-3.5 h-3.5 text-slate-600 dark:text-slate-300" />
+          <div className="w-6 h-6 rounded-full bg-slate-100 dark:bg-muted flex items-center justify-center shrink-0">
+            <AlignLeft className="w-3.5 h-3.5 text-muted-foreground dark:text-foreground" />
           </div>
-          <span className="text-xs font-medium text-slate-700 dark:text-slate-200 truncate flex-1">
+          <span className="text-xs font-medium text-slate-700 dark:text-foreground truncate flex-1">
             旁白
           </span>
         </div>
 
-        <div className="bg-slate-50 dark:bg-slate-800/50 rounded-md px-2 py-1.5">
-          <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed italic">
+        <div className="bg-slate-50 dark:bg-muted/50 rounded-md px-2 py-1.5">
+          <p className="text-xs text-muted-foreground dark:text-muted-foreground line-clamp-2 leading-relaxed italic">
             {data.text || '点击编辑旁白文本...'}
           </p>
         </div>
 
         <div className="flex items-center justify-end mt-1.5">
-          <AlignLeft className="w-3 h-3 text-slate-400 dark:text-slate-500" />
+          <AlignLeft className="w-3 h-3 text-muted-foreground dark:text-muted-foreground" />
         </div>
       </div>
 

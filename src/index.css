@@ -3,97 +3,113 @@
 @tailwind utilities;
 
 @layer base {
+  /* ===== :root — 浅色（纸面画稿） ===== */
   :root {
-    --background: 30 25% 96%;
-    --foreground: 25 15% 15%;
+    --background: 0 0% 97%;
+    --foreground: 0 0% 6%;
 
-    --card: 35 30% 98%;
-    --card-foreground: 25 15% 15%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 8%;
 
-    --popover: 35 30% 99%;
-    --popover-foreground: 25 15% 15%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 8%;
 
-    --primary: 25 65% 50%;
-    --primary-foreground: 35 30% 98%;
+    --primary: 0 84% 47%;
+    --primary-foreground: 0 0% 98%;
 
-    --secondary: 30 20% 92%;
-    --secondary-foreground: 25 15% 20%;
+    --secondary: 0 0% 93%;
+    --secondary-foreground: 0 0% 12%;
 
-    --muted: 30 15% 90%;
-    --muted-foreground: 25 10% 45%;
+    --muted: 0 0% 91%;
+    --muted-foreground: 0 0% 42%;
 
-    --accent: 15 55% 60%;
-    --accent-foreground: 35 30% 98%;
+    --accent: 0 84% 47%;
+    --accent-foreground: 0 0% 98%;
 
-    --destructive: 0 55% 50%;
-    --destructive-foreground: 35 30% 98%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 30 15% 82%;
-    --input: 30 15% 88%;
-    --ring: 25 65% 50%;
+    --border: 0 0% 82%;
+    --input: 0 0% 88%;
+    --ring: 0 84% 47%;
 
-    --ochre-50: 40 40% 97%;
-    --ochre-100: 38 45% 94%;
-    --ochre-200: 36 50% 88%;
-    --ochre-300: 34 55% 78%;
-    --ochre-400: 32 60% 65%;
-    --ochre-500: 30 65% 52%;
-    --ochre-600: 28 70% 45%;
-    --ochre-700: 25 65% 38%;
-    --ochre-800: 22 55% 30%;
-    --ochre-900: 20 45% 22%;
+    /* Gold (was ochre) */
+    --gold-50: 43 90% 96%;
+    --gold-100: 42 85% 90%;
+    --gold-200: 40 80% 78%;
+    --gold-300: 38 75% 65%;
+    --gold-400: 43 90% 54%;
+    --gold-500: 43 85% 48%;
+    --gold-600: 40 80% 40%;
+    --gold-700: 35 75% 32%;
+    --gold-800: 30 65% 24%;
+    --gold-900: 25 55% 16%;
 
-    --ochre: var(--ochre-500);
-    --sienna: 18 60% 45%;
-    --terracotta: 15 60% 55%;
+    --gold: var(--gold-400);
 
-    --silicon-50: 200 30% 96%;
-    --silicon-100: 195 35% 92%;
-    --silicon-200: 190 30% 84%;
-    --silicon-300: 188 28% 72%;
-    --silicon-400: 190 30% 60%;
-    --silicon-500: 200 30% 50%;
-    --silicon-600: 205 28% 42%;
-    --silicon-700: 210 25% 35%;
-    --silicon-800: 215 20% 28%;
-    --silicon-900: 220 18% 20%;
+    /* Aliases for legacy Tailwind classes (ochre → gold, sage → muted/secondary) */
+    --ochre-50: var(--gold-50);
+    --ochre-100: var(--gold-100);
+    --ochre-200: var(--gold-200);
+    --ochre-300: var(--gold-300);
+    --ochre-400: var(--gold-400);
+    --ochre-500: var(--gold-500);
+    --ochre-600: var(--gold-600);
+    --ochre-700: var(--gold-700);
+    --ochre-800: var(--gold-800);
+    --ochre-900: var(--gold-900);
+    --ochre: var(--gold-400);
+    --sage-50: var(--gold-50);
+    --sage-100: var(--gold-100);
+    --sage-200: var(--gold-200);
+    --sage-300: var(--gold-300);
+    --sage-400: var(--gold-400);
+    --sage-500: var(--gold-500);
+    --sage-600: var(--gold-600);
+    --sage-700: var(--gold-700);
+    --sage-800: var(--gold-800);
+    --sage-900: var(--gold-900);
+    --sage: var(--gold-400);
 
-    --silicon-925: 220 18% 14%;
-    --silicon-950: 220 20% 10%;
-    --silicon-975: 222 22% 6%;
+    /* Red family (was sienna/terracotta) */
+    --p5-red: 0 84% 47%;
+    --p5-red-deep: 0 78% 39%;
+    --sienna: var(--p5-red);
+    --terracotta: var(--p5-red);
 
-    --silicon-blue: var(--silicon-600);
-    --silicon-cyan: 185 35% 55%;
-    --silicon-slate: 210 15% 40%;
-    --silicon-glow: 200 40% 65%;
+    /* Silver (was silicon-blue/cyan) — secondary accents */
+    --silver-50: 0 0% 96%;
+    --silver-100: 0 0% 90%;
+    --silver-200: 0 0% 82%;
+    --silver-300: 0 0% 70%;
+    --silver-400: 0 0% 58%;
+    --silver-500: 0 0% 48%;
+    --silver-600: 0 0% 40%;
+    --silver-700: 0 0% 32%;
+    --silver-800: 0 0% 24%;
+    --silver-900: 0 0% 16%;
+    --silver-950: 0 0% 8%;
 
-    --silicon-cool: 270 8% 50%;
-    --silicon-warm: 250 6% 60%;
-    --silicon-neon: 260 12% 70%;
-    --silicon-foreground: 220 15% 88%;
+    --silicon-blue: var(--silver-600);
+    --silicon-cyan: var(--silver-400);
+    --silicon-slate: var(--silver-500);
+    --silicon-glow: var(--silver-300);
+    --silicon-cool: var(--silver-400);
+    --silicon-warm: var(--silver-400);
+    --silicon-neon: var(--silver-300);
+    --silicon-foreground: 0 0% 88%;
 
-    --sage-50: 90 25% 96%;
-    --sage-100: 88 25% 92%;
-    --sage-200: 90 22% 84%;
-    --sage-300: 92 20% 70%;
-    --sage-400: 95 18% 58%;
-    --sage-500: 90 20% 48%;
-    --sage-600: 85 22% 40%;
-    --sage-700: 80 20% 33%;
-    --sage-800: 75 18% 26%;
-    --sage-900: 70 15% 20%;
+    /* Ink / pencil (unchanged purpose) */
+    --ink: 0 0% 10%;
+    --pencil: 0 0% 45%;
 
-    --sage: var(--sage-500);
-
-    --cream: 40 25% 96%;
-    --parchment: 45 35% 94%;
-    --ink: 25 20% 20%;
-    --pencil: 25 10% 50%;
+    --cream: 0 0% 98%;
+    --parchment: 0 0% 95%;
 
     --teal-warm: 180 25% 35%;
 
     --font-sans: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
-    --font-serif: 'Noto Serif SC', 'ZCOOL KuaiLe', serif;
+    --font-serif: 'Noto Serif SC', serif;
     --font-hand: 'ZCOOL KuaiLe', 'Noto Serif SC', cursive;
 
     --font-xs: 0.75rem;
@@ -115,25 +131,25 @@
     --tracking-wide: 0.05em;
     --tracking-wider: 0.1em;
 
-    --radius: 0.75rem;
-    --radius-sm: calc(var(--radius) - 4px);
-    --radius-md: calc(var(--radius) - 2px);
+    --radius: 0.5rem;
+    --radius-sm: calc(var(--radius) - 2px);
+    --radius-md: calc(var(--radius) - 1px);
     --radius-lg: var(--radius);
-    --radius-xl: 1rem;
-    --radius-2xl: 1.5rem;
+    --radius-xl: 0.75rem;
+    --radius-2xl: 1rem;
     --radius-full: 9999px;
 
-    --shadow-xs: 0 1px 2px hsl(25 20% 0% / 0.04);
-    --shadow-sm: 0 2px 4px -2px hsl(25 20% 0% / 0.06);
-    --shadow-md: 0 4px 12px -4px hsl(25 20% 0% / 0.1);
-    --shadow-lg: 0 8px 24px -8px hsl(25 20% 0% / 0.15);
-    --shadow-xl: 0 16px 48px -12px hsl(25 20% 0% / 0.2);
+    /* Hard shadows — P5 flat style */
+    --shadow-xs: 0 1px 2px hsl(0 0% 0% / 0.06);
+    --shadow-sm: 0 2px 4px -2px hsl(0 0% 0% / 0.08), 4px 4px 0 hsl(0 84% 47% / 0.12);
+    --shadow-md: 0 4px 12px -4px hsl(0 0% 0% / 0.1), 4px 4px 0 hsl(0 84% 47% / 0.15);
+    --shadow-lg: 0 8px 24px -8px hsl(0 0% 0% / 0.15), 6px 6px 0 hsl(0 84% 47% / 0.2);
+    --shadow-xl: 0 16px 48px -12px hsl(0 0% 0% / 0.2), 6px 6px 0 hsl(0 84% 47% / 0.25);
 
     --shadow-inset-paper: inset 0 1px 0 hsl(0 0% 100% / 0.8);
-    --shadow-inset-deep: inset 0 2px 4px hsl(25 20% 0% / 0.06);
+    --shadow-inset-deep: inset 0 2px 4px hsl(0 0% 0% / 0.06);
 
     --shadow-glow-primary: 0 0 20px hsl(var(--primary) / 0.3);
-    --shadow-glow-silicon: 0 0 20px hsl(var(--silicon-cyan) / 0.3);
 
     --duration-fast: 150ms;
     --duration-normal: 300ms;
@@ -157,209 +173,222 @@
     --animate-float: float 6s ease-in-out infinite;
   }
 
+  /* ===== .dark — 深色（预告函暗色） ===== */
   .dark {
-    --background: 222 20% 7%;
-    --foreground: 35 25% 88%;
+    --background: 0 0% 5%;
+    --foreground: 0 0% 96%;
 
-    --card: 222 18% 10%;
-    --card-foreground: 35 25% 88%;
+    --card: 0 0% 8%;
+    --card-foreground: 0 0% 94%;
 
-    --popover: 222 18% 9%;
-    --popover-foreground: 35 25% 88%;
+    --popover: 0 0% 7%;
+    --popover-foreground: 0 0% 94%;
 
-    --primary: 30 80% 60%;
-    --primary-foreground: 25 25% 8%;
+    --primary: 0 84% 47%;
+    --primary-foreground: 0 0% 98%;
 
-    --secondary: 222 14% 15%;
-    --secondary-foreground: 35 25% 88%;
+    --secondary: 0 0% 14%;
+    --secondary-foreground: 0 0% 90%;
 
-    --muted: 222 12% 14%;
-    --muted-foreground: 222 8% 55%;
+    --muted: 0 0% 12%;
+    --muted-foreground: 0 0% 55%;
 
-    --accent: 188 55% 55%;
-    --accent-foreground: 220 30% 8%;
+    --accent: 0 84% 47%;
+    --accent-foreground: 0 0% 98%;
 
-    --destructive: 0 60% 50%;
-    --destructive-foreground: 35 25% 90%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 94%;
 
-    --border: 222 12% 18%;
-    --input: 222 12% 15%;
-    --ring: 30 80% 60%;
+    --border: 0 0% 18%;
+    --input: 0 0% 14%;
+    --ring: 0 84% 47%;
 
-    --ochre-50: 220 14% 12%;
-    --ochre-100: 28 20% 15%;
-    --ochre-200: 29 24% 20%;
-    --ochre-300: 30 32% 30%;
-    --ochre-400: 30 50% 42%;
-    --ochre-500: 30 70% 55%;
-    --ochre-600: 30 80% 60%;
-    --ochre-700: 28 70% 48%;
-    --ochre-800: 25 60% 38%;
-    --ochre-900: 22 45% 28%;
+    /* Dark gold */
+    --gold-50: 0 0% 12%;
+    --gold-100: 40 40% 18%;
+    --gold-200: 38 50% 28%;
+    --gold-300: 42 65% 42%;
+    --gold-400: 43 85% 54%;
+    --gold-500: 43 80% 48%;
+    --gold-600: 40 75% 40%;
+    --gold-700: 35 70% 32%;
+    --gold-800: 30 65% 24%;
+    --gold-900: 25 55% 18%;
 
-    --ochre: var(--ochre-500);
-    --sienna: 18 60% 50%;
-    --terracotta: 15 60% 60%;
+    --gold: var(--gold-400);
 
-    --silicon-50: 220 15% 12%;
-    --silicon-100: 218 18% 15%;
-    --silicon-200: 215 20% 20%;
-    --silicon-300: 212 22% 28%;
-    --silicon-400: 208 25% 38%;
-    --silicon-500: 205 30% 48%;
-    --silicon-600: 202 45% 55%;
-    --silicon-700: 200 40% 45%;
-    --silicon-800: 208 28% 30%;
-    --silicon-900: 212 22% 20%;
+    /* Aliases for legacy Tailwind classes */
+    --ochre-50: var(--gold-50);
+    --ochre-100: var(--gold-100);
+    --ochre-200: var(--gold-200);
+    --ochre-300: var(--gold-300);
+    --ochre-400: var(--gold-400);
+    --ochre-500: var(--gold-500);
+    --ochre-600: var(--gold-600);
+    --ochre-700: var(--gold-700);
+    --ochre-800: var(--gold-800);
+    --ochre-900: var(--gold-900);
+    --ochre: var(--gold-400);
+    --sage-50: var(--gold-50);
+    --sage-100: var(--gold-100);
+    --sage-200: var(--gold-200);
+    --sage-300: var(--gold-300);
+    --sage-400: var(--gold-400);
+    --sage-500: var(--gold-500);
+    --sage-600: var(--gold-600);
+    --sage-700: var(--gold-700);
+    --sage-800: var(--gold-800);
+    --sage-900: var(--gold-900);
+    --sage: var(--gold-400);
 
-    --silicon-925: 220 20% 14%;
-    --silicon-950: 220 22% 10%;
-    --silicon-975: 222 24% 7%;
+    --p5-red: 0 84% 47%;
+    --p5-red-deep: 0 78% 39%;
+    --sienna: var(--p5-red);
+    --terracotta: var(--p5-red);
 
-    --silicon-blue: var(--silicon-600);
-    --silicon-cyan: 188 60% 58%;
-    --silicon-slate: 210 12% 50%;
-    --silicon-glow: 200 40% 60%;
+    /* Dark silver */
+    --silver-50: 0 0% 12%;
+    --silver-100: 0 0% 18%;
+    --silver-200: 0 0% 28%;
+    --silver-300: 0 0% 42%;
+    --silver-400: 0 0% 55%;
+    --silver-500: 0 0% 62%;
+    --silver-600: 0 0% 70%;
+    --silver-700: 0 0% 78%;
+    --silver-800: 0 0% 85%;
+    --silver-900: 0 0% 90%;
+    --silver-950: 0 0% 94%;
 
-    --silicon-cool: 240 10% 55%;
-    --silicon-warm: 250 8% 62%;
-    --silicon-neon: 260 14% 72%;
-    --silicon-foreground: 220 15% 90%;
+    --silicon-blue: var(--silver-600);
+    --silicon-cyan: var(--silver-500);
+    --silicon-slate: var(--silver-500);
+    --silicon-glow: var(--silver-400);
+    --silicon-cool: var(--silver-500);
+    --silicon-warm: var(--silver-500);
+    --silicon-neon: var(--silver-400);
+    --silicon-foreground: 0 0% 88%;
 
-    --sage-50: 220 10% 12%;
-    --sage-100: 218 12% 15%;
-    --sage-200: 215 14% 20%;
-    --sage-300: 210 16% 28%;
-    --sage-400: 205 20% 38%;
-    --sage-500: 200 25% 48%;
-    --sage-600: 195 30% 52%;
-    --sage-700: 190 28% 42%;
-    --sage-800: 190 22% 30%;
-    --sage-900: 190 16% 22%;
+    --ink: 0 0% 94%;
+    --pencil: 0 0% 55%;
 
-    --sage: var(--sage-500);
+    --cream: 0 0% 8%;
+    --parchment: 0 0% 7%;
 
-    --cream: 222 15% 13%;
-    --parchment: 222 14% 11%;
-    --ink: 35 25% 88%;
-    --pencil: 222 8% 52%;
+    --teal-warm: 180 30% 45%;
 
-    --teal-warm: 188 30% 45%;
+    /* Hard shadows for dark */
+    --shadow-xs: 0 1px 2px hsl(0 0% 0% / 0.4);
+    --shadow-sm: 0 2px 4px -2px hsl(0 0% 0% / 0.5), 4px 4px 0 hsl(0 84% 47% / 0.2);
+    --shadow-md: 0 4px 12px -4px hsl(0 0% 0% / 0.6), 4px 4px 0 hsl(0 84% 47% / 0.25);
+    --shadow-lg: 0 8px 24px -8px hsl(0 0% 0% / 0.7), 6px 6px 0 hsl(0 84% 47% / 0.3);
+    --shadow-xl: 0 16px 48px -12px hsl(0 0% 0% / 0.8), 6px 6px 0 hsl(0 84% 47% / 0.35);
 
-    --shadow-xs: 0 1px 2px hsl(0 0% 0% / 0.3);
-    --shadow-sm: 0 2px 4px -2px hsl(0 0% 0% / 0.4);
-    --shadow-md: 0 4px 12px -4px hsl(0 0% 0% / 0.5);
-    --shadow-lg: 0 8px 24px -8px hsl(0 0% 0% / 0.6);
-    --shadow-xl: 0 16px 48px -12px hsl(0 0% 0% / 0.7);
-
-    --shadow-inset-paper: inset 0 1px 0 hsl(35 20% 100% / 0.06);
+    --shadow-inset-paper: inset 0 1px 0 hsl(0 0% 100% / 0.05);
     --shadow-inset-deep: inset 0 2px 4px hsl(0 0% 0% / 0.3);
 
-    --shadow-glow-primary: 0 0 20px hsl(var(--primary) / 0.25);
-    --shadow-glow-silicon: 0 0 20px hsl(var(--silicon-cyan) / 0.25);
+    --shadow-glow-primary: 0 0 20px hsl(var(--primary) / 0.3);
   }
 
-  /* 复古暖棕：早期暖棕深色主题，保留为第三主题 */
+  /* ===== .sepia — 旧纸预告函 ===== */
   .sepia {
-    --background: 25 20% 10%;
-    --foreground: 35 20% 85%;
+    --background: 25 15% 94%;
+    --foreground: 25 20% 15%;
 
-    --card: 25 18% 14%;
-    --card-foreground: 35 20% 85%;
+    --card: 25 20% 97%;
+    --card-foreground: 25 20% 12%;
 
-    --popover: 25 18% 12%;
-    --popover-foreground: 35 20% 85%;
+    --popover: 25 20% 97%;
+    --popover-foreground: 25 20% 12%;
 
-    --primary: 28 70% 55%;
-    --primary-foreground: 25 20% 10%;
+    --primary: 0 84% 42%;
+    --primary-foreground: 25 20% 96%;
 
-    --secondary: 25 15% 18%;
-    --secondary-foreground: 35 20% 85%;
+    --secondary: 25 15% 90%;
+    --secondary-foreground: 25 20% 18%;
 
-    --muted: 25 12% 20%;
-    --muted-foreground: 30 10% 60%;
+    --muted: 25 12% 88%;
+    --muted-foreground: 25 10% 45%;
 
-    --accent: 18 60% 55%;
-    --accent-foreground: 25 20% 10%;
+    --accent: 0 84% 42%;
+    --accent-foreground: 25 20% 96%;
 
-    --destructive: 0 60% 50%;
-    --destructive-foreground: 35 20% 85%;
+    --destructive: 0 65% 45%;
+    --destructive-foreground: 25 20% 96%;
 
-    --border: 25 12% 22%;
-    --input: 25 12% 18%;
-    --ring: 28 70% 55%;
+    --border: 25 12% 82%;
+    --input: 25 12% 88%;
+    --ring: 0 84% 42%;
 
-    --ochre-50: 25 15% 16%;
-    --ochre-100: 26 18% 20%;
-    --ochre-200: 27 22% 28%;
-    --ochre-300: 28 30% 40%;
-    --ochre-400: 29 45% 52%;
-    --ochre-500: 30 65% 58%;
-    --ochre-600: 32 70% 50%;
-    --ochre-700: 28 65% 42%;
-    --ochre-800: 24 55% 35%;
-    --ochre-900: 20 45% 28%;
+    /* Sepia gold */
+    --gold-50: 40 40% 94%;
+    --gold-100: 38 45% 88%;
+    --gold-200: 36 50% 78%;
+    --gold-300: 34 55% 65%;
+    --gold-400: 43 80% 52%;
+    --gold-500: 40 75% 45%;
+    --gold-600: 35 70% 38%;
+    --gold-700: 30 65% 30%;
+    --gold-800: 25 55% 22%;
+    --gold-900: 20 45% 15%;
 
-    --ochre: var(--ochre-500);
-    --sienna: 18 60% 50%;
-    --terracotta: 15 60% 60%;
+    --gold: var(--gold-400);
 
-    --silicon-50: 220 15% 16%;
-    --silicon-100: 218 18% 20%;
-    --silicon-200: 215 20% 28%;
-    --silicon-300: 212 22% 38%;
-    --silicon-400: 208 25% 50%;
-    --silicon-500: 205 30% 58%;
-    --silicon-600: 202 32% 50%;
-    --silicon-700: 208 28% 42%;
-    --silicon-800: 212 22% 32%;
-    --silicon-900: 218 18% 22%;
+    /* Aliases for legacy Tailwind classes */
+    --ochre-50: var(--gold-50);
+    --ochre-100: var(--gold-100);
+    --ochre-200: var(--gold-200);
+    --ochre-300: var(--gold-300);
+    --ochre-400: var(--gold-400);
+    --ochre-500: var(--gold-500);
+    --ochre-600: var(--gold-600);
+    --ochre-700: var(--gold-700);
+    --ochre-800: var(--gold-800);
+    --ochre-900: var(--gold-900);
+    --ochre: var(--gold-400);
+    --sage-50: var(--gold-50);
+    --sage-100: var(--gold-100);
+    --sage-200: var(--gold-200);
+    --sage-300: var(--gold-300);
+    --sage-400: var(--gold-400);
+    --sage-500: var(--gold-500);
+    --sage-600: var(--gold-600);
+    --sage-700: var(--gold-700);
+    --sage-800: var(--gold-800);
+    --sage-900: var(--gold-900);
+    --sage: var(--gold-400);
 
-    --silicon-925: 220 18% 16%;
-    --silicon-950: 220 20% 12%;
-    --silicon-975: 222 22% 8%;
+    --p5-red: 0 84% 42%;
+    --p5-red-deep: 0 78% 34%;
+    --sienna: var(--p5-red);
+    --terracotta: var(--p5-red);
 
-    --silicon-blue: var(--silicon-500);
-    --silicon-cyan: 185 45% 60%;
-    --silicon-slate: 210 15% 55%;
-    --silicon-glow: 200 40% 65%;
+    --silicon-blue: 25 10% 40%;
+    --silicon-cyan: 25 8% 50%;
+    --silicon-slate: 25 8% 45%;
+    --silicon-glow: 25 10% 60%;
+    --silicon-cool: 25 8% 50%;
+    --silicon-warm: 25 10% 60%;
+    --silicon-neon: 25 10% 55%;
+    --silicon-foreground: 25 10% 85%;
 
-    --silicon-cool: 270 8% 55%;
-    --silicon-warm: 250 6% 65%;
-    --silicon-neon: 260 12% 75%;
-    --silicon-foreground: 220 15% 90%;
+    --ink: 25 20% 15%;
+    --pencil: 25 10% 45%;
 
-    --sage-50: 80 10% 14%;
-    --sage-100: 82 12% 18%;
-    --sage-200: 85 15% 24%;
-    --sage-300: 88 18% 35%;
-    --sage-400: 92 20% 48%;
-    --sage-500: 95 25% 55%;
-    --sage-600: 90 28% 48%;
-    --sage-700: 85 25% 40%;
-    --sage-800: 80 20% 32%;
-    --sage-900: 75 15% 24%;
+    --cream: 40 25% 95%;
+    --parchment: 45 30% 92%;
 
-    --sage: var(--sage-500);
+    --teal-warm: 180 25% 35%;
 
-    --cream: 35 15% 20%;
-    --parchment: 30 18% 16%;
-    --ink: 35 20% 85%;
-    --pencil: 30 10% 55%;
+    --shadow-xs: 0 1px 2px hsl(25 20% 0% / 0.04);
+    --shadow-sm: 0 2px 4px -2px hsl(25 20% 0% / 0.06), 4px 4px 0 hsl(0 84% 47% / 0.1);
+    --shadow-md: 0 4px 12px -4px hsl(25 20% 0% / 0.08), 4px 4px 0 hsl(0 84% 47% / 0.12);
+    --shadow-lg: 0 8px 24px -8px hsl(25 20% 0% / 0.12), 6px 6px 0 hsl(0 84% 47% / 0.15);
+    --shadow-xl: 0 16px 48px -12px hsl(25 20% 0% / 0.15), 6px 6px 0 hsl(0 84% 47% / 0.2);
 
-    --teal-warm: 180 25% 45%;
-
-    --shadow-xs: 0 1px 2px hsl(0 0% 0% / 0.3);
-    --shadow-sm: 0 2px 4px -2px hsl(0 0% 0% / 0.4);
-    --shadow-md: 0 4px 12px -4px hsl(0 0% 0% / 0.5);
-    --shadow-lg: 0 8px 24px -8px hsl(0 0% 0% / 0.6);
-    --shadow-xl: 0 16px 48px -12px hsl(0 0% 0% / 0.7);
-
-    --shadow-inset-paper: inset 0 1px 0 hsl(35 20% 100% / 0.06);
-    --shadow-inset-deep: inset 0 2px 4px hsl(0 0% 0% / 0.3);
+    --shadow-inset-paper: inset 0 1px 0 hsl(0 0% 100% / 0.7);
+    --shadow-inset-deep: inset 0 2px 4px hsl(25 20% 0% / 0.06);
 
     --shadow-glow-primary: 0 0 20px hsl(var(--primary) / 0.25);
-    --shadow-glow-silicon: 0 0 20px hsl(var(--silicon-cyan) / 0.25);
   }
 
   @keyframes fade-in {
@@ -433,68 +462,50 @@ body {
 }
 
 @layer components {
+  /* Heist-style cards — sharp edges, bold borders */
   .paper-card {
-    background: hsl(var(--ochre-50));
-    background-image:
-      radial-gradient(hsl(var(--ochre-200) / 0.4) 1px, transparent 1px),
-      radial-gradient(hsl(var(--ochre-100) / 0.3) 1px, transparent 1px);
-    background-size: 24px 24px, 40px 40px;
-    background-position: 0 0, 12px 12px;
+    background: hsl(var(--card));
+    border: 2px solid hsl(var(--border));
+    border-radius: var(--radius-md);
     box-shadow:
-      0 1px 2px hsl(25 20% 0% / 0.04),
-      0 4px 12px -4px hsl(25 20% 0% / 0.08),
-      inset 0 1px 0 hsl(0 0% 100% / 0.8);
-    border: 1px solid hsl(var(--ochre-200) / 0.6);
-    border-radius: var(--radius-lg);
+      0 1px 2px hsl(0 0% 0% / 0.04),
+      0 4px 12px -4px hsl(0 0% 0% / 0.08),
+      4px 4px 0 hsl(var(--primary) / 0.1);
+    position: relative;
   }
 
   .dark .paper-card {
-    background: hsl(222 18% 10%);
-    background-image:
-      radial-gradient(hsl(222 14% 16% / 0.5) 1px, transparent 1px),
-      radial-gradient(hsl(222 12% 14% / 0.4) 1px, transparent 1px);
-    border-color: hsl(222 12% 18% / 0.8);
+    border-color: hsl(var(--border));
     box-shadow:
       0 1px 2px hsl(0 0% 0% / 0.3),
       0 4px 12px -4px hsl(0 0% 0% / 0.5),
-      inset 0 1px 0 hsl(35 20% 100% / 0.06);
-  }
-
-  .sepia .paper-card {
-    background: hsl(25 18% 14%);
-    background-image:
-      radial-gradient(hsl(25 15% 22% / 0.5) 1px, transparent 1px),
-      radial-gradient(hsl(25 12% 18% / 0.4) 1px, transparent 1px);
-    border-color: hsl(25 12% 22% / 0.8);
-    box-shadow:
-      0 1px 2px hsl(0 0% 0% / 0.3),
-      0 4px 12px -4px hsl(0 0% 0% / 0.5),
-      inset 0 1px 0 hsl(35 20% 100% / 0.06);
+      4px 4px 0 hsl(var(--primary) / 0.15);
   }
 
   .glass-card {
-    background: hsl(var(--background) / 0.6);
+    background: hsl(var(--card) / 0.85);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border: 1px solid hsl(var(--border) / 0.6);
-    border-radius: var(--radius-lg);
-    box-shadow: 0 4px 12px -4px hsl(25 20% 0% / 0.1);
+    border: 1px solid hsl(var(--border) / 0.8);
+    border-radius: var(--radius-md);
+    box-shadow: 0 2px 8px -2px hsl(0 0% 0% / 0.1);
   }
 
   .dark .glass-card {
-    background: hsl(var(--background) / 0.5);
-    border-color: hsl(var(--border) / 0.5);
-    box-shadow: 0 4px 12px -4px hsl(0 0% 0% / 0.4);
+    background: hsl(var(--card) / 0.75);
+    border-color: hsl(var(--border) / 0.6);
+    box-shadow: 0 2px 8px -2px hsl(0 0% 0% / 0.4);
   }
 
+  /* Lab card — keeps silicon feel but with heist colors */
   .lab-card {
-    background: hsl(var(--silicon-950));
-    border: 1px solid hsl(var(--silicon-700) / 0.6);
-    border-radius: var(--radius-lg);
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    border-radius: var(--radius-md);
     box-shadow:
-      0 0 0 1px hsl(var(--silicon-cyan) / 0.1),
-      0 4px 12px -4px hsl(200 50% 0% / 0.5),
-      inset 0 1px 0 hsl(var(--silicon-500) / 0.1);
+      0 0 0 1px hsl(var(--primary) / 0.08),
+      0 4px 12px -4px hsl(0 0% 0% / 0.3),
+      inset 0 1px 0 hsl(var(--primary) / 0.06);
     position: relative;
     overflow: hidden;
   }
@@ -505,15 +516,11 @@ body {
     top: 0;
     left: 0;
     right: 0;
-    height: 1px;
-    background: linear-gradient(
-      90deg,
-      transparent,
-      hsl(var(--silicon-cyan) / 0.5),
-      transparent
-    );
+    height: 2px;
+    background: hsl(var(--primary));
   }
 
+  /* Stroke button — gradient border in heist style */
   .btn-stroke {
     position: relative;
     background: hsl(var(--background));
@@ -530,9 +537,9 @@ body {
     padding: 1.5px;
     background: linear-gradient(
       135deg,
-      hsl(var(--ochre-400)),
-      hsl(var(--terracotta)),
-      hsl(var(--ochre-500))
+      hsl(var(--primary)),
+      hsl(var(--gold)),
+      hsl(var(--primary))
     );
     -webkit-mask:
       linear-gradient(#fff 0 0) content-box,
@@ -546,49 +553,32 @@ body {
     background: hsl(var(--background));
   }
 
+  /* Hard-corner border */
   .sketch-border {
-    border: 2px solid hsl(var(--ink));
+    border: 2px solid hsl(var(--foreground) / 0.8);
     border-radius: var(--radius-md);
     position: relative;
   }
 
-  .sketch-border::before {
-    content: '';
-    position: absolute;
-    inset: -2px;
-    border: 1.5px solid hsl(var(--ink) / 0.3);
-    border-radius: calc(var(--radius-md) + 2px);
-    transform: rotate(-0.5deg);
-    pointer-events: none;
-  }
-
-  .dark .sketch-border {
-    border-color: hsl(var(--ink) / 0.8);
-  }
-
-  .dark .sketch-border::before {
-    border-color: hsl(var(--ink) / 0.2);
-  }
-
   .hover-lift-hand {
     transition:
-      transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+      transform 0.3s var(--ease-out),
       box-shadow 0.3s var(--ease-out);
   }
 
   .hover-lift-hand:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 24px -8px hsl(25 20% 0% / 0.2);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 18px -6px hsl(0 0% 0% / 0.15), 4px 4px 0 hsl(var(--primary) / 0.15);
   }
 
   .dark .hover-lift-hand:hover {
-    box-shadow: 0 8px 24px -8px hsl(0 0% 0% / 0.6);
+    box-shadow: 0 6px 18px -6px hsl(0 0% 0% / 0.5), 4px 4px 0 hsl(var(--primary) / 0.2);
   }
 
   .shadow-soft-md {
     box-shadow:
-      0 2px 4px -2px hsl(25 20% 0% / 0.04),
-      0 6px 16px -6px hsl(25 20% 0% / 0.08);
+      0 2px 4px -2px hsl(0 0% 0% / 0.06),
+      0 6px 16px -6px hsl(0 0% 0% / 0.1);
   }
 
   .dark .shadow-soft-md {
@@ -599,8 +589,8 @@ body {
 
   .shadow-soft-lg {
     box-shadow:
-      0 4px 8px -4px hsl(25 20% 0% / 0.06),
-      0 12px 32px -12px hsl(25 20% 0% / 0.12);
+      0 4px 8px -4px hsl(0 0% 0% / 0.08),
+      0 12px 32px -12px hsl(0 0% 0% / 0.12);
   }
 
   .dark .shadow-soft-lg {
@@ -638,46 +628,46 @@ body {
     scroll-behavior: auto !important;
   }
 }
-/* ADHD 适配：低干扰模式（设置开启时 body 挂 low-stimulus class） */
+/* ADHD 适配：低干扰模式 */
 .low-stimulus * {
   animation-duration: 0.01ms !important;
   animation-iteration-count: 1 !important;
 }
 .low-stimulus .animate-slide-in-toast { animation-name: none !important; }
 
-/* 全局滚动条（亚硅主题） */
+/* 全局滚动条 */
 * {
   scrollbar-width: thin;
-  scrollbar-color: hsl(222 12% 26%) transparent;
+  scrollbar-color: hsl(var(--primary) / 0.3) transparent;
 }
 *::-webkit-scrollbar { width: 8px; height: 8px; }
 *::-webkit-scrollbar-track { background: transparent; }
 *::-webkit-scrollbar-thumb {
-  background: hsl(222 12% 26%);
+  background: hsl(var(--primary) / 0.25);
   border-radius: 9999px;
 }
-*::-webkit-scrollbar-thumb:hover { background: hsl(222 12% 34%); }
+*::-webkit-scrollbar-thumb:hover { background: hsl(var(--primary) / 0.4); }
 
-/* 亚硅聊天面板主题 */
+/* Editor chat panel */
 @layer components {
   .yasgui-gradient-text {
-    background: linear-gradient(120deg, hsl(30 80% 65%), hsl(188 60% 65%));
+    background: linear-gradient(120deg, hsl(var(--primary)), hsl(var(--gold)));
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
   }
   .yasgui-ai-bubble {
-    background: linear-gradient(160deg, hsl(222 18% 12%), hsl(222 16% 10%));
-    border: 1px solid hsl(222 12% 20%);
-    box-shadow: 0 2px 8px -2px hsl(0 0% 0% / 0.3);
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    box-shadow: 0 2px 8px -2px hsl(0 0% 0% / 0.2);
   }
   .yasgui-user-bubble {
-    background: linear-gradient(160deg, hsl(30 70% 22%), hsl(30 60% 18%));
-    border: 1px solid hsl(30 60% 32%);
-    box-shadow: 0 2px 8px -2px hsl(0 0% 0% / 0.3);
+    background: hsl(var(--primary) / 0.12);
+    border: 1px solid hsl(var(--primary) / 0.25);
+    box-shadow: 0 2px 8px -2px hsl(0 0% 0% / 0.2);
   }
   .yasgui-panel {
-    background: hsl(222 20% 8%);
-    border: 1px solid hsl(222 12% 16%);
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
   }
 }

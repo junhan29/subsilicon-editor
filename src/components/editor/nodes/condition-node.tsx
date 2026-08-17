@@ -55,7 +55,7 @@ function ConditionNodeComponent({ data, selected }: any) {
             type="source"
             position={Position.Bottom}
             id="false"
-            className="!w-4 !h-4 !rounded-full !z-20 !bg-red-500 !border-2 !border-card !-bottom-2 !transition-all hover:!scale-125 hover:!shadow-lg hover:!shadow-red-500/30 dark:!bg-red-400 dark:!border-card"
+            className="!w-4 !h-4 !rounded-full !z-20 !bg-primary !border-2 !border-card !-bottom-2 !transition-all hover:!scale-125 hover:!shadow-lg hover:!shadow-red-500/30 dark:!bg-red-400 dark:!border-card"
             style={{ left: '75%' }}
           />
         </div>

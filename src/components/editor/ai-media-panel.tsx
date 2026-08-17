@@ -199,12 +199,12 @@ export function AiMediaPanel({ characters, onImageGenerated }: AiMediaPanelProps
       {/* 服务商配置 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          {mediaType === 'image' ? <Image className="w-4 h-4 text-pink-400" /> : <Video className="w-4 h-4 text-purple-400" />}
+          {mediaType === 'image' ? <Image className="w-4 h-4 text-primary" /> : <Video className="w-4 h-4 text-purple-400" />}
           <h3 className="text-sm font-medium text-white">{assistantName}媒体生成</h3>
         </div>
         <button
           onClick={() => setShowSettings(!showSettings)}
-          className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+          className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-white transition-colors"
           title="配置服务商"
         >
           <Settings className="w-3.5 h-3.5" />
@@ -225,8 +225,8 @@ export function AiMediaPanel({ characters, onImageGenerated }: AiMediaPanelProps
           onClick={() => setMediaType('image')}
           className={`flex-1 py-1.5 text-[11px] rounded-md border transition-colors ${
             mediaType === 'image'
-              ? 'bg-pink-500/15 text-pink-400 border-pink-500/30'
-              : 'bg-slate-700 text-slate-400 border-slate-600 hover:border-slate-500'
+              ? 'bg-primary/15 text-primary border-primary/30'
+              : 'bg-secondary text-muted-foreground border-border hover:border-slate-500'
           }`}
         >
           <Image className="w-3 h-3 inline mr-1" />
@@ -237,7 +237,7 @@ export function AiMediaPanel({ characters, onImageGenerated }: AiMediaPanelProps
           className={`flex-1 py-1.5 text-[11px] rounded-md border transition-colors ${
             mediaType === 'video'
               ? 'bg-purple-500/15 text-purple-400 border-purple-500/30'
-              : 'bg-slate-700 text-slate-400 border-slate-600 hover:border-slate-500'
+              : 'bg-secondary text-muted-foreground border-border hover:border-slate-500'
           }`}
         >
           <Video className="w-3 h-3 inline mr-1" />
@@ -248,7 +248,7 @@ export function AiMediaPanel({ characters, onImageGenerated }: AiMediaPanelProps
       {/* 自定义工作流（Skill）选择器：图片 / 视频共享，按 mediaType 动态筛选 */}
       <div className="relative space-y-1.5">
         <div className="flex items-center justify-between">
-          <Label className="text-[11px] text-slate-400">
+          <Label className="text-[11px] text-muted-foreground">
             <Sparkles className="w-3 h-3 inline mr-1 text-yellow-400" />
             自定义工作流（Skill）
           </Label>
@@ -256,7 +256,7 @@ export function AiMediaPanel({ characters, onImageGenerated }: AiMediaPanelProps
             <button
               type="button"
               onClick={() => setActiveWorkflowId(null)}
-              className="text-[9px] text-slate-500 hover:text-slate-300 transition-colors"
+              className="text-[9px] text-muted-foreground hover:text-foreground transition-colors"
             >
               清空
             </button>
@@ -269,7 +269,7 @@ export function AiMediaPanel({ characters, onImageGenerated }: AiMediaPanelProps
           className={`w-full flex items-center justify-between px-2.5 py-2 rounded-md border text-left transition-colors ${
             activeWorkflow
               ? 'bg-yellow-500/10 border-yellow-500/30 text-yellow-300'
-              : 'bg-slate-700 border-slate-600 text-slate-400 hover:border-slate-500'
+              : 'bg-secondary border-border text-muted-foreground hover:border-slate-500'
           }`}
         >
           <div className="flex items-center gap-1.5 min-w-0">
@@ -278,15 +278,15 @@ export function AiMediaPanel({ characters, onImageGenerated }: AiMediaPanelProps
               {activeWorkflow ? activeWorkflow.name : mediaType === 'image' ? '选择生图工作流（可选）' : '选择生视频工作流（可选）'}
             </span>
             {activeWorkflow?.description && (
-              <span className="text-[9px] text-slate-500 truncate hidden sm:inline">· {activeWorkflow.description}</span>
+              <span className="text-[9px] text-muted-foreground truncate hidden sm:inline">· {activeWorkflow.description}</span>
             )}
           </div>
           <ChevronDown className={`w-3 h-3 transition-transform flex-shrink-0 ${showWorkflowPicker ? 'rotate-180' : ''}`} />
         </button>
         {showWorkflowPicker && (
-          <div className="absolute left-0 right-0 z-20 mt-1 rounded-md border border-slate-600 bg-slate-800 shadow-xl overflow-hidden max-h-64 overflow-y-auto">
+          <div className="absolute left-0 right-0 z-20 mt-1 rounded-md border border-border bg-muted shadow-xl overflow-hidden max-h-64 overflow-y-auto">
             {mediaWorkflows.length === 0 ? (
-              <div className="px-2.5 py-2 text-[10px] text-slate-500">暂无工作流：前往设置 → AI 任务路由 → 自定义工作流新建</div>
+              <div className="px-2.5 py-2 text-[10px] text-muted-foreground">暂无工作流：前往设置 → AI 任务路由 → 自定义工作流新建</div>
             ) : (
               mediaWorkflows.map((wf) => {
                 const active = wf.id === activeWorkflowId
@@ -296,20 +296,20 @@ export function AiMediaPanel({ characters, onImageGenerated }: AiMediaPanelProps
                     type="button"
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => selectWorkflow(wf.id)}
-                    className={`w-full text-left px-2.5 py-2 border-b last:border-b-0 border-slate-700/60 flex items-start gap-2 transition-colors ${
-                      active ? 'bg-yellow-500/10' : 'hover:bg-slate-700/60'
+                    className={`w-full text-left px-2.5 py-2 border-b last:border-b-0 border-border/60 flex items-start gap-2 transition-colors ${
+                      active ? 'bg-yellow-500/10' : 'hover:bg-secondary/60'
                     }`}
                   >
                     <Check className={`w-3 h-3 mt-0.5 flex-shrink-0 ${active ? 'text-yellow-400' : 'opacity-0'}`} />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">
-                        <span className={`text-[11px] ${active ? 'text-yellow-300 font-medium' : 'text-slate-200'} truncate`}>{wf.name}</span>
+                        <span className={`text-[11px] ${active ? 'text-yellow-300 font-medium' : 'text-foreground'} truncate`}>{wf.name}</span>
                         {wf.builtin && (
-                          <span className="text-[9px] px-1 rounded border border-slate-600 text-slate-500 flex-shrink-0">内置</span>
+                          <span className="text-[9px] px-1 rounded border border-border text-muted-foreground flex-shrink-0">内置</span>
                         )}
                       </div>
                       {wf.description && (
-                        <p className="text-[9px] text-slate-500 leading-snug line-clamp-2">{wf.description}</p>
+                        <p className="text-[9px] text-muted-foreground leading-snug line-clamp-2">{wf.description}</p>
                       )}
                     </div>
                   </button>
@@ -323,7 +323,7 @@ export function AiMediaPanel({ characters, onImageGenerated }: AiMediaPanelProps
       {/* 角色选择（保持一致性） */}
       {characters.length > 0 && (
         <div className="space-y-1.5">
-          <Label className="text-[11px] text-slate-400">选择角色（保持形象一致）</Label>
+          <Label className="text-[11px] text-muted-foreground">选择角色（保持形象一致）</Label>
           <div className="flex flex-wrap gap-1.5">
             {characters.map((char) => (
               <button
@@ -337,8 +337,8 @@ export function AiMediaPanel({ characters, onImageGenerated }: AiMediaPanelProps
                 }}
                 className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] border transition-colors ${
                   selectedChars.includes(char.id)
-                    ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
-                    : 'bg-slate-700 text-slate-400 border-slate-600 hover:border-slate-500'
+                    ? 'bg-gold-400/15 text-gold-400 border-gold-400/30'
+                    : 'bg-secondary text-muted-foreground border-border hover:border-slate-500'
                 }`}
               >
                 <img src={char.avatar} alt={char.name} className="w-4 h-4 rounded-full object-cover" />
@@ -351,7 +351,7 @@ export function AiMediaPanel({ characters, onImageGenerated }: AiMediaPanelProps
 
       {/* 风格选择 */}
       <div className="space-y-1.5">
-        <Label className="text-[11px] text-slate-400">画面风格</Label>
+        <Label className="text-[11px] text-muted-foreground">画面风格</Label>
         <div className="grid grid-cols-3 gap-1.5">
           {STYLE_OPTIONS.map((s) => (
             <button
@@ -359,12 +359,12 @@ export function AiMediaPanel({ characters, onImageGenerated }: AiMediaPanelProps
               onClick={() => setStyle(s.value)}
               className={`p-2 rounded-md border text-left transition-colors ${
                 style === s.value
-                  ? 'bg-pink-500/15 text-pink-400 border-pink-500/30'
-                  : 'bg-slate-700 text-slate-400 border-slate-600 hover:border-slate-500'
+                  ? 'bg-primary/15 text-primary border-primary/30'
+                  : 'bg-secondary text-muted-foreground border-border hover:border-slate-500'
               }`}
             >
               <p className="text-[11px] font-medium">{s.label}</p>
-              <p className="text-[9px] text-slate-500">{s.desc}</p>
+              <p className="text-[9px] text-muted-foreground">{s.desc}</p>
             </button>
           ))}
         </div>
@@ -372,12 +372,12 @@ export function AiMediaPanel({ characters, onImageGenerated }: AiMediaPanelProps
 
       {/* 描述输入 */}
       <div className="space-y-1.5">
-        <Label className="text-[11px] text-slate-400">场景描述</Label>
+        <Label className="text-[11px] text-muted-foreground">场景描述</Label>
         <textarea
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           placeholder="描述你想要生成的场景画面..."
-          className="w-full h-20 text-xs rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-pink-500/50 resize-none"
+          className="w-full h-20 text-xs rounded-lg border border-border bg-secondary px-3 py-2 text-white placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
         />
       </div>
 
@@ -392,7 +392,7 @@ export function AiMediaPanel({ characters, onImageGenerated }: AiMediaPanelProps
             <button
               type="button"
               onClick={() => { setVideoDuration(5); setVideoRatio('16:9') }}
-              className="text-[9px] text-slate-500 hover:text-indigo-400 transition-colors"
+              className="text-[9px] text-muted-foreground hover:text-indigo-400 transition-colors"
             >
               重置
             </button>
@@ -401,7 +401,7 @@ export function AiMediaPanel({ characters, onImageGenerated }: AiMediaPanelProps
           {/* 时长滑杆 */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <Label className="text-[10px] text-slate-400">时长</Label>
+              <Label className="text-[10px] text-muted-foreground">时长</Label>
               <span className="text-[10px] text-indigo-300 font-mono tabular-nums">{videoDuration}s</span>
             </div>
             <input
@@ -413,7 +413,7 @@ export function AiMediaPanel({ characters, onImageGenerated }: AiMediaPanelProps
               onChange={(e) => setVideoDuration(parseInt(e.target.value, 10))}
               className="w-full accent-indigo-500 h-1.5"
             />
-            <div className="flex justify-between text-[9px] text-slate-600 font-mono">
+            <div className="flex justify-between text-[9px] text-muted-foreground font-mono">
               <span>3s</span>
               <span>5s</span>
               <span>10s</span>
@@ -422,7 +422,7 @@ export function AiMediaPanel({ characters, onImageGenerated }: AiMediaPanelProps
 
           {/* 画幅比例 */}
           <div className="space-y-1.5">
-            <Label className="text-[10px] text-slate-400">画幅比例</Label>
+            <Label className="text-[10px] text-muted-foreground">画幅比例</Label>
             <div className="grid grid-cols-3 gap-1.5">
               {RATIO_OPTIONS.map((r) => (
                 <button
@@ -432,7 +432,7 @@ export function AiMediaPanel({ characters, onImageGenerated }: AiMediaPanelProps
                   className={`p-1.5 rounded-md border text-left transition-colors ${
                     videoRatio === r.value
                       ? 'bg-indigo-500/15 text-indigo-300 border-indigo-500/40'
-                      : 'bg-slate-700 text-slate-400 border-slate-600 hover:border-slate-500'
+                      : 'bg-secondary text-muted-foreground border-border hover:border-slate-500'
                   }`}
                 >
                   <p className="text-[10px] font-medium leading-tight">{r.label}</p>
@@ -448,7 +448,7 @@ export function AiMediaPanel({ characters, onImageGenerated }: AiMediaPanelProps
       <button
         onClick={handleGenerate}
         disabled={generating || !prompt.trim()}
-        className="w-full flex items-center justify-center gap-2 py-2 text-xs bg-pink-500/15 text-pink-400 border border-pink-500/30 hover:bg-pink-500/25 rounded-lg transition-colors disabled:opacity-50"
+        className="w-full flex items-center justify-center gap-2 py-2 text-xs bg-primary/15 text-primary border border-primary/30 hover:bg-primary/25 rounded-lg transition-colors disabled:opacity-50"
       >
         {generating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
         {generating ? '生成中...' : `生成${mediaType === 'image' ? '图片' : '视频'}`}
@@ -457,7 +457,7 @@ export function AiMediaPanel({ characters, onImageGenerated }: AiMediaPanelProps
       {/* 结果展示：视频卡片按所选比例显示；图片按生成尺寸自适应 */}
       {results.length > 0 && (
         <div className="space-y-2">
-          <p className="text-[11px] text-slate-400">生成结果 <span className="text-slate-600">· {results.length}</span></p>
+          <p className="text-[11px] text-muted-foreground">生成结果 <span className="text-muted-foreground">· {results.length}</span></p>
           <div className="grid grid-cols-2 gap-2">
             {results.map((result, i) => {
               const isVideo = result.type === 'video'
@@ -465,7 +465,7 @@ export function AiMediaPanel({ characters, onImageGenerated }: AiMediaPanelProps
                 ? ratioToTailwindClass(result.ratio as VideoAspectRatio | undefined | null, 'video')
                 : 'aspect-square'
               return (
-                <div key={i} className="relative rounded-lg overflow-hidden border border-slate-600 group flex-col">
+                <div key={i} className="relative rounded-lg overflow-hidden border border-border group flex-col">
                   <div className={`${cardClass} w-full`}>
                     {isVideo ? (
                       <video src={result.url} className="w-full h-full object-cover" controls />
@@ -474,7 +474,7 @@ export function AiMediaPanel({ characters, onImageGenerated }: AiMediaPanelProps
                     )}
                   </div>
                   {isVideo && (
-                    <div className="flex items-center justify-between px-2 py-1 bg-slate-800/80 border-t border-slate-700/50 text-[9px] text-slate-400 font-mono">
+                    <div className="flex items-center justify-between px-2 py-1 bg-muted/80 border-t border-border/50 text-[9px] text-muted-foreground font-mono">
                       <span>{((result as { ratio?: VideoAspectRatio }).ratio || '16:9')}</span>
                       <span>{(result as { durationSec?: number | null }).durationSec || '5'}s</span>
                     </div>
@@ -491,7 +491,7 @@ export function AiMediaPanel({ characters, onImageGenerated }: AiMediaPanelProps
                     </button>
                     <button
                       onClick={() => onImageGenerated?.(result.url, result.prompt)}
-                      className="px-2 py-1 text-[10px] bg-pink-500 text-white rounded hover:bg-pink-600 transition-colors"
+                      className="px-2 py-1 text-[10px] bg-primary text-white rounded hover:bg-primary/90 transition-colors"
                     >
                       添加到场景
                     </button>
@@ -529,14 +529,14 @@ function ProviderSettingsPanel({
   }
 
   return (
-    <div className="p-3 bg-slate-700/40 rounded-lg border border-slate-600/50 space-y-3">
+    <div className="p-3 bg-secondary/40 rounded-lg border border-border/50 space-y-3">
       <div className="flex items-center gap-2 mb-2">
-        <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
-        <p className="text-[11px] text-slate-300">配置媒体生成服务商</p>
+        <AlertCircle className="w-3.5 h-3.5 text-gold-400" />
+        <p className="text-[11px] text-foreground">配置媒体生成服务商</p>
       </div>
 
       <div className="space-y-1.5">
-        <Label className="text-[11px] text-slate-400">服务商</Label>
+        <Label className="text-[11px] text-muted-foreground">服务商</Label>
         <div className="grid grid-cols-1 gap-1.5">
           {PROVIDER_OPTIONS.map((p) => (
             <button
@@ -544,37 +544,37 @@ function ProviderSettingsPanel({
               onClick={() => setType(p.value)}
               className={`p-2 rounded-md border text-left transition-colors ${
                 type === p.value
-                  ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
-                  : 'bg-slate-700 text-slate-400 border-slate-600 hover:border-slate-500'
+                  ? 'bg-gold-400/15 text-gold-400 border-gold-400/30'
+                  : 'bg-secondary text-muted-foreground border-border hover:border-slate-500'
               }`}
             >
               <p className="text-[11px] font-medium">{p.label}</p>
-              <p className="text-[9px] text-slate-500">{p.desc}</p>
+              <p className="text-[9px] text-muted-foreground">{p.desc}</p>
             </button>
           ))}
         </div>
       </div>
 
       <div className="space-y-1.5">
-        <Label className="text-[11px] text-slate-400">API Key</Label>
+        <Label className="text-[11px] text-muted-foreground">API Key</Label>
         <input
           type="password"
           value={apiKey}
           onChange={(e) => setApiKey(e.target.value)}
           placeholder="输入 API Key"
-          className="w-full h-8 text-xs rounded-lg border border-slate-600 bg-slate-700 px-3 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+          className="w-full h-8 text-xs rounded-lg border border-border bg-secondary px-3 text-white placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-amber-500/50"
         />
       </div>
 
       {type === 'comfyui' && (
         <div className="space-y-1.5">
-          <Label className="text-[11px] text-slate-400">API URL</Label>
+          <Label className="text-[11px] text-muted-foreground">API URL</Label>
           <input
             type="text"
             value={apiUrl}
             onChange={(e) => setApiUrl(e.target.value)}
             placeholder="http://localhost:8188"
-            className="w-full h-8 text-xs rounded-lg border border-slate-600 bg-slate-700 px-3 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+            className="w-full h-8 text-xs rounded-lg border border-border bg-secondary px-3 text-white placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-amber-500/50"
           />
         </div>
       )}
@@ -582,13 +582,13 @@ function ProviderSettingsPanel({
       <div className="flex gap-2">
         <button
           onClick={onCancel}
-          className="flex-1 py-1.5 text-[11px] text-slate-400 hover:text-white transition-colors"
+          className="flex-1 py-1.5 text-[11px] text-muted-foreground hover:text-white transition-colors"
         >
           取消
         </button>
         <button
           onClick={handleSave}
-          className="flex-1 py-1.5 text-[11px] bg-amber-500/15 text-amber-400 border border-amber-500/30 hover:bg-amber-500/25 rounded-lg transition-colors"
+          className="flex-1 py-1.5 text-[11px] bg-gold-400/15 text-gold-400 border border-gold-400/30 hover:bg-gold-400/25 rounded-lg transition-colors"
         >
           <Check className="w-3 h-3 inline mr-1" />
           保存

@@ -55,19 +55,19 @@ const NODE_TYPES: SidebarNodeType[] = [
   {
     type: 'narration',
     label: '旁白',
-    icon: <AlignLeft className="w-5 h-5 text-slate-500" />,
+    icon: <AlignLeft className="w-5 h-5 text-muted-foreground" />,
     description: '叙述与环境描写',
   },
   {
     type: 'choice',
     label: '选择',
-    icon: <GitBranch className="w-5 h-5 text-amber-500" />,
+    icon: <GitBranch className="w-5 h-5 text-gold-400" />,
     description: '玩家分支选择',
   },
   {
     type: 'gather',
     label: '汇聚',
-    icon: <Merge className="w-5 h-5 text-slate-500" />,
+    icon: <Merge className="w-5 h-5 text-muted-foreground" />,
     description: '多分支汇聚到一处',
   },
   {
@@ -373,7 +373,7 @@ function EditorSidebar({
                 <span className="text-[10px]">×</span>
               </button>
               <div className="flex items-start gap-1.5">
-                <Lightbulb className="w-3.5 h-3.5 text-amber-500 mt-0.5 shrink-0" />
+                <Lightbulb className="w-3.5 h-3.5 text-gold-400 mt-0.5 shrink-0" />
                 <div>
                   <p className="text-[10px] font-medium">小技巧</p>
                   <p className="text-[9px] text-muted-foreground mt-0.5 leading-relaxed">
@@ -434,8 +434,8 @@ function EditorSidebar({
 
             <div>
               <div className="flex items-center gap-1 mb-1.5 px-0.5">
-                <User className="w-3 h-3 text-slate-500" />
-                <span className="text-[9px] font-medium text-slate-600">我的模板</span>
+                <User className="w-3 h-3 text-muted-foreground" />
+                <span className="text-[9px] font-medium text-muted-foreground">我的模板</span>
               </div>
               <div className="space-y-1.5">
                 {customTemplates.length === 0 && (

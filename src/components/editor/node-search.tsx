@@ -478,9 +478,9 @@ export function NodeSearch({ nodes, characters, open, onClose, onReplaceNode }: 
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-start justify-center pt-20 z-50">
-      <div className="bg-slate-900 rounded-xl border border-slate-700 shadow-2xl w-full max-w-lg overflow-hidden">
-        <div className="flex items-center gap-2 px-3 py-2 border-b border-slate-700">
-          <Search className="w-4 h-4 text-slate-400 shrink-0" />
+      <div className="bg-card rounded-xl border border-border shadow-2xl w-full max-w-lg overflow-hidden">
+        <div className="flex items-center gap-2 px-3 py-2 border-b border-border">
+          <Search className="w-4 h-4 text-muted-foreground shrink-0" />
           <input
             ref={searchInputRef}
             type="text"
@@ -488,10 +488,10 @@ export function NodeSearch({ nodes, characters, open, onClose, onReplaceNode }: 
             onChange={e => setQuery(e.target.value)}
             onKeyDown={handleSearchKeyDown}
             placeholder="搜索节点文本..."
-            className="flex-1 bg-transparent border-none text-sm text-white placeholder:text-slate-500 focus:outline-none"
+            className="flex-1 bg-transparent border-none text-sm text-white placeholder:text-muted-foreground focus:outline-none"
           />
           {query && matches.length > 0 && (
-            <span className="text-xs text-slate-400 font-mono">
+            <span className="text-xs text-muted-foreground font-mono">
               {selectedIndex + 1} / {matches.length}
             </span>
           )}
@@ -499,7 +499,7 @@ export function NodeSearch({ nodes, characters, open, onClose, onReplaceNode }: 
             <button
               onClick={() => setCaseSensitive(!caseSensitive)}
               className={`p-1 rounded text-xs font-mono transition-colors ${
-                caseSensitive ? 'bg-slate-700 text-white' : 'text-slate-500 hover:text-slate-300'
+                caseSensitive ? 'bg-secondary text-white' : 'text-muted-foreground hover:text-foreground'
               }`}
               title="区分大小写"
             >
@@ -508,7 +508,7 @@ export function NodeSearch({ nodes, characters, open, onClose, onReplaceNode }: 
             <button
               onClick={goToPrev}
               disabled={matches.length === 0}
-              className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
               title="上一个 (Shift+Enter)"
             >
               <ArrowUp className="w-3.5 h-3.5" />
@@ -516,7 +516,7 @@ export function NodeSearch({ nodes, characters, open, onClose, onReplaceNode }: 
             <button
               onClick={goToNext}
               disabled={matches.length === 0}
-              className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
               title="下一个 (Enter)"
             >
               <ArrowDown className="w-3.5 h-3.5" />
@@ -524,16 +524,16 @@ export function NodeSearch({ nodes, characters, open, onClose, onReplaceNode }: 
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white"
+            className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-white"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="border-b border-slate-700">
+        <div className="border-b border-border">
           <button
             onClick={() => setShowReplace(!showReplace)}
-            className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-slate-400 hover:text-slate-300 hover:bg-slate-800/50 transition-colors"
+            className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
           >
             <Replace className="w-3.5 h-3.5" />
             <span>替换</span>
@@ -543,7 +543,7 @@ export function NodeSearch({ nodes, characters, open, onClose, onReplaceNode }: 
           {showReplace && (
             <div className="px-3 pb-3 space-y-2">
               <div className="flex items-center gap-2">
-                <span className="w-12 text-xs text-slate-500">替换为</span>
+                <span className="w-12 text-xs text-muted-foreground">替换为</span>
                 <input
                   ref={replaceInputRef}
                   type="text"
@@ -551,21 +551,21 @@ export function NodeSearch({ nodes, characters, open, onClose, onReplaceNode }: 
                   onChange={e => setReplaceText(e.target.value)}
                   onKeyDown={handleReplaceKeyDown}
                   placeholder="替换文本..."
-                  className="flex-1 bg-slate-800 border border-slate-600 rounded px-2 py-1.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-slate-500"
+                  className="flex-1 bg-muted border border-border rounded px-2 py-1.5 text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:border-slate-500"
                 />
               </div>
               <div className="flex items-center gap-2">
                 <button
                   onClick={replaceCurrent}
                   disabled={!currentMatch || !onReplaceNode}
-                  className="flex-1 px-3 py-1.5 text-xs bg-slate-700 hover:bg-slate-600 text-white rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 px-3 py-1.5 text-xs bg-secondary hover:bg-accent text-white rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   替换
                 </button>
                 <button
                   onClick={replaceAll}
                   disabled={matches.length === 0 || !onReplaceNode}
-                  className="flex-1 px-3 py-1.5 text-xs bg-slate-700 hover:bg-slate-600 text-white rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 px-3 py-1.5 text-xs bg-secondary hover:bg-accent text-white rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   全部替换 ({matches.length})
                 </button>
@@ -576,14 +576,14 @@ export function NodeSearch({ nodes, characters, open, onClose, onReplaceNode }: 
 
         <div className="max-h-80 overflow-y-auto">
           {query && matches.length === 0 && (
-            <div className="px-4 py-8 text-center text-sm text-slate-500">
+            <div className="px-4 py-8 text-center text-sm text-muted-foreground">
               未找到匹配的内容
             </div>
           )}
           {!query && (
-            <div className="px-4 py-8 text-center text-sm text-slate-500">
+            <div className="px-4 py-8 text-center text-sm text-muted-foreground">
               输入关键词搜索节点文本
-              <div className="mt-2 text-xs text-slate-600">
+              <div className="mt-2 text-xs text-muted-foreground">
                 支持：对话、旁白、选择、结局、付费、CG、跳转、随机、条件、汇聚
               </div>
             </div>
@@ -602,27 +602,27 @@ export function NodeSearch({ nodes, characters, open, onClose, onReplaceNode }: 
                 onMouseEnter={() => setSelectedIndex(index)}
                 className={`w-full flex flex-col gap-1 px-3 py-2.5 text-left transition-colors ${
                   isSelected
-                    ? 'bg-slate-700/80'
-                    : 'hover:bg-slate-800/50'
+                    ? 'bg-secondary/80'
+                    : 'hover:bg-muted/50'
                 }`}
               >
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-700 text-slate-400 font-mono shrink-0">
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground font-mono shrink-0">
                     {typeLabel}
                   </span>
-                  <span className="text-xs text-slate-400 shrink-0">
+                  <span className="text-xs text-muted-foreground shrink-0">
                     {match.fieldLabel}
                   </span>
                   <span className="text-sm text-white truncate flex-1">
                     {match.nodeTitle}
                   </span>
                   {match.characterName && (
-                    <span className="text-xs text-slate-500 truncate max-w-[100px]">
+                    <span className="text-xs text-muted-foreground truncate max-w-[100px]">
                       {match.characterName}
                     </span>
                   )}
                 </div>
-                <div className="text-xs text-slate-400 pl-1 font-mono break-all">
+                <div className="text-xs text-muted-foreground pl-1 font-mono break-all">
                   {highlightText(match.beforeText, query, caseSensitive)}
                   <span className="bg-yellow-500/40 text-yellow-200 px-0.5 rounded">
                     {match.matchText}
@@ -635,7 +635,7 @@ export function NodeSearch({ nodes, characters, open, onClose, onReplaceNode }: 
         </div>
 
         {query && matches.length > 0 && (
-          <div className="px-3 py-1.5 border-t border-slate-700 text-[10px] text-slate-500 flex items-center justify-between">
+          <div className="px-3 py-1.5 border-t border-border text-[10px] text-muted-foreground flex items-center justify-between">
             <span>{matches.length} 个匹配结果</span>
             <div className="flex items-center gap-0.5">
               <CornerDownLeft className="w-3 h-3" />

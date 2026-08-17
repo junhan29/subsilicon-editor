@@ -2558,7 +2558,7 @@ const StatusBar = memo(function StatusBar({ nodeCount, edgeCount, completionPerc
       <span className="w-px h-3 bg-border" />
       <button
         onClick={onStatsClick}
-        className="flex items-center gap-1.5 hover:text-pink-400 transition-colors"
+        className="flex items-center gap-1.5 hover:text-primary transition-colors"
         title="故事统计"
       >
         <ShieldCheck className="w-3.5 h-3.5" />
@@ -2568,7 +2568,7 @@ const StatusBar = memo(function StatusBar({ nodeCount, edgeCount, completionPerc
         <>
           <span className="w-px h-3 bg-border" />
           <span className={clsx(
-            nodeCount > 500 ? 'text-amber-400' : 'text-slate-500'
+            nodeCount > 500 ? 'text-gold-400' : 'text-muted-foreground'
           )}>
             {nodeCount > 500
               ? '建议使用"查找节点"功能而非手动拖拽'

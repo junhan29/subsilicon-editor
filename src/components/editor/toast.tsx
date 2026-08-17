@@ -66,7 +66,7 @@ function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: () => void }) 
   const configs = {
     success: {
       icon: <CheckCircle className="w-4 h-4 text-emerald-500" />,
-      bg: 'bg-slate-900 border-slate-700',
+      bg: 'bg-card border-border',
       text: 'text-white',
     },
     error: {
@@ -76,7 +76,7 @@ function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: () => void }) 
     },
     info: {
       icon: <Info className="w-4 h-4 text-blue-400" />,
-      bg: 'bg-slate-900 border-slate-700',
+      bg: 'bg-card border-border',
       text: 'text-white',
     },
   }
@@ -89,7 +89,7 @@ function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: () => void }) 
     >
       {config.icon}
       <span className={`text-sm ${config.text}`}>{toast.message}</span>
-      <button onClick={onRemove} className="ml-1 text-slate-400 hover:text-white transition-colors">
+      <button onClick={onRemove} className="ml-1 text-muted-foreground hover:text-white transition-colors">
         <X className="w-3.5 h-3.5" />
       </button>
     </div>

@@ -155,7 +155,7 @@ export function PluginManagerPanel() {
                 variant="outline"
                 onClick={() => handleUninstall(plugin.id)}
                 disabled={loading}
-                className="text-xs h-7 text-red-500 border-red-500/30 hover:bg-red-500/10"
+                className="text-xs h-7 text-primary border-primary/30 hover:bg-primary/10"
               >
                 <Trash2 className="w-3 h-3" />
               </Button>

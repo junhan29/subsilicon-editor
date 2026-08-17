@@ -94,7 +94,7 @@ export function HelpMenu({ onStartTour, onShowShortcuts }: HelpMenuProps) {
       icon: updateChecking
         ? <RefreshCw className="w-4 h-4 animate-spin" />
         : updateStatus === 'available'
-        ? <AlertCircle className="w-4 h-4 text-amber-400" />
+        ? <AlertCircle className="w-4 h-4 text-gold-400" />
         : updateStatus === 'not-available'
         ? <CheckCircle2 className="w-4 h-4 text-green-500" />
         : <RefreshCw className="w-4 h-4" />,
@@ -173,9 +173,9 @@ export function HelpMenu({ onStartTour, onShowShortcuts }: HelpMenuProps) {
 
           {/* 更新详情面板：检测到新版本时显示更新日志和前往下载按钮 */}
           {updateInfo && updateStatus === 'available' && (
-            <div className="mx-2 mb-2 p-3 rounded-lg bg-amber-500/5 border border-amber-500/20">
+            <div className="mx-2 mb-2 p-3 rounded-lg bg-gold-400/5 border border-gold-400/20">
               <div className="flex items-center gap-2 mb-2">
-                <Download className="w-3.5 h-3.5 text-amber-500" />
+                <Download className="w-3.5 h-3.5 text-gold-400" />
                 <span className="text-xs font-medium">v{updateInfo.version}</span>
                 {updateInfo.releaseDate && (
                   <span className="text-[10px] text-muted-foreground">
@@ -196,7 +196,7 @@ export function HelpMenu({ onStartTour, onShowShortcuts }: HelpMenuProps) {
 
               <button
                 onClick={handleDownloadUpdate}
-                className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-500/15 hover:bg-amber-500/25 text-amber-600 dark:text-amber-400 text-xs font-medium transition-colors"
+                className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md bg-gold-400/15 hover:bg-gold-400/25 text-amber-600 dark:text-gold-400 text-xs font-medium transition-colors"
               >
                 <ExternalLink className="w-3 h-3" />
                 前往下载页
@@ -207,7 +207,7 @@ export function HelpMenu({ onStartTour, onShowShortcuts }: HelpMenuProps) {
           {/* 小贴士 */}
           <div className="px-4 py-3 border-t bg-muted/20">
             <div className="flex items-center gap-1.5 mb-2">
-              <Lightbulb className="w-3.5 h-3.5 text-amber-500" />
+              <Lightbulb className="w-3.5 h-3.5 text-gold-400" />
               <span className="text-xs font-medium">创作小贴士</span>
             </div>
             <ul className="space-y-1.5">

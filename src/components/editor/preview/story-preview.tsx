@@ -51,7 +51,7 @@ const QUICK_SAVE_ID = 0
 
 const ENDING_TYPE_CONFIG: Record<string, { icon: React.ReactNode; label: string; color: string }> = {
   good: { icon: <Star className="w-5 h-5 text-yellow-500" />, label: '好结局', color: 'bg-yellow-50 border-yellow-200' },
-  bad: { icon: <X className="w-5 h-5 text-red-500" />, label: '坏结局', color: 'bg-red-50 border-red-200' },
+  bad: { icon: <X className="w-5 h-5 text-primary" />, label: '坏结局', color: 'bg-red-50 border-red-200' },
   neutral: { icon: <CheckCircle2 className="w-5 h-5 text-gray-500" />, label: '普通结局', color: 'bg-gray-50 border-gray-200' },
   secret: { icon: <Star className="w-5 h-5 text-purple-500" />, label: '隐藏结局', color: 'bg-purple-50 border-purple-200' },
 }
@@ -1012,12 +1012,12 @@ export function StoryPreview({ graph, open, onClose, workId }: StoryPreviewProps
               )}
             </div>
             {(data.title || data.subtitle) && (
-              <div className="p-4 text-center bg-slate-900">
+              <div className="p-4 text-center bg-card">
                 {data.title && <h3 className="text-white font-bold mb-1">{data.title}</h3>}
                 {data.subtitle && <p className="text-white/60 text-sm">{data.subtitle}</p>}
               </div>
             )}
-            <div className="px-4 pb-3 bg-slate-900 flex items-center justify-between text-xs text-white/40">
+            <div className="px-4 pb-3 bg-card flex items-center justify-between text-xs text-white/40">
               <span>{isVideo ? '视频 CG' : '图片 CG'}</span>
               <span>{data.canSkip === false ? '不可跳过' : '可跳过'}</span>
             </div>
@@ -1064,15 +1064,15 @@ export function StoryPreview({ graph, open, onClose, workId }: StoryPreviewProps
       case 'unlock':
         return (
           <div className={`text-center space-y-4 ${bgImage ? 'bg-card/95 backdrop-blur-sm rounded-2xl p-6 shadow-xl' : 'p-6'}`}>
-            <div className="w-16 h-16 mx-auto rounded-full bg-amber-500/10 flex items-center justify-center">
-              <Lock className="w-8 h-8 text-amber-500" />
+            <div className="w-16 h-16 mx-auto rounded-full bg-gold-400/10 flex items-center justify-center">
+              <Lock className="w-8 h-8 text-gold-400" />
             </div>
             <div>
               <h3 className="text-lg font-bold mb-2">{data.title || data.nodeTitle || '解锁内容'}</h3>
               {data.description && (
                 <p className="text-sm text-muted-foreground mb-4">{data.description}</p>
               )}
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/10 text-amber-600">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gold-400/10 text-amber-600">
                 <Coins className="w-4 h-4" />
                 <span className="font-medium">{data.price || data.amount || 1} 次解锁</span>
               </div>
@@ -1166,7 +1166,7 @@ export function StoryPreview({ graph, open, onClose, workId }: StoryPreviewProps
           )}
           {hasAudio && (
             <Button variant="ghost" size="sm" onClick={() => setShowAudioPanel(!showAudioPanel)} className="gap-1.5" title="音频 (M)">
-              <Volume2 className={`w-4 h-4 ${anyAudioPlaying ? 'text-amber-500' : 'text-muted-foreground'}`} />
+              <Volume2 className={`w-4 h-4 ${anyAudioPlaying ? 'text-gold-400' : 'text-muted-foreground'}`} />
             </Button>
           )}
           <Button variant="ghost" size="sm" onClick={() => setShowShortcuts(!showShortcuts)} className="gap-1.5" title="快捷键 (?)">
@@ -1425,7 +1425,7 @@ export function StoryPreview({ graph, open, onClose, workId }: StoryPreviewProps
                       </div>
                       {quickSlot && saveMode === 'load' && <div className="opacity-0 group-hover:opacity-100 transition-opacity"><ChevronRight className="w-5 h-5 text-primary" /></div>}
                       {quickSlot && (
-                        <button onClick={(e) => { e.stopPropagation(); handleDeleteSlot(QUICK_SAVE_ID) }} className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-red-50 text-muted-foreground hover:text-red-500">
+                        <button onClick={(e) => { e.stopPropagation(); handleDeleteSlot(QUICK_SAVE_ID) }} className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-red-50 text-muted-foreground hover:text-primary">
                           <Trash2 className="w-4 h-4" />
                         </button>
                       )}
@@ -1466,7 +1466,7 @@ export function StoryPreview({ graph, open, onClose, workId }: StoryPreviewProps
                       </div>
                       {slot && saveMode === 'load' && <div className="opacity-0 group-hover:opacity-100 transition-opacity"><ChevronRight className="w-5 h-5 text-primary" /></div>}
                       {slot && (
-                        <button onClick={(e) => { e.stopPropagation(); handleDeleteSlot(slotId) }} className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-red-50 text-muted-foreground hover:text-red-500">
+                        <button onClick={(e) => { e.stopPropagation(); handleDeleteSlot(slotId) }} className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-red-50 text-muted-foreground hover:text-primary">
                           <Trash2 className="w-4 h-4" />
                         </button>
                       )}

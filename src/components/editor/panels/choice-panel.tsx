@@ -55,7 +55,7 @@ export function ChoicePanel({ node, variables, scenes, onUpdateNode }: BasePanel
                 key={mode.value}
                 onClick={() => updateData({ choiceMode: mode.value })}
                 className={`py-1.5 px-2 rounded-md text-[11px] font-medium transition-all flex items-center justify-center gap-1 ${
-                  isActive ? 'bg-pink-500 text-white' : 'bg-muted hover:bg-muted/80'
+                  isActive ? 'bg-primary text-white' : 'bg-muted hover:bg-muted/80'
                 }`}
               >
                 {Icon && <Icon className="w-3 h-3" />}

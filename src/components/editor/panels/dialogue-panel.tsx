@@ -71,7 +71,7 @@ export function DialoguePanel({ node, characters, variables, assets, scenes, onU
                     key={sprite.id}
                     onClick={() => onUpdateNode(id, { ...data, emotion: sprite.emotion })}
                     className={`relative rounded-lg overflow-hidden border-2 transition-all hover:scale-105 ${
-                      isActive ? 'border-pink-500 ring-1 ring-pink-500' : 'border-border hover:border-slate-400'
+                      isActive ? 'border-primary ring-1 ring-pink-500' : 'border-border hover:border-slate-400'
                     }`}
                     title={sprite.name}
                   >
@@ -80,7 +80,7 @@ export function DialoguePanel({ node, characters, variables, assets, scenes, onU
                       alt={sprite.name}
                       className="w-10 h-12 object-cover"
                     />
-                    {isActive && <div className="absolute inset-0 bg-pink-500/20" />}
+                    {isActive && <div className="absolute inset-0 bg-primary/20" />}
                     <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[8px] text-center py-0.5 truncate">
                       {sprite.name}
                     </div>
@@ -203,7 +203,7 @@ export function DialoguePanel({ node, characters, variables, assets, scenes, onU
                     }
                   }}
                   className={`relative aspect-video rounded-md overflow-hidden border transition-all ${
-                    isSelected ? 'border-pink-500 ring-1 ring-pink-500' : 'border-border hover:border-pink-500/50'
+                    isSelected ? 'border-primary ring-1 ring-pink-500' : 'border-border hover:border-primary/50'
                   }`}
                 >
                   <img src={scene.backgroundImage} alt={scene.name} className="w-full h-full object-cover" />
@@ -258,7 +258,7 @@ export function DialoguePanel({ node, characters, variables, assets, scenes, onU
         </div>
         {(data as any).bgm ? (
           <div className="flex items-center gap-2 p-2 rounded-lg border border-border bg-muted/30">
-            <Music className="w-4 h-4 text-amber-500 shrink-0" />
+            <Music className="w-4 h-4 text-gold-400 shrink-0" />
             <div className="flex-1 min-w-0">
               <p className="text-xs truncate">已设置背景音乐</p>
             </div>
@@ -272,7 +272,7 @@ export function DialoguePanel({ node, characters, variables, assets, scenes, onU
             {(assets?.audios || []).slice(0, 5).map((audio, i) => (
               <button key={i} onClick={() => onUpdateNode(id, { ...data, bgm: audio })}
                 className="w-full flex items-center gap-2 p-2 rounded-md border border-border hover:border-primary/50 hover:bg-primary/5 transition-colors text-left">
-                <Music className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                <Music className="w-3.5 h-3.5 text-gold-400 shrink-0" />
                 <span className="text-xs truncate flex-1">音频 {i + 1}</span>
               </button>
             ))}
@@ -473,7 +473,7 @@ export function DialoguePanel({ node, characters, variables, assets, scenes, onU
                     onClick={() => updateVisual({ position: pos.value })}
                     className={`py-1 px-1 rounded-md text-[10px] font-medium transition-all ${
                       (visual.position || 'bottom') === pos.value
-                        ? 'bg-pink-500 text-white'
+                        ? 'bg-primary text-white'
                         : 'bg-muted hover:bg-muted/80'
                     }`}
                   >
@@ -632,7 +632,7 @@ export function DialoguePanel({ node, characters, variables, assets, scenes, onU
                 <Toggle
                   checked={visual.shadow !== false}
                   onChange={(checked) => updateVisual({ shadow: checked })}
-                  color="bg-pink-500"
+                  color="bg-primary"
                 />
               </div>
               <div className="flex items-center justify-between">
@@ -640,7 +640,7 @@ export function DialoguePanel({ node, characters, variables, assets, scenes, onU
                 <Toggle
                   checked={visual.backdropBlur !== false}
                   onChange={(checked) => updateVisual({ backdropBlur: checked })}
-                  color="bg-pink-500"
+                  color="bg-primary"
                 />
               </div>
             </div>
@@ -687,7 +687,7 @@ export function DialoguePanel({ node, characters, variables, assets, scenes, onU
                       onClick={() => updateVisual({ textAlignment: align })}
                       className={`py-1 px-1 rounded text-[10px] transition-all ${
                         (visual.textAlignment || 'left') === align
-                          ? 'bg-pink-500 text-white'
+                          ? 'bg-primary text-white'
                           : 'bg-muted hover:bg-muted/80'
                       }`}
                     >
@@ -705,7 +705,7 @@ export function DialoguePanel({ node, characters, variables, assets, scenes, onU
                 <Toggle
                   checked={visual.showAvatar !== false}
                   onChange={(checked) => updateVisual({ showAvatar: checked })}
-                  color="bg-pink-500"
+                  color="bg-primary"
                 />
               </div>
               <div className="space-y-1">
@@ -740,7 +740,7 @@ export function DialoguePanel({ node, characters, variables, assets, scenes, onU
                     onClick={() => updateVisual({ characterNamePosition: pos.value })}
                     className={`py-1 px-1 rounded text-[10px] transition-all ${
                       (visual.characterNamePosition || 'top') === pos.value
-                        ? 'bg-pink-500 text-white'
+                        ? 'bg-primary text-white'
                         : 'bg-muted hover:bg-muted/80'
                     }`}
                   >

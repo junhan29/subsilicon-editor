@@ -22,11 +22,11 @@ export const CREATOR_INPUT_TYPE_LABELS: Record<CreatorInputType, string> = {
 const CREATOR_INPUT_TYPES: CreatorInputType[] = ['inspiration', 'outline', 'setting', 'correction', 'chat']
 
 const TYPE_BADGE_COLORS: Record<CreatorInputType, string> = {
-  inspiration: 'text-amber-300 bg-amber-500/15 border-amber-500/30',
+  inspiration: 'text-gold-400 bg-gold-400/15 border-gold-400/30',
   outline: 'text-cyan-300 bg-cyan-500/15 border-cyan-500/30',
   setting: 'text-emerald-300 bg-emerald-500/15 border-emerald-500/30',
-  correction: 'text-red-300 bg-red-500/15 border-red-500/30',
-  chat: 'text-slate-300 bg-slate-500/15 border-slate-500/30',
+  correction: 'text-red-300 bg-primary/15 border-primary/30',
+  chat: 'text-foreground bg-slate-500/15 border-slate-500/30',
 }
 
 interface CreatorInputPanelProps {
@@ -98,22 +98,22 @@ export function CreatorInputPanel({ workId, onInject, refreshKey = 0, useInConte
   }
 
   return (
-    <div className="shrink-0 border-t border-slate-700/40 bg-slate-900/40">
+    <div className="shrink-0 border-t border-border/40 bg-card/40">
       {/* 面板头部：折叠开关 + 标题 + 计数 + 「生成时引用」开关 */}
       <div className="flex items-center gap-2 px-3 py-1.5">
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
-          className="flex items-center gap-1.5 text-[11px] text-slate-400 hover:text-slate-200 transition-colors"
+          className="flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
           title={expanded ? '收起灵感库' : '展开灵感库（查看 AI 对话自动沉淀的输入记录）'}
         >
           {expanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-          <BookOpen className="w-3.5 h-3.5 text-amber-400/80" />
+          <BookOpen className="w-3.5 h-3.5 text-gold-400/80" />
           灵感库
-          <span className="text-[9px] text-slate-500">({entries.length})</span>
+          <span className="text-[9px] text-muted-foreground">({entries.length})</span>
         </button>
         <label
-          className="ml-auto flex items-center gap-1 text-[9px] text-slate-500 cursor-pointer select-none"
+          className="ml-auto flex items-center gap-1 text-[9px] text-muted-foreground cursor-pointer select-none"
           title="开启后，AI 对话与生成时会自动把输入库中最近的灵感/设定等注入上下文，供 AI 复用"
         >
           <input
@@ -128,35 +128,35 @@ export function CreatorInputPanel({ workId, onInject, refreshKey = 0, useInConte
 
       {/* 面板主体：搜索 + 条目列表 */}
       {expanded && (
-        <div className="border-t border-slate-700/40 max-h-56 overflow-y-auto px-3 py-2 space-y-2">
+        <div className="border-t border-border/40 max-h-56 overflow-y-auto px-3 py-2 space-y-2">
           <div className="relative">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-500" />
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="搜索输入内容……"
-              className="w-full text-[11px] rounded border border-slate-600 bg-slate-800/60 pl-6 pr-2 py-1 text-white placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-500/40"
+              className="w-full text-[11px] rounded border border-border bg-muted/60 pl-6 pr-2 py-1 text-white placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-amber-500/40"
             />
           </div>
 
           {filtered.length === 0 ? (
-            <p className="text-[10px] text-slate-500 leading-relaxed py-2 text-center">
+            <p className="text-[10px] text-muted-foreground leading-relaxed py-2 text-center">
               还没有记录。在 AI 对话中发送消息会自动沉淀到这里，用于后续生成参考。
             </p>
           ) : (
             <ul className="space-y-1.5">
               {filtered.map((e) => (
-                <li key={e.id} className="rounded border border-slate-700/50 bg-slate-800/40 p-2">
+                <li key={e.id} className="rounded border border-border/50 bg-muted/40 p-2">
                   <div className="flex items-center gap-1.5 mb-1">
                     <span className={`text-[9px] px-1.5 py-0.5 rounded border ${TYPE_BADGE_COLORS[e.type]}`}>
                       {CREATOR_INPUT_TYPE_LABELS[e.type]}
                     </span>
-                    <span className="text-[9px] text-slate-500">{formatTime(e.createdAt)}</span>
+                    <span className="text-[9px] text-muted-foreground">{formatTime(e.createdAt)}</span>
                     <div className="ml-auto flex items-center gap-1.5">
                       <select
                         value={e.type}
                         onChange={(ev) => handleTypeChange(e.id, ev.target.value as CreatorInputType)}
-                        className="text-[9px] rounded border border-slate-600 bg-slate-700/50 text-slate-300 px-1 py-0.5 focus:outline-none"
+                        className="text-[9px] rounded border border-border bg-secondary/50 text-foreground px-1 py-0.5 focus:outline-none"
                         title="修改类型"
                       >
                         {CREATOR_INPUT_TYPES.map((t) => (
@@ -166,7 +166,7 @@ export function CreatorInputPanel({ workId, onInject, refreshKey = 0, useInConte
                       <button
                         type="button"
                         onClick={() => handleInject(e)}
-                        className="text-[9px] px-1.5 py-0.5 rounded border border-amber-500/30 text-amber-400/90 hover:bg-amber-500/15 transition-colors"
+                        className="text-[9px] px-1.5 py-0.5 rounded border border-gold-400/30 text-gold-400/90 hover:bg-gold-400/15 transition-colors"
                         title="把这条内容注入当前对话输入框"
                       >
                         注入
@@ -174,14 +174,14 @@ export function CreatorInputPanel({ workId, onInject, refreshKey = 0, useInConte
                       <button
                         type="button"
                         onClick={() => handleDelete(e)}
-                        className="p-0.5 rounded text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                        className="p-0.5 rounded text-muted-foreground hover:text-red-400 hover:bg-primary/10 transition-colors"
                         title="删除这条记录"
                       >
                         <Trash2 className="w-3 h-3" />
                       </button>
                     </div>
                   </div>
-                  <p className="text-[10px] text-slate-300 leading-snug line-clamp-2 whitespace-pre-wrap break-all">{e.content}</p>
+                  <p className="text-[10px] text-foreground leading-snug line-clamp-2 whitespace-pre-wrap break-all">{e.content}</p>
                 </li>
               ))}
             </ul>

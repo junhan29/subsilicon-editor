@@ -213,16 +213,16 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
           <div className="p-6 max-w-2xl space-y-6">
             <div>
               <div className="flex items-center gap-2 mb-4">
-                <div className="w-6 h-6 rounded-md bg-gradient-to-br from-amber-500/30 to-cyan-400/30 flex items-center justify-center">
-                  <Cpu className="w-3.5 h-3.5 text-amber-300" />
+                <div className="w-6 h-6 rounded-md bg-gradient-to-br from-gold-400/30 to-cyan-400/30 flex items-center justify-center">
+                  <Cpu className="w-3.5 h-3.5 text-gold-400" />
                 </div>
                 <h3 className="text-sm font-semibold text-[hsl(var(--foreground))]">{assistantName}服务配置</h3>
               </div>
               <div className="space-y-4">
                 <div className="flex items-center justify-between p-3 rounded-lg bg-[hsl(var(--card))] border border-[hsl(var(--border))]">
                   <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-md bg-gradient-to-br from-amber-500/20 to-cyan-400/20 flex items-center justify-center">
-                      <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                    <div className="w-7 h-7 rounded-md bg-gradient-to-br from-gold-400/20 to-cyan-400/20 flex items-center justify-center">
+                      <Sparkles className="w-3.5 h-3.5 text-gold-400" />
                     </div>
                     <div>
                       <p className="text-xs font-medium text-[hsl(var(--foreground))]">启用{assistantName}功能</p>
@@ -364,7 +364,7 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
               <h3 className="text-sm font-semibold text-[hsl(var(--foreground))] mb-4">关于 SubSilicon Editor</h3>
               <div className="p-4 rounded-lg bg-[hsl(var(--card))] border border-[hsl(var(--border))] space-y-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-primary flex items-center justify-center">
                     <Sparkles className="w-6 h-6 text-white" />
                   </div>
                   <div>

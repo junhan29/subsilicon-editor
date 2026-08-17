@@ -71,7 +71,7 @@ export function AssetPanel({ characters, onAddLayer }: AssetPanelProps) {
                 draggable
                 onDragStart={(e) => handleDragStart(e, 'background', item)}
                 onClick={() => handleAddClick('background', item)}
-                className="group relative aspect-video rounded-lg overflow-hidden border border-slate-700 hover:border-pink-500 cursor-grab active:cursor-grabbing transition-colors"
+                className="group relative aspect-video rounded-lg overflow-hidden border border-border hover:border-primary cursor-grab active:cursor-grabbing transition-colors"
               >
                 <img src={item.url} alt={item.name} className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -96,7 +96,7 @@ export function AssetPanel({ characters, onAddLayer }: AssetPanelProps) {
                 draggable
                 onDragStart={(e) => handleDragStart(e, 'image', item)}
                 onClick={() => handleAddClick('image', item)}
-                className="group relative aspect-square rounded-lg overflow-hidden border border-slate-700 hover:border-pink-500 cursor-grab active:cursor-grabbing transition-colors bg-slate-800/50"
+                className="group relative aspect-square rounded-lg overflow-hidden border border-border hover:border-primary cursor-grab active:cursor-grabbing transition-colors bg-muted/50"
               >
                 <img src={item.url} alt={item.name} className="w-full h-full object-contain p-2" />
                 <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-1 py-0.5">
@@ -115,7 +115,7 @@ export function AssetPanel({ characters, onAddLayer }: AssetPanelProps) {
         return (
           <div className="space-y-2">
             {characters.length === 0 ? (
-              <div className="text-center py-8 text-slate-500 text-xs">
+              <div className="text-center py-8 text-muted-foreground text-xs">
                 暂无角色<br />
                 先在角色面板添加角色
               </div>
@@ -127,7 +127,7 @@ export function AssetPanel({ characters, onAddLayer }: AssetPanelProps) {
                     draggable
                     onDragStart={(e) => handleDragStart(e, 'character', { characterId: char.id, name: char.name, avatar: char.avatar })}
                     onClick={() => handleAddClick('character', { characterId: char.id, name: char.name, avatar: char.avatar })}
-                    className="group relative aspect-[3/4] rounded-lg overflow-hidden border border-slate-700 hover:border-pink-500 cursor-grab active:cursor-grabbing transition-colors"
+                    className="group relative aspect-[3/4] rounded-lg overflow-hidden border border-border hover:border-primary cursor-grab active:cursor-grabbing transition-colors"
                   >
                     <img src={char.avatar} alt={char.name} className="w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
@@ -157,7 +157,7 @@ export function AssetPanel({ characters, onAddLayer }: AssetPanelProps) {
                 draggable
                 onDragStart={(e) => handleDragStart(e, 'effect', item)}
                 onClick={() => handleAddClick('effect', item)}
-                className="group relative aspect-square rounded-lg overflow-hidden border border-slate-700 hover:border-pink-500 cursor-grab active:cursor-grabbing transition-colors bg-slate-800/50"
+                className="group relative aspect-square rounded-lg overflow-hidden border border-border hover:border-primary cursor-grab active:cursor-grabbing transition-colors bg-muted/50"
               >
                 <img src={item.url} alt={item.name} className="w-full h-full object-cover mix-screen" />
                 <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-1 py-0.5">
@@ -172,10 +172,10 @@ export function AssetPanel({ characters, onAddLayer }: AssetPanelProps) {
       case 'upload':
         return (
           <div className="space-y-3">
-            <label className="block border-2 border-dashed border-slate-700 rounded-lg p-4 text-center hover:border-pink-500/50 transition-colors cursor-pointer">
-              <Upload className="w-6 h-6 text-slate-500 mx-auto mb-2" />
-              <p className="text-xs text-slate-400">点击或拖拽上传图片</p>
-              <p className="text-[10px] text-slate-600 mt-1">支持 JPG/PNG/WebP</p>
+            <label className="block border-2 border-dashed border-border rounded-lg p-4 text-center hover:border-primary/50 transition-colors cursor-pointer">
+              <Upload className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
+              <p className="text-xs text-muted-foreground">点击或拖拽上传图片</p>
+              <p className="text-[10px] text-muted-foreground mt-1">支持 JPG/PNG/WebP</p>
               <input
                 type="file"
                 accept="image/*"
@@ -196,7 +196,7 @@ export function AssetPanel({ characters, onAddLayer }: AssetPanelProps) {
                 }}
               />
             </label>
-            <p className="text-[10px] text-slate-600 text-center">
+            <p className="text-[10px] text-muted-foreground text-center">
               上传的图片会自动添加到场景中
             </p>
           </div>
@@ -205,21 +205,21 @@ export function AssetPanel({ characters, onAddLayer }: AssetPanelProps) {
   }
 
   return (
-    <div className="w-52 flex flex-col h-full bg-slate-900 border-r border-slate-800">
-      <div className="p-2 border-b border-slate-800">
+    <div className="w-52 flex flex-col h-full bg-card border-r border-border">
+      <div className="p-2 border-b border-border">
         <div className="relative">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="搜索素材..."
-            className="w-full pl-7 pr-2 py-1.5 text-xs bg-slate-800 border border-slate-700 rounded-md text-white placeholder-slate-500 focus:outline-none focus:border-pink-500"
+            className="w-full pl-7 pr-2 py-1.5 text-xs bg-muted border border-border rounded-md text-white placeholder-slate-500 focus:outline-none focus:border-primary"
           />
         </div>
       </div>
 
-      <div className="flex border-b border-slate-800 overflow-x-auto">
+      <div className="flex border-b border-border overflow-x-auto">
         {categories.map((cat) => {
           const Icon = cat.icon
           return (
@@ -228,8 +228,8 @@ export function AssetPanel({ characters, onAddLayer }: AssetPanelProps) {
               onClick={() => setActiveCategory(cat.id)}
               className={`flex-1 min-w-0 py-2 flex flex-col items-center gap-0.5 text-[10px] transition-colors ${
                 activeCategory === cat.id
-                  ? 'bg-slate-800 text-pink-400 border-b-2 border-pink-500'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+                  ? 'bg-muted text-primary border-b-2 border-primary'
+                  : 'text-muted-foreground hover:text-white hover:bg-muted/50'
               }`}
             >
               <Icon className="w-4 h-4" />

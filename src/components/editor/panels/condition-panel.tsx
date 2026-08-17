@@ -112,8 +112,8 @@ export function ConditionPanel({ node, variables = [], onUpdateNode }: BasePanel
       </div>
 
       {variables.length === 0 && (
-        <div className="rounded-md bg-amber-500/10 border border-amber-500/30 p-2">
-          <p className="text-[10px] text-amber-500">
+        <div className="rounded-md bg-gold-400/10 border border-gold-400/30 p-2">
+          <p className="text-[10px] text-gold-400">
             请先在变量管理中定义变量，才能使用可视化条件编辑
           </p>
         </div>

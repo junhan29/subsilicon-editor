@@ -88,7 +88,7 @@ function CgNodeComponent({ data, selected }: any) {
             {Math.round(data.duration / 1000)}s
           </span>
         ) : (
-          <span className="text-[9px] bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-300 px-1.5 py-0.5 rounded-full">
+          <span className="text-[9px] bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-gold-400 px-1.5 py-0.5 rounded-full">
             点击继续
           </span>
         )}

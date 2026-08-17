@@ -62,7 +62,7 @@ function CharacterAIEnhance({ char, onUpdateCharacter }: { char: StoryCharacter;
     }
   }
 
-  const buttonClass = "px-2 py-1 text-[10px] rounded bg-amber-500/10 text-amber-600 border border-amber-500/20 hover:bg-amber-500/20 transition-colors disabled:opacity-50 flex items-center gap-1"
+  const buttonClass = "px-2 py-1 text-[10px] rounded bg-gold-400/10 text-amber-600 border border-gold-400/20 hover:bg-gold-400/20 transition-colors disabled:opacity-50 flex items-center gap-1"
 
   return (
     <div className="flex flex-wrap gap-1">
@@ -353,7 +353,7 @@ function PropertyPanel({
                   {tag}
                   <button
                     onClick={() => onUpdateTags?.(tags.filter((t) => t !== tag))}
-                    className="hover:text-red-500 transition-colors"
+                    className="hover:text-primary transition-colors"
                     title="移除标签"
                   >
                     <X className="w-3 h-3" />
@@ -400,7 +400,7 @@ function PropertyPanel({
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
-                <BookOpen className="w-3.5 h-3.5 text-amber-400" />
+                <BookOpen className="w-3.5 h-3.5 text-gold-400" />
                 <Label className="text-xs">作品核心设定</Label>
               </div>
               <button
@@ -408,7 +408,7 @@ function PropertyPanel({
                   saveWorkPremise(workId, workPremise)
                   showToast('success', workPremise.trim() ? '核心设定已保存（AI 对话时自动带入）' : '核心设定已清空')
                 }}
-                className="flex items-center gap-1 px-2 py-1 text-[10px] rounded bg-amber-500/10 text-amber-500 border border-amber-500/20 hover:bg-amber-500/20 transition-colors"
+                className="flex items-center gap-1 px-2 py-1 text-[10px] rounded bg-gold-400/10 text-gold-400 border border-gold-400/20 hover:bg-gold-400/20 transition-colors"
               >
                 <Check className="w-3 h-3" />
                 保存
@@ -461,7 +461,7 @@ function PropertyPanel({
                     <select
                       value={v.type}
                       onChange={(e) => onUpdateVariables?.(variables.map((vv) => vv.id === v.id ? { ...vv, type: e.target.value as 'number' | 'string' | 'boolean' } : vv))}
-                      className="h-6 text-xs rounded-md border border-slate-600 bg-slate-700 px-2 text-white"
+                      className="h-6 text-xs rounded-md border border-border bg-secondary px-2 text-white"
                     >
                       <option value="number">数字</option>
                       <option value="string">文本</option>
@@ -532,7 +532,7 @@ function PropertyPanel({
                         <select
                           value={char.gender || 'unknown'}
                           onChange={(e) => onUpdateCharacter({ ...char, gender: e.target.value as CharacterGender })}
-                          className="w-full h-7 text-xs rounded-md border border-slate-600 bg-slate-700 px-2 text-white focus:outline-none focus:ring-2 focus:ring-pink-500/50"
+                          className="w-full h-7 text-xs rounded-md border border-border bg-secondary px-2 text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
                         >
                           <option value="male">男</option>
                           <option value="female">女</option>
@@ -631,7 +631,7 @@ function PropertyPanel({
                         <select
                           value={char.speech?.tone || '温和'}
                           onChange={(e) => onUpdateCharacter({ ...char, speech: { ...char.speech, tone: e.target.value } })}
-                          className="w-full h-7 text-xs rounded-md border border-slate-600 bg-slate-700 px-2 text-white focus:outline-none focus:ring-2 focus:ring-pink-500/50"
+                          className="w-full h-7 text-xs rounded-md border border-border bg-secondary px-2 text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
                         >
                           {SPEECH_TONES.map((tone) => (
                             <option key={tone} value={tone}>{tone}</option>
@@ -643,7 +643,7 @@ function PropertyPanel({
                         <select
                           value={char.speech?.rhythm || '正常'}
                           onChange={(e) => onUpdateCharacter({ ...char, speech: { ...char.speech, rhythm: e.target.value } })}
-                          className="w-full h-7 text-xs rounded-md border border-slate-600 bg-slate-700 px-2 text-white focus:outline-none focus:ring-2 focus:ring-pink-500/50"
+                          className="w-full h-7 text-xs rounded-md border border-border bg-secondary px-2 text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
                         >
                           {SPEECH_RHYTHMS.map((rhythm) => (
                             <option key={rhythm} value={rhythm}>{rhythm}</option>
@@ -671,7 +671,7 @@ function PropertyPanel({
                   {/* 创作助理增强 */}
                   <div className="space-y-1.5">
                     <Label className="text-[10px] flex items-center gap-1">
-                      <Sparkles className="w-3 h-3 text-amber-500" />
+                      <Sparkles className="w-3 h-3 text-gold-400" />
                       创作助理辅助
                     </Label>
                     <CharacterAIEnhance char={char} onUpdateCharacter={onUpdateCharacter} />

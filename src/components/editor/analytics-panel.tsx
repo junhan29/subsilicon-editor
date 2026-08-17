@@ -111,7 +111,7 @@ export function AnalyticsPanel() {
     <div className="h-full flex flex-col">
       <div className="flex items-center justify-between p-4 border-b border-border">
         <div className="flex items-center gap-2">
-          <BarChart3 className="w-5 h-5 text-amber-500" />
+          <BarChart3 className="w-5 h-5 text-gold-400" />
           <h3 className="font-medium">读者行为分析</h3>
         </div>
         <div className="flex items-center gap-2">
@@ -141,7 +141,7 @@ export function AnalyticsPanel() {
 
           {loading && (
             <div className="flex items-center justify-center py-8">
-              <RefreshCw className="w-6 h-6 animate-spin text-amber-500" />
+              <RefreshCw className="w-6 h-6 animate-spin text-gold-400" />
             </div>
           )}
 
@@ -153,11 +153,11 @@ export function AnalyticsPanel() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-xs text-muted-foreground">总访问次数</p>
-                        <p className="text-2xl font-bold text-amber-500 mt-1">
+                        <p className="text-2xl font-bold text-gold-400 mt-1">
                           {analytics.totalSessions}
                         </p>
                       </div>
-                      <Users className="w-8 h-8 text-amber-500/20" />
+                      <Users className="w-8 h-8 text-gold-400/20" />
                     </div>
                   </CardContent>
                 </Card>
@@ -209,7 +209,7 @@ export function AnalyticsPanel() {
                 <Card className="border-border">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm flex items-center gap-2">
-                      <BarChart3 className="w-4 h-4 text-amber-500" />
+                      <BarChart3 className="w-4 h-4 text-gold-400" />
                       节点访问统计
                     </CardTitle>
                   </CardHeader>
@@ -264,7 +264,7 @@ export function AnalyticsPanel() {
                 <Card className="border-border">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm flex items-center gap-2">
-                      <TrendingDown className="w-4 h-4 text-red-500" />
+                      <TrendingDown className="w-4 h-4 text-primary" />
                       读者流失点
                     </CardTitle>
                   </CardHeader>
@@ -445,7 +445,7 @@ export function AnalyticsPanel() {
 
               <Button
                 variant="outline"
-                className="w-full border-red-500/30 text-red-500 hover:bg-red-500/10"
+                className="w-full border-primary/30 text-primary hover:bg-primary/10"
                 onClick={handleClearData}
                 disabled={loading}
               >
@@ -463,7 +463,7 @@ export function AnalyticsPanel() {
             </div>
           )}
 
-          <div className="p-3 bg-amber-500/10 rounded-lg text-xs text-amber-600">
+          <div className="p-3 bg-gold-400/10 rounded-lg text-xs text-amber-600">
             <p className="font-medium mb-1">去中心化模式说明</p>
             <ul className="space-y-1 list-disc list-inside">
               <li>作品导出为 .story.html 文件后，平台无法收集读者数据</li>

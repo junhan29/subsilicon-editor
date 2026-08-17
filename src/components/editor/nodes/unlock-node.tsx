@@ -15,7 +15,7 @@ function UnlockNodeComponent({ data, selected }: any) {
 
   return (
     <div
-      className={`min-w-[200px] max-w-[280px] rounded-lg border-2 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 shadow-sm transition-all relative hover:shadow-md hover:border-slate-600 ${
+      className={`min-w-[200px] max-w-[280px] rounded-lg border-2 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 shadow-sm transition-all relative hover:shadow-md hover:border-border ${
         selected
           ? 'border-orange-400 ring-2 ring-orange-400/50 shadow-lg shadow-orange-500/20 dark:border-orange-400'
           : 'border-orange-200 dark:border-orange-800'
@@ -27,7 +27,7 @@ function UnlockNodeComponent({ data, selected }: any) {
       <Handle
         type="target"
         position={Position.Top}
-        className="!w-4 !h-4 !rounded-full !z-20 !bg-card !border-2 !border-orange-500 !-top-2 !transition-all hover:!scale-125 hover:!shadow-lg hover:!shadow-orange-500/30 dark:!bg-slate-900 dark:!border-orange-400"
+        className="!w-4 !h-4 !rounded-full !z-20 !bg-card !border-2 !border-orange-500 !-top-2 !transition-all hover:!scale-125 hover:!shadow-lg hover:!shadow-orange-500/30 dark:!bg-card dark:!border-orange-400"
       />
 
       <div className="pl-3.5 pr-3 pt-3 pb-3">
@@ -47,7 +47,7 @@ function UnlockNodeComponent({ data, selected }: any) {
         </div>
 
         {/* 解锁描述 */}
-        <div className="bg-white/60 dark:bg-slate-900/60 rounded-md p-2 mb-2">
+        <div className="bg-white/60 dark:bg-card/60 rounded-md p-2 mb-2">
           <p className="text-xs text-orange-900 dark:text-orange-100 line-clamp-2 leading-relaxed">
             {data.description || '点击编辑解锁描述...'}
           </p>

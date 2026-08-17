@@ -116,14 +116,14 @@ export function VariablePanel({ variables = [], onUpdateVariables }: VariablePan
     switch (v.type) {
       case 'boolean':
         return (
-          <span className={`px-1.5 py-0.5 rounded text-[10px] ${value ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+          <span className={`px-1.5 py-0.5 rounded text-[10px] ${value ? 'bg-green-500/20 text-green-400' : 'bg-primary/20 text-red-400'}`}>
             {value ? '是' : '否'}
           </span>
         )
       case 'number':
         return <span className="text-cyan-400 font-mono">{String(value)}</span>
       default:
-        return <span className="text-slate-300 truncate max-w-[120px]">{String(value)}</span>
+        return <span className="text-foreground truncate max-w-[120px]">{String(value)}</span>
     }
   }
 
@@ -134,7 +134,7 @@ export function VariablePanel({ variables = [], onUpdateVariables }: VariablePan
         <div className="flex items-center gap-2">
           <BarChart3 className="w-4 h-4 text-cyan-400" />
           <h3 className="text-sm font-semibold text-white">变量管理</h3>
-          <span className="text-xs text-slate-500">({variables.length})</span>
+          <span className="text-xs text-muted-foreground">({variables.length})</span>
         </div>
         <button
           onClick={() => setShowAddForm(!showAddForm)}
@@ -147,33 +147,33 @@ export function VariablePanel({ variables = [], onUpdateVariables }: VariablePan
 
       {/* 添加变量表单 */}
       {showAddForm && (
-        <div className="p-3 bg-slate-800/50 rounded-lg border border-slate-700 space-y-3">
+        <div className="p-3 bg-muted/50 rounded-lg border border-border space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-white">添加新变量</span>
-            <button onClick={() => setShowAddForm(false)} className="text-slate-500 hover:text-slate-300">
+            <button onClick={() => setShowAddForm(false)} className="text-muted-foreground hover:text-foreground">
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
 
           <div className="space-y-2">
             <div>
-              <label className="text-[10px] text-slate-500 block mb-1">变量名</label>
+              <label className="text-[10px] text-muted-foreground block mb-1">变量名</label>
               <input
                 type="text"
                 value={newVarName}
                 onChange={(e) => setNewVarName(e.target.value)}
                 placeholder="例如：好感度、金币数量"
-                className="w-full px-2 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-md text-white placeholder:text-slate-600 focus:outline-none focus:border-cyan-500"
+                className="w-full px-2 py-1.5 text-xs bg-card border border-border rounded-md text-white placeholder:text-muted-foreground focus:outline-none focus:border-cyan-500"
               />
             </div>
 
             <div className="flex gap-2">
               <div className="flex-1">
-                <label className="text-[10px] text-slate-500 block mb-1">类型</label>
+                <label className="text-[10px] text-muted-foreground block mb-1">类型</label>
                 <select
                   value={newVarType}
                   onChange={(e) => setNewVarType(e.target.value as VariableType)}
-                  className="w-full px-2 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-md text-white focus:outline-none focus:border-cyan-500"
+                  className="w-full px-2 py-1.5 text-xs bg-card border border-border rounded-md text-white focus:outline-none focus:border-cyan-500"
                 >
                   <option value="string">字符串</option>
                   <option value="number">数字</option>
@@ -181,11 +181,11 @@ export function VariablePanel({ variables = [], onUpdateVariables }: VariablePan
                 </select>
               </div>
               <div className="flex-1">
-                <label className="text-[10px] text-slate-500 block mb-1">分类</label>
+                <label className="text-[10px] text-muted-foreground block mb-1">分类</label>
                 <select
                   value={newVarCategory}
                   onChange={(e) => setNewVarCategory(e.target.value)}
-                  className="w-full px-2 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-md text-white focus:outline-none focus:border-cyan-500"
+                  className="w-full px-2 py-1.5 text-xs bg-card border border-border rounded-md text-white focus:outline-none focus:border-cyan-500"
                 >
                   <option value="角色属性">角色属性</option>
                   <option value="剧情进度">剧情进度</option>
@@ -196,23 +196,23 @@ export function VariablePanel({ variables = [], onUpdateVariables }: VariablePan
             </div>
 
             <div>
-              <label className="text-[10px] text-slate-500 block mb-1">
+              <label className="text-[10px] text-muted-foreground block mb-1">
                 初始值
-                {newVarType === 'boolean' && <span className="text-slate-600 ml-1">（true/false）</span>}
+                {newVarType === 'boolean' && <span className="text-muted-foreground ml-1">（true/false）</span>}
               </label>
               <input
                 type={newVarType === 'number' ? 'number' : 'text'}
                 value={newVarInitial}
                 onChange={(e) => setNewVarInitial(e.target.value)}
                 placeholder={newVarType === 'boolean' ? 'true 或 false' : newVarType === 'number' ? '0' : '初始值'}
-                className="w-full px-2 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-md text-white placeholder:text-slate-600 focus:outline-none focus:border-cyan-500"
+                className="w-full px-2 py-1.5 text-xs bg-card border border-border rounded-md text-white placeholder:text-muted-foreground focus:outline-none focus:border-cyan-500"
               />
             </div>
 
             <button
               onClick={handleAddVariable}
               disabled={!newVarName.trim()}
-              className="w-full py-1.5 text-xs bg-cyan-500 hover:bg-cyan-600 disabled:bg-slate-700 disabled:text-slate-500 text-white rounded-md transition-colors"
+              className="w-full py-1.5 text-xs bg-cyan-500 hover:bg-cyan-600 disabled:bg-secondary disabled:text-muted-foreground text-white rounded-md transition-colors"
             >
               添加变量
             </button>
@@ -223,7 +223,7 @@ export function VariablePanel({ variables = [], onUpdateVariables }: VariablePan
       {/* 预设快捷变量 */}
       {variables.length === 0 && !showAddForm && (
         <div className="space-y-2">
-          <p className="text-xs text-slate-500 text-center mb-3">快速添加常用变量</p>
+          <p className="text-xs text-muted-foreground text-center mb-3">快速添加常用变量</p>
           <div className="flex flex-wrap gap-1.5">
             {[
               { name: '好感度', type: 'number', category: '角色属性', initial: '0' },
@@ -240,7 +240,7 @@ export function VariablePanel({ variables = [], onUpdateVariables }: VariablePan
                   setNewVarCategory(preset.category)
                   setShowAddForm(true)
                 }}
-                className="px-2 py-1 text-[10px] rounded-md border border-slate-700 bg-slate-800/50 hover:bg-slate-700 hover:border-cyan-500/50 text-slate-300 transition-colors"
+                className="px-2 py-1 text-[10px] rounded-md border border-border bg-muted/50 hover:bg-secondary hover:border-cyan-500/50 text-foreground transition-colors"
               >
                 + {preset.name}
               </button>
@@ -256,7 +256,7 @@ export function VariablePanel({ variables = [], onUpdateVariables }: VariablePan
             {/* 分类标题 */}
             <button
               onClick={() => toggleCategory(category)}
-              className="flex items-center gap-1.5 w-full py-1.5 text-xs text-slate-400 hover:text-white transition-colors"
+              className="flex items-center gap-1.5 w-full py-1.5 text-xs text-muted-foreground hover:text-white transition-colors"
             >
               {expandedCategories[category] ? (
                 <ChevronDown className="w-3 h-3" />
@@ -268,7 +268,7 @@ export function VariablePanel({ variables = [], onUpdateVariables }: VariablePan
                 style={{ backgroundColor: CATEGORY_COLORS[category] || '#6b7280' }}
               />
               <span>{category}</span>
-              <span className="text-slate-600">({vars.length})</span>
+              <span className="text-muted-foreground">({vars.length})</span>
             </button>
 
             {/* 分类下的变量 */}
@@ -277,17 +277,17 @@ export function VariablePanel({ variables = [], onUpdateVariables }: VariablePan
                 {vars.map((v) => (
                   <div
                     key={v.id}
-                    className="group flex items-center gap-2 p-2 bg-slate-800/30 hover:bg-slate-800/60 rounded-md border border-transparent hover:border-slate-700 transition-colors"
+                    className="group flex items-center gap-2 p-2 bg-muted/30 hover:bg-muted/60 rounded-md border border-transparent hover:border-border transition-colors"
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-medium text-white truncate">{v.name}</span>
-                        <span className="text-[10px] text-slate-600">
+                        <span className="text-[10px] text-muted-foreground">
                           {v.type === 'string' ? '字' : v.type === 'number' ? '数' : '布尔'}
                         </span>
                       </div>
                       <div className="flex items-center gap-1 mt-0.5">
-                        <span className="text-[10px] text-slate-600">当前值:</span>
+                        <span className="text-[10px] text-muted-foreground">当前值:</span>
                         {renderVariableValue(v)}
                       </div>
                     </div>
@@ -296,14 +296,14 @@ export function VariablePanel({ variables = [], onUpdateVariables }: VariablePan
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
                         onClick={() => setEditingId(editingId === v.id ? null : v.id)}
-                        className="p-1 text-slate-500 hover:text-cyan-400 transition-colors"
+                        className="p-1 text-muted-foreground hover:text-cyan-400 transition-colors"
                         title="编辑"
                       >
                         <Edit3 className="w-3 h-3" />
                       </button>
                       <button
                         onClick={() => handleDeleteVariable(v.id)}
-                        className="p-1 text-slate-500 hover:text-red-400 transition-colors"
+                        className="p-1 text-muted-foreground hover:text-red-400 transition-colors"
                         title="删除"
                       >
                         <Trash2 className="w-3 h-3" />
@@ -319,9 +319,9 @@ export function VariablePanel({ variables = [], onUpdateVariables }: VariablePan
 
       {/* 内置变量说明 */}
       {variables.length > 0 && (
-        <div className="mt-4 p-3 bg-slate-900/50 rounded-lg border border-slate-800">
-          <p className="text-[10px] text-slate-600 leading-relaxed">
-            <span className="text-slate-500 font-medium">提示：</span>
+        <div className="mt-4 p-3 bg-card/50 rounded-lg border border-border">
+          <p className="text-[10px] text-muted-foreground leading-relaxed">
+            <span className="text-muted-foreground font-medium">提示：</span>
             变量可以在条件节点和选择节点中使用。例如：
             <code className="text-cyan-500 ml-1">好感度 {'>='} 60</code>
             或

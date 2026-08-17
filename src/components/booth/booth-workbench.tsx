@@ -65,8 +65,8 @@ interface BoothWorkbenchProps {
 }
 
 const inputCls =
-  'w-full h-9 text-sm rounded-lg border border-slate-600 bg-slate-700 px-3 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-pink-500/50'
-const labelCls = 'block text-xs text-slate-400 mb-1'
+  'w-full h-9 text-sm rounded-lg border border-border bg-secondary px-3 text-white placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50'
+const labelCls = 'block text-xs text-muted-foreground mb-1'
 
 export function BoothWorkbench({ onBack }: BoothWorkbenchProps) {
   const [booth, setBooth] = useState<Booth | null>(null)
@@ -275,8 +275,8 @@ export function BoothWorkbench({ onBack }: BoothWorkbenchProps) {
 
   if (loading || !booth) {
     return (
-      <div className="h-screen w-screen bg-slate-900 flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-pink-500 border-t-transparent rounded-full animate-spin" />
+      <div className="h-screen w-screen bg-card flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     )
   }
@@ -290,37 +290,37 @@ export function BoothWorkbench({ onBack }: BoothWorkbenchProps) {
   ]
 
   return (
-    <div className="h-screen w-screen bg-slate-900 flex flex-col overflow-hidden">
+    <div className="h-screen w-screen bg-card flex flex-col overflow-hidden">
       {/* 顶栏 */}
-      <header className="flex items-center gap-3 px-4 py-3 border-b border-slate-800 bg-slate-900/90 backdrop-blur shrink-0">
+      <header className="flex items-center gap-3 px-4 py-3 border-b border-border bg-card/90 backdrop-blur shrink-0">
         <button
           onClick={onBack}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground hover:text-white hover:bg-muted rounded-lg transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           返回
         </button>
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-gold-400 to-orange-600 flex items-center justify-center">
             <Store className="w-4 h-4 text-white" />
           </div>
           <h1 className="text-sm font-semibold text-white">摊位工作台</h1>
         </div>
-        <span className={`flex items-center gap-1 text-[10px] ${saved ? 'text-slate-500' : 'text-amber-400'}`}>
+        <span className={`flex items-center gap-1 text-[10px] ${saved ? 'text-muted-foreground' : 'text-gold-400'}`}>
           <Save className="w-3 h-3" />
           {saved ? '已保存' : '保存中…'}
         </span>
         <div className="ml-auto flex items-center gap-2">
           <button
             onClick={handlePreview}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg border border-slate-700 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-foreground hover:text-white hover:bg-muted rounded-lg border border-border transition-colors"
           >
             <Eye className="w-3.5 h-3.5" />
             摊位预览
           </button>
           <button
             onClick={handleExport}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg border border-slate-700 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-foreground hover:text-white hover:bg-muted rounded-lg border border-border transition-colors"
           >
             <Package className="w-3.5 h-3.5" />
             打包导出
@@ -328,7 +328,7 @@ export function BoothWorkbench({ onBack }: BoothWorkbenchProps) {
           <button
             onClick={handlePublish}
             disabled={publishing}
-            className="flex items-center gap-1.5 px-4 py-1.5 text-xs bg-pink-500 hover:bg-pink-600 text-white rounded-lg transition-colors disabled:opacity-50"
+            className="flex items-center gap-1.5 px-4 py-1.5 text-xs bg-primary hover:bg-primary/90 text-white rounded-lg transition-colors disabled:opacity-50"
           >
             {publishing ? (
               <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -342,16 +342,16 @@ export function BoothWorkbench({ onBack }: BoothWorkbenchProps) {
 
       <div className="flex-1 flex overflow-hidden">
         {/* 左侧配置 */}
-        <aside className="w-[380px] shrink-0 border-r border-slate-800 overflow-y-auto bg-slate-900/60">
-          <div className="p-3 border-b border-slate-800 flex gap-1 flex-wrap">
+        <aside className="w-[380px] shrink-0 border-r border-border overflow-y-auto bg-card/60">
+          <div className="p-3 border-b border-border flex gap-1 flex-wrap">
             {sections.map((s) => (
               <button
                 key={s.id}
                 onClick={() => setSection(s.id)}
                 className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
                   section === s.id
-                    ? 'bg-pink-500/15 text-pink-300 border border-pink-500/40'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800 border border-transparent'
+                    ? 'bg-primary/15 text-primary/80 border border-primary/40'
+                    : 'text-muted-foreground hover:text-white hover:bg-muted border border-transparent'
                 }`}
               >
                 {s.name}
@@ -375,7 +375,7 @@ export function BoothWorkbench({ onBack }: BoothWorkbenchProps) {
                 </Field>
                 <Field label="摊位简介">
                   <textarea
-                    className="w-full min-h-[84px] text-sm rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-pink-500/50 resize-y"
+                    className="w-full min-h-[84px] text-sm rounded-lg border border-border bg-secondary px-3 py-2 text-white placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-y"
                     value={booth.creator.bio}
                     onChange={(e) => updateCreator({ bio: e.target.value })}
                     placeholder="一句话介绍你的摊位与作品风格…"
@@ -436,7 +436,7 @@ export function BoothWorkbench({ onBack }: BoothWorkbenchProps) {
                 </Field>
                 <Field label="合规声明（默认即可）">
                   <textarea
-                    className="w-full min-h-[72px] text-xs rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-slate-300 focus:outline-none focus:ring-2 focus:ring-pink-500/50 resize-y"
+                    className="w-full min-h-[72px] text-xs rounded-lg border border-border bg-secondary px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-y"
                     value={booth.complianceNote || DEFAULT_COMPLIANCE_NOTE}
                     onChange={(e) => updateBooth({ complianceNote: e.target.value })}
                   />
@@ -446,23 +446,23 @@ export function BoothWorkbench({ onBack }: BoothWorkbenchProps) {
 
             {section === 'display' && (
               <>
-                <p className="text-xs text-slate-500 leading-relaxed">
+                <p className="text-xs text-muted-foreground leading-relaxed">
                   把作品摆上摊位。陈列顺序即摊位展示顺序，可设一件主推作品（高亮标注）。
                 </p>
                 {boothWorks.map(({ entry, work }, index) => (
-                  <div key={work.id} className="flex items-center gap-2 p-2.5 rounded-lg border border-slate-700/70 bg-slate-800/60">
+                  <div key={work.id} className="flex items-center gap-2 p-2.5 rounded-lg border border-border/70 bg-muted/60">
                     <div className="flex flex-col">
                       <button
                         onClick={() => moveWork(index, -1)}
                         disabled={index === 0}
-                        className="p-0.5 text-slate-500 hover:text-white disabled:opacity-30"
+                        className="p-0.5 text-muted-foreground hover:text-white disabled:opacity-30"
                       >
                         <ArrowUp className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => moveWork(index, 1)}
                         disabled={index === boothWorks.length - 1}
-                        className="p-0.5 text-slate-500 hover:text-white disabled:opacity-30"
+                        className="p-0.5 text-muted-foreground hover:text-white disabled:opacity-30"
                       >
                         <ArrowDown className="w-3.5 h-3.5" />
                       </button>
@@ -472,21 +472,21 @@ export function BoothWorkbench({ onBack }: BoothWorkbenchProps) {
                       title={booth.display.featuredId === work.id ? '取消主推' : '设为主推'}
                       className={`p-1.5 rounded-md transition-colors ${
                         booth.display.featuredId === work.id
-                          ? 'text-amber-400 bg-amber-500/10'
-                          : 'text-slate-600 hover:text-amber-400'
+                          ? 'text-gold-400 bg-gold-400/10'
+                          : 'text-muted-foreground hover:text-gold-400'
                       }`}
                     >
                       <Star className="w-4 h-4" fill={booth.display.featuredId === work.id ? 'currentColor' : 'none'} />
                     </button>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs text-white truncate">{work.name}</p>
-                      <p className="text-[10px] text-slate-500">
+                      <p className="text-[10px] text-muted-foreground">
                         {WORK_TYPE_NAMES[entry.workType] || entry.workType}
                       </p>
                     </div>
                     <button
                       onClick={() => removeWork(work.id)}
-                      className="p-1.5 rounded-md text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                      className="p-1.5 rounded-md text-muted-foreground hover:text-red-400 hover:bg-primary/10 transition-colors"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -494,24 +494,24 @@ export function BoothWorkbench({ onBack }: BoothWorkbenchProps) {
                 ))}
 
                 <div className="pt-1">
-                  <p className="text-xs text-slate-400 mb-2">待上架作品</p>
+                  <p className="text-xs text-muted-foreground mb-2">待上架作品</p>
                   {works
                     .filter((w) => !booth.display.order.includes(w.id))
                     .map((work) => (
                       <button
                         key={work.id}
                         onClick={() => addWork(work.id)}
-                        className="w-full flex items-center gap-2 p-2.5 rounded-lg border border-dashed border-slate-700 hover:border-pink-500/50 hover:bg-slate-800/60 transition-colors text-left"
+                        className="w-full flex items-center gap-2 p-2.5 rounded-lg border border-dashed border-border hover:border-primary/50 hover:bg-muted/60 transition-colors text-left"
                       >
-                        <Plus className="w-3.5 h-3.5 text-slate-500" />
-                        <span className="text-xs text-slate-300 truncate">{work.name}</span>
-                        <span className="ml-auto text-[10px] text-slate-600">
+                        <Plus className="w-3.5 h-3.5 text-muted-foreground" />
+                        <span className="text-xs text-foreground truncate">{work.name}</span>
+                        <span className="ml-auto text-[10px] text-muted-foreground">
                           {WORK_TYPE_NAMES[work.workType || 'interactive-narrative'] || work.workType}
                         </span>
                       </button>
                     ))}
                   {works.length === 0 && (
-                    <p className="text-xs text-slate-600 mt-2">还没有作品，先去创作模式做一本本子吧。</p>
+                    <p className="text-xs text-muted-foreground mt-2">还没有作品，先去创作模式做一本本子吧。</p>
                   )}
                 </div>
               </>
@@ -519,14 +519,14 @@ export function BoothWorkbench({ onBack }: BoothWorkbenchProps) {
 
             {section === 'pricing' && (
               <>
-                <p className="text-xs text-slate-500 leading-relaxed">
+                <p className="text-xs text-muted-foreground leading-relaxed">
                   为每件陈列作品配置试阅片段与价目。试阅片段是发布到展示墙的宣传物料，完整内容不托管在平台。
                 </p>
                 {boothWorks.length === 0 && (
-                  <p className="text-xs text-slate-600">先在「陈列管理」摆上作品。</p>
+                  <p className="text-xs text-muted-foreground">先在「陈列管理」摆上作品。</p>
                 )}
                 {boothWorks.map(({ entry, work }) => (
-                  <div key={work.id} className="p-3 rounded-lg border border-slate-700/70 bg-slate-800/60 space-y-3">
+                  <div key={work.id} className="p-3 rounded-lg border border-border/70 bg-muted/60 space-y-3">
                     <p className="text-xs font-medium text-white truncate">{work.name}</p>
                     <div className="grid grid-cols-2 gap-2">
                       <div>
@@ -568,7 +568,7 @@ export function BoothWorkbench({ onBack }: BoothWorkbenchProps) {
                         />
                       </div>
                     </div>
-                    <label className="flex items-center gap-2 text-xs text-slate-300">
+                    <label className="flex items-center gap-2 text-xs text-foreground">
                       <input
                         type="checkbox"
                         checked={entry.pricing.override}
@@ -619,23 +619,23 @@ export function BoothWorkbench({ onBack }: BoothWorkbenchProps) {
 
             {section === 'channels' && (
               <>
-                <p className="text-xs text-slate-500 leading-relaxed">
+                <p className="text-xs text-muted-foreground leading-relaxed">
                   聚合多渠道收款方式，展示在摊位预览与摊位页上。支付直达创作者，平台零参与。
                 </p>
 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-slate-300">收款码 / 账号</span>
+                    <span className="text-xs font-medium text-foreground">收款码 / 账号</span>
                     <button
                       onClick={() => addChannel('manual')}
-                      className="flex items-center gap-1 px-2 py-1 text-[10px] text-pink-300 hover:bg-pink-500/10 rounded-md transition-colors"
+                      className="flex items-center gap-1 px-2 py-1 text-[10px] text-primary/80 hover:bg-primary/10 rounded-md transition-colors"
                     >
                       <Plus className="w-3 h-3" />
                       添加
                     </button>
                   </div>
                   {booth.channels.manual.map((c) => (
-                    <div key={c.id} className="p-2.5 rounded-lg border border-slate-700/70 bg-slate-800/60 space-y-2">
+                    <div key={c.id} className="p-2.5 rounded-lg border border-border/70 bg-muted/60 space-y-2">
                       <div className="flex gap-2">
                         <select
                           className={`${inputCls} flex-1`}
@@ -650,7 +650,7 @@ export function BoothWorkbench({ onBack }: BoothWorkbenchProps) {
                         </select>
                         <button
                           onClick={() => removeChannel('manual', c.id)}
-                          className="p-1.5 text-slate-500 hover:text-red-400"
+                          className="p-1.5 text-muted-foreground hover:text-red-400"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -673,17 +673,17 @@ export function BoothWorkbench({ onBack }: BoothWorkbenchProps) {
 
                 <div className="space-y-2 pt-1">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-slate-300">第三方平台链接</span>
+                    <span className="text-xs font-medium text-foreground">第三方平台链接</span>
                     <button
                       onClick={() => addChannel('thirdParty')}
-                      className="flex items-center gap-1 px-2 py-1 text-[10px] text-pink-300 hover:bg-pink-500/10 rounded-md transition-colors"
+                      className="flex items-center gap-1 px-2 py-1 text-[10px] text-primary/80 hover:bg-primary/10 rounded-md transition-colors"
                     >
                       <Plus className="w-3 h-3" />
                       添加
                     </button>
                   </div>
                   {booth.channels.thirdParty.map((c) => (
-                    <div key={c.id} className="p-2.5 rounded-lg border border-slate-700/70 bg-slate-800/60 space-y-2">
+                    <div key={c.id} className="p-2.5 rounded-lg border border-border/70 bg-muted/60 space-y-2">
                       <div className="flex gap-2">
                         <select
                           className={`${inputCls} flex-1`}
@@ -698,7 +698,7 @@ export function BoothWorkbench({ onBack }: BoothWorkbenchProps) {
                         </select>
                         <button
                           onClick={() => removeChannel('thirdParty', c.id)}
-                          className="p-1.5 text-slate-500 hover:text-red-400"
+                          className="p-1.5 text-muted-foreground hover:text-red-400"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -780,7 +780,7 @@ function BoothPreview({
     <div className="max-w-3xl mx-auto">
       {/* 摊位横幅 */}
       <div
-        className="relative rounded-2xl overflow-hidden border border-slate-700 mb-5"
+        className="relative rounded-2xl overflow-hidden border border-border mb-5"
         style={{
           background:
             'linear-gradient(135deg, hsl(35 70% 50% / 0.28), transparent 45%, hsl(210 80% 50% / 0.22))',
@@ -794,20 +794,20 @@ function BoothPreview({
           />
         )}
         <div className="relative p-6 sm:p-8">
-          <span className="inline-flex items-center gap-1 text-[10px] px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-500 to-orange-600 text-white mb-3">
+          <span className="inline-flex items-center gap-1 text-[10px] px-2.5 py-1 rounded-full bg-gradient-to-r from-gold-400 to-orange-600 text-white mb-3">
             <Store className="w-3 h-3" />
             创作者摊位
           </span>
           <h2 className="text-2xl sm:text-3xl font-bold text-white mb-1 break-words">
             {booth.creator.handle || '我的摊位'}
           </h2>
-          {booth.profile.slogan && <p className="text-sm text-slate-300">{booth.profile.slogan}</p>}
+          {booth.profile.slogan && <p className="text-sm text-foreground">{booth.profile.slogan}</p>}
           {booth.profile.tags.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mt-3">
               {booth.profile.tags.map((t) => (
                 <span
                   key={t}
-                  className="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-slate-200 border border-white/10"
+                  className="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-foreground border border-white/10"
                 >
                   {t}
                 </span>
@@ -815,7 +815,7 @@ function BoothPreview({
             </div>
           )}
           {booth.creator.bio && (
-            <p className="text-xs text-slate-400 mt-3 leading-relaxed max-w-xl">{booth.creator.bio}</p>
+            <p className="text-xs text-muted-foreground mt-3 leading-relaxed max-w-xl">{booth.creator.bio}</p>
           )}
         </div>
       </div>
@@ -823,12 +823,12 @@ function BoothPreview({
       {/* 陈列作品 */}
       <section className="mb-5">
         <h3 className="text-sm font-medium text-white mb-3 flex items-center gap-2">
-          <BookOpenText className="w-4 h-4 text-amber-400" />
+          <BookOpenText className="w-4 h-4 text-gold-400" />
           陈列作品
-          <span className="text-[10px] text-slate-500 font-normal">{boothWorks.length} 件</span>
+          <span className="text-[10px] text-muted-foreground font-normal">{boothWorks.length} 件</span>
         </h3>
         {boothWorks.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-slate-700 p-8 text-center text-xs text-slate-600">
+          <div className="rounded-xl border border-dashed border-border p-8 text-center text-xs text-muted-foreground">
             摊位上还没有陈列作品
           </div>
         ) : (
@@ -839,16 +839,16 @@ function BoothPreview({
               return (
                 <div
                   key={work.id}
-                  className={`rounded-xl overflow-hidden border bg-slate-800/60 ${
-                    isFeatured ? 'border-amber-500/60 ring-1 ring-amber-500/30' : 'border-slate-700/70'
+                  className={`rounded-xl overflow-hidden border bg-muted/60 ${
+                    isFeatured ? 'border-gold-400/60 ring-1 ring-gold-400/30' : 'border-border/70'
                   }`}
                 >
-                  <div className="h-28 bg-gradient-to-br from-slate-700 to-slate-800 relative">
+                  <div className="h-28 bg-gradient-to-br from-secondary to-muted relative">
                     {cover ? (
                       <img src={cover} alt={work.name} className="w-full h-full object-cover" />
                     ) : null}
                     {isFeatured && (
-                      <span className="absolute top-2 left-2 flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-amber-500 text-white">
+                      <span className="absolute top-2 left-2 flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-gold-400 text-white">
                         <Star className="w-3 h-3" fill="currentColor" />
                         主推
                       </span>
@@ -856,7 +856,7 @@ function BoothPreview({
                   </div>
                   <div className="p-3">
                     <p className="text-xs font-medium text-white truncate">{work.name}</p>
-                    <p className="text-[10px] text-slate-500 mt-1">
+                    <p className="text-[10px] text-muted-foreground mt-1">
                       {WORK_TYPE_NAMES[entry.workType] || entry.workType} · {previewLabel(entry)} ·{' '}
                       {pricingLabel(entry)}
                     </p>
@@ -872,16 +872,16 @@ function BoothPreview({
       {(booth.channels.manual.length > 0 || booth.channels.thirdParty.length > 0) && (
         <section className="mb-5">
           <h3 className="text-sm font-medium text-white mb-3 flex items-center gap-2">
-            <MessageCircle className="w-4 h-4 text-pink-400" />
+            <MessageCircle className="w-4 h-4 text-primary" />
             收款方式
           </h3>
           <div className="flex flex-wrap gap-2">
             {booth.channels.manual
               .filter((c) => c.value.trim())
               .map((c) => (
-                <span key={c.id} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-[11px] text-slate-300">
+                <span key={c.id} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted border border-border text-[11px] text-foreground">
                   {c.label || c.kind}
-                  <span className="text-slate-500">{c.value}</span>
+                  <span className="text-muted-foreground">{c.value}</span>
                 </span>
               ))}
             {booth.channels.thirdParty
@@ -892,10 +892,10 @@ function BoothPreview({
                   href={c.link}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-[11px] text-slate-300 hover:border-pink-500/50 transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted border border-border text-[11px] text-foreground hover:border-primary/50 transition-colors"
                 >
                   {c.label || c.kind}
-                  <ExternalLink className="w-3 h-3 text-slate-500" />
+                  <ExternalLink className="w-3 h-3 text-muted-foreground" />
                 </a>
               ))}
           </div>
@@ -909,7 +909,7 @@ function BoothPreview({
             <MessageCircle className="w-4 h-4 text-sky-400" />
             联系创作者
           </h3>
-          <p className="text-xs text-slate-300 px-3 py-2 rounded-lg bg-slate-800 border border-slate-700">
+          <p className="text-xs text-foreground px-3 py-2 rounded-lg bg-muted border border-border">
             {booth.creator.contact}
           </p>
         </section>
@@ -917,8 +917,8 @@ function BoothPreview({
 
       {/* 摆摊结果 */}
       {publishResult && (
-        <section className="mb-5 rounded-xl border p-3 space-y-1.5 bg-slate-800/60 border-slate-700">
-          <p className={`text-xs font-medium ${publishResult.success ? 'text-emerald-400' : 'text-amber-400'}`}>
+        <section className="mb-5 rounded-xl border p-3 space-y-1.5 bg-muted/60 border-border">
+          <p className={`text-xs font-medium ${publishResult.success ? 'text-emerald-400' : 'text-gold-400'}`}>
             {publishResult.success ? '摆摊完成：全部作品已提交到展示墙' : '摆摊结果（部分失败）'}
           </p>
           {publishResult.results.map((r) => (
@@ -926,7 +926,7 @@ function BoothPreview({
               <span className={r.success ? 'text-emerald-400' : 'text-red-400'}>
                 {r.success ? <Check className="w-3 h-3" /> : <X className="w-3 h-3" />}
               </span>
-              <span className="text-slate-300 truncate">{r.title}</span>
+              <span className="text-foreground truncate">{r.title}</span>
               {!r.success && <span className="text-red-400/80 truncate ml-auto">{r.error}</span>}
             </div>
           ))}
@@ -934,7 +934,7 @@ function BoothPreview({
       )}
 
       {/* 合规声明 */}
-      <p className="text-center text-[10px] text-slate-600 leading-relaxed px-4 pb-2">
+      <p className="text-center text-[10px] text-muted-foreground leading-relaxed px-4 pb-2">
         {booth.complianceNote || DEFAULT_COMPLIANCE_NOTE}
       </p>
     </div>

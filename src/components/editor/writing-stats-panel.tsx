@@ -128,10 +128,10 @@ function WritingStatsPanel({ workId, nodeCount, wordCount }: WritingStatsPanelPr
   const recentSessions = stats?.sessions.slice(0, 10) || []
 
   const StatCard = memo(({ icon: Icon, label, value, color }: { icon: typeof Clock; label: string; value: string; color: string }) => (
-    <div className="bg-slate-700/40 rounded-lg p-3 border border-slate-600/50">
+    <div className="bg-secondary/40 rounded-lg p-3 border border-border/50">
       <div className="flex items-center gap-2 mb-1">
         <Icon className={`w-4 h-4 ${color}`} />
-        <span className="text-[11px] text-slate-400">{label}</span>
+        <span className="text-[11px] text-muted-foreground">{label}</span>
       </div>
       <p className="text-lg font-semibold text-white">{value}</p>
     </div>
@@ -148,12 +148,12 @@ function WritingStatsPanel({ workId, nodeCount, wordCount }: WritingStatsPanelPr
   }
 
   const SessionItem = memo(({ session }: { session: WritingSession }) => (
-    <div className="py-2.5 border-b border-slate-700/50 last:border-0">
+    <div className="py-2.5 border-b border-border/50 last:border-0">
       <div className="flex items-center justify-between mb-1">
-        <span className="text-xs text-slate-300">{formatSessionDate(session.startTime)}</span>
-        <span className="text-xs text-pink-400 font-medium">{formatShortDuration(session.duration)}</span>
+        <span className="text-xs text-foreground">{formatSessionDate(session.startTime)}</span>
+        <span className="text-xs text-primary font-medium">{formatShortDuration(session.duration)}</span>
       </div>
-      <div className="flex items-center gap-3 text-[11px] text-slate-400">
+      <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
         <span className="flex items-center gap-1">
           <FileText className="w-3 h-3" />
           {session.wordCountDelta >= 0 ? '+' : ''}{session.wordCountDelta} 字
@@ -201,21 +201,21 @@ function WritingStatsPanel({ workId, nodeCount, wordCount }: WritingStatsPanelPr
           />
         </div>
 
-        <div className="bg-slate-700/30 rounded-lg p-3 border border-slate-600/50">
+        <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
           <div className="flex items-center justify-between mb-3">
-            <h4 className="text-xs font-medium text-slate-300 flex items-center gap-1.5">
-              <Activity className="w-3.5 h-3.5 text-pink-400" />
+            <h4 className="text-xs font-medium text-foreground flex items-center gap-1.5">
+              <Activity className="w-3.5 h-3.5 text-primary" />
               时间分布
             </h4>
-            <div className="flex bg-slate-800 rounded-md p-0.5">
+            <div className="flex bg-muted rounded-md p-0.5">
               {(['today', 'week', 'month'] as const).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
                   className={`px-2 py-0.5 text-[10px] rounded transition-colors ${
                     activeTab === tab
-                      ? 'bg-pink-500 text-white'
-                      : 'text-slate-400 hover:text-slate-300'
+                      ? 'bg-primary text-white'
+                      : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
                   {tab === 'today' ? '今日' : tab === 'week' ? '本周' : '本月'}
@@ -229,7 +229,7 @@ function WritingStatsPanel({ workId, nodeCount, wordCount }: WritingStatsPanelPr
               <div key={i} className="flex-1 flex flex-col items-center gap-1">
                 <div className="w-full flex-1 flex items-end">
                   <div
-                    className="w-full bg-gradient-to-t from-pink-500 to-pink-400 rounded-t-sm transition-all duration-300 min-h-[2px]"
+                    className="w-full bg-gradient-to-t from-primary to-pink-400 rounded-t-sm transition-all duration-300 min-h-[2px]"
                     style={{
                       height: `${(item.value / maxValue) * 100}%`,
                       opacity: item.value > 0 ? 1 : 0.2,
@@ -237,14 +237,14 @@ function WritingStatsPanel({ workId, nodeCount, wordCount }: WritingStatsPanelPr
                     title={`${item.label}: ${formatDuration(item.value)}`}
                   />
                 </div>
-                <span className="text-[9px] text-slate-500 truncate w-full text-center">
+                <span className="text-[9px] text-muted-foreground truncate w-full text-center">
                   {item.label}
                 </span>
               </div>
             ))}
           </div>
 
-          <div className="mt-2 flex items-center justify-between text-[10px] text-slate-500">
+          <div className="mt-2 flex items-center justify-between text-[10px] text-muted-foreground">
             <span>
               总时长：{stats ? formatDuration(
                 activeTab === 'today' ? stats.todayTime :
@@ -282,13 +282,13 @@ function WritingStatsPanel({ workId, nodeCount, wordCount }: WritingStatsPanelPr
           </div>
         </div>
 
-        <div className="bg-slate-700/30 rounded-lg p-3 border border-slate-600/50">
-          <h4 className="text-xs font-medium text-slate-300 mb-2 flex items-center gap-1.5">
+        <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
+          <h4 className="text-xs font-medium text-foreground mb-2 flex items-center gap-1.5">
             <Clock className="w-3.5 h-3.5 text-blue-400" />
             最近会话
           </h4>
           {recentSessions.length === 0 ? (
-            <div className="text-center py-6 text-slate-500 text-xs">
+            <div className="text-center py-6 text-muted-foreground text-xs">
               暂无创作记录
             </div>
           ) : (
@@ -300,19 +300,19 @@ function WritingStatsPanel({ workId, nodeCount, wordCount }: WritingStatsPanelPr
           )}
         </div>
 
-        <div className="bg-slate-700/30 rounded-lg p-3 border border-slate-600/50">
-          <h4 className="text-xs font-medium text-slate-300 mb-2">数据管理</h4>
+        <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
+          <h4 className="text-xs font-medium text-foreground mb-2">数据管理</h4>
           <div className="flex gap-2">
             <button
               onClick={handleExport}
-              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-md transition-colors"
+              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs bg-secondary hover:bg-accent text-foreground rounded-md transition-colors"
             >
               <Download className="w-3.5 h-3.5" />
               导出数据
             </button>
             <button
               onClick={() => setShowClearConfirm(true)}
-              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-md transition-colors"
+              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs bg-primary/10 hover:bg-primary/20 text-red-400 border border-primary/30 rounded-md transition-colors"
             >
               <Trash2 className="w-3.5 h-3.5" />
               清除数据
@@ -323,29 +323,29 @@ function WritingStatsPanel({ workId, nodeCount, wordCount }: WritingStatsPanelPr
 
       {showClearConfirm && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-800 rounded-xl p-5 max-w-sm w-full border border-slate-700 shadow-2xl">
+          <div className="bg-muted rounded-xl p-5 max-w-sm w-full border border-border shadow-2xl">
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
                 <AlertTriangle className="w-5 h-5 text-red-400" />
               </div>
               <div>
                 <h3 className="text-sm font-semibold text-white">确认清除</h3>
-                <p className="text-xs text-slate-400">此操作不可撤销</p>
+                <p className="text-xs text-muted-foreground">此操作不可撤销</p>
               </div>
             </div>
-            <p className="text-xs text-slate-300 mb-4">
+            <p className="text-xs text-foreground mb-4">
               确定要清除所有创作统计数据吗？所有的时间记录和会话历史都将被永久删除。
             </p>
             <div className="flex gap-2">
               <button
                 onClick={() => setShowClearConfirm(false)}
-                className="flex-1 px-4 py-2 text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-md transition-colors"
+                className="flex-1 px-4 py-2 text-xs bg-secondary hover:bg-accent text-foreground rounded-md transition-colors"
               >
                 取消
               </button>
               <button
                 onClick={handleClear}
-                className="flex-1 px-4 py-2 text-xs bg-red-500 hover:bg-red-600 text-white rounded-md transition-colors"
+                className="flex-1 px-4 py-2 text-xs bg-primary hover:bg-red-600 text-white rounded-md transition-colors"
               >
                 确认清除
               </button>

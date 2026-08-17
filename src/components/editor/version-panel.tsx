@@ -105,12 +105,12 @@ export function VersionPanel({
     <div className="p-4 space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-white flex items-center gap-1.5">
-          <GitBranch className="w-4 h-4 text-pink-400" />
+          <GitBranch className="w-4 h-4 text-primary" />
           版本管理
         </h3>
         <button
           onClick={() => setShowSaveForm(true)}
-          className="flex items-center gap-1 px-2 py-1 text-xs bg-pink-500 hover:bg-pink-600 text-white rounded-md transition-colors"
+          className="flex items-center gap-1 px-2 py-1 text-xs bg-primary hover:bg-primary/90 text-white rounded-md transition-colors"
         >
           <Plus className="w-3 h-3" />
           保存当前版本
@@ -119,14 +119,14 @@ export function VersionPanel({
 
       {/* 保存表单弹窗 */}
       {showSaveForm && (
-        <div className="rounded-lg border border-pink-500/30 bg-slate-900/60 p-3 space-y-2">
+        <div className="rounded-lg border border-primary/30 bg-card/60 p-3 space-y-2">
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="版本名称（如：第一章完成v1）"
             autoFocus
-            className="w-full px-2.5 py-1.5 text-xs bg-slate-800 border border-slate-700 rounded-md text-white placeholder:text-slate-500 focus:outline-none focus:border-pink-500/60"
+            className="w-full px-2.5 py-1.5 text-xs bg-muted border border-border rounded-md text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary/60"
             onKeyDown={(e) => {
               if (e.key === 'Enter') handleSave()
               if (e.key === 'Escape') handleCancelSave()
@@ -137,19 +137,19 @@ export function VersionPanel({
             onChange={(e) => setDescription(e.target.value)}
             placeholder="版本描述（可选）"
             rows={2}
-            className="w-full px-2.5 py-1.5 text-xs bg-slate-800 border border-slate-700 rounded-md text-white placeholder:text-slate-500 focus:outline-none focus:border-pink-500/60 resize-none"
+            className="w-full px-2.5 py-1.5 text-xs bg-muted border border-border rounded-md text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary/60 resize-none"
           />
           <div className="flex items-center justify-end gap-2">
             <button
               onClick={handleCancelSave}
-              className="px-2.5 py-1 text-xs text-slate-400 hover:text-white transition-colors"
+              className="px-2.5 py-1 text-xs text-muted-foreground hover:text-white transition-colors"
             >
               取消
             </button>
             <button
               onClick={handleSave}
               disabled={!name.trim()}
-              className="px-2.5 py-1 text-xs bg-pink-500 hover:bg-pink-600 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-md transition-colors"
+              className="px-2.5 py-1 text-xs bg-primary hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-md transition-colors"
             >
               保存
             </button>
@@ -160,30 +160,30 @@ export function VersionPanel({
       {/* 恢复确认对话框 */}
       {pendingRestoreVersion && (
         <div
-          className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 space-y-2"
+          className="rounded-lg border border-gold-400/40 bg-gold-400/10 p-3 space-y-2"
           role="alertdialog"
           aria-label="恢复版本确认"
         >
           <div className="flex items-start gap-2">
-            <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+            <AlertTriangle className="w-4 h-4 text-gold-400 shrink-0 mt-0.5" />
             <div className="text-xs space-y-1">
               <p className="text-amber-200 font-medium">确认恢复版本？</p>
-              <p className="text-slate-300">
+              <p className="text-foreground">
                 将把画布恢复为「{pendingRestoreVersion.name}」，当前未保存的改动会被覆盖。
               </p>
-              <p className="text-slate-500 text-[11px]">该操作支持撤销（Ctrl+Z）。</p>
+              <p className="text-muted-foreground text-[11px]">该操作支持撤销（Ctrl+Z）。</p>
             </div>
           </div>
           <div className="flex items-center justify-end gap-2">
             <button
               onClick={() => setConfirmRestoreId(null)}
-              className="px-2.5 py-1 text-xs text-slate-400 hover:text-white transition-colors"
+              className="px-2.5 py-1 text-xs text-muted-foreground hover:text-white transition-colors"
             >
               取消
             </button>
             <button
               onClick={handleConfirmRestore}
-              className="px-2.5 py-1 text-xs bg-amber-500 hover:bg-amber-600 text-white rounded-md transition-colors"
+              className="px-2.5 py-1 text-xs bg-gold-400 hover:bg-gold-500 text-white rounded-md transition-colors"
             >
               确认恢复
             </button>
@@ -194,10 +194,10 @@ export function VersionPanel({
       {/* 版本列表 */}
       <div className="space-y-2">
         {sortedVersions.length === 0 && !showSaveForm && (
-          <div className="text-center py-10 text-slate-500 text-sm">
+          <div className="text-center py-10 text-muted-foreground text-sm">
             <Clock className="w-8 h-8 mx-auto mb-2 opacity-40" />
             <p>暂无版本快照</p>
-            <p className="text-xs text-slate-600 mt-1">点击「保存当前版本」创建第一个版本</p>
+            <p className="text-xs text-muted-foreground mt-1">点击「保存当前版本」创建第一个版本</p>
           </div>
         )}
 
@@ -210,28 +210,28 @@ export function VersionPanel({
           return (
             <div
               key={version.id}
-              className="group rounded-lg border border-slate-700 bg-slate-800/40 hover:border-pink-500/40 transition-colors overflow-hidden"
+              className="group rounded-lg border border-border bg-muted/40 hover:border-primary/40 transition-colors overflow-hidden"
             >
               <div className="p-2.5">
                 <div className="flex items-start gap-2">
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-medium text-white truncate">{version.name}</p>
-                    <p className="text-[10px] text-slate-500 mt-0.5">
+                    <p className="text-[10px] text-muted-foreground mt-0.5">
                       {formatRelativeTime(version.createdAt)}
                     </p>
                   </div>
-                  <div className="text-[10px] text-slate-600 shrink-0 text-right">
+                  <div className="text-[10px] text-muted-foreground shrink-0 text-right">
                     <span>{nodeCount} 节点</span>
                     <span className="mx-1">·</span>
                     <span>{edgeCount} 连线</span>
                   </div>
                 </div>
                 {version.description && (
-                  <p className="text-[11px] text-slate-400 mt-1 line-clamp-2">
+                  <p className="text-[11px] text-muted-foreground mt-1 line-clamp-2">
                     {version.description}
                   </p>
                 )}
-                <div className="text-[10px] text-slate-600 mt-1">
+                <div className="text-[10px] text-muted-foreground mt-1">
                   {charCount} 角色
                 </div>
               </div>
@@ -240,7 +240,7 @@ export function VersionPanel({
               <div className="flex items-center gap-1 px-2 pb-2 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button
                   onClick={() => setConfirmRestoreId(version.id)}
-                  className="flex items-center gap-1 px-2 py-1 text-[11px] bg-slate-700/60 hover:bg-amber-500/20 hover:text-amber-300 text-slate-300 rounded transition-colors"
+                  className="flex items-center gap-1 px-2 py-1 text-[11px] bg-secondary/60 hover:bg-gold-400/20 hover:text-gold-400 text-foreground rounded transition-colors"
                   title="恢复此版本"
                 >
                   <RotateCcw className="w-3 h-3" />
@@ -248,7 +248,7 @@ export function VersionPanel({
                 </button>
                 <button
                   onClick={() => handleCompare(version)}
-                  className="flex items-center gap-1 px-2 py-1 text-[11px] bg-slate-700/60 hover:bg-blue-500/20 hover:text-blue-300 text-slate-300 rounded transition-colors"
+                  className="flex items-center gap-1 px-2 py-1 text-[11px] bg-secondary/60 hover:bg-blue-500/20 hover:text-blue-300 text-foreground rounded transition-colors"
                   title="与当前版本对比"
                 >
                   <GitCompare className="w-3 h-3" />
@@ -256,7 +256,7 @@ export function VersionPanel({
                 </button>
                 <button
                   onClick={() => onDeleteVersion(version.id)}
-                  className="flex items-center gap-1 px-2 py-1 text-[11px] bg-slate-700/60 hover:bg-red-500/20 hover:text-red-300 text-slate-300 rounded transition-colors ml-auto"
+                  className="flex items-center gap-1 px-2 py-1 text-[11px] bg-secondary/60 hover:bg-primary/20 hover:text-red-300 text-foreground rounded transition-colors ml-auto"
                   title="删除版本"
                 >
                   <Trash2 className="w-3 h-3" />

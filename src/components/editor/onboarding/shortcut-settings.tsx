@@ -293,7 +293,7 @@ export function ShortcutSettings({ open, onClose }: ShortcutSettingsProps) {
                         </div>
                         <span className="text-[10px] text-muted-foreground truncate">{b.description}</span>
                         {hasConflict && (
-                          <span className="flex items-center gap-1 text-[10px] text-amber-500 mt-1">
+                          <span className="flex items-center gap-1 text-[10px] text-gold-400 mt-1">
                             <AlertTriangle className="w-3 h-3" />
                             与「{conflicts.map(actionLabel).join('、')}」冲突
                           </span>

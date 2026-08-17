@@ -709,7 +709,7 @@ export function VideoEditor({ work, onBack }: VideoEditorProps) {
                         </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); deleteClip(clip.id) }}
-                          className="p-1 text-muted-foreground hover:text-red-500 rounded"
+                          className="p-1 text-muted-foreground hover:text-primary rounded"
                           title="删除片段"
                         >
                           <Trash2 className="w-3 h-3" />

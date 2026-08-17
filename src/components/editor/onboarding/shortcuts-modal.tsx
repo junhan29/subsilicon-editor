@@ -261,7 +261,7 @@ export function ShortcutsModal({ open, onClose, onOpenSettings }: ShortcutsModal
               {theme === 'dark' ? (
                 <Moon className="w-3.5 h-3.5" />
               ) : (
-                <Sun className="w-3.5 h-3.5 text-amber-500" />
+                <Sun className="w-3.5 h-3.5 text-gold-400" />
               )}
               <span>
                 当前主题：{theme === 'dark' ? '深色' : '浅色'}

@@ -105,37 +105,37 @@ export function AccountDialog({ open, onClose, onSuccess }: AccountDialogProps) 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="w-full max-w-md rounded-2xl bg-slate-900 text-white shadow-2xl border border-slate-700 overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-700">
+      <div className="w-full max-w-md rounded-2xl bg-card text-white shadow-2xl border border-border overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <h2 className="font-semibold text-sm">账号</h2>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full hover:bg-slate-800 flex items-center justify-center transition-colors"
+            className="w-8 h-8 rounded-full hover:bg-muted flex items-center justify-center transition-colors"
             aria-label="关闭"
           >
-            <X className="w-4 h-4 text-slate-400" />
+            <X className="w-4 h-4 text-muted-foreground" />
           </button>
         </div>
 
         <div className="px-5 py-4">
           {currentAccount ? (
             <div className="space-y-4">
-              <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-800/60 border border-slate-700">
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/60 border border-border">
                 <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
                   <User className="w-5 h-5 text-emerald-400" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-slate-100 truncate">
+                  <div className="text-sm font-medium text-foreground truncate">
                     {currentAccount.displayName}
                   </div>
-                  <div className="text-xs text-slate-400 truncate">{currentAccount.email}</div>
+                  <div className="text-xs text-muted-foreground truncate">{currentAccount.email}</div>
                 </div>
                 <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
               </div>
               {currentAccount.bio && (
-                <p className="text-xs text-slate-400">{currentAccount.bio}</p>
+                <p className="text-xs text-muted-foreground">{currentAccount.bio}</p>
               )}
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-muted-foreground">
                 每账号限上传 2 个作品到 SubSilicon 作品墙展示
               </p>
               <button
@@ -143,20 +143,20 @@ export function AccountDialog({ open, onClose, onSuccess }: AccountDialogProps) 
                   handleLogout()
                   onClose()
                 }}
-                className="w-full rounded-lg border border-slate-700 hover:bg-slate-800 text-slate-300 text-sm py-2 transition-colors"
+                className="w-full rounded-lg border border-border hover:bg-muted text-foreground text-sm py-2 transition-colors"
               >
                 退出登录
               </button>
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="flex rounded-lg border border-slate-700 overflow-hidden">
+              <div className="flex rounded-lg border border-border overflow-hidden">
                 <button
                   onClick={() => { setTab('login'); setError('') }}
                   className={`flex-1 py-2 text-sm font-medium transition-colors ${
                     tab === 'login'
-                      ? 'bg-slate-800 text-white'
-                      : 'bg-transparent text-slate-400 hover:text-slate-300'
+                      ? 'bg-muted text-white'
+                      : 'bg-transparent text-muted-foreground hover:text-foreground'
                   }`}
                 >
                   登录
@@ -165,8 +165,8 @@ export function AccountDialog({ open, onClose, onSuccess }: AccountDialogProps) 
                   onClick={() => { setTab('register'); setError('') }}
                   className={`flex-1 py-2 text-sm font-medium transition-colors ${
                     tab === 'register'
-                      ? 'bg-slate-800 text-white'
-                      : 'bg-transparent text-slate-400 hover:text-slate-300'
+                      ? 'bg-muted text-white'
+                      : 'bg-transparent text-muted-foreground hover:text-foreground'
                   }`}
                 >
                   注册
@@ -176,30 +176,30 @@ export function AccountDialog({ open, onClose, onSuccess }: AccountDialogProps) 
               {tab === 'login' ? (
                 <div className="space-y-3">
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <input
                       type="email"
                       value={loginEmail}
                       onChange={(e) => setLoginEmail(e.target.value)}
                       placeholder="邮箱"
-                      className="w-full pl-9 pr-3 py-2 text-sm bg-slate-800 border border-slate-700 rounded-lg text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-amber-500/60"
+                      className="w-full pl-9 pr-3 py-2 text-sm bg-muted border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-gold-400/60"
                     />
                   </div>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <input
                       type="password"
                       value={loginPassword}
                       onChange={(e) => setLoginPassword(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
                       placeholder="密码"
-                      className="w-full pl-9 pr-3 py-2 text-sm bg-slate-800 border border-slate-700 rounded-lg text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-amber-500/60"
+                      className="w-full pl-9 pr-3 py-2 text-sm bg-muted border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-gold-400/60"
                     />
                   </div>
                   <button
                     onClick={handleLogin}
                     disabled={submitting}
-                    className="w-full flex items-center justify-center gap-2 rounded-lg bg-amber-500 hover:bg-amber-400 disabled:opacity-60 text-slate-900 font-medium text-sm py-2.5 transition-colors"
+                    className="w-full flex items-center justify-center gap-2 rounded-lg bg-gold-400 hover:bg-amber-400 disabled:opacity-60 text-slate-900 font-medium text-sm py-2.5 transition-colors"
                   >
                     {submitting ? (
                       <><Loader2 className="w-4 h-4 animate-spin" />登录中...</>
@@ -209,43 +209,43 @@ export function AccountDialog({ open, onClose, onSuccess }: AccountDialogProps) 
               ) : (
                 <div className="space-y-3">
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <input
                       type="email"
                       value={regEmail}
                       onChange={(e) => setRegEmail(e.target.value)}
                       placeholder="邮箱"
-                      className="w-full pl-9 pr-3 py-2 text-sm bg-slate-800 border border-slate-700 rounded-lg text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-amber-500/60"
+                      className="w-full pl-9 pr-3 py-2 text-sm bg-muted border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-gold-400/60"
                     />
                   </div>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <input
                       type="password"
                       value={regPassword}
                       onChange={(e) => setRegPassword(e.target.value)}
                       placeholder="密码（至少 8 位，含字母和数字）"
-                      className="w-full pl-9 pr-3 py-2 text-sm bg-slate-800 border border-slate-700 rounded-lg text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-amber-500/60"
+                      className="w-full pl-9 pr-3 py-2 text-sm bg-muted border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-gold-400/60"
                     />
                   </div>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <input
                       type="password"
                       value={regConfirm}
                       onChange={(e) => setRegConfirm(e.target.value)}
                       placeholder="确认密码"
-                      className="w-full pl-9 pr-3 py-2 text-sm bg-slate-800 border border-slate-700 rounded-lg text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-amber-500/60"
+                      className="w-full pl-9 pr-3 py-2 text-sm bg-muted border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-gold-400/60"
                     />
                   </div>
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <input
                       type="text"
                       value={regDisplayName}
                       onChange={(e) => setRegDisplayName(e.target.value)}
                       placeholder="显示名称（创作者署名）"
-                      className="w-full pl-9 pr-3 py-2 text-sm bg-slate-800 border border-slate-700 rounded-lg text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-amber-500/60"
+                      className="w-full pl-9 pr-3 py-2 text-sm bg-muted border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-gold-400/60"
                     />
                   </div>
                   <textarea
@@ -253,12 +253,12 @@ export function AccountDialog({ open, onClose, onSuccess }: AccountDialogProps) 
                     onChange={(e) => setRegBio(e.target.value)}
                     placeholder="个人简介（可选）"
                     rows={2}
-                    className="w-full px-3 py-2 text-sm bg-slate-800 border border-slate-700 rounded-lg text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-amber-500/60 resize-none"
+                    className="w-full px-3 py-2 text-sm bg-muted border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-gold-400/60 resize-none"
                   />
                   <button
                     onClick={handleRegister}
                     disabled={submitting}
-                    className="w-full flex items-center justify-center gap-2 rounded-lg bg-amber-500 hover:bg-amber-400 disabled:opacity-60 text-slate-900 font-medium text-sm py-2.5 transition-colors"
+                    className="w-full flex items-center justify-center gap-2 rounded-lg bg-gold-400 hover:bg-amber-400 disabled:opacity-60 text-slate-900 font-medium text-sm py-2.5 transition-colors"
                   >
                     {submitting ? (
                       <><Loader2 className="w-4 h-4 animate-spin" />注册中...</>

@@ -63,8 +63,8 @@ export function QualityCheckPanel({ nodes, edges, monetization, onLocateNode, on
           <p className="text-xs text-emerald-600 dark:text-emerald-400">一切正常，作品结构完整，可以放心导出。</p>
         ) : (
           <p className="text-xs text-muted-foreground">
-            发现 <span className="text-red-500 font-medium">{errorCount}</span> 个需要处理的问题，{' '}
-            <span className="text-amber-500 font-medium">{warningCount}</span> 个可优化项。点击条目定位到节点。
+            发现 <span className="text-primary font-medium">{errorCount}</span> 个需要处理的问题，{' '}
+            <span className="text-gold-400 font-medium">{warningCount}</span> 个可优化项。点击条目定位到节点。
           </p>
         )}
       </div>
@@ -85,14 +85,14 @@ export function QualityCheckPanel({ nodes, edges, monetization, onLocateNode, on
             }}
             className={`w-full text-left rounded-lg px-2.5 py-2 text-xs transition-colors flex items-start gap-2 border ${
               issue.severity === 'error'
-                ? 'bg-red-500/5 border-red-500/20 hover:bg-red-500/10'
-                : 'bg-amber-500/5 border-amber-500/20 hover:bg-amber-500/10'
+                ? 'bg-primary/5 border-primary/20 hover:bg-primary/10'
+                : 'bg-gold-400/5 border-gold-400/20 hover:bg-gold-400/10'
             }`}
           >
             {issue.severity === 'error' ? (
-              <AlertCircle className="h-3.5 w-3.5 text-red-500 shrink-0 mt-0.5" />
+              <AlertCircle className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
             ) : (
-              <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0 mt-0.5" />
+              <AlertTriangle className="h-3.5 w-3.5 text-gold-400 shrink-0 mt-0.5" />
             )}
             <span className="text-foreground/90 leading-snug">{issue.message}</span>
           </button>
