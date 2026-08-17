@@ -112,53 +112,24 @@ jobs:
           echo "Creating version directory on server..."
           ssh -p "$SSH_PORT" -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$SERVER_USER@$SERVER_HOST" "mkdir -p $VERSION_DIR"
 
-          echo "Downloading release assets on server via gh-proxy.com mirror..."
+          echo "Uploading release assets from runner to server via scp (GitHub native, stable)..."
+          scp -P "$SSH_PORT" -o ServerAliveInterval=30 -o ServerAliveCountMax=3 release/* "$SERVER_USER@$SERVER_HOST:$VERSION_DIR/"
+
+          echo "Verifying all assets present on server..."
           ssh -p "$SSH_PORT" -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$SERVER_USER@$SERVER_HOST" "
             cd $VERSION_DIR
-            FILES=(
-              'SubSilicon.Editor-${VERSION}-macos-arm64.dmg'
-              'SubSilicon.Editor-${VERSION}-macos-arm64.zip'
-              'SubSilicon.Editor-${VERSION}-windows-x64.exe'
-              'SubSilicon.Editor-${VERSION}-windows-x64.zip'
-              'SubSilicon.Editor-${VERSION}-linux-amd64.deb'
-              'SubSilicon.Editor-${VERSION}-linux-x64.tar.gz'
-              'SubSilicon.Editor-${VERSION}-linux-x86_64.AppImage'
-            )
             FAILED=0
-            for f in \"\${FILES[@]}\"; do
-              g=\"\${f/.Editor-/ Editor-}\"
-              # 幂等：仅当文件存在且非空时才跳过，避免上次断连遗留的不完整文件被误判为已存在
+            for g in 'SubSilicon Editor-${VERSION}-macos-arm64.dmg' 'SubSilicon Editor-${VERSION}-macos-arm64.zip' 'SubSilicon Editor-${VERSION}-windows-x64.exe' 'SubSilicon Editor-${VERSION}-windows-x64.zip' 'SubSilicon Editor-${VERSION}-linux-amd64.deb' 'SubSilicon Editor-${VERSION}-linux-x64.tar.gz' 'SubSilicon Editor-${VERSION}-linux-x86_64.AppImage'; do
+              f=\"\${g// Editor-/Editor-}\"
               if [ -s \"\$g\" ] || [ -s \"\$f\" ]; then
-                echo \"Skipping \$f (already exists)\"
-                continue
-              fi
-              ok=0
-              for i in 1 2 3 4 5 6; do
-                echo \"Downloading \$f (attempt \$i)...\"
-                rm -f \"\$f\"
-                if curl -sL --max-time 600 -o \"\$f\" \"${MIRROR}/\$f\" && [ -s \"\$f\" ]; then
-                  # 与远端 Content-Length 比对，防止下载不完整（清理行尾 \r 避免误判）
-                  expected=\$(curl -sI --max-time 60 \"${MIRROR}/\$f\" | awk 'tolower(\$1)==\"content-length:\" {gsub(/\\r/,\"\",\$2); print \$2; exit}')
-                  actual=\$(stat -c%s \"\$f\" 2>/dev/null || echo 0)
-                  if [ -z \"\$expected\" ] || [ \"\$expected\" = \"\$actual\" ]; then
-                    echo \"  Done: \$f (\$(ls -lh \$f | awk '{print \$5}'))\"
-                    ok=1
-                    break
-                  fi
-                  echo \"  Size mismatch (expected \$expected, got \$actual), retrying...\"
-                else
-                  echo \"  Download failed, retrying...\"
-                fi
-                rm -f \"\$f\"
-                sleep 3
-              done
-              if [ \"\$ok\" -ne 1 ]; then
-                echo \"  FAILED after retries: \$f\"
+                echo \"OK: \$g\"
+              else
+                echo \"MISSING: \$g\"
                 FAILED=1
               fi
             done
             if [ \"\$FAILED\" -eq 1 ]; then
-              echo \"Some assets failed to download, aborting to avoid publishing bad metadata\"
+              echo 'Some assets are missing after upload, aborting to avoid publishing bad metadata'
               exit 1
             fi
           "
