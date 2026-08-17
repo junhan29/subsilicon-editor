@@ -1,5 +1,6 @@
 import type { AiConfig, AiGenerateResult, AiLayoutResult, AiLayoutType, AiPolishResult, AiPolishStyle } from '../types'
 import { callAiForTask } from '../provider-registry'
+import { buildGenerationPolicyPrompt, deaiStyle, type GenerationContext } from './generation-policy'
 
 export const STYLE_PROMPTS: Record<AiPolishStyle, string> = {
   general: '请润色以下文字，使表达更流畅自然，保持原意：',
@@ -24,48 +25,51 @@ export const CONTINUE_STYLE_PROMPTS: Record<AiPolishStyle, string> = {
 export async function polishText(
   text: string,
   style: AiPolishStyle = 'general',
-  config?: AiConfig | null
+  config?: AiConfig | null,
+  context?: GenerationContext
 ): Promise<AiPolishResult> {
   const result = await callAiForTask('text',
     {
-      systemPrompt: STYLE_PROMPTS[style] || STYLE_PROMPTS.general,
+      systemPrompt: `${STYLE_PROMPTS[style] || STYLE_PROMPTS.general}${buildGenerationPolicyPrompt(text, context)}`,
       userPrompt: text,
       temperature: 0.7,
     }
   )
 
-  return { result }
+  return { result: deaiStyle(result) }
 }
 
 export async function layoutText(
   text: string,
   layoutType: AiLayoutType = 'dialogue',
-  config?: AiConfig | null
+  config?: AiConfig | null,
+  context?: GenerationContext
 ): Promise<AiLayoutResult> {
   const result = await callAiForTask('text',
     {
-      systemPrompt: LAYOUT_PROMPTS[layoutType] || LAYOUT_PROMPTS.dialogue,
+      systemPrompt: `${LAYOUT_PROMPTS[layoutType] || LAYOUT_PROMPTS.dialogue}${buildGenerationPolicyPrompt(text, context)}`,
       userPrompt: text,
       temperature: 0.5,
     }
   )
 
-  return { result }
+  return { result: deaiStyle(result) }
 }
 
 export async function continueText(
   text: string,
   style: AiPolishStyle = 'general',
-  config?: AiConfig | null
+  config?: AiConfig | null,
+  context?: GenerationContext
 ): Promise<AiGenerateResult> {
   const result = await callAiForTask('text',
     {
-      systemPrompt: CONTINUE_STYLE_PROMPTS[style] || CONTINUE_STYLE_PROMPTS.general,
+      systemPrompt: `${CONTINUE_STYLE_PROMPTS[style] || CONTINUE_STYLE_PROMPTS.general}${buildGenerationPolicyPrompt(text, context)}`,
       userPrompt: text,
       temperature: 0.8,
       maxTokens: 200,
     }
   )
 
-  return { result }
+  return { result: deaiStyle(result) }
 }

@@ -145,7 +145,8 @@ export interface IncomeRecord {
   workId: string
   workTitle: string
   amount: number
-  channel: 'wechat' | 'alipay' | 'stripe' | 'paypal' | 'afdian' | 'mianbaoduo' | 'patreon' | 'ko-fi' | 'other'
+  /** 收款渠道：含面板「第三方平台」选项对应的 third_party */
+  channel: 'wechat' | 'alipay' | 'stripe' | 'paypal' | 'afdian' | 'mianbaoduo' | 'patreon' | 'ko-fi' | 'third_party' | 'other'
   date: number
   note?: string
 }

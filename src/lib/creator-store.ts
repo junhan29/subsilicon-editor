@@ -1,5 +1,5 @@
 import { openDB } from './local-db/db'
-import type { CreatorAccount, PlatformConfig, PublishRecord } from '@editor/types/creator'
+import type { PlatformConfig, PublishRecord } from '@editor/types/creator'
 
 export async function savePlatformConfig(config: PlatformConfig): Promise<void> {
   const db = await openDB()
@@ -39,49 +39,6 @@ export async function deletePlatformConfig(id: string): Promise<void> {
     const request = db.transaction('platformConfigs', 'readwrite')
       .objectStore('platformConfigs')
       .delete(id)
-    request.onsuccess = () => resolve()
-    request.onerror = () => reject(request.error)
-  })
-}
-
-export async function saveCreatorAccount(account: CreatorAccount): Promise<void> {
-  const db = await openDB()
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction('creatorAccounts', 'readwrite')
-    tx.objectStore('creatorAccounts').put(account)
-    tx.oncomplete = () => resolve()
-    tx.onerror = () => reject(tx.error)
-  })
-}
-
-export async function getCreatorAccount(email: string): Promise<CreatorAccount | null> {
-  const db = await openDB()
-  return new Promise((resolve, reject) => {
-    const request = db.transaction('creatorAccounts', 'readonly')
-      .objectStore('creatorAccounts')
-      .get(email.toLowerCase())
-    request.onsuccess = () => resolve(request.result || null)
-    request.onerror = () => reject(request.error)
-  })
-}
-
-export async function getAllCreatorAccounts(): Promise<CreatorAccount[]> {
-  const db = await openDB()
-  return new Promise((resolve, reject) => {
-    const request = db.transaction('creatorAccounts', 'readonly')
-      .objectStore('creatorAccounts')
-      .getAll()
-    request.onsuccess = () => resolve(request.result || [])
-    request.onerror = () => reject(request.error)
-  })
-}
-
-export async function deleteCreatorAccount(email: string): Promise<void> {
-  const db = await openDB()
-  return new Promise((resolve, reject) => {
-    const request = db.transaction('creatorAccounts', 'readwrite')
-      .objectStore('creatorAccounts')
-      .delete(email.toLowerCase())
     request.onsuccess = () => resolve()
     request.onerror = () => reject(request.error)
   })

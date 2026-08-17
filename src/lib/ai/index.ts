@@ -67,6 +67,7 @@ export type {
   AudioGenerationParams,
   ImageGenerationParams,
   VideoGenerationParams,
+  VideoAspectRatio,
   MediaGenerationResult,
   MediaProviderConfig,
 } from './services/media-generation-service'

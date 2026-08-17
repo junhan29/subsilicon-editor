@@ -1,5 +1,6 @@
 import type { AiCharacter, AiConfig, AiFullStoryResult, OutlineScene } from '../types'
 import { callAiForTask } from '../provider-registry'
+import { buildGenerationPolicyPrompt, deaiStyle, type GenerationContext } from './generation-policy'
 
 const FULL_STORY_SYSTEM_PROMPT = `你是一个专业的互动叙事设计师。请根据主题和类型，生成一个完整的互动故事。输出必须是严格的 JSON 格式，不要包含任何 markdown 标记或额外文字。
 
@@ -48,13 +49,14 @@ export async function generateFullStory(
   genre: string,
   characterCount: number = 3,
   sceneCount: number = 5,
-  config?: AiConfig | null
+  config?: AiConfig | null,
+  context?: GenerationContext
 ): Promise<AiFullStoryResult> {
   const userPrompt = `主题：${topic}\n类型：${genre}\n角色数量：${characterCount}\n场景数量：${sceneCount}`
 
   const rawResult = await callAiForTask('text',
     {
-      systemPrompt: FULL_STORY_SYSTEM_PROMPT,
+      systemPrompt: `${FULL_STORY_SYSTEM_PROMPT}${buildGenerationPolicyPrompt(topic, context)}`,
       userPrompt,
       temperature: 0.8,
       maxTokens: 3000,
@@ -66,8 +68,8 @@ export async function generateFullStory(
     const parsed = JSON.parse(jsonStr) as Record<string, unknown>
 
     return {
-      title: typeof parsed.title === 'string' ? parsed.title : `基于"${topic}"的故事`,
-      description: typeof parsed.description === 'string' ? parsed.description : '',
+      title: deaiStyle(typeof parsed.title === 'string' ? parsed.title : `基于"${topic}"的故事`),
+      description: deaiStyle(typeof parsed.description === 'string' ? parsed.description : ''),
       characters: Array.isArray(parsed.characters)
         ? parsed.characters.map((char: unknown, index: number) =>
             parseCharacter(char, index)
@@ -93,29 +95,29 @@ function parseCharacter(char: unknown, index: number): AiCharacter {
   const c = char as Record<string, unknown>
   return {
     id: `char-${Date.now()}-${index}`,
-    name: typeof c.name === 'string' ? c.name : `角色${index + 1}`,
+    name: deaiStyle(typeof c.name === 'string' ? c.name : `角色${index + 1}`),
     gender: ['male', 'female', 'other', 'unknown'].includes(c.gender as string)
       ? (c.gender as AiCharacter['gender'])
       : 'unknown',
-    age: typeof c.age === 'string' ? c.age : '',
-    occupation: typeof c.occupation === 'string' ? c.occupation : '',
+    age: deaiStyle(typeof c.age === 'string' ? c.age : ''),
+    occupation: deaiStyle(typeof c.occupation === 'string' ? c.occupation : ''),
     personality: Array.isArray(c.personality)
-      ? c.personality.filter((p: unknown) => typeof p === 'string')
+      ? c.personality.filter((p: unknown) => typeof p === 'string').map((p) => deaiStyle(p))
       : [],
     appearance: [],
-    background: typeof c.background === 'string' ? c.background : '',
+    background: deaiStyle(typeof c.background === 'string' ? c.background : ''),
     speech: {
-      tone: typeof (c.speech as Record<string, unknown>)?.tone === 'string'
+      tone: deaiStyle(typeof (c.speech as Record<string, unknown>)?.tone === 'string'
         ? (c.speech as Record<string, string>).tone
-        : '',
+        : ''),
       catchphrases: Array.isArray((c.speech as Record<string, unknown>)?.catchphrases)
         ? (c.speech as Record<string, string[]>).catchphrases.filter(
             (cp: unknown) => typeof cp === 'string'
-          )
+          ).map((cp) => deaiStyle(cp))
         : [],
     },
-    motivation: typeof c.motivation === 'string' ? c.motivation : '',
-    bio: typeof c.background === 'string' ? c.background : '',
+    motivation: deaiStyle(typeof c.motivation === 'string' ? c.motivation : ''),
+    bio: deaiStyle(typeof c.background === 'string' ? c.background : ''),
   }
 }
 
@@ -123,17 +125,17 @@ function parseScene(scene: unknown, index: number): OutlineScene {
   const s = scene as Record<string, unknown>
   return {
     id: typeof s.id === 'string' ? s.id : `scene-${index + 1}`,
-    title: typeof s.title === 'string' ? s.title : `场景 ${index + 1}`,
-    description: typeof s.description === 'string' ? s.description : '',
+    title: deaiStyle(typeof s.title === 'string' ? s.title : `场景 ${index + 1}`),
+    description: deaiStyle(typeof s.description === 'string' ? s.description : ''),
     characters: Array.isArray(s.characters)
-      ? s.characters.filter((c) => typeof c === 'string') as string[]
+      ? s.characters.filter((c) => typeof c === 'string').map((c) => deaiStyle(c)) as string[]
       : [],
     choices: Array.isArray(s.choices)
       ? s.choices
           .map((c: unknown) => {
             const choice = c as Record<string, unknown>
             return {
-              text: typeof choice.text === 'string' ? choice.text : '',
+              text: deaiStyle(typeof choice.text === 'string' ? choice.text : ''),
               nextSceneId:
                 typeof choice.nextSceneId === 'string' ? choice.nextSceneId : undefined,
             }

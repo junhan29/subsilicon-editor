@@ -10,6 +10,7 @@ import {
   FileText,
   Home,
   Image as ImageIcon,
+  KeyRound,
   Link2,
   Loader2,
   Lock,
@@ -29,24 +30,20 @@ import {
 } from 'lucide-react'
 import type { StoryGraph } from '@editor/types/editor'
 import type {
-  CreatorAccount,
   PlatformConfig,
   PublishPlatform,
   PublishRecord,
 } from '@editor/types/creator'
 import {
   addPlatformConfig,
-  getCurrentAccount,
   getPlatformConfigs,
   getPublishRecords,
-  isLoggedIn,
-  loginAccount,
-  logoutAccount,
   publishToPlatform,
-  registerAccount,
   removePlatformConfig,
   updatePlatformConfig,
 } from '@editor/lib/creator-service'
+import type { LocalAccount } from '@editor/lib/local-account-store'
+import { getAccount, isLoggedIn, login, logout, register } from '@editor/lib/local-account-store'
 import { exportPreviewHTML } from '@editor/lib/export-preview-html'
 import { UnlockCodeGenerator } from './unlock-code-generator'
 import { UnlockRequestsPanel } from './unlock-requests-panel'
@@ -58,6 +55,10 @@ interface CreatorCenterDialogProps {
   graph: StoryGraph
   workId?: string
   initialTab?: 'account' | 'platforms' | 'publish' | 'records' | 'unlock' | 'unlock-requests'
+  /** 预填发布表单的作品标题（可选，未传则回退到 graph.title） */
+  initialTitle?: string
+  /** 预填发布表单的作品简介（可选） */
+  initialSummary?: string
   onLoginStateChange?: () => void
 }
 
@@ -65,13 +66,17 @@ const PRESET_TAGS = ['古风', '悬疑', '科幻', '恋爱', '恐怖', '冒险',
 
 const MAX_SUMMARY_LENGTH = 100
 const MAX_SCREENSHOTS = 6
-const MAX_COVER_SIZE = 2 * 1024 * 1024
+const MAX_TITLE_LENGTH = 60
+const MAX_COVER_SIZE = 5 * 1024 * 1024
 const MAX_SCREENSHOT_SIZE = 2 * 1024 * 1024
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
 
 const SUBSILICON_PLATFORM_ID = 'subsilicon'
 const SUBSILICON_DEFAULT_NAME = 'SubSilicon 作品墙'
 const SUBSILICON_DEFAULT_API = 'https://subsilicon.cn/api/creator/preview/submit'
 const SUBSILICON_DEFAULT_DESC = '官方作品墙，审核通过后展示给所有用户'
+// 与 submit-config.ts 的 storyUnlockUrl 判定写法保持一致：开发环境指向本地服务端便于联调
+const SUBMIT_TOKEN_ORIGIN = (import.meta as any).env?.DEV ? 'http://localhost:3000' : 'https://subsilicon.cn'
 
 type Tab = 'account' | 'platforms' | 'publish' | 'records' | 'unlock' | 'unlock-requests'
 type AccountTab = 'login' | 'register'
@@ -121,6 +126,8 @@ export function CreatorCenterDialog({
   graph,
   workId,
   initialTab,
+  initialTitle,
+  initialSummary,
   onLoginStateChange,
 }: CreatorCenterDialogProps) {
   const [tab, setTab] = useState<Tab>('account')
@@ -133,7 +140,7 @@ export function CreatorCenterDialog({
     }
   })
 
-  const [account, setAccount] = useState<Omit<CreatorAccount, 'passwordHash'> | null>(getCurrentAccount())
+  const [account, setAccount] = useState<Omit<LocalAccount, 'passwordHash'> | null>(getAccount())
   const [accountTab, setAccountTab] = useState<AccountTab>('login')
   const [regEmail, setRegEmail] = useState('')
   const [regPassword, setRegPassword] = useState('')
@@ -161,6 +168,15 @@ export function CreatorCenterDialog({
   })
   const [platformSubmitting, setPlatformSubmitting] = useState(false)
 
+  const [showTokenDialog, setShowTokenDialog] = useState(false)
+  const [tokenTab, setTokenTab] = useState<'login' | 'register'>('login')
+  const [tokenEmail, setTokenEmail] = useState('')
+  const [tokenPassword, setTokenPassword] = useState('')
+  const [tokenDisplayName, setTokenDisplayName] = useState('')
+  const [tokenSubmitting, setTokenSubmitting] = useState(false)
+  const [tokenError, setTokenError] = useState('')
+  const [showTokenPassword, setShowTokenPassword] = useState(false)
+
   const [selectedPlatformId, setSelectedPlatformId] = useState('')
   const [title, setTitle] = useState('')
   const [summary, setSummary] = useState('')
@@ -185,9 +201,10 @@ export function CreatorCenterDialog({
   const [showRegConfirm, setShowRegConfirm] = useState(false)
   const [showPlatformPassword, setShowPlatformPassword] = useState(false)
 
-  const loadPlatforms = async () => {
+  const loadPlatforms = async (ownerEmail?: string) => {
     try {
-      const list = await getPlatformConfigs()
+      // 账号双轨统一：平台配置归属当前登录的本地账号邮箱
+      const list = await getPlatformConfigs(ownerEmail)
       setPlatforms(list)
       setSelectedPlatformId((prev) => {
         if (prev && list.some((p) => p.id === prev && p.enabled)) return prev
@@ -199,9 +216,10 @@ export function CreatorCenterDialog({
     }
   }
 
-  const loadRecords = async () => {
+  const loadRecords = async (ownerEmail?: string) => {
     try {
-      const list = await getPublishRecords()
+      // 账号双轨统一：发布记录归属当前登录的本地账号邮箱
+      const list = await getPublishRecords(undefined, ownerEmail)
       setRecords(list)
     } catch {
       setRecords([])
@@ -211,7 +229,9 @@ export function CreatorCenterDialog({
   useEffect(() => {
     if (!open) return
     setTab(initialTab || 'account')
-    setAccount(isLoggedIn() ? getCurrentAccount() : null)
+    // 账号双轨统一：登录态复用本地账户（local-account-store）
+    const acc = isLoggedIn() ? getAccount() : null
+    setAccount(acc)
     setAccountTab('login')
     setRegEmail('')
     setRegPassword('')
@@ -224,12 +244,19 @@ export function CreatorCenterDialog({
     setShowPlatformForm(false)
     setEditingPlatform(null)
     setShowPlatformPassword(false)
+    setShowTokenDialog(false)
+    setTokenTab('login')
+    setTokenEmail('')
+    setTokenPassword('')
+    setTokenDisplayName('')
+    setTokenError('')
+    setShowTokenPassword(false)
     setShowLoginPassword(false)
     setShowRegPassword(false)
     setShowRegConfirm(false)
     setPlatformToDelete(null)
-    setTitle(graph.title || '')
-    setSummary('')
+    setTitle(initialTitle ?? (graph.title || ''))
+    setSummary(initialSummary ?? '')
     setTags([])
     setCustomTagInput('')
     setWechat('')
@@ -240,9 +267,17 @@ export function CreatorCenterDialog({
     setPublished(false)
     setErrors({})
     setSelectedPlatformId('')
-    loadPlatforms()
-    loadRecords()
-  }, [open, initialTab, graph])
+    loadPlatforms(acc?.email)
+    loadRecords(acc?.email)
+  }, [open, initialTab, graph, initialTitle, initialSummary])
+
+  // 预填作品标题/简介：首次打开或 prop 变化时填入，但仅在当前值为空时生效，
+  // 避免覆盖用户在发布表单里已输入的内容
+  useEffect(() => {
+    if (!open) return
+    if (initialTitle) setTitle((prev) => (prev === '' ? initialTitle : prev))
+    if (initialSummary) setSummary((prev) => (prev === '' ? initialSummary : prev))
+  }, [open, initialTitle, initialSummary])
 
   const busy = publishing || accountSubmitting || platformSubmitting
 
@@ -279,12 +314,12 @@ export function CreatorCenterDialog({
     }
     setAccountSubmitting(true)
     try {
-      const result = await registerAccount(regEmail, regPassword, regDisplayName, regBio)
+      const result = await register(regEmail, regPassword, regDisplayName, regBio)
       if (!result.success) {
         setAccountError(result.error || '注册失败')
         return
       }
-      setAccount(getCurrentAccount())
+      setAccount(getAccount())
       onLoginStateChange?.()
       showToast('success', '注册成功')
     } catch (e) {
@@ -302,12 +337,12 @@ export function CreatorCenterDialog({
     }
     setAccountSubmitting(true)
     try {
-      const result = await loginAccount(loginEmail, loginPassword)
+      const result = await login(loginEmail, loginPassword)
       if (!result.success) {
         setAccountError(result.error || '登录失败')
         return
       }
-      setAccount(result.account || getCurrentAccount())
+      setAccount(result.account || getAccount())
       onLoginStateChange?.()
       showToast('success', `欢迎回来，${result.account?.displayName || ''}`)
     } catch (e) {
@@ -318,7 +353,7 @@ export function CreatorCenterDialog({
   }
 
   const handleLogout = () => {
-    logoutAccount()
+    logout()
     setAccount(null)
     onLoginStateChange?.()
     showToast('info', '已退出登录')
@@ -385,6 +420,8 @@ export function CreatorCenterDialog({
           enabled: platformForm.enabled,
           createdAt: editingPlatform.createdAt,
           updatedAt: Date.now(),
+          // 保留平台配置的账号归属
+          ownerEmail: editingPlatform.ownerEmail,
         }
         await updatePlatformConfig(clean)
         showToast('success', '平台已更新')
@@ -394,16 +431,81 @@ export function CreatorCenterDialog({
           name: platformForm.name.trim(),
           config: configData,
           enabled: true,
-        })
+        }, account?.email)
         showToast('success', '平台已添加')
       }
       setShowPlatformForm(false)
       setEditingPlatform(null)
-      await loadPlatforms()
+      // 刷新时按当前本地账号邮箱过滤，保持平台配置归属一致
+      await loadPlatforms(account?.email)
     } catch (e) {
       showToast('error', e instanceof Error ? e.message : '操作失败')
     } finally {
       setPlatformSubmitting(false)
+    }
+  }
+
+  const openTokenDialog = (mode: 'login' | 'register') => {
+    setTokenTab(mode)
+    setTokenEmail('')
+    setTokenPassword('')
+    setTokenDisplayName('')
+    setTokenError('')
+    setShowTokenPassword(false)
+    setShowTokenDialog(true)
+  }
+
+  const handleGetToken = async () => {
+    setTokenError('')
+    const email = tokenEmail.trim()
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setTokenError('请输入正确的邮箱地址')
+      return
+    }
+    if (tokenTab === 'register') {
+      if (tokenPassword.length < 8) {
+        setTokenError('密码至少 8 位')
+        return
+      }
+      if (!/[a-zA-Z]/.test(tokenPassword) || !/[0-9]/.test(tokenPassword)) {
+        setTokenError('密码必须包含字母和数字')
+        return
+      }
+    } else if (!tokenPassword) {
+      setTokenError('请输入密码')
+      return
+    }
+    setTokenSubmitting(true)
+    try {
+      const payload: Record<string, string> = { email, password: tokenPassword }
+      if (tokenTab === 'register') {
+        // 显示名可选，默认取邮箱前缀
+        payload.displayName = tokenDisplayName.trim() || email.split('@')[0]
+      }
+      const res = await fetch(`${SUBMIT_TOKEN_ORIGIN}/api/creator/submit-token/${tokenTab}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        // 优先展示接口返回的 error 文案（如「该邮箱已注册，请直接登录获取令牌」「邮箱或密码错误」）
+        setTokenError((data as { error?: string }).error || `获取令牌失败（${res.status}）`)
+        return
+      }
+      const token = (data as { token?: string }).token
+      if (!token) {
+        setTokenError('接口返回异常，未获取到令牌')
+        return
+      }
+      // 只回填输入框，不自动保存，避免误覆盖平台配置
+      setPlatformForm((prev) => ({ ...prev, submitToken: token }))
+      setShowTokenDialog(false)
+      showToast('success', '已获取提交令牌并填入，请保存平台配置')
+    } catch (e) {
+      setTokenError(e instanceof Error ? e.message : '获取令牌失败，请检查网络后重试')
+    } finally {
+      setTokenSubmitting(false)
     }
   }
 
@@ -417,9 +519,12 @@ export function CreatorCenterDialog({
         enabled: !config.enabled,
         createdAt: config.createdAt,
         updatedAt: Date.now(),
+        // 保留平台配置的账号归属
+        ownerEmail: config.ownerEmail,
       }
       await updatePlatformConfig(clean)
-      await loadPlatforms()
+      // 刷新时按当前本地账号邮箱过滤，保持平台配置归属一致
+      await loadPlatforms(account?.email)
     } catch (e) {
       showToast('error', e instanceof Error ? e.message : '操作失败')
     }
@@ -434,7 +539,8 @@ export function CreatorCenterDialog({
     try {
       await removePlatformConfig(platformToDelete.id)
       showToast('success', '平台已删除')
-      await loadPlatforms()
+      // 刷新时按当前本地账号邮箱过滤，保持平台配置归属一致
+      await loadPlatforms(account?.email)
     } catch (e) {
       showToast('error', e instanceof Error ? e.message : '删除失败')
     } finally {
@@ -460,12 +566,12 @@ export function CreatorCenterDialog({
   const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    if (!file.type.startsWith('image/')) {
-      showToast('error', '请上传图片格式的文件')
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      showToast('error', '仅支持 JPEG/PNG/GIF/WebP 格式')
       return
     }
     if (file.size > MAX_COVER_SIZE) {
-      showToast('error', '封面图大小不能超过 2MB')
+      showToast('error', '封面图大小不能超过 5MB')
       return
     }
     setCoverImage(file)
@@ -490,8 +596,8 @@ export function CreatorCenterDialog({
       return
     }
     filesToAdd.forEach((file) => {
-      if (!file.type.startsWith('image/')) {
-        showToast('error', '请上传图片格式的文件')
+      if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+        showToast('error', '仅支持 JPEG/PNG/GIF/WebP 格式')
         return
       }
       if (file.size > MAX_SCREENSHOT_SIZE) {
@@ -515,8 +621,10 @@ export function CreatorCenterDialog({
     const next: Record<string, string> = {}
     if (!selectedPlatformId) next.platform = '请选择目标平台'
     if (!title.trim()) next.title = '请填写作品标题'
+    else if (title.trim().length > MAX_TITLE_LENGTH) next.title = '标题长度不能超过60字'
     if (!summary.trim()) next.summary = '请填写一句话简介'
     if (summary.length > MAX_SUMMARY_LENGTH) next.summary = `简介不能超过 ${MAX_SUMMARY_LENGTH} 字`
+    if (tags.length > 10) next.tags = '标签不能超过10个'
     const hasContact = wechat.trim() || afdianLink.trim()
     if (!hasContact) next.contact = '请至少填写微信号或爱发电链接之一'
     if (afdianLink.trim() && !/^https?:\/\/.+/.test(afdianLink.trim())) {
@@ -556,7 +664,8 @@ export function CreatorCenterDialog({
       }
       setPublished(true)
       showToast('success', '提交成功，等待平台审核')
-      await loadRecords()
+      // 刷新时按当前本地账号邮箱过滤，保持发布记录归属一致
+      await loadRecords(account?.email)
     } catch (e) {
       showToast('error', e instanceof Error ? e.message : '提交失败')
     } finally {
@@ -926,15 +1035,30 @@ export function CreatorCenterDialog({
                     <div>
                       <label className={labelClass}>
                         提交令牌
-                        <span className="text-[10px] text-slate-500 font-normal">可选，留空使用默认令牌</span>
+                        <span
+                          className="text-[10px] text-slate-500 font-normal cursor-help"
+                          title="留空则使用内置默认令牌（可能不可用）；推荐点击右侧按钮获取个人令牌"
+                        >
+                          留空则使用内置默认令牌
+                        </span>
                       </label>
-                      <input
-                        type="text"
-                        value={platformForm.submitToken}
-                        onChange={(e) => setPlatformForm((prev) => ({ ...prev, submitToken: e.target.value }))}
-                        placeholder="提交令牌"
-                        className={inputClass}
-                      />
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={platformForm.submitToken}
+                          onChange={(e) => setPlatformForm((prev) => ({ ...prev, submitToken: e.target.value }))}
+                          placeholder="提交令牌"
+                          className={inputClass}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => openTokenDialog('login')}
+                          className="px-3 py-2 text-xs rounded-lg border border-amber-500/40 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 transition-colors flex items-center gap-1.5 shrink-0"
+                        >
+                          <KeyRound className="w-3.5 h-3.5" />
+                          获取提交令牌
+                        </button>
+                      </div>
                     </div>
                     {!platformForm.isBuiltin && (
                       <>
@@ -1308,6 +1432,12 @@ export function CreatorCenterDialog({
                             添加
                           </button>
                         </div>
+                        {errors.tags && (
+                          <p className={errorTextClass}>
+                            <AlertCircle className="w-3 h-3" />
+                            {errors.tags}
+                          </p>
+                        )}
                       </div>
 
                       <div>
@@ -1370,7 +1500,7 @@ export function CreatorCenterDialog({
                           >
                             <ImageIcon className="w-6 h-6 text-slate-500" />
                             <span className="text-xs text-slate-400">点击上传封面图</span>
-                            <span className="text-[10px] text-slate-600">支持 JPG / PNG / WebP，最大 2MB</span>
+                            <span className="text-[10px] text-slate-600">支持 JPG / PNG / WebP，最大 5MB</span>
                           </button>
                         )}
                         <input
@@ -1564,6 +1694,129 @@ export function CreatorCenterDialog({
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 删除
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showTokenDialog && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 p-4"
+          onClick={(e) => { if (e.target === e.currentTarget && !tokenSubmitting) setShowTokenDialog(false) }}
+        >
+          <div className="w-full max-w-sm bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl p-5 space-y-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-2.5">
+                <div className="w-9 h-9 rounded-full bg-amber-500/15 flex items-center justify-center shrink-0">
+                  <KeyRound className="w-4.5 h-4.5 text-amber-400" />
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-slate-100">获取提交令牌</div>
+                  <div className="text-[11px] text-slate-400 mt-0.5 leading-relaxed">
+                    令牌绑定你的邮箱，提交作品时将以此身份上墙
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowTokenDialog(false)}
+                disabled={tokenSubmitting}
+                className="w-7 h-7 rounded-full hover:bg-slate-800 flex items-center justify-center transition-colors disabled:opacity-40 shrink-0"
+                aria-label="关闭"
+              >
+                <X className="w-4 h-4 text-slate-400" />
+              </button>
+            </div>
+
+            <div className="flex rounded-lg border border-slate-700 overflow-hidden">
+              <button
+                type="button"
+                onClick={() => { setTokenTab('login'); setTokenError('') }}
+                className={`flex-1 py-2 text-xs font-medium transition-colors ${
+                  tokenTab === 'login' ? 'bg-slate-800 text-white' : 'bg-transparent text-slate-400 hover:text-slate-300'
+                }`}
+              >
+                已有账号登录
+              </button>
+              <button
+                type="button"
+                onClick={() => { setTokenTab('register'); setTokenError('') }}
+                className={`flex-1 py-2 text-xs font-medium transition-colors ${
+                  tokenTab === 'register' ? 'bg-slate-800 text-white' : 'bg-transparent text-slate-400 hover:text-slate-300'
+                }`}
+              >
+                注册新账号
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                <input
+                  type="email"
+                  value={tokenEmail}
+                  onChange={(e) => setTokenEmail(e.target.value)}
+                  placeholder="邮箱"
+                  className={iconInputClass}
+                />
+              </div>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                <input
+                  type={showTokenPassword ? 'text' : 'password'}
+                  value={tokenPassword}
+                  onChange={(e) => setTokenPassword(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleGetToken()}
+                  placeholder={tokenTab === 'register' ? '密码（至少 8 位，含字母和数字）' : '密码'}
+                  className={`${iconInputClass} pr-9`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowTokenPassword(v => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                  tabIndex={-1}
+                >
+                  {showTokenPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              {tokenTab === 'register' && (
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                  <input
+                    type="text"
+                    value={tokenDisplayName}
+                    onChange={(e) => setTokenDisplayName(e.target.value)}
+                    placeholder="显示名（可选，默认取邮箱前缀）"
+                    className={iconInputClass}
+                  />
+                </div>
+              )}
+              {tokenError && (
+                <div className="flex items-start gap-2 text-xs text-red-400 bg-red-900/20 rounded-lg px-3 py-2">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                  <span>{tokenError}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button
+                onClick={() => setShowTokenDialog(false)}
+                disabled={tokenSubmitting}
+                className="px-3 py-1.5 text-xs rounded-lg border border-slate-700 text-slate-300 hover:bg-slate-800 transition-colors disabled:opacity-40"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleGetToken}
+                disabled={tokenSubmitting}
+                className="px-3 py-1.5 text-xs rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-900 font-medium transition-colors disabled:opacity-60 flex items-center gap-1.5"
+              >
+                {tokenSubmitting ? (
+                  <><Loader2 className="w-3.5 h-3.5 animate-spin" />获取中...</>
+                ) : (
+                  <><KeyRound className="w-3.5 h-3.5" />获取令牌</>
+                )}
               </button>
             </div>
           </div>

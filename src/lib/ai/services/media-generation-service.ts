@@ -19,13 +19,18 @@ export interface ImageGenerationParams {
   seed?: number
 }
 
+export type VideoAspectRatio = '16:9' | '9:16' | '1:1'
+
 export interface VideoGenerationParams {
   prompt: string
   imageUrl?: string
+  /** 视频时长（秒）：3~10 秒，受服务商限制 */
   duration?: number
   motionStrength?: number
   /** 固定随机种子（部分视频 API 支持，用于画面稳定复现） */
   seed?: number
+  /** 输出画幅比例：16:9 横屏 / 9:16 竖屏 / 1:1 方形。默认 16:9 */
+  ratio?: VideoAspectRatio
 }
 
 export interface AudioGenerationParams {
@@ -50,6 +55,72 @@ export interface MediaProviderConfig {
   model?: string
   /** ComfyUI 专用：用户导出的工作流 JSON（API 格式）。编辑器会自动注入 prompt 和参考图。 */
   workflowJson?: string
+}
+
+// ---------- 重试与并发控制 ----------
+
+/**
+ * 网络错 / 5xx 重试（默认 2 次，最多共尝试 3 次）；4xx 永不重试（参数/权限问题，重发只会浪费配额）。
+ * 指数退避：800ms → 1600ms → 3200ms。
+ */
+export async function withRetry<T>(
+  fn: (attempt: number) => Promise<T>,
+  opts: { maxRetries?: number; baseDelayMs?: number } = {}
+): Promise<T> {
+  const maxRetries = opts.maxRetries ?? 2
+  const base = opts.baseDelayMs ?? 800
+  let lastErr: unknown
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn(attempt)
+    } catch (e) {
+      lastErr = e
+      // 最后一次不再重试
+      if (attempt >= maxRetries) break
+      // 4xx（非 429）不重试：参数错误/配额不足/Key 错，重试没意义
+      const status =
+        (e instanceof Error && typeof (e as { status?: unknown }).status === 'number')
+          ? (e as unknown as { status: number }).status
+          : undefined
+      if (status != null && status >= 400 && status < 500 && status !== 429) {
+        break
+      }
+      // 429（限流）/ 5xx / 网络异常 → 退避后重试
+      await new Promise((r) => setTimeout(r, base * (2 ** attempt)))
+    }
+  }
+  throw lastErr
+}
+
+/**
+ * 媒体生成并发节流：同类任务最多 MAX_CONCURRENT 个同时飞，其余按调用顺序排队。
+ * 避免用户连续点多次打爆 API 配额或被限流。
+ */
+const MAX_CONCURRENT = 3
+const _queueTokens: Array<() => void> = []
+let _inFlight = 0
+
+function acquireSlot(): Promise<void> {
+  if (_inFlight < MAX_CONCURRENT) {
+    _inFlight++
+    return Promise.resolve()
+  }
+  return new Promise((resolve) => _queueTokens.push(resolve))
+}
+
+function releaseSlot(): void {
+  const next = _queueTokens.shift()
+  if (next) {
+    next() // 占位已转让，inFlight 不变
+  } else {
+    _inFlight = Math.max(0, _inFlight - 1)
+  }
+}
+
+// 测试工具：重置节流状态（仅单测用）
+export function _resetConcurrencyLimiterForTest(): void {
+  _queueTokens.length = 0
+  _inFlight = 0
 }
 
 // ---------- 一致性辅助 ----------
@@ -365,7 +436,12 @@ async function generateVideoWithOpenAICompatible(
   const base = apiUrl.replace(/\/+$/, '')
   const body: Record<string, unknown> = { model, prompt: params.prompt }
   if (params.imageUrl) body.image_url = params.imageUrl
-  if (params.duration) body.duration = params.duration
+  // 规范化时长：服务商一般支持 3~5s，少数到 10s；夹到 [3, 10]，不传则让服务商用默认
+  if (params.duration != null) {
+    const d = Math.max(3, Math.min(10, Math.round(params.duration)))
+    body.duration = d
+  }
+  if (params.ratio) body.ratio = params.ratio
   if (params.motionStrength != null) body.motion_strength = params.motionStrength
   if (params.seed != null) body.seed = params.seed
 
@@ -446,54 +522,65 @@ export async function generateAudio(
   params: AudioGenerationParams,
   provider: MediaProviderConfig
 ): Promise<MediaGenerationResult> {
-  const resolved = await decryptApiKeyField(provider)
-  if (resolved.type === 'comfyui') {
-    throw new Error('ComfyUI 不支持音频生成，请选择 wan/custom 类型服务商')
+  await acquireSlot()
+  try {
+    return await withRetry(async () => {
+      const resolved = await decryptApiKeyField(provider)
+      if (resolved.type === 'comfyui') {
+        throw new Error('ComfyUI 不支持音频生成，请选择 wan/custom 类型服务商')
+      }
+      if (resolved.type === 'openai' || resolved.type === 'stability') {
+        return generateAudioWithOpenAICompatible(params, resolved.apiUrl || 'https://api.openai.com/v1', resolved.apiKey, resolved.model)
+      }
+      if (resolved.type === 'wan' || resolved.type === 'custom') {
+        if (!resolved.apiUrl || !resolved.apiKey) {
+          throw new Error(`${resolved.type} 供应商需要配置 apiUrl 和 apiKey`)
+        }
+        return generateAudioWithOpenAICompatible(params, resolved.apiUrl, resolved.apiKey, resolved.model)
+      }
+      throw new Error(`Unsupported provider type: ${resolved.type}`)
+    })
+  } finally {
+    releaseSlot()
   }
-  if (resolved.type === 'openai' || resolved.type === 'stability') {
-    // OpenAI/Stability 走各自官方音频端点；此处统一走 OpenAI 兼容格式
-    return generateAudioWithOpenAICompatible(params, resolved.apiUrl || 'https://api.openai.com/v1', resolved.apiKey, resolved.model)
-  }
-  if (resolved.type === 'wan' || resolved.type === 'custom') {
-    if (!resolved.apiUrl || !resolved.apiKey) {
-      throw new Error(`${resolved.type} 供应商需要配置 apiUrl 和 apiKey`)
-    }
-    return generateAudioWithOpenAICompatible(params, resolved.apiUrl, resolved.apiKey, resolved.model)
-  }
-  throw new Error(`Unsupported provider type: ${resolved.type}`)
 }
 
-// 主生成函数
+// 主生成函数（图片 / 视频）
 export async function generateMedia(
   params: ImageGenerationParams | VideoGenerationParams,
   provider: MediaProviderConfig
 ): Promise<MediaGenerationResult> {
   const isVideo = 'imageUrl' in params || 'duration' in params
-  const resolved = await decryptApiKeyField(provider)
-  // 视频生成仅支持 wan/custom（云端视频 API）
-  if (isVideo && resolved.type !== 'wan' && resolved.type !== 'custom') {
-    throw new Error('视频生成仅支持 wan/custom 类型服务商（云端视频 API），请在创作助理设置中配置')
-  }
-
-  switch (resolved.type) {
-    case 'openai':
-      return generateWithOpenAI(params as ImageGenerationParams, resolved.apiKey, resolved.model)
-    case 'stability':
-      return generateWithStability(params as ImageGenerationParams, resolved.apiKey, resolved.model)
-    case 'comfyui':
-      return generateWithComfyUI(params as ImageGenerationParams, resolved.apiUrl || 'http://localhost:8188', resolved.workflowJson)
-    case 'wan':
-    case 'custom': {
-      if (!resolved.apiUrl || !resolved.apiKey) {
-        throw new Error(`${resolved.type} 供应商需要配置 apiUrl 和 apiKey`)
+  await acquireSlot()
+  try {
+    return await withRetry(async () => {
+      const resolved = await decryptApiKeyField(provider)
+      if (isVideo && resolved.type !== 'wan' && resolved.type !== 'custom') {
+        throw new Error('视频生成仅支持 wan/custom 类型服务商（云端视频 API），请在创作助理设置中配置')
       }
-      if (isVideo) {
-        return generateVideoWithOpenAICompatible(params as VideoGenerationParams, resolved.apiUrl, resolved.apiKey, resolved.model)
+      switch (resolved.type) {
+        case 'openai':
+          return generateWithOpenAI(params as ImageGenerationParams, resolved.apiKey, resolved.model)
+        case 'stability':
+          return generateWithStability(params as ImageGenerationParams, resolved.apiKey, resolved.model)
+        case 'comfyui':
+          return generateWithComfyUI(params as ImageGenerationParams, resolved.apiUrl || 'http://localhost:8188', resolved.workflowJson)
+        case 'wan':
+        case 'custom': {
+          if (!resolved.apiUrl || !resolved.apiKey) {
+            throw new Error(`${resolved.type} 供应商需要配置 apiUrl 和 apiKey`)
+          }
+          if (isVideo) {
+            return generateVideoWithOpenAICompatible(params as VideoGenerationParams, resolved.apiUrl, resolved.apiKey, resolved.model)
+          }
+          return generateWithOpenAICompatible(params as ImageGenerationParams, resolved.apiUrl, resolved.apiKey, resolved.model)
+        }
+        default:
+          throw new Error(`Unsupported provider type: ${resolved.type}`)
       }
-      return generateWithOpenAICompatible(params as ImageGenerationParams, resolved.apiUrl, resolved.apiKey, resolved.model)
-    }
-    default:
-      throw new Error(`Unsupported provider type: ${resolved.type}`)
+    })
+  } finally {
+    releaseSlot()
   }
 }
 
@@ -561,14 +648,19 @@ export function saveGlobalStylePrompt(style: string): void {
 
 // ---------- 任务路由（image / video / audio） ----------
 
-/** 按任务取媒体生成配置：路由指定 > 旧版单一配置回退（仅 image/video） */
+/**
+ * 按任务取媒体生成配置。
+ * 回退链（配置读取收敛）：任务槽（image/video/audio）配置优先 → 槽缺失时回退旧全局配置
+ * （subsilicon_media_provider，仅 image/video 兼容旧行为；audio 从未有过旧配置，缺失即 null）。
+ * 统一入口：媒体配置只维护在任务槽，旧全局配置仅作读取回退，不再写回。
+ */
 export function getMediaProviderConfigForTask(task: MediaTaskType): MediaProviderConfig | null {
   return resolveMediaProviderForTask(task, getMediaProviderConfig)
 }
 
 /**
  * 按任务路由生成媒体（image / video / audio 槽）。
- * 使用该任务槽配置的服务商；槽未配置时回退旧版媒体配置（仅 image/video）。
+ * 配置回退链同 getMediaProviderConfigForTask：任务槽配置优先，槽缺失回退旧全局配置（仅 image/video）。
  * 槽的技能 prompt（skillPrompt）会自动拼接在生成 prompt 前。
  */
 export async function generateMediaForTask(

@@ -166,7 +166,12 @@ export function getTaskRoutingProviders(): AiProviderConfig[] {
   }
 }
 
-/** 媒体类任务槽的配置：路由指定 > 回退旧版媒体配置（仅 image/video 兼容旧行为） */
+/**
+ * 媒体类任务槽的配置解析（配置读取收敛的回退链核心）：
+ * 1. 任务槽（image/video/audio）有 media 配置 → 优先使用；
+ * 2. 槽缺失 → 回退旧全局媒体配置（仅 image/video 兼容旧行为；audio 从未有过旧配置，返回 null）。
+ * 统一入口：媒体配置只维护在任务槽，旧全局配置仅作读取回退（legacy 参数），不再写回。
+ */
 export function resolveMediaProviderForTask(
   task: MediaTaskType,
   legacy: () => MediaProviderConfig | null

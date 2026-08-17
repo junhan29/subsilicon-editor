@@ -22,6 +22,7 @@ import {
   Music,
   Plus,
   Save,
+  Send,
   Trash2,
   Unlock,
   Upload,
@@ -30,7 +31,7 @@ import {
 } from 'lucide-react'
 import type { StoredWork } from '@editor/lib/local-db/work-store'
 import type { WorkDocument } from '@editor/types/work'
-import { saveWork } from '@editor/lib/local-db/work-store'
+import { getGraphFromWork, saveWork } from '@editor/lib/local-db/work-store'
 import { getAsset, saveAsset } from '@editor/lib/local-db/asset-store'
 import {
   VIDEO_TRANSITIONS,
@@ -58,6 +59,7 @@ import {
   validateFileSize,
 } from '@editor/lib/media-processor'
 import { type PlayerClip, TimelinePlayer } from './timeline-player'
+import { CreatorCenterDialog } from './creator-center-dialog'
 import { showToast } from './toast'
 
 interface VideoEditorProps {
@@ -143,6 +145,7 @@ export function VideoEditor({ work, onBack }: VideoEditorProps) {
   const [saving, setSaving] = useState(false)
   const [showExport, setShowExport] = useState(false)
   const [exportDone, setExportDone] = useState<string | null>(null)
+  const [showCreatorCenter, setShowCreatorCenter] = useState(false)
   const [unlockCode, setUnlockCode] = useState('')
   const [playerClips, setPlayerClips] = useState<PlayerClip[]>([])
   const saveTimer = useRef<number | null>(null)
@@ -465,6 +468,14 @@ export function VideoEditor({ work, onBack }: VideoEditorProps) {
           {saving && <span className="text-muted-foreground/60">（保存中…）</span>}
         </span>
         <div className="ml-auto flex items-center gap-2">
+          <button
+            onClick={() => setShowCreatorCenter(true)}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
+            title="把作品提交到网站作品墙"
+          >
+            <Send className="w-3.5 h-3.5" />
+            发布作品
+          </button>
           <button
             onClick={() => setShowExport((v) => !v)}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity"
@@ -916,6 +927,16 @@ export function VideoEditor({ work, onBack }: VideoEditorProps) {
           </div>
         </aside>
       </div>
+
+      <CreatorCenterDialog
+        open={showCreatorCenter}
+        onClose={() => setShowCreatorCenter(false)}
+        graph={getGraphFromWork(work)}
+        workId={work.id}
+        initialTab="publish"
+        initialTitle={work.name}
+        initialSummary={doc.meta?.description || ''}
+      />
     </div>
   )
 }

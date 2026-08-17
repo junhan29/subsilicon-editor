@@ -11,8 +11,9 @@
 import type { Booth } from './types'
 import type { BoothExportItem } from './pack'
 import { buildBoothDdp } from './pack'
-import type { CreatorAccount } from '@editor/types/creator'
-import { publishToPlatform, getCurrentAccount } from '@editor/lib/creator-service'
+import type { LocalAccount } from '@editor/lib/local-account-store'
+import { getAccount } from '@editor/lib/local-account-store'
+import { publishToPlatform } from '@editor/lib/creator-service'
 import { getWorkType } from '@editor/lib/work-registry'
 import { getGraphFromWork } from '@editor/lib/local-db/work-store'
 import { saveBooth } from './store'
@@ -38,9 +39,9 @@ export async function publishBooth(
   booth: Booth,
   items: BoothExportItem[],
   platformConfigId: string,
-  account?: Omit<CreatorAccount, 'passwordHash'>
+  account?: Omit<LocalAccount, 'passwordHash'>
 ): Promise<BoothPublishOutcome> {
-  const acc = account || getCurrentAccount()
+  const acc = account || getAccount()
   if (!acc) {
     return { success: false, error: '请先在「创作者中心」登录创作者账号', results: [] }
   }

@@ -1,6 +1,6 @@
 // 数据库名和结构
 const DB_NAME = 'subsilicon-editor'
-const DB_VERSION = 4
+const DB_VERSION = 5
 
 // 表定义
 const STORES = {
@@ -11,6 +11,7 @@ const STORES = {
   creatorAccounts: { keyPath: 'email' }, // 创作者账号
   publishRecords: { keyPath: 'id' },  // 发布记录
   booths: { keyPath: 'id' },          // 摊位容器（v4）
+  creatorInputs: { keyPath: 'id' },   // 创作者输入库（v5）
 }
 
 // 单例连接缓存：IndexedDB 连接数有浏览器上限（Chromium 约 20 个/源），
@@ -52,6 +53,12 @@ export function openDB(): Promise<IDBDatabase> {
         // v4：摊位容器（摊位工作台一级容器，单摊位模型）
         if (!db.objectStoreNames.contains('booths')) {
           db.createObjectStore('booths', { keyPath: 'id' })
+        }
+        // v5：创作者输入库（灵感/大纲/设定/纠错/对话等采集条目）
+        if (!db.objectStoreNames.contains('creatorInputs')) {
+          const creatorInputsStore = db.createObjectStore('creatorInputs', { keyPath: 'id' })
+          creatorInputsStore.createIndex('byWorkId', 'workId', { unique: false })
+          creatorInputsStore.createIndex('byCreatedAt', 'createdAt', { unique: false })
         }
       }
       request.onsuccess = () => {

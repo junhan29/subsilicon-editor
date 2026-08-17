@@ -37,6 +37,23 @@ describe('chat-system-prompt', () => {
     expect(p).toContain('不要一上来就创建节点')
   })
 
+  it('默认（不传 mode）输出先聊后做段落，不含边聊边做段落', () => {
+    const p = getChatSystemPrompt('')
+    expect(p).toContain('## 先聊后做：你的核心工作方式')
+    expect(p).toContain('聊透想法')
+    expect(p).not.toContain('边聊边做')
+  })
+
+  it('act-along 模式输出边聊边做段落，且整体替换先聊后做段落', () => {
+    const p = getChatSystemPrompt('', 'act-along')
+    expect(p).toContain('边聊边做')
+    expect(p).toContain('每轮建议只建 3-6 个节点')
+    expect(p).toContain('等待用户授权')
+    // 先聊后做段落的关键字不应残留
+    expect(p).not.toContain('聊透想法')
+    expect(p).not.toContain('征询确认')
+  })
+
   it('媒体生成必须先说明意图并等待用户授权', () => {
     const p = getChatSystemPrompt('')
     expect(p).toContain('等待用户授权')

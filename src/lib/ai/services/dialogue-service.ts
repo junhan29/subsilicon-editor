@@ -1,5 +1,6 @@
 import type { AiConfig, AiDialogueResult } from '../types'
 import { callAiForTask } from '../provider-registry'
+import { buildGenerationPolicyPrompt, deaiStyle, type GenerationContext } from './generation-policy'
 
 export const DIALOGUE_SYSTEM_PROMPT = `你是一个专业的剧本创作助手。请根据角色列表和上下文，生成一段自然流畅的对话。输出必须是严格的 JSON 格式，不要包含任何 markdown 标记或额外文字。
 
@@ -20,14 +21,15 @@ export async function generateDialogue(
   characterNames: string[],
   context: string,
   emotion: string = '',
-  config?: AiConfig | null
+  config?: AiConfig | null,
+  genContext?: GenerationContext
 ): Promise<AiDialogueResult> {
   const emotionPrompt = emotion ? `\n整体情绪：${emotion}` : ''
   const userPrompt = `角色：${characterNames.join('、')}\n上下文：${context}${emotionPrompt}`
 
   const rawResult = await callAiForTask('text',
     {
-      systemPrompt: DIALOGUE_SYSTEM_PROMPT,
+      systemPrompt: `${DIALOGUE_SYSTEM_PROMPT}${buildGenerationPolicyPrompt(context, genContext)}`,
       userPrompt,
       temperature: 0.7,
       maxTokens: 800,
@@ -44,9 +46,9 @@ export async function generateDialogue(
             .map((line: unknown) => {
               const l = line as Record<string, unknown>
               return {
-                character: typeof l.character === 'string' ? l.character : '',
-                text: typeof l.text === 'string' ? l.text : '',
-                emotion: typeof l.emotion === 'string' ? l.emotion : undefined,
+                character: deaiStyle(typeof l.character === 'string' ? l.character : ''),
+                text: deaiStyle(typeof l.text === 'string' ? l.text : ''),
+                emotion: typeof l.emotion === 'string' ? deaiStyle(l.emotion) : undefined,
               }
             })
             .filter((l) => l.character && l.text)
@@ -59,7 +61,7 @@ export async function generateDialogue(
     for (const part of parts) {
       const match = part.match(/^(.+?)[：:] (.+)$/)
       if (match) {
-        lines.push({ character: match[1].trim(), text: match[2].trim() })
+        lines.push({ character: deaiStyle(match[1].trim()), text: deaiStyle(match[2].trim()) })
       }
     }
     return { lines, result: rawResult }

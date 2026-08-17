@@ -7,9 +7,13 @@ import {
   Calendar,
   CheckCircle2,
   Clock,
+  Download,
+  FileDown,
   PieChartIcon,
   RefreshCw,
+  Timer,
   Trash2,
+  TrendingDown,
   TrendingUp,
   Users,
 } from 'lucide-react'
@@ -60,11 +64,48 @@ export function AnalyticsPanel() {
     setLoading(false)
   }
 
+  /** 通过 Blob + 下载链接导出本地文件，不依赖后端 */
+  const downloadBlob = (content: string, filename: string, mimeType: string) => {
+    const blob = new Blob([content], { type: mimeType })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }
+
+  const handleExportJson = async () => {
+    try {
+      const json = await analyticsStore.exportAnalyticsJson(storyId || 'default')
+      downloadBlob(json, `analytics-${storyId || 'default'}-${Date.now()}.json`, 'application/json;charset=utf-8')
+      showToast('success', 'JSON 报告已导出')
+    } catch (error) {
+      showToast('error', `导出失败: ${(error as Error).message}`)
+    }
+  }
+
+  const handleExportCsv = async () => {
+    try {
+      const csv = await analyticsStore.exportAnalyticsCsv(storyId || 'default')
+      // 前置 BOM，便于 Excel 打开时正确识别中文
+      downloadBlob(`\uFEFF${csv}`, `analytics-${storyId || 'default'}-${Date.now()}.csv`, 'text/csv;charset=utf-8')
+      showToast('success', 'CSV 报告已导出')
+    } catch (error) {
+      showToast('error', `导出失败: ${(error as Error).message}`)
+    }
+  }
+
   const formatTime = (ms: number): string => {
     if (ms < 60000) return `${Math.round(ms / 1000)}秒`
     if (ms < 3600000) return `${Math.round(ms / 60000)}分钟`
     return `${(ms / 3600000).toFixed(1)}小时`
   }
+
+  // 停留时长区间总计数（用于分布条宽度计算）
+  const totalDwellCount = analytics?.dwellDistribution.reduce((sum, b) => sum + b.count, 0) || 1
 
   return (
     <div className="h-full flex flex-col">
@@ -219,6 +260,113 @@ export function AnalyticsPanel() {
                 </Card>
               )}
 
+              {analytics.dropOffPoints.length > 0 && (
+                <Card className="border-border">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <TrendingDown className="w-4 h-4 text-red-500" />
+                      读者流失点
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex justify-center">
+                      <BarChart
+                        data={analytics.dropOffPoints.slice(0, 8).map((drop) => ({
+                          label: drop.nodeId.slice(0, 6),
+                          value: drop.dropCount,
+                          color: '#EF4444',
+                        }))}
+                        height={100}
+                        barWidth={28}
+                        gap={6}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      {analytics.dropOffPoints.slice(0, 10).map((drop) => (
+                        <div
+                          key={drop.nodeId}
+                          className="flex items-center gap-3 p-2 rounded-lg bg-muted/30"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium truncate">{drop.nodeId}</p>
+                            <p className="text-[10px] text-muted-foreground">读者在此节点后离开</p>
+                          </div>
+                          <Badge variant="secondary" className="text-[10px]">
+                            {drop.dropCount} 次
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                    {analytics.dropOffPoints.length > 10 && (
+                      <p className="text-xs text-center text-muted-foreground mt-2">
+                        仅显示前 10 个流失点
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {analytics.nodeDwellStats.length > 0 && (
+                <Card className="border-border">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <Timer className="w-4 h-4 text-cyan-500" />
+                      节点停留分布
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex justify-center">
+                      <BarChart
+                        data={analytics.nodeDwellStats.slice(0, 8).map((node) => ({
+                          label: node.nodeId.slice(0, 6),
+                          value: Math.max(Math.round(node.avgDwellMs / 1000), 1),
+                          color: '#14B8A6',
+                        }))}
+                        height={100}
+                        barWidth={28}
+                        gap={6}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      {analytics.nodeDwellStats.slice(0, 10).map((node) => (
+                        <div
+                          key={node.nodeId}
+                          className="flex items-center gap-3 p-2 rounded-lg bg-muted/30"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium truncate">{node.nodeId}</p>
+                            <p className="text-[10px] text-muted-foreground">
+                              平均 {formatTime(node.avgDwellMs)} · {node.visitCount} 次访问
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="pt-2 border-t border-border">
+                      <p className="text-xs text-muted-foreground mb-2">停留时长区间分布</p>
+                      <div className="space-y-2">
+                        {analytics.dwellDistribution.map((bucket) => (
+                          <div key={bucket.label}>
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-xs">{bucket.label}</span>
+                              <span className="text-[10px] text-muted-foreground">
+                                {bucket.count} 次 ({((bucket.count / totalDwellCount) * 100).toFixed(1)}%)
+                              </span>
+                            </div>
+                            <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-cyan-500 rounded-full transition-all"
+                                style={{ width: `${(bucket.count / totalDwellCount) * 100}%` }}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               {analytics.choiceDistribution.length > 0 && (
                 <Card className="border-border">
                   <CardHeader className="pb-2">
@@ -267,6 +415,33 @@ export function AnalyticsPanel() {
                   </CardContent>
                 </Card>
               )}
+
+              <div className="p-3 bg-muted/30 rounded-lg space-y-2">
+                <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                  <Download className="w-3.5 h-3.5" />
+                  导出分析报告（仅本地生成，不联网）
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={handleExportJson}
+                    disabled={loading}
+                  >
+                    <FileDown className="w-4 h-4 mr-2" />
+                    导出 JSON
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={handleExportCsv}
+                    disabled={loading}
+                  >
+                    <FileDown className="w-4 h-4 mr-2" />
+                    导出 CSV
+                  </Button>
+                </div>
+              </div>
 
               <Button
                 variant="outline"

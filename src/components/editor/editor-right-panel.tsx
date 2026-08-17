@@ -361,6 +361,7 @@ function EditorRightPanel({
               onAddAnnotation={(nodeId) => onOpenAnnotationDialog?.(nodeId)}
               onViewAnnotations={() => setActiveTab('annotations')}
               graph={graph}
+              workId={workId}
             />
           </div>}
 

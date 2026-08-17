@@ -25,13 +25,14 @@ import {
   Lock,
   Plus,
   Save,
+  Send,
   Trash2,
   Unlock,
   X,
 } from 'lucide-react'
 import type { StoredWork } from '@editor/lib/local-db/work-store'
 import type { WorkDocument } from '@editor/types/work'
-import { saveWork } from '@editor/lib/local-db/work-store'
+import { getGraphFromWork, saveWork } from '@editor/lib/local-db/work-store'
 import { RichTextEditor, RichTextViewer } from './rich-text-editor'
 import {
   type NovelChapter,
@@ -47,6 +48,7 @@ import {
   exportNovelToHTML,
   exportNovelToTXT,
 } from '@editor/lib/export-novel'
+import { CreatorCenterDialog } from './creator-center-dialog'
 import { showToast } from './toast'
 
 interface NovelEditorProps {
@@ -91,6 +93,7 @@ export function NovelEditor({ work, onBack }: NovelEditorProps) {
   const [saving, setSaving] = useState(false)
   const [showExport, setShowExport] = useState(false)
   const [exportDone, setExportDone] = useState<string | null>(null)
+  const [showCreatorCenter, setShowCreatorCenter] = useState(false)
   const saveTimer = useRef<number | null>(null)
   // 防抖窗口内最新待保存的数据（卸载时 flush 用）
   const pendingRef = useRef<{ data: NovelData; title: string } | null>(null)
@@ -263,6 +266,14 @@ export function NovelEditor({ work, onBack }: NovelEditorProps) {
           {saving && <span className="text-muted-foreground/60">（保存中…）</span>}
         </span>
         <div className="ml-auto flex items-center gap-2">
+          <button
+            onClick={() => setShowCreatorCenter(true)}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
+            title="把作品提交到网站作品墙"
+          >
+            <Send className="w-3.5 h-3.5" />
+            发布作品
+          </button>
           <button
             onClick={() => setShowExport((v) => !v)}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity"
@@ -520,6 +531,16 @@ export function NovelEditor({ work, onBack }: NovelEditorProps) {
           )}
         </main>
       </div>
+
+      <CreatorCenterDialog
+        open={showCreatorCenter}
+        onClose={() => setShowCreatorCenter(false)}
+        graph={getGraphFromWork(work)}
+        workId={work.id}
+        initialTab="publish"
+        initialTitle={work.name}
+        initialSummary={doc.meta?.description || ''}
+      />
     </div>
   )
 }

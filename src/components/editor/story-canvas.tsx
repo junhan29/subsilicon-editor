@@ -77,7 +77,6 @@ import type { MonetizationConfig } from '@editor/lib/work-monetization'
 import { GROUP_COLORS } from '@editor/types/editor'
 import { generateNodesFromOutline, generateOutlineFromNodes, parseOutline } from '@editor/lib/outline-parser'
 import type { LibraryAsset } from '@editor/lib/asset-library'
-import { ensureCreatorServiceInit } from '@editor/lib/creator-service'
 import {
   getAnnotationAuthor,
   loadAnnotations,
@@ -398,22 +397,9 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, onStartTour, wo
     }
   }, [contextMenu])
 
-  // 账号登录状态刷新
-  // 当登录/登出后触发重渲染
-  useEffect(() => {
-    const handleLoginChange = () => {
-      setLoginState(n => n + 1)
-    }
-    window.addEventListener('app:login-change', handleLoginChange)
-    return () => window.removeEventListener('app:login-change', handleLoginChange)
-  }, [])
-
-  // 创作者中心初始化（从 localStorage 恢复登录态）
-  useEffect(() => {
-    ensureCreatorServiceInit().then(() => {
-      setLoginState(n => n + 1)
-    })
-  }, [])
+  // 创作者中心初始化（本地账号会话由 local-account-store 承载，无需在此恢复）
+  // 注：原 ensureCreatorServiceInit（creatorAccounts 会话恢复）已随账号双轨统一移除；
+  // 登录/登出后的重渲染由 CreatorCenterDialog 的 onLoginStateChange 回调驱动
 
   // 批注 Map（nodeId -> annotations）供 marker Context 使用
   const annotationsMap = useMemo(() => {
@@ -541,55 +527,60 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, onStartTour, wo
     return `${type}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
   }, [])
 
+  // 把历史快照恢复到画布各状态源（undo / redo / 回滚 AI 操作共用）
+  const applySnapshot = useCallback((snapshot: StoryGraphSnapshot) => {
+    setNodes(snapshot.nodes as StoryNode[])
+    setEdges(snapshot.edges as StoryEdge[])
+    setGroups(snapshot.groups as NodeGroup[])
+    setCharacters(snapshot.characters as StoryCharacter[])
+    setVariables(snapshot.variables as import('@editor/types/editor').StoryVariable[])
+    scenesRef.current = snapshot.scenes as ComicScene[]
+    audioRef.current = snapshot.audios as ComicAudio[]
+    // 场景/音频可能随快照回滚，递增版本号驱动 graph 重算
+    setScenesVersion((v) => v + 1)
+    setAudiosVersion((v) => v + 1)
+    // 批注与付费配置随快照回滚（可选字段兼容早期快照）
+    if (snapshot.annotations) {
+      setAnnotations(snapshot.annotations as NodeAnnotation[])
+    }
+    if (snapshot.monetization !== undefined) {
+      setMonetization((snapshot.monetization as MonetizationConfig | null) ?? null)
+    }
+  }, [setNodes, setEdges, setGroups, setCharacters, setVariables, setAnnotations, setMonetization, setScenesVersion, setAudiosVersion])
+
   const undo = useCallback(() => {
     const snapshot = historyStoreRef.current?.undo()
     if (snapshot) {
-      setNodes(snapshot.nodes as StoryNode[])
-      setEdges(snapshot.edges as StoryEdge[])
-      setGroups(snapshot.groups as NodeGroup[])
-      setCharacters(snapshot.characters as StoryCharacter[])
-      setVariables(snapshot.variables as import('@editor/types/editor').StoryVariable[])
-      scenesRef.current = snapshot.scenes as ComicScene[]
-      audioRef.current = snapshot.audios as ComicAudio[]
-      // 场景/音频可能随快照回滚，递增版本号驱动 graph 重算
-      setScenesVersion((v) => v + 1)
-      setAudiosVersion((v) => v + 1)
-      // 批注与付费配置随快照回滚（可选字段兼容早期快照）
-      if (snapshot.annotations) {
-        setAnnotations(snapshot.annotations as NodeAnnotation[])
-      }
-      if (snapshot.monetization !== undefined) {
-        setMonetization((snapshot.monetization as MonetizationConfig | null) ?? null)
-      }
+      applySnapshot(snapshot)
       showToast('info', '已撤销')
       announce('已撤销')
     }
-  }, [setNodes, setEdges, setGroups, setCharacters, setVariables, announce])
+  }, [applySnapshot, announce])
 
   const redo = useCallback(() => {
     const snapshot = historyStoreRef.current?.redo()
     if (snapshot) {
-      setNodes(snapshot.nodes as StoryNode[])
-      setEdges(snapshot.edges as StoryEdge[])
-      setGroups(snapshot.groups as NodeGroup[])
-      setCharacters(snapshot.characters as StoryCharacter[])
-      setVariables(snapshot.variables as import('@editor/types/editor').StoryVariable[])
-      scenesRef.current = snapshot.scenes as ComicScene[]
-      audioRef.current = snapshot.audios as ComicAudio[]
-      // 场景/音频可能随快照回滚，递增版本号驱动 graph 重算
-      setScenesVersion((v) => v + 1)
-      setAudiosVersion((v) => v + 1)
-      // 批注与付费配置随快照回滚（可选字段兼容早期快照）
-      if (snapshot.annotations) {
-        setAnnotations(snapshot.annotations as NodeAnnotation[])
-      }
-      if (snapshot.monetization !== undefined) {
-        setMonetization((snapshot.monetization as MonetizationConfig | null) ?? null)
-      }
+      applySnapshot(snapshot)
       showToast('info', '已重做')
       announce('已重做')
     }
-  }, [setNodes, setEdges, setGroups, setCharacters, setVariables, announce])
+  }, [applySnapshot, announce])
+
+  // AI 批量操作检查点：act-along 模式下，AI 每批动作执行前把当前画布状态推入历史栈
+  const markAiBatchBoundary = useCallback(() => {
+    const graph = buildSnapshot()
+    historyStoreRef.current?.markAiBatch(graph)
+  }, [buildSnapshot])
+
+  // 回滚到最近一次 AI 批量操作之前的状态（可重复回退到更早的 AI 批次）
+  const undoToAiBatchBoundary = useCallback((): boolean => {
+    const result = historyStoreRef.current?.undoToLastAiBatch()
+    if (!result || !result.done || !result.snapshot) return false
+    applySnapshot(result.snapshot)
+    showToast('info', '已回滚 AI 操作')
+    announce('已回滚 AI 操作')
+    return true
+  }, [applySnapshot, announce])
 
   // 构建当前 graph — useMemo 优化避免每次渲染重建
   const graph = useMemo((): StoryGraph => ({
@@ -2014,6 +2005,10 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, onStartTour, wo
       onPreviewWork={() => setShowPreview(true)}
       onUndo={undo}
       onRedo={redo}
+      // act-along 模式：AI 动作执行前打批次检查点 + 提供「回滚 AI 操作」
+      onMarkAiBatch={markAiBatchBoundary}
+      onRollbackAiBatch={undoToAiBatchBoundary}
+      workId={workId}
     />
   )
 

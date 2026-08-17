@@ -27,6 +27,8 @@ export interface HistoryAction<T = unknown> {
   description: string
   before: T
   after: T
+  /** 可选标记：'ai-batch' 表示该条目是 AI 批量操作起点检查点（用于「回滚 AI 操作」） */
+  tag?: 'ai-batch'
 }
 
 export interface StoryGraphSnapshot {
@@ -58,6 +60,8 @@ export class HistoryStore<T extends StoryGraphSnapshot = StoryGraphSnapshot> {
   private present: T | null = null
   private maxSize: number
   private listeners: Set<(state: HistoryState) => void> = new Set()
+  /** 最近一次 AI 批次起点在历史栈中的位置（-1 表示尚未记录） */
+  private lastAiBatchIndex = -1
 
   constructor(maxSize = 50) {
     this.maxSize = maxSize
@@ -67,6 +71,7 @@ export class HistoryStore<T extends StoryGraphSnapshot = StoryGraphSnapshot> {
     this.past = []
     this.future = []
     this.present = state
+    this.lastAiBatchIndex = -1
     this.notifyListeners()
   }
 
@@ -93,7 +98,8 @@ export class HistoryStore<T extends StoryGraphSnapshot = StoryGraphSnapshot> {
     type: HistoryActionType,
     description: string,
     before: T,
-    after: T
+    after: T,
+    tag?: 'ai-batch'
   ): void {
     if (this.present === null) {
       this.present = after
@@ -108,6 +114,7 @@ export class HistoryStore<T extends StoryGraphSnapshot = StoryGraphSnapshot> {
       description,
       before: createSnapshot(before),
       after: createSnapshot(after),
+      ...(tag ? { tag } : {}),
     }
 
     this.past.push(action)
@@ -153,7 +160,50 @@ export class HistoryStore<T extends StoryGraphSnapshot = StoryGraphSnapshot> {
   clear(): void {
     this.past = []
     this.future = []
+    this.lastAiBatchIndex = -1
     this.notifyListeners()
+  }
+
+  /**
+   * 把当前 graph 作为 AI 批量操作起点检查点推入历史栈（tag='ai-batch'），
+   * 并记录 lastAiBatchIndex（该快照在栈中的位置）。
+   * 之后 AI 批量操作产生的普通历史条目会堆叠在其上方，undoToLastAiBatch 可一次性回退到此处。
+   * 若历史栈尚未初始化（present 为 null），本次标记被忽略。
+   */
+  markAiBatch(graph: T): void {
+    if (this.present === null) return
+    this.push('BATCH', 'AI 批量操作', graph, graph, 'ai-batch')
+    this.lastAiBatchIndex = this.past.length
+  }
+
+  /**
+   * 撤销到最近一次 AI 批量操作的起点（不越过该起点）。
+   * 可重复调用回退到更早的 AI 批次（当前已是某批次起点时继续回退到更早一个）。
+   * 历史栈中没有 AI 批次检查点时返回 { done: false }。
+   * done 为 true 时附上回退后的最终快照，供调用方恢复画布状态。
+   */
+  undoToLastAiBatch(): { done: boolean; snapshot?: T | null } {
+    // 从栈顶向下找最近的 ai-batch 条目（用户可能已手动 undo/redo，动态定位保证语义正确）
+    let batchPos = -1
+    for (let i = this.past.length - 1; i >= 0; i--) {
+      if (this.past[i].tag === 'ai-batch') {
+        batchPos = i
+        break
+      }
+    }
+    if (batchPos === -1) return { done: false }
+
+    // 反复撤销直到该 ai-batch 条目出栈（present 回到批次起点之前的状态）
+    while (this.past.length > batchPos && this.canUndo()) {
+      this.undo()
+    }
+    this.lastAiBatchIndex = batchPos
+    return { done: true, snapshot: this.present }
+  }
+
+  /** 最近一次 AI 批次起点在历史栈中的位置（-1 表示尚未记录） */
+  getLastAiBatchIndex(): number {
+    return this.lastAiBatchIndex
   }
 
   subscribe(listener: (state: HistoryState) => void): () => void {

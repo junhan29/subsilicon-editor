@@ -60,8 +60,14 @@ function serializeEdge(edge: StoryEdge): string {
   return `- ${edge.source} → ${edge.target}${edge.label ? ` (标签: "${edge.label}")` : ''}`
 }
 
-function serializeCharacter(char: StoryCharacter): string {
-  return `- ${char.name} (ID: ${char.id})${char.gender ? `, ${char.gender === 'male' ? '男' : char.gender === 'female' ? '女' : char.gender}` : ''}${char.age ? `, ${char.age}` : ''}${char.occupation ? `, ${char.occupation}` : ''}${char.personality?.length ? `, 性格: ${char.personality.slice(0, 3).join(', ')}` : ''}`
+function serializeCharacter(char: StoryCharacter, hasReference: boolean): string {
+  const parts: string[] = [`- ${char.name} (ID: ${char.id})`]
+  if (char.gender) parts.push(char.gender === 'male' ? '男' : char.gender === 'female' ? '女' : char.gender)
+  if (char.age) parts.push(`${char.age}岁`)
+  if (char.occupation) parts.push(`职业: ${char.occupation}`)
+  if (char.personality?.length) parts.push(`性格: ${char.personality.slice(0, 3).join(', ')}`)
+  parts.push(hasReference ? '✅ 已设参考图锚点（后续生成立绘自动复用，保证人物一致）' : '⚠️ 未设参考图锚点（建议上传一张参考图作为一致性锚点）')
+  return parts.join(', ')
 }
 
 function serializeScene(scene: ComicScene): string {
@@ -77,7 +83,11 @@ function serializeAnnotatedAsset(asset: StoredAsset, index: number, charMap: Map
   if (charName) parts.push(`角色: ${charName}`)
   if (a.emotion) parts.push(`情绪: ${a.emotion}`)
   if (a.sceneTag) parts.push(`场景: ${a.sceneTag}`)
-  if (a.usageType) parts.push(`用途: ${a.usageType}`)
+  if (a.usageType) {
+    parts.push(a.usageType === 'reference'
+      ? `用途: 参考图锚点${charName ? `（绑定角色: ${charName}，生成立绘时自动使用）` : ''}`
+      : `用途: ${a.usageType}`)
+  }
   if (a.description) parts.push(`描述: ${a.description}`)
   if (a.tags?.length) parts.push(`标签: ${a.tags.join(', ')}`)
   return `- ${parts.join(', ')}`
@@ -89,9 +99,26 @@ export function serializeGraphContext(
   characters: StoryCharacter[],
   scenes: ComicScene[],
   annotatedAssets?: StoredAsset[],
-  variables?: StoryVariable[]
+  variables?: StoryVariable[],
+  extras?: { workPremise?: string; creatorInputs?: string[] }
 ): string {
   const parts: string[] = []
+
+  // 作品核心设定（创作者自定义，放在最前面，AI 最容易看到）
+  if (extras?.workPremise?.trim()) {
+    parts.push(`## 作品核心设定（创作者定义，必须严格遵守）`)
+    parts.push(extras.workPremise.trim())
+    parts.push('')
+  }
+
+  // 近期创作输入（创作者输入库：AI 对话自动采集 + 手动维护的灵感/大纲/设定/纠错，供 AI 复用）
+  if (extras?.creatorInputs && extras.creatorInputs.length > 0) {
+    parts.push(`## 近期创作输入（创作者输入库，作为创作参考，需与之一致，不得违背创作者已明确的意图）`)
+    for (const item of extras.creatorInputs) {
+      parts.push(`- ${item}`)
+    }
+    parts.push('')
+  }
 
   // 统计摘要
   const nodeTypeCount = new Map<string, number>()
@@ -103,10 +130,17 @@ export function serializeGraphContext(
     .map(([type, count]) => `${type}×${count}`)
     .join(', ')
 
+  // 统计哪些角色有参考图锚点（素材库 usageType=reference 且 characterId 匹配）
+  const refCharIds = new Set<string>()
+  for (const a of (annotatedAssets || [])) {
+    const ann = a.annotation
+    if (ann?.usageType === 'reference' && ann.characterId) refCharIds.add(ann.characterId)
+  }
+
   parts.push(`## 项目结构`)
   parts.push(`- 节点总数: ${nodes.length} (${typeSummary})`)
   parts.push(`- 边总数: ${edges.length}`)
-  parts.push(`- 角色数: ${characters.length}`)
+  parts.push(`- 角色数: ${characters.length}（已设参考图锚点: ${refCharIds.size} / 未设: ${characters.length - refCharIds.size}）`)
   parts.push(`- 场景数: ${scenes.length}`)
   parts.push(`- 变量数: ${(variables || []).length}`)
   parts.push('')
@@ -129,8 +163,9 @@ export function serializeGraphContext(
 
   if (characters.length > 0) {
     parts.push(`### 角色列表`)
+    parts.push(`> 提示：未设参考图锚点的角色，建议主动提醒创作者上传一张参考图，以便后续生成立绘时保持同一角色的五官和服饰一致。`)
     for (const char of characters) {
-      parts.push(serializeCharacter(char))
+      parts.push(serializeCharacter(char, refCharIds.has(char.id)))
     }
     parts.push('')
   }

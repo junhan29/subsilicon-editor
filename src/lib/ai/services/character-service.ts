@@ -1,5 +1,6 @@
 import type { AiCharacter, AiCharacterResult, AiConfig, AiGenerateResult } from '../types'
 import { callAiForTask } from '../provider-registry'
+import { buildGenerationPolicyPrompt, deaiStyle, type GenerationContext } from './generation-policy'
 
 export const CHARACTER_DETAIL_SYSTEM_PROMPT = `你是一个专业的角色设计师。请根据角色名称、性格特点和故事类型，生成一个详细的角色设定。输出必须是严格的 JSON 格式，不要包含任何 markdown 标记或额外文字。
 
@@ -30,34 +31,36 @@ JSON 格式要求：
 export async function generateCharacterSimple(
   name: string,
   personality: string,
-  config?: AiConfig | null
+  config?: AiConfig | null,
+  context?: GenerationContext
 ): Promise<AiGenerateResult> {
   const systemPrompt = `请根据以下信息生成一个角色的详细描述，包括外貌、性格、背景故事，约 150 字：`
   const userPrompt = `角色名：${name}\n性格特点：${personality}`
 
   const result = await callAiForTask('text',
     {
-      systemPrompt,
+      systemPrompt: `${systemPrompt}${buildGenerationPolicyPrompt(`${name}：${personality}`, context)}`,
       userPrompt,
       temperature: 0.7,
       maxTokens: 300,
     }
   )
 
-  return { result }
+  return { result: deaiStyle(result) }
 }
 
 export async function generateCharacterDetail(
   name: string,
   personality: string,
   genre: string = 'general',
-  config?: AiConfig | null
+  config?: AiConfig | null,
+  context?: GenerationContext
 ): Promise<AiCharacterResult> {
   const userPrompt = `角色名：${name}\n性格特点：${personality}\n故事类型：${genre}`
 
   const rawResult = await callAiForTask('text',
     {
-      systemPrompt: CHARACTER_DETAIL_SYSTEM_PROMPT,
+      systemPrompt: `${CHARACTER_DETAIL_SYSTEM_PROMPT}${buildGenerationPolicyPrompt(`${name}：${personality}`, context)}`,
       userPrompt,
       temperature: 0.7,
       maxTokens: 800,
@@ -86,38 +89,38 @@ export function parseCharacterFromJson(
 ): AiCharacter {
   return {
     id: `char-${Date.now()}`,
-    name: typeof parsed.name === 'string' ? parsed.name : fallbackName,
+    name: deaiStyle(typeof parsed.name === 'string' ? parsed.name : fallbackName),
     gender: ['male', 'female', 'other', 'unknown'].includes(parsed.gender as string)
       ? (parsed.gender as AiCharacter['gender'])
       : 'unknown',
-    age: typeof parsed.age === 'string' ? parsed.age : '',
-    occupation: typeof parsed.occupation === 'string' ? parsed.occupation : '',
+    age: deaiStyle(typeof parsed.age === 'string' ? parsed.age : ''),
+    occupation: deaiStyle(typeof parsed.occupation === 'string' ? parsed.occupation : ''),
     personality: Array.isArray(parsed.personality)
-      ? parsed.personality.filter((p: unknown) => typeof p === 'string')
+      ? parsed.personality.filter((p: unknown) => typeof p === 'string').map((p) => deaiStyle(p))
       : [],
     appearance: Array.isArray(parsed.appearance)
-      ? parsed.appearance.filter((a: unknown) => typeof a === 'string')
+      ? parsed.appearance.filter((a: unknown) => typeof a === 'string').map((a) => deaiStyle(a))
       : [],
-    background: typeof parsed.background === 'string' ? parsed.background : '',
+    background: deaiStyle(typeof parsed.background === 'string' ? parsed.background : ''),
     speech: {
-      tone: typeof (parsed.speech as Record<string, unknown>)?.tone === 'string'
+      tone: deaiStyle(typeof (parsed.speech as Record<string, unknown>)?.tone === 'string'
         ? (parsed.speech as Record<string, string>).tone
-        : '',
+        : ''),
       catchphrases: Array.isArray((parsed.speech as Record<string, unknown>)?.catchphrases)
         ? (parsed.speech as Record<string, string[]>).catchphrases.filter(
             (cp: unknown) => typeof cp === 'string'
-          )
+          ).map((cp) => deaiStyle(cp))
         : [],
     },
-    motivation: typeof parsed.motivation === 'string' ? parsed.motivation : '',
-    bio: typeof parsed.bio === 'string' ? parsed.bio : '',
+    motivation: deaiStyle(typeof parsed.motivation === 'string' ? parsed.motivation : ''),
+    bio: deaiStyle(typeof parsed.bio === 'string' ? parsed.bio : ''),
   }
 }
 
 export function createFallbackCharacter(name: string, rawResult: string): AiCharacter {
   return {
     id: `char-${Date.now()}`,
-    name,
+    name: deaiStyle(name),
     gender: 'unknown',
     age: '',
     occupation: '',
@@ -126,7 +129,7 @@ export function createFallbackCharacter(name: string, rawResult: string): AiChar
     background: '',
     speech: { tone: '', catchphrases: [] },
     motivation: '',
-    bio: rawResult,
+    bio: deaiStyle(rawResult),
   }
 }
 

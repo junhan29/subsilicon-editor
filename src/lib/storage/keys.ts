@@ -38,12 +38,6 @@ export const STORAGE_KEYS = {
     type: 'local' as StorageType,
     description: '批注数据',
   },
-  SHORTCUTS: {
-    key: 'subsilicon_shortcuts',
-    version: 1,
-    type: 'local' as StorageType,
-    description: '快捷键配置',
-  },
   WRITING_SESSION: {
     key: 'subsilicon_writing_session',
     version: 1,

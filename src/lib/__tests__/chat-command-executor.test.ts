@@ -7,6 +7,7 @@ import {
   executeAiActions,
   parseAiCommands,
   parseAllAiCommands,
+  validateAiAction,
 } from '../ai/chat-command-executor'
 
 function createMockCallbacks(): EditorCanvasCallbacks {
@@ -67,6 +68,96 @@ describe('parseAiCommands', () => {
   it('无 ai-action 块返回 null', () => {
     expect(parseAiCommands('普通文本')).toBeNull()
   })
+
+  it('合法与非法动作混合时，仅保留合法动作，非法动作进入 invalid 且带 reason', () => {
+    const text = `\`\`\`ai-action
+{
+  "actions": [
+    { "type": "createNode", "payload": { "nodeType": "dialogue", "data": { "text": "你好" } } },
+    { "type": "hackSystem", "payload": { "cmd": "rm -rf" } },
+    { "type": "createNode", "payload": {} },
+    { "type": "undo", "payload": {} }
+  ]
+}
+\`\`\``
+
+    const result = parseAiCommands(text)
+    expect(result).not.toBeNull()
+    expect(result!.actions).toHaveLength(2)
+    expect(result!.actions[0].type).toBe('createNode')
+    expect(result!.actions[1].type).toBe('undo')
+    expect(result!.invalid).toHaveLength(2)
+    expect(result!.invalid[0].reason).toContain('未知动作类型')
+    expect(result!.invalid[0].raw).toEqual({ type: 'hackSystem', payload: { cmd: 'rm -rf' } })
+    expect(result!.invalid[1].reason).toContain('nodeType')
+  })
+
+  it('空 action 数组返回空块（不执行任何动作）', () => {
+    const text = `\`\`\`ai-action
+{ "actions": [] }
+\`\`\``
+    const result = parseAiCommands(text)
+    expect(result).not.toBeNull()
+    expect(result!.actions).toEqual([])
+    expect(result!.invalid).toEqual([])
+  })
+})
+
+describe('validateAiAction', () => {
+  it('未知 type 被拒', () => {
+    const result = validateAiAction({ type: 'hackSystem', payload: {} })
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.reason).toContain('未知动作类型')
+  })
+
+  it('非对象动作被拒', () => {
+    expect(validateAiAction(null).ok).toBe(false)
+    expect(validateAiAction('createNode').ok).toBe(false)
+    expect(validateAiAction([{ type: 'createNode' }]).ok).toBe(false)
+  })
+
+  it('payload 缺必填字段被拒（createNode 无 nodeType）', () => {
+    const result = validateAiAction({ type: 'createNode', payload: { data: { text: 'hi' } } })
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.reason).toContain('nodeType')
+  })
+
+  it('payload 类型错误被拒（connectNodes 的 source 是数字）', () => {
+    const result = validateAiAction({ type: 'connectNodes', payload: { source: 123, target: 'b' } })
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.reason).toContain('source')
+  })
+
+  it('payload 非对象被拒（字符串 / 数组）', () => {
+    expect(validateAiAction({ type: 'createNode', payload: 'dialogue' }).ok).toBe(false)
+    expect(validateAiAction({ type: 'createNode', payload: ['dialogue'] }).ok).toBe(false)
+  })
+
+  it('requestMediaGeneration 的 mediaType 非法值被拒', () => {
+    const result = validateAiAction({ type: 'requestMediaGeneration', payload: { mediaType: 'pdf', prompt: 'x' } })
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.reason).toContain('mediaType')
+  })
+
+  it('addVariable 的 type 非法值被拒、合法值通过', () => {
+    expect(validateAiAction({ type: 'addVariable', payload: { name: 'x', type: 'array' } }).ok).toBe(false)
+    expect(validateAiAction({ type: 'addVariable', payload: { name: '好感度', type: 'number' } }).ok).toBe(true)
+  })
+
+  it('无需 payload 的动作缺省 payload 通过并补为空对象', () => {
+    const result = validateAiAction({ type: 'undo' })
+    expect(result.ok).toBe(true)
+    if (result.ok) expect(result.action.payload).toEqual({})
+  })
+
+  it('合法动作校验通过', () => {
+    const result = validateAiAction({
+      type: 'createNode',
+      payload: { nodeType: 'dialogue', data: { text: '你好' } },
+    })
+    expect(result.ok).toBe(true)
+    if (result.ok) expect(result.action.payload.nodeType).toBe('dialogue')
+  })
 })
 
 describe('parseAllAiCommands', () => {
@@ -91,6 +182,31 @@ describe('parseAllAiCommands', () => {
 
   it('无命令块返回空数组', () => {
     expect(parseAllAiCommands('普通文本')).toEqual([])
+  })
+
+  it('多个命令块中的非法动作均被过滤进 invalid', () => {
+    const text = `第一个块
+
+\`\`\`ai-action
+{ "actions": [ { "type": "createNode", "payload": { "nodeType": "dialogue" } }, { "type": "unknownType" } ] }
+\`\`\`
+
+第二个块
+
+\`\`\`ai-action
+{ "actions": [ { "type": "requestMediaGeneration", "payload": { "mediaType": "image", "prompt": "test" } }, { "type": "connectNodes", "payload": { "source": 1, "target": "b" } } ] }
+\`\`\``
+
+    const results = parseAllAiCommands(text)
+    expect(results).toHaveLength(2)
+    expect(results[0].actions).toHaveLength(1)
+    expect(results[0].actions[0].type).toBe('createNode')
+    expect(results[0].invalid).toHaveLength(1)
+    expect(results[0].invalid[0].reason).toContain('未知动作类型')
+    expect(results[1].actions).toHaveLength(1)
+    expect(results[1].actions[0].type).toBe('requestMediaGeneration')
+    expect(results[1].invalid).toHaveLength(1)
+    expect(results[1].invalid[0].reason).toContain('source')
   })
 })
 
@@ -160,6 +276,28 @@ describe('executeAiActions', () => {
     ]
     const result = await executeAiActions(actions, callbacks)
     expect(result.failed).toBe(1)
+  })
+
+  it('解析后混合执行：非法动作被跳过，合法动作仍执行', async () => {
+    const callbacks = createMockCallbacks()
+    const text = `\`\`\`ai-action
+{ "actions": [
+  { "type": "createNode", "payload": { "nodeType": "dialogue", "data": { "text": "hi" } } },
+  { "type": "hackSystem", "payload": {} },
+  { "type": "connectNodes", "payload": { "source": 123, "target": "b" } },
+  { "type": "connectNodes", "payload": { "source": "a", "target": "b" } }
+] }
+\`\`\``
+
+    const block = parseAiCommands(text)
+    expect(block).not.toBeNull()
+    const result = await executeAiActions(block!.actions, callbacks)
+    expect(result.success).toBe(2)
+    expect(result.failed).toBe(0)
+    expect(callbacks.onAddNode).toHaveBeenCalledTimes(1)
+    expect(callbacks.onAddEdge).toHaveBeenCalledTimes(1)
+    expect(callbacks.onAddEdge).toHaveBeenCalledWith('a', 'b')
+    expect(block!.invalid).toHaveLength(2)
   })
 
   it('操作失败不影响后续操作', async () => {
@@ -236,6 +374,43 @@ describe('executeAiActions', () => {
     expect(result.success).toBe(2)
     expect(onUpdateVariable).toHaveBeenCalledWith('var-1', { initialValue: 10 })
     expect(onDeleteVariable).toHaveBeenCalledWith('var-1')
+  })
+
+  it('onBeforeExecute 在执行第一批动作前被调用一次', async () => {
+    const callbacks = createMockCallbacks()
+    const onBeforeExecute = vi.fn()
+    const actions: AiAction[] = [
+      { type: 'createNode', payload: { nodeType: 'dialogue', data: { text: 'hi' } } },
+      { type: 'createNode', payload: { nodeType: 'narration', data: { text: 'hello' } } },
+    ]
+    const result = await executeAiActions(actions, callbacks, { onBeforeExecute })
+    expect(onBeforeExecute).toHaveBeenCalledTimes(1)
+    expect(result.success).toBe(2)
+  })
+
+  it('onBeforeExecute 先于第一个动作回调执行', async () => {
+    const order: string[] = []
+    const callbacks = {
+      ...createMockCallbacks(),
+      onAddNode: vi.fn(() => { order.push('action'); return 'new-node-1' }),
+    }
+    const actions: AiAction[] = [
+      { type: 'createNode', payload: { nodeType: 'dialogue', data: { text: 'hi' } } },
+    ]
+    await executeAiActions(actions, callbacks, {
+      onBeforeExecute: () => order.push('before'),
+    })
+    expect(order).toEqual(['before', 'action'])
+  })
+
+  it('不传 options 时行为与以前一致（向后兼容）', async () => {
+    const callbacks = createMockCallbacks()
+    const actions: AiAction[] = [
+      { type: 'createNode', payload: { nodeType: 'dialogue', data: { text: 'hi' } } },
+    ]
+    const result = await executeAiActions(actions, callbacks)
+    expect(result.success).toBe(1)
+    expect(callbacks.onAddNode).toHaveBeenCalledTimes(1)
   })
 })
 

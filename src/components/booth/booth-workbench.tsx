@@ -25,7 +25,8 @@ import type { StoredWork } from '@editor/lib/local-db/work-store'
 import { getAllWorks } from '@editor/lib/local-db/work-store'
 import { getDocumentFromWork } from '@editor/lib/local-db/work-store'
 import { showToast } from '@editor/components/editor/toast'
-import { getCurrentAccount, getPlatformConfigs } from '@editor/lib/creator-service'
+import { getAccount } from '@editor/lib/local-account-store'
+import { getPlatformConfigs } from '@editor/lib/creator-service'
 
 const WORK_TYPE_NAMES: Record<string, string> = {
   'interactive-narrative': '互动叙事',
@@ -246,12 +247,12 @@ export function BoothWorkbench({ onBack }: BoothWorkbenchProps) {
   const [publishing, setPublishing] = useState(false)
   const handlePublish = async () => {
     if (!booth) return
-    const acc = getCurrentAccount()
+    const acc = getAccount()
     if (!acc) {
       showToast('error', '请先在「创作者中心」登录创作者账号')
       return
     }
-    const configs = await getPlatformConfigs().catch(() => [])
+    const configs = await getPlatformConfigs(acc.email).catch(() => [])
     const enabled = configs.filter((c) => c.enabled)
     if (enabled.length === 0) {
       showToast('error', '请先在「创作者中心」配置并启用发布平台')

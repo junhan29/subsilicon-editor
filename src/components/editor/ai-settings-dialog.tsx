@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { CheckCircle2, Cpu, ExternalLink, Globe, Image, Loader2, Music, Settings2, SlidersHorizontal, Sparkles, Wand2, X } from 'lucide-react'
+import { Check, CheckCircle2, ChevronDown, Copy, Cpu, ExternalLink, Globe, Image, Loader2, Music, Pencil, Settings2, SlidersHorizontal, Sparkles, Trash2, Wand2, X } from 'lucide-react'
+import { Label } from '../ui/label'
 import { showToast } from './toast'
 import { ComfyuiWorkflowDialog } from './comfyui-workflow-dialog'
 import {
@@ -11,18 +12,29 @@ import {
   type MediaProviderConfig,
   type TaskMediaSlot,
   type TaskTextSlot,
-  getMediaProviderConfig,
+  getMediaProviderConfigForTask,
   getSkillTemplatesForTask,
   getTaskRoutingConfig,
   getTaskRoutingProviders,
   refreshAiConfig,
-  saveMediaProviderConfig,
   saveTaskRoutingConfig,
 } from '@editor/lib/ai'
 import { getDefaultModel, getModelsForProvider } from '@editor/lib/ai/model-presets'
 import { decryptAiConfig, decryptApiKeyField, decryptAiKey } from '@editor/lib/ai/ai-key-vault'
 import { saveAiConfigEncrypted } from '@editor/lib/ai/ai-config-store'
 import { useAssistantName } from '@editor/lib/assistant-name'
+import {
+  cloneCustomWorkflow,
+  createCustomWorkflow,
+  deleteCustomWorkflow,
+  getCustomWorkflow,
+  resetCustomWorkflows,
+  updateCustomWorkflow,
+  useCustomWorkflows,
+  type CustomWorkflow,
+  type WorkflowTaskType,
+  type WorkflowPatch,
+} from '@editor/lib/custom-workflows-store'
 
 interface AiSettingsDialogProps {
   open: boolean
@@ -35,6 +47,172 @@ interface FlatAiConfig {
   apiKey: string
   apiUrl: string
   model: string
+}
+
+interface FlatAiConfig {
+  enabled: boolean
+  provider: string
+  apiKey: string
+  apiUrl: string
+  model: string
+}
+
+/* ======================================================================== */
+/*  自定义工作流 CRUD：纯函数 helpers + 列表子组件                            */
+/* ======================================================================== */
+
+type WfDraftShape = {
+  name: string
+  desc: string
+  t: number
+  maxT: number
+  sys: string
+  kw: string
+  style: string
+  skill: string
+  ratio: '16:9' | '9:16' | '1:1'
+  d: number
+  seed: string
+}
+
+function buildDraftFromState(taskType: WorkflowTaskType, d: WfDraftShape) {
+  if (taskType === 'text') {
+    return {
+      taskType: 'text' as const,
+      name: d.name,
+      description: d.desc || undefined,
+      text: {
+        temperature: d.t,
+        maxTokens: Math.max(128, Math.min(16384, Math.round(d.maxT || 1024))),
+        systemPrompt: d.sys || undefined,
+        styleKeywords: d.kw || undefined,
+      },
+    } as const
+  }
+  const seedNum = d.seed.trim() !== '' ? parseInt(d.seed, 10) : undefined
+  return {
+    taskType,
+    name: d.name,
+    description: d.desc || undefined,
+    media: {
+      style: d.style || undefined,
+      skillPrompt: d.skill || undefined,
+      seedLock: Number.isFinite(seedNum) ? seedNum : undefined,
+      ratio: taskType === 'video' ? d.ratio : undefined,
+      durationSec: taskType === 'video' ? Math.max(3, Math.min(10, Math.round(d.d))) : undefined,
+    },
+  } as const
+}
+
+function buildPatchFromDraft(taskType: WorkflowTaskType, d: WfDraftShape): WorkflowPatch {
+  const seedNum = d.seed.trim() !== '' ? parseInt(d.seed, 10) : undefined
+  return {
+    name: d.name,
+    description: d.desc,
+    ...(taskType === 'text'
+      ? {
+          text: {
+            temperature: d.t,
+            maxTokens: Math.max(128, Math.min(16384, Math.round(d.maxT || 1024))),
+            systemPrompt: d.sys || undefined,
+            styleKeywords: d.kw || undefined,
+          },
+        }
+      : {
+          media: {
+            style: d.style || undefined,
+            skillPrompt: d.skill || undefined,
+            seedLock: Number.isFinite(seedNum) ? seedNum : undefined,
+            ratio: taskType === 'video' ? d.ratio : undefined,
+            durationSec: taskType === 'video' ? Math.max(3, Math.min(10, Math.round(d.d))) : undefined,
+          },
+        }),
+  }
+}
+
+interface WorkflowListByTaskProps {
+  taskType: WorkflowTaskType
+  onEdit: (wf: CustomWorkflow) => void
+  onClone: (wf: CustomWorkflow) => void
+  onDelete: (wf: CustomWorkflow) => void
+}
+
+function WorkflowListByTask({ taskType, onEdit, onClone, onDelete }: WorkflowListByTaskProps) {
+  // 这里内部用 hook 没问题，因为组件总在同一位置渲染（固定分类 tab）
+  const items = useCustomWorkflows(taskType)
+  if (items.length === 0) {
+    return (
+      <div className="p-3 rounded-md border border-dashed border-slate-700 text-center">
+        <p className="text-[11px] text-slate-500">暂无工作流。使用上方表单新建第一条吧 ✨</p>
+      </div>
+    )
+  }
+  return (
+    <div className="space-y-1.5 max-h-80 overflow-y-auto pr-0.5">
+      {items.map((wf) => (
+        <div key={wf.id} className="p-2.5 rounded-md border border-slate-700 bg-slate-900/40 flex items-start gap-2">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <p className="text-[12px] font-medium text-slate-200 truncate">{wf.name}</p>
+              {wf.builtin && (
+                <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-400 flex-shrink-0">内置</span>
+              )}
+              {wf.taskType === 'text' && wf.text?.temperature != null && (
+                <span className="text-[9px] px-1.5 py-0.5 rounded bg-green-500/10 text-green-400 font-mono border border-green-500/20">
+                  T {wf.text.temperature.toFixed(2)}
+                </span>
+              )}
+              {wf.taskType === 'video' && (
+                <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 font-mono border border-purple-500/20">
+                  {wf.media?.ratio || '16:9'} · {wf.media?.durationSec ?? 5}s
+                </span>
+              )}
+              {wf.taskType === 'image' && wf.media?.style && (
+                <span className="text-[9px] px-1.5 py-0.5 rounded bg-pink-500/10 text-pink-400 border border-pink-500/20">
+                  {wf.media.style}
+                </span>
+              )}
+            </div>
+            {wf.description && (
+              <p className="text-[10px] text-slate-500 leading-snug mt-0.5 line-clamp-2">{wf.description}</p>
+            )}
+          </div>
+          <div className="flex items-center gap-0.5 flex-shrink-0">
+            <button
+              type="button"
+              onClick={() => onClone(wf)}
+              className="p-1 rounded text-slate-400 hover:text-amber-300 hover:bg-slate-800 transition-colors"
+              title="克隆工作流"
+            >
+              <Copy className="w-3.5 h-3.5" />
+            </button>
+            {!wf.builtin && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => onEdit(wf)}
+                  className="p-1 rounded text-slate-400 hover:text-cyan-300 hover:bg-slate-800 transition-colors"
+                  title="编辑"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (confirm(`确认删除工作流「${wf.name}」？`)) onDelete(wf)
+                  }}
+                  className="p-1 rounded text-slate-400 hover:text-red-400 hover:bg-slate-800 transition-colors"
+                  title="删除"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
 }
 
 const PROVIDER_INFO: Record<string, {
@@ -155,6 +333,32 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
   // ComfyUI 独立面板：记录当前编辑哪个来源的工作流（第 2 层媒体区 或 某任务槽）
   const [comfyEditor, setComfyEditor] = useState<'legacy' | 'image' | 'video' | 'audio' | null>(null)
 
+  // ============================================================
+  // 自定义工作流（Skill）CRUD state & helpers
+  // ============================================================
+  const [showWorkflows, setShowWorkflows] = useState(false)
+  // 高级设置总手风琴：收纳任务路由 / 自定义工作流 / ComfyUI 等进阶配置，默认收起，不持久化
+  const [showAdvanced, setShowAdvanced] = useState(false)
+  const [wfTaskType, setWfTaskType] = useState<WorkflowTaskType>('image')
+  const allWorkflows = useCustomWorkflows()
+  const [editingWfId, setEditingWfId] = useState<string | null>(null)
+  const [wfDraft, setWfDraft] = useState<{
+    name: string
+    desc: string
+    // text 专用
+    t: number
+    maxT: number
+    sys: string
+    kw: string
+    // media 专用（image/video 共享）
+    style: string
+    skill: string
+    // video 专用
+    ratio: '16:9' | '9:16' | '1:1'
+    d: number
+    seed: string
+  }>({ name: '', desc: '', sys: '', t: 0.7, maxT: 1024, style: 'anime', ratio: '16:9', d: 5, seed: '', kw: '', skill: '' })
+
   // 更新文本类任务槽（editor / text）
   const updateTextSlot = (task: 'editor' | 'text', patch: Partial<TaskTextSlot>) => {
     setRouting((prev) => ({ ...prev, [task]: { ...prev[task], ...patch } }))
@@ -185,8 +389,10 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
         } catch {
           // ignore
         }
-        // 加载媒体生成配置
-        const mp = getMediaProviderConfig()
+        // 加载媒体生成配置（媒体配置收敛：以任务路由 image 槽为统一入口）
+        // 回退链：image 槽配置优先 → 槽缺失时回退旧全局配置（历史数据，兼容老用户）
+        // 旧全局配置仅作读取回退，保存时不再写回，避免双轨维护
+        const mp = getMediaProviderConfigForTask('image')
         if (mp) {
           setMediaProvider(await decryptApiKeyField(mp))
           // 已配置高级服务商时自动展开高级选项，避免下拉显示与服务商不一致
@@ -289,12 +495,16 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
     // 落盘前 AES-256 加密全部 apiKey
     await saveAiConfigEncrypted(config)
     refreshAiConfig()
-    // 保存媒体生成配置（有 apiKey，或 ComfyUI 工作流——ComfyUI 无 apiKey 但需持久化工作流）
-    if (mediaProvider.apiKey.trim() || mediaProvider.type === 'comfyui') {
-      await saveMediaProviderConfig(mediaProvider)
+    // 媒体配置收敛：统一写入任务路由 image 槽（不再写旧全局配置，旧全局仅作读取回退）
+    // 有有效配置（apiKey，或 ComfyUI 工作流——ComfyUI 无 apiKey 但需持久化工作流）才落槽；
+    // 空配置则清空槽位，保留「未配置 → 回退旧全局配置」的回退链
+    const hasMedia = mediaProvider.apiKey.trim() || mediaProvider.type === 'comfyui'
+    const nextRouting: AiTaskRoutingConfig = {
+      ...routing,
+      image: { ...routing.image, media: hasMedia ? mediaProvider : undefined },
     }
     // 保存任务路由配置（内部对媒体槽 apiKey 加密）
-    await saveTaskRoutingConfig(routing)
+    await saveTaskRoutingConfig(nextRouting)
     showToast('success', `${assistantName}设置已保存`)
     onClose()
   }
@@ -742,6 +952,8 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
               这是<span className="text-slate-400">可选功能</span>。不配置也能用 AI 写故事、建节点。
               <br />配置后 AI 才能自动生成图片/视频。密钥仅存本地，不会上传。
               <br />首次使用建议选「通义万相」，国内注册即送免费额度。
+              <br />此配置会保存到下方「AI 任务路由」的<span className="text-slate-400">图片生成</span>槽（统一入口）；
+              视频/音乐可在任务路由中单独配置，未配置时视频回退旧全局配置（历史数据）。
             </p>
 
             <div className="space-y-1.5">
@@ -861,24 +1073,50 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
               </div>
             )}
 
-            {/* ComfyUI 专属配置（高级）：独立面板入口 */}
+            {/* ComfyUI 无 API Key：指引到下方「高级设置」配置工作流 */}
             {mediaProvider.type === 'comfyui' && (
-              <div className="space-y-1.5 p-2 rounded border border-amber-500/20 bg-amber-500/5">
-                <p className="text-[10px] text-amber-300 leading-relaxed">
-                  ⚠️ ComfyUI 需要你已在本地装好 ComfyUI。新手请选「通义万相」。
-                </p>
-                <button
-                  onClick={() => setComfyEditor('legacy')}
-                  className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 rounded transition-colors"
-                >
-                  <Settings2 className="w-3 h-3" />
-                  {mediaProvider.workflowJson ? '编辑工作流' : '配置工作流'}
-                </button>
-              </div>
+              <p className="text-[10px] text-slate-500 leading-relaxed">
+                已选 ComfyUI 服务商。工作流配置收在下方「高级设置」区，展开后即可配置。
+              </p>
             )}
           </div>
-          {/* AI 任务路由（高级）：不同创作任务用不同模型 */}
+
+          {/* 高级设置（默认收起）：收纳 ComfyUI 工作流 / 任务路由 / 自定义工作流等进阶配置 */}
           <div className="border-t border-slate-800 pt-3 space-y-3">
+            <button
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="w-full flex items-center gap-2 text-left"
+            >
+              <div className="w-6 h-6 rounded-md bg-gradient-to-br from-cyan-400/25 to-cyan-400/10 flex items-center justify-center shrink-0">
+                <Settings2 className="w-3.5 h-3.5 text-cyan-300" />
+              </div>
+              <span className="text-xs font-semibold text-white">高级设置</span>
+              <span className="text-[9px] text-slate-400 bg-slate-800 border border-slate-700 px-1.5 py-0.5 rounded">高级</span>
+              <span className={`ml-auto text-slate-400 transition-transform ${showAdvanced ? 'rotate-180' : ''}`}>▾</span>
+            </button>
+            <p className="text-[10px] text-slate-500 -mt-1.5 leading-relaxed">
+              以下为进阶配置：不修改也能正常使用全部基础功能，新手建议保持默认。
+            </p>
+
+            {showAdvanced && (
+              <div className="space-y-3">
+                {/* ComfyUI 专属配置（高级）：独立面板入口（选择 ComfyUI 服务商后出现） */}
+                {mediaProvider.type === 'comfyui' && (
+                  <div className="space-y-1.5 p-2 rounded border border-amber-500/20 bg-amber-500/5">
+                    <p className="text-[10px] text-amber-300 leading-relaxed">
+                      ⚠️ ComfyUI 需要你已在本地装好 ComfyUI。新手请选「通义万相」。
+                    </p>
+                    <button
+                      onClick={() => setComfyEditor('legacy')}
+                      className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 rounded transition-colors"
+                    >
+                      <Settings2 className="w-3 h-3" />
+                      {mediaProvider.workflowJson ? '编辑工作流' : '配置工作流'}
+                    </button>
+                  </div>
+                )}
+                {/* AI 任务路由（高级）：不同创作任务用不同模型 */}
+                <div className="space-y-3">
             <button
               onClick={() => setShowRouting(!showRouting)}
               className="w-full flex items-center gap-2 text-left"
@@ -916,8 +1154,279 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
                 {renderMediaSlot('audio', '音乐 / 音效', '音乐、音效、语音（OpenAI 兼容音频接口）')}
 
                 <p className="text-[9px] text-slate-600 leading-relaxed">
-                  提示：媒体任务若不打开独立配置，图片/视频回退使用上方「图片/视频生成」的服务商；音乐/音效必须独立配置。
+                  提示：媒体配置以任务路由槽为统一入口——上方「图片/视频生成」区实际编辑「图片生成」槽；
+                  槽未配置时，图片/视频回退旧全局配置（历史数据），音乐/音效无回退、必须独立配置。
                 </p>
+              </div>
+            )}
+          </div>
+
+                {/* 自定义工作流（Skill）CRUD：生图 / 生视频 / 生文字 */}
+                <div className="space-y-3">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <button
+                  onClick={() => setShowWorkflows(!showWorkflows)}
+                  className="flex items-center gap-2 text-left"
+                >
+                  <div className="w-6 h-6 rounded-md bg-gradient-to-br from-yellow-400/25 to-amber-400/10 flex items-center justify-center shrink-0">
+                    <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-semibold text-white">自定义工作流（Skill）</span>
+                    <span className="text-[9px] text-slate-400 bg-slate-800 border border-slate-700 px-1.5 py-0.5 rounded">v1.16</span>
+                  </div>
+                </button>
+                <button
+                  onClick={() => setShowWorkflows(!showWorkflows)}
+                  className={`p-1 rounded hover:bg-slate-800 text-slate-400 transition-transform ${showWorkflows ? 'rotate-180' : ''}`}
+                >
+                  <ChevronDown className="w-4 h-4" />
+                </button>
+              </div>
+              <p className="text-[10px] text-slate-500 -mt-1 leading-relaxed">
+                把你反复调的参数组合（风格 / 画幅 / 时长 / 系统提示词 / 温度）保存成工作流，
+                在任意生成入口一键套用；内置 3 条模板可直接克隆改造。
+              </p>
+            </div>
+
+            {showWorkflows && (
+              <div className="space-y-3">
+                {/* 分类 Tab：image / video / text */}
+                <div className="flex rounded-md border border-slate-700 bg-slate-900/40 p-0.5">
+                  {(['image', 'video', 'text'] as const).map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setWfTaskType(t)}
+                      className={`flex-1 px-2 py-1 rounded text-[11px] transition-colors ${
+                        wfTaskType === t
+                          ? t === 'text'
+                            ? 'bg-green-500/15 text-green-300 border border-green-500/30'
+                            : t === 'video'
+                            ? 'bg-purple-500/15 text-purple-300 border border-purple-500/30'
+                            : 'bg-pink-500/15 text-pink-300 border border-pink-500/30'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      {t === 'image' ? '生图' : t === 'video' ? '生视频' : '生文字'}
+                      <span className="text-[9px] opacity-70 ml-1">
+                        ({allWorkflows.filter((x) => x.taskType === t).length})
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* 表单：新建 / 编辑共用 */}
+                <div className="p-3 rounded-md border border-slate-700 bg-slate-900/30 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[11px] font-medium text-slate-200">
+                      {editingWfId ? `编辑工作流：${getCustomWorkflow(editingWfId)?.name || ''}` : `新建${wfTaskType === 'image' ? '生图' : wfTaskType === 'video' ? '生视频' : '生文字'}工作流`}
+                    </p>
+                    {editingWfId && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingWfId(null)
+                          setWfDraft({ name: '', desc: '', sys: '', t: 0.7, maxT: 1024, style: 'anime', ratio: '16:9' as const, d: 5, seed: '', kw: '', skill: '' })
+                        }}
+                        className="text-[9px] text-slate-500 hover:text-slate-200"
+                      >
+                        取消编辑
+                      </button>
+                    )}
+                  </div>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <input
+                        value={wfDraft.name}
+                        onChange={(e) => setWfDraft({ ...wfDraft, name: e.target.value })}
+                        placeholder="工作流名（≤ 24 字）"
+                        className="flex-1 px-2 py-1.5 text-[11px] rounded bg-slate-800 border border-slate-700 text-white placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-500/50"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!wfDraft.name.trim()) {
+                            showToast('error', '请先填写工作流名')
+                            return
+                          }
+                          if (editingWfId) {
+                            const patch = buildPatchFromDraft(wfTaskType, wfDraft)
+                            const r = updateCustomWorkflow(editingWfId, patch)
+                            if (!r) showToast('error', '内置工作流不可直接修改，请先克隆副本再编辑')
+                            else {
+                              showToast('success', `已更新：${r.name}`)
+                              setEditingWfId(null)
+                            }
+                          } else {
+                            const draft = buildDraftFromState(wfTaskType, wfDraft)
+                            const created = createCustomWorkflow(draft)
+                            showToast('success', `已创建工作流「${created.name}」`)
+                            setWfDraft({ name: '', desc: '', sys: '', t: 0.7, maxT: 1024, style: 'anime', ratio: '16:9', d: 5, seed: '', kw: '', skill: '' })
+                          }
+                        }}
+                        className="px-3 py-1.5 text-[11px] rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 hover:bg-amber-500/25 transition-colors"
+                      >
+                        {editingWfId ? '保存修改' : '+ 新建工作流'}
+                      </button>
+                    </div>
+                    <textarea
+                      value={wfDraft.desc}
+                      onChange={(e) => setWfDraft({ ...wfDraft, desc: e.target.value })}
+                      rows={1}
+                      placeholder="简短说明（≤ 120 字，可选）：这条工作流解决什么问题"
+                      className="w-full px-2 py-1.5 text-[11px] rounded bg-slate-800 border border-slate-700 text-white placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-500/50 resize-none"
+                    />
+
+                    {wfTaskType === 'text' && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        <div className="space-y-1 md:col-span-1">
+                          <div className="flex items-center justify-between">
+                            <Label className="text-[10px] text-slate-400">temperature</Label>
+                            <span className="text-[10px] font-mono text-green-300 tabular-nums">{wfDraft.t.toFixed(2)}</span>
+                          </div>
+                          <input type="range" min={0} max={1.5} step={0.05} value={wfDraft.t}
+                            onChange={(e) => setWfDraft({ ...wfDraft, t: parseFloat(e.target.value) })}
+                            className="w-full accent-green-500 h-1.5" />
+                        </div>
+                        <div className="md:col-span-1">
+                          <Label className="text-[10px] text-slate-400">maxTokens</Label>
+                          <input type="number" value={wfDraft.maxT}
+                            onChange={(e) => setWfDraft({ ...wfDraft, maxT: Math.max(128, Math.min(16384, parseInt(e.target.value || '0', 10))) })}
+                            className="w-full px-2 py-1 mt-1 text-[11px] rounded bg-slate-800 border border-slate-700 text-white font-mono" />
+                        </div>
+                        <div className="md:col-span-2">
+                          <Label className="text-[10px] text-slate-400">文风关键词（逗号分隔）</Label>
+                          <input value={wfDraft.kw} onChange={(e) => setWfDraft({ ...wfDraft, kw: e.target.value })}
+                            placeholder="例：克制,细腻,白描,短句分段,少心理"
+                            className="w-full px-2 py-1 mt-1 text-[11px] rounded bg-slate-800 border border-slate-700 text-white placeholder:text-slate-500" />
+                        </div>
+                        <div className="md:col-span-2">
+                          <Label className="text-[10px] text-slate-400">系统提示词（技能指令）：决定 AI 会怎么回答</Label>
+                          <textarea value={wfDraft.sys} onChange={(e) => setWfDraft({ ...wfDraft, sys: e.target.value })}
+                            rows={4} placeholder="1) 段落规则；2) 信息量节奏；3) 钩子设置；4) 禁止出现的内容..."
+                            className="w-full px-2 py-1 mt-1 text-[11px] rounded bg-slate-800 border border-slate-700 text-white placeholder:text-slate-500 resize-y leading-relaxed" />
+                        </div>
+                      </div>
+                    )}
+
+                    {(wfTaskType === 'image' || wfTaskType === 'video') && (
+                      <div className="space-y-2">
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <Label className="text-[10px] text-slate-400">画面风格</Label>
+                            <select value={wfDraft.style} onChange={(e) => setWfDraft({ ...wfDraft, style: e.target.value })}
+                              className="w-full px-2 py-1 mt-1 text-[11px] rounded bg-slate-800 border border-slate-700 text-white">
+                              {[
+                                { v: 'anime', l: '动漫' },
+                                { v: 'realistic', l: '写实' },
+                                { v: 'illustration', l: '插画' },
+                                { v: 'pixel', l: '像素' },
+                                { v: '3d', l: '3D' },
+                              ].map((x) => <option key={x.v} value={x.v}>{x.l}</option>)}
+                            </select>
+                          </div>
+                          <div>
+                            <Label className="text-[10px] text-slate-400">固定 seed（留空=随机）</Label>
+                            <input type="text" value={wfDraft.seed}
+                              onChange={(e) => setWfDraft({ ...wfDraft, seed: e.target.value.replace(/[^\d-]/g, '') })}
+                              placeholder="例：123456"
+                              className="w-full px-2 py-1 mt-1 text-[11px] rounded bg-slate-800 border border-slate-700 text-white placeholder:text-slate-500 font-mono" />
+                          </div>
+                        </div>
+                        {wfTaskType === 'video' && (
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <Label className="text-[10px] text-slate-400">画幅比例</Label>
+                              <div className="grid grid-cols-3 gap-1 mt-1">
+                                {(['16:9','9:16','1:1'] as const).map((r) => (
+                                  <button key={r} type="button" onClick={() => setWfDraft({ ...wfDraft, ratio: r })}
+                                    className={`px-1.5 py-1 text-[10px] rounded border transition-colors ${
+                                      wfDraft.ratio === r
+                                        ? 'bg-purple-500/15 text-purple-300 border-purple-500/30'
+                                        : 'text-slate-400 border-slate-700 hover:text-slate-200'
+                                    }`}>{r}</button>
+                                ))}
+                              </div>
+                            </div>
+                            <div>
+                              <div className="flex items-center justify-between">
+                                <Label className="text-[10px] text-slate-400">时长</Label>
+                                <span className="text-[10px] font-mono text-purple-300 tabular-nums">{wfDraft.d}s</span>
+                              </div>
+                              <input type="range" min={3} max={10} step={1} value={wfDraft.d}
+                                onChange={(e) => setWfDraft({ ...wfDraft, d: parseInt(e.target.value, 10) })}
+                                className="w-full accent-purple-500 h-1.5 mt-1" />
+                            </div>
+                          </div>
+                        )}
+                        <div>
+                          <Label className="text-[10px] text-slate-400">技能指令（拼接到生成 prompt 前，优先级最高）</Label>
+                          <textarea value={wfDraft.skill} onChange={(e) => setWfDraft({ ...wfDraft, skill: e.target.value })}
+                            rows={3}
+                            placeholder={wfTaskType === 'image'
+                              ? '例：人物必须严格保持参考图脸型和发型；不要出现逆光剪影遮挡五官；画面统一使用冷色调。'
+                              : '例：电影感构图，轻微推镜，镜头不晃；情绪随场景进展推进；结尾留出呼吸帧。'}
+                            className="w-full px-2 py-1 mt-1 text-[11px] rounded bg-slate-800 border border-slate-700 text-white placeholder:text-slate-500 resize-y leading-relaxed" />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* 工作流列表（按当前 wfTaskType 分类展示） */}
+                <WorkflowListByTask taskType={wfTaskType}
+                  onEdit={(wf) => {
+                    setEditingWfId(wf.id)
+                    // 把当前工作流字段回填到 draft state
+                    const wfText = wf.taskType === 'text' ? wf.text : undefined
+                    const wfMedia = (wf.taskType === 'image' || wf.taskType === 'video') ? wf.media : undefined
+                    setWfDraft({
+                      name: wf.name,
+                      desc: wf.description || '',
+                      sys: wfText?.systemPrompt || '',
+                      t: wfText?.temperature ?? 0.7,
+                      maxT: wfText?.maxTokens ?? 1024,
+                      kw: wfText?.styleKeywords || '',
+                      skill: wfMedia?.skillPrompt || '',
+                      style: wfMedia?.style || 'anime',
+                      ratio: (wfMedia?.ratio as '16:9' | '9:16' | '1:1' | undefined) ?? '16:9',
+                      d: wfMedia?.durationSec ?? 5,
+                      seed: wfMedia?.seedLock != null ? String(wfMedia.seedLock) : '',
+                    })
+                  }}
+                  onClone={(wf) => {
+                    const c = cloneCustomWorkflow(wf.id)
+                    if (c) showToast('success', `已克隆为「${c.name}」，可编辑修改`)
+                  }}
+                  onDelete={(wf) => {
+                    if (deleteCustomWorkflow(wf.id)) showToast('success', `已删除工作流「${wf.name}」`)
+                    else showToast('error', '内置工作流不可删除，可先克隆再编辑自定义副本')
+                  }}
+                />
+
+                <div className="flex items-center justify-between">
+                  <p className="text-[9px] text-slate-600">
+                    提示：内置工作流（标签「内置」）保持不可改名不可删除；想改造请先「克隆」。
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (confirm('确定要重置所有自定义工作流吗？内置模板会恢复，自定义会被清空。')) {
+                        resetCustomWorkflows()
+                        setEditingWfId(null)
+                        showToast('success', '工作流已重置')
+                      }
+                    }}
+                    className="text-[9px] text-slate-500 hover:text-red-400 transition-colors"
+                  >
+                    重置为内置默认
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
               </div>
             )}
           </div>

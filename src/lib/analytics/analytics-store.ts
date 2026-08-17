@@ -4,6 +4,10 @@ import type {
   AnalyticsFilter,
   ChoiceEvent,
   ChoiceStat,
+  DropOffStat,
+  DwellBucketLabel,
+  DwellBucketStat,
+  NodeDwellStat,
   NodeVisit,
   NodeVisitStat,
   ReaderSession,
@@ -219,6 +223,53 @@ export class AnalyticsStore {
       choiceDistribution.push(stat)
     }
 
+    // —— 读者流失点：每个会话取最后一个访问节点，作为读者退出会话的位置 ——
+    const lastVisitBySession = new Map<string, NodeVisit>()
+    for (const visit of visits) {
+      const prev = lastVisitBySession.get(visit.sessionId)
+      if (!prev || visit.enteredAt >= prev.enteredAt) {
+        lastVisitBySession.set(visit.sessionId, visit)
+      }
+    }
+
+    const dropOffMap = new Map<string, number>()
+    for (const visit of lastVisitBySession.values()) {
+      dropOffMap.set(visit.nodeId, (dropOffMap.get(visit.nodeId) || 0) + 1)
+    }
+
+    const dropOffPoints: DropOffStat[] = Array.from(dropOffMap.entries())
+      .map(([nodeId, dropCount]) => ({ nodeId, dropCount }))
+      .sort((a, b) => b.dropCount - a.dropCount)
+
+    // —— 节点停留分布：按节点聚合平均停留时长，并统计停留区间档位 ——
+    const dwellByNode = new Map<string, { totalDwell: number; count: number }>()
+    const bucketCounts = new Map<DwellBucketLabel, number>()
+    for (const visit of visits) {
+      const dwell = visit.dwellTime
+      if (dwell === undefined) continue
+
+      const entry = dwellByNode.get(visit.nodeId) || { totalDwell: 0, count: 0 }
+      entry.totalDwell += dwell
+      entry.count += 1
+      dwellByNode.set(visit.nodeId, entry)
+
+      const bucket = toDwellBucket(dwell)
+      bucketCounts.set(bucket, (bucketCounts.get(bucket) || 0) + 1)
+    }
+
+    const nodeDwellStats: NodeDwellStat[] = Array.from(dwellByNode.entries()).map(
+      ([nodeId, { totalDwell, count }]) => ({
+        nodeId,
+        avgDwellMs: Math.round(totalDwell / count),
+        visitCount: count,
+      })
+    )
+
+    const dwellDistribution: DwellBucketStat[] = DWELL_BUCKET_LABELS.map((label) => ({
+      label,
+      count: bucketCounts.get(label) || 0,
+    }))
+
     return {
       storyId,
       totalSessions: sessions.length,
@@ -227,7 +278,48 @@ export class AnalyticsStore {
       completionRate: sessions.length > 0 ? completedSessions / sessions.length : 0,
       nodeVisits: Array.from(nodeVisitMap.values()).sort((a, b) => b.visitCount - a.visitCount),
       choiceDistribution: choiceDistribution.sort((a, b) => b.selectionCount - a.selectionCount),
+      dropOffPoints,
+      nodeDwellStats,
+      dwellDistribution,
     }
+  }
+
+  /**
+   * 导出分析报告（JSON）：完整聚合数据，仅本地生成，不上报任何网络。
+   */
+  async exportAnalyticsJson(storyId: string): Promise<string> {
+    const analytics = await this.getStoryAnalytics(storyId)
+    return JSON.stringify(analytics, null, 2)
+  }
+
+  /**
+   * 导出分析报告（CSV）：节点级数据表（访问量 / 平均停留 / 独立读者 / 流失数），仅本地生成。
+   */
+  async exportAnalyticsCsv(storyId: string): Promise<string> {
+    const analytics = await this.getStoryAnalytics(storyId)
+    const dropOffMap = new Map(analytics.dropOffPoints.map((d) => [d.nodeId, d.dropCount]))
+
+    const rows: string[][] = [['nodeId', 'nodeType', 'visitCount', 'averageDwellMs', 'uniqueVisitors', 'dropCount']]
+
+    const nodeIds = new Set<string>([
+      ...analytics.nodeVisits.map((n) => n.nodeId),
+      ...analytics.nodeDwellStats.map((n) => n.nodeId),
+    ])
+
+    for (const nodeId of nodeIds) {
+      const visitStat = analytics.nodeVisits.find((v) => v.nodeId === nodeId)
+      const dwellStat = analytics.nodeDwellStats.find((d) => d.nodeId === nodeId)
+      rows.push([
+        nodeId,
+        visitStat?.nodeType || '',
+        String(visitStat?.visitCount ?? 0),
+        String(dwellStat?.avgDwellMs ?? 0),
+        String(visitStat?.uniqueVisitors ?? 0),
+        String(dropOffMap.get(nodeId) || 0),
+      ])
+    }
+
+    return rows.map((row) => row.map(escapeCsvCell).join(',')).join('\n')
   }
 
   async clearStory(storyId: string): Promise<void> {
@@ -279,6 +371,25 @@ export class AnalyticsStore {
       await this.storage.set(INDEX_KEY, index)
     }
   }
+}
+
+/** 停留时长四档区间标签（固定顺序） */
+const DWELL_BUCKET_LABELS: DwellBucketLabel[] = ['<10s', '10-30s', '30-60s', '>60s']
+
+/** 将停留时长（毫秒）映射到区间档位 */
+function toDwellBucket(ms: number): DwellBucketLabel {
+  if (ms < 10000) return '<10s'
+  if (ms < 30000) return '10-30s'
+  if (ms < 60000) return '30-60s'
+  return '>60s'
+}
+
+/** 转义 CSV 单元格：包含逗号/引号/换行时用引号包裹并双写引号 */
+function escapeCsvCell(value: string): string {
+  if (/[",\n]/.test(value)) {
+    return `"${value.replace(/"/g, '""')}"`
+  }
+  return value
 }
 
 function generateId(prefix: string): string {

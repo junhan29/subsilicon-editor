@@ -367,3 +367,98 @@ describe('getHistory/getFuture 返回副本', () => {
     expect(store.getFuture().length).toEqual(1)
   })
 })
+
+describe('HistoryStore AI 批次检查点（回滚 AI 操作）', () => {
+  it('markAiBatch 后 undoToLastAiBatch 回到批次前状态', () => {
+    const store = new HistoryStore<StoryGraphSnapshot>()
+    store.initialize(makeSnapshot(0))
+    store.push('ADD_NODE', '手动操作', makeSnapshot(0), makeSnapshot(1))
+    // 建立 AI 批次起点（当前画布状态为 makeSnapshot(1)）
+    store.markAiBatch(makeSnapshot(1))
+    // AI 批量操作产生的普通历史条目
+    store.push('ADD_NODE', 'AI 创建节点 1', makeSnapshot(1), makeSnapshot(2))
+    store.push('ADD_NODE', 'AI 创建节点 2', makeSnapshot(2), makeSnapshot(3))
+    // 检查点条目带 tag 标记
+    expect(store.getHistory()[1].tag).toBe('ai-batch')
+    const result = store.undoToLastAiBatch()
+    expect(result.done).toBe(true)
+    expect(store.getPresent()).toEqual(makeSnapshot(1))
+    // 回滚后未来栈保留了 AI 操作（可 redo 恢复），更早历史仍可撤销
+    expect(store.canRedo()).toBe(true)
+    expect(store.canUndo()).toBe(true)
+  })
+
+  it('重复调用 undoToLastAiBatch 回退到更早的 AI 批次', () => {
+    const store = new HistoryStore<StoryGraphSnapshot>()
+    store.initialize(makeSnapshot(0))
+    store.push('ADD_NODE', '手动操作', makeSnapshot(0), makeSnapshot(1))
+    store.markAiBatch(makeSnapshot(1))
+    store.push('ADD_NODE', '第一批 AI 操作', makeSnapshot(1), makeSnapshot(2))
+    store.markAiBatch(makeSnapshot(2))
+    store.push('ADD_NODE', '第二批 AI 操作', makeSnapshot(2), makeSnapshot(3))
+    // 第一次回退：回到第二批起点（makeSnapshot(2)）
+    expect(store.undoToLastAiBatch().done).toBe(true)
+    expect(store.getPresent()).toEqual(makeSnapshot(2))
+    // 第二次回退：回到第一批起点（makeSnapshot(1)）
+    expect(store.undoToLastAiBatch().done).toBe(true)
+    expect(store.getPresent()).toEqual(makeSnapshot(1))
+    // 没有更早批次：done=false 且状态不变
+    expect(store.undoToLastAiBatch().done).toBe(false)
+    expect(store.getPresent()).toEqual(makeSnapshot(1))
+  })
+
+  it('无 AI 批次时 undoToLastAiBatch 返回 done=false 且状态不变', () => {
+    const store = new HistoryStore<StoryGraphSnapshot>()
+    store.initialize(makeSnapshot(0))
+    store.push('ADD_NODE', '手动操作', makeSnapshot(0), makeSnapshot(1))
+    const result = store.undoToLastAiBatch()
+    expect(result.done).toBe(false)
+    expect(store.getPresent()).toEqual(makeSnapshot(1))
+    // 普通 undo 不受影响
+    expect(store.undo()).toEqual(makeSnapshot(0))
+  })
+
+  it('markAiBatch 记录 lastAiBatchIndex 且条目带 tag', () => {
+    const store = new HistoryStore<StoryGraphSnapshot>()
+    store.initialize(makeSnapshot(0))
+    store.push('ADD_NODE', '手动操作', makeSnapshot(0), makeSnapshot(1))
+    store.markAiBatch(makeSnapshot(1))
+    expect(store.getLastAiBatchIndex()).toBe(2)
+    expect(store.getHistory()[1].tag).toBe('ai-batch')
+    expect(store.getHistory()[1].description).toBe('AI 批量操作')
+  })
+
+  it('回滚后 AI 操作条目仍可通过 redo 恢复', () => {
+    const store = new HistoryStore<StoryGraphSnapshot>()
+    store.initialize(makeSnapshot(0))
+    store.markAiBatch(makeSnapshot(0))
+    store.push('ADD_NODE', 'AI 操作', makeSnapshot(0), makeSnapshot(1))
+    store.undoToLastAiBatch()
+    expect(store.getPresent()).toEqual(makeSnapshot(0))
+    // 第一次 redo 恢复检查点条目（before==after，状态值不变），第二次 redo 恢复 AI 操作
+    store.redo()
+    expect(store.getPresent()).toEqual(makeSnapshot(0))
+    store.redo()
+    expect(store.getPresent()).toEqual(makeSnapshot(1))
+  })
+
+  it('AI 批次检查点不破坏普通 undo/redo 行为', () => {
+    const store = new HistoryStore<StoryGraphSnapshot>()
+    store.initialize(makeSnapshot(0))
+    store.markAiBatch(makeSnapshot(0))
+    store.push('ADD_NODE', 'AI 操作', makeSnapshot(0), makeSnapshot(1))
+    // 普通 undo 一次回到批次起点快照（检查点条目本身也可被撤销）
+    expect(store.undo()).toEqual(makeSnapshot(0))
+    expect(store.redo()).toEqual(makeSnapshot(1))
+  })
+
+  it('clear 后 lastAiBatchIndex 重置，回滚不可用', () => {
+    const store = new HistoryStore<StoryGraphSnapshot>()
+    store.initialize(makeSnapshot(0))
+    store.markAiBatch(makeSnapshot(0))
+    store.push('ADD_NODE', 'AI 操作', makeSnapshot(0), makeSnapshot(1))
+    store.clear()
+    expect(store.getLastAiBatchIndex()).toBe(-1)
+    expect(store.undoToLastAiBatch().done).toBe(false)
+  })
+})

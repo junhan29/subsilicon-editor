@@ -1,6 +1,7 @@
 import type { AiConfig } from '../../ai/types'
 import { callAiForTask } from '../../ai/provider-registry'
 import type { StoryCharacter, StoryEdge, StoryNode } from '@editor/types/editor'
+import { buildGenerationPolicyPrompt, deaiStyle, type GenerationContext } from '../../ai/services/generation-policy'
 
 export interface StoryBranchSuggestion {
   title: string
@@ -22,7 +23,8 @@ export async function suggestNextPlot(
   currentEdges: StoryEdge[],
   characters: StoryCharacter[],
   context?: string,
-  config?: AiConfig | null
+  config?: AiConfig | null,
+  genContext?: GenerationContext
 ): Promise<PlotSuggestion> {
   const nodeSummary = currentNodes.slice(-5).map(n => {
     const type = n.type
@@ -67,24 +69,37 @@ ${context ? `额外要求：${context}` : ''}
 请提供后续剧情建议。`
 
   const rawResult = await callAiForTask('text',
-    { systemPrompt, userPrompt, temperature: 0.85, maxTokens: 2000 }
+    {
+      systemPrompt: `${systemPrompt}${buildGenerationPolicyPrompt(context ?? '', genContext)}`,
+      userPrompt,
+      temperature: 0.85,
+      maxTokens: 2000,
+    }
   )
 
   try {
     const jsonStr = rawResult.replace(/```json/g, '').replace(/```/g, '').trim()
     const parsed = JSON.parse(jsonStr)
     return {
-      summary: parsed.summary || '暂无分析',
-      branches: Array.isArray(parsed.branches) ? parsed.branches : [],
-      characterDevelopment: parsed.characterDevelopment || '',
-      pacing: parsed.pacing || '',
+      summary: deaiStyle(parsed.summary || '暂无分析'),
+      branches: Array.isArray(parsed.branches)
+        ? parsed.branches.map((b: Record<string, unknown>) => ({
+            title: deaiStyle(typeof b.title === 'string' ? b.title : ''),
+            description: deaiStyle(typeof b.description === 'string' ? b.description : ''),
+            nodeType: typeof b.nodeType === 'string' ? b.nodeType : '',
+            suggestedText: deaiStyle(typeof b.suggestedText === 'string' ? b.suggestedText : ''),
+            emotionalImpact: deaiStyle(typeof b.emotionalImpact === 'string' ? b.emotionalImpact : ''),
+          }))
+        : [],
+      characterDevelopment: deaiStyle(parsed.characterDevelopment || ''),
+      pacing: deaiStyle(parsed.pacing || ''),
     }
   } catch {
     return {
       summary: '解析失败，请参考原始输出',
       branches: [],
       characterDevelopment: '',
-      pacing: rawResult.slice(0, 200),
+      pacing: deaiStyle(rawResult.slice(0, 200)),
     }
   }
 }
@@ -93,7 +108,8 @@ export async function generateNodeContent(
   nodeType: string,
   context: string,
   characters: StoryCharacter[],
-  config?: AiConfig | null
+  config?: AiConfig | null,
+  genContext?: GenerationContext
 ): Promise<string> {
   const charList = characters.map(c => c.name).join('、')
 
@@ -111,15 +127,23 @@ export async function generateNodeContent(
 
 请生成内容。`
 
-  return callAiForTask('text',
-    { systemPrompt, userPrompt, temperature: 0.8, maxTokens: 800 }
+  const rawResult = await callAiForTask('text',
+    {
+      systemPrompt: `${systemPrompt}${buildGenerationPolicyPrompt(context, genContext)}`,
+      userPrompt,
+      temperature: 0.8,
+      maxTokens: 800,
+    }
   )
+
+  return deaiStyle(rawResult)
 }
 
 export async function enhanceCharacter(
   character: StoryCharacter,
   enhancement: 'background' | 'personality' | 'speech' | 'appearance' | 'full',
-  config?: AiConfig | null
+  config?: AiConfig | null,
+  genContext?: GenerationContext
 ): Promise<Partial<StoryCharacter>> {
   const systemPrompt = `你是一位专业的角色设计师。请基于以下角色信息，补充${
     enhancement === 'background' ? '背景故事' :
@@ -148,19 +172,33 @@ export async function enhanceCharacter(
 
 请补充${enhancement === 'full' ? '完整的' : ''}角色设定。`
 
+  const coreInput = `${character.name}：${character.personality?.join('、') || ''} ${character.background || ''}`
+
   const rawResult = await callAiForTask('text',
-    { systemPrompt, userPrompt, temperature: 0.75, maxTokens: 1200 }
+    {
+      systemPrompt: `${systemPrompt}${buildGenerationPolicyPrompt(coreInput, genContext)}`,
+      userPrompt,
+      temperature: 0.75,
+      maxTokens: 1200,
+    }
   )
 
   try {
     const jsonStr = rawResult.replace(/```json/g, '').replace(/```/g, '').trim()
     const parsed = JSON.parse(jsonStr)
     const result: Partial<StoryCharacter> = {}
-    if (parsed.background) result.background = parsed.background
-    if (Array.isArray(parsed.personality)) result.personality = parsed.personality
-    if (parsed.speech) result.speech = parsed.speech
-    if (Array.isArray(parsed.appearance)) result.appearance = parsed.appearance
-    if (parsed.bio) result.bio = parsed.bio
+    if (parsed.background) result.background = deaiStyle(parsed.background)
+    if (Array.isArray(parsed.personality)) result.personality = parsed.personality.map((p: unknown) => deaiStyle(String(p)))
+    if (parsed.speech) {
+      result.speech = {
+        tone: deaiStyle(typeof parsed.speech.tone === 'string' ? parsed.speech.tone : ''),
+        catchphrases: Array.isArray(parsed.speech.catchphrases)
+          ? parsed.speech.catchphrases.map((cp: unknown) => deaiStyle(String(cp)))
+          : [],
+      }
+    }
+    if (Array.isArray(parsed.appearance)) result.appearance = parsed.appearance.map((a: unknown) => deaiStyle(String(a)))
+    if (parsed.bio) result.bio = deaiStyle(parsed.bio)
     return result
   } catch {
     return {}

@@ -20,8 +20,10 @@ import {
   blobToDataURL,
   getGlobalStylePrompt,
   saveGlobalStylePrompt,
+  saveMediaProviderConfig,
   type MediaProviderConfig,
 } from '../ai/services/media-generation-service'
+import { saveTaskRoutingConfig } from '../ai/task-routing'
 import { encryptAiKey } from '../ai/ai-key-vault'
 
 // happy-dom 可能缺 WebCrypto：补 node webcrypto，保证 AES 加解密可用
@@ -151,6 +153,58 @@ describe('generateAudio', () => {
 
 describe('generateMediaForTask（任务路由）', () => {
   it('未配置服务商时给出明确提示', async () => {
+    await expect(
+      generateMediaForTask('image', { prompt: 'x' })
+    ).rejects.toThrow('未配置图片生成服务商')
+  })
+})
+
+describe('媒体配置回退链（任务槽优先，旧全局配置回退）', () => {
+  it('任务槽有配置时优先使用槽配置（忽略旧全局配置）', async () => {
+    // 旧全局配置存在但不该被使用
+    await saveMediaProviderConfig(wanProvider)
+    // image 槽配置了 openai（与旧全局 wan 不同）
+    await saveTaskRoutingConfig({
+      version: 1,
+      editor: {},
+      text: {},
+      image: { media: openaiProvider },
+      video: {},
+      audio: {},
+    })
+    const res = await generateMediaForTask('image', { prompt: 'a cat' })
+    expect(res.type).toBe('image')
+    const init = mockFetch.mock.calls[0][1] as RequestInit
+    const headers = init.headers as Record<string, string>
+    expect(headers.Authorization).toBe('Bearer sk-openai-test')
+  })
+
+  it('任务槽无配置时回退旧全局配置', async () => {
+    await saveMediaProviderConfig(wanProvider)
+    const res = await generateMediaForTask('image', { prompt: 'a cat' })
+    expect(res.type).toBe('image')
+    const init = mockFetch.mock.calls[0][1] as RequestInit
+    const headers = init.headers as Record<string, string>
+    expect(headers.Authorization).toBe('Bearer sk-wan-test')
+  })
+
+  it('video 槽无配置时回退旧全局配置', async () => {
+    await saveMediaProviderConfig(wanProvider)
+    const res = await generateMediaForTask('video', { prompt: 'a clip', duration: 5 })
+    expect(res.type).toBe('video')
+    const init = mockFetch.mock.calls[0][1] as RequestInit
+    const headers = init.headers as Record<string, string>
+    expect(headers.Authorization).toBe('Bearer sk-wan-test')
+  })
+
+  it('audio 槽无配置时不回退旧全局配置（audio 无旧配置，需独立配置）', async () => {
+    await saveMediaProviderConfig(wanProvider)
+    await expect(
+      generateMediaForTask('audio', { prompt: 'x' })
+    ).rejects.toThrow('未配置音乐/音效生成服务商')
+  })
+
+  it('槽与旧全局均无配置时保持现状报错', async () => {
     await expect(
       generateMediaForTask('image', { prompt: 'x' })
     ).rejects.toThrow('未配置图片生成服务商')

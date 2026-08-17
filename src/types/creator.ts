@@ -29,6 +29,8 @@ export interface PlatformConfig {
   enabled: boolean
   createdAt: number
   updatedAt: number
+  /** 归属的本地账号邮箱（账号双轨统一后，平台配置挂到本地账户名下） */
+  ownerEmail?: string
 }
 
 export interface CreatorAccount {
@@ -54,6 +56,8 @@ export interface PublishRecord {
   platformResponse: Record<string, unknown>
   publishedAt: number
   updatedAt: number
+  /** 发布归属的本地账号邮箱（账号双轨统一后，发布记录归属本地账号） */
+  creatorEmail?: string
 }
 
 export interface CreatorCenterState {

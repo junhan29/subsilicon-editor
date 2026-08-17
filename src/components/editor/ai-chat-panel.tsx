@@ -1,12 +1,15 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { AlertCircle, Bot, Bug, Check, ChevronDown, ChevronRight, Eye, Image, ListChecks, Loader2, Music, Send, Settings, Sparkles, Trash2, User, Video, X } from 'lucide-react'
+import { AlertCircle, Bot, Bug, Check, ChevronDown, ChevronRight, Eye, Image, ListChecks, Loader2, Music, Send, Settings, Sparkles, Trash2, Undo2, User, Video, X } from 'lucide-react'
 import { showToast } from './toast'
 import { AiSettingsDialog } from './ai-settings-dialog'
+import { CreatorInputPanel, CREATOR_INPUT_TYPE_LABELS } from './creator-input-panel'
 import { buildConsistentImagePrompt, callAiStreamForTask, generateMediaForTask, getGlobalStylePrompt, getMediaProviderConfigForTask, isAiAvailable, optimizePrompt, refreshAiConfig } from '@editor/lib/ai'
 import { serializeGraphContext } from '@editor/lib/ai/chat-graph-context'
 import { getChatSystemPrompt } from '@editor/lib/ai/chat-system-prompt'
+import { setChatMode, useChatMode } from '@editor/lib/ai/chat-mode'
+import { getWorkPremise } from '@editor/lib/work-premise-store'
 import { getAssistantName, useAssistantName } from '@editor/lib/assistant-name'
 import { type EditorCanvasCallbacks, type MediaGenerationRequest, type ActionPreview, describeAiActions, dispatchParsedCommands, executeAiActions, parseAllAiCommands } from '@editor/lib/ai/chat-command-executor'
 import { addAutomationRule, listAutomationRules, matchAutomationRules, removeAutomationRule, resetAutomationRules, updateAutomationRule, type AutomationRule } from '@editor/lib/ai/ai-automation'
@@ -14,6 +17,12 @@ import { appendDebugEntry, clearDebugEntries, getDebugEntries, removeDebugEntry,
 import { getModelsForProvider } from '@editor/lib/ai/model-presets'
 import { encryptAiKey, isEncryptedAiKey } from '@editor/lib/ai/ai-key-vault'
 import { type AssetAnnotation, findAssetsByAnnotation, getAllAssets, saveBlobAsAsset, updateAssetAnnotation } from '@editor/lib/local-db'
+import { addCreatorInput, getInputCaptureEnabled, listCreatorInputs } from '@editor/lib/creator-input-store'
+import {
+  useCustomWorkflows,
+  type CustomWorkflow,
+  type WorkflowTextDefaults,
+} from '@editor/lib/custom-workflows-store'
 import type { ComicScene, StoryCharacter, StoryEdge, StoryNode } from '@editor/types/editor'
 import type { AiConfig, AiProviderConfig } from '@editor/types/ai'
 
@@ -70,6 +79,11 @@ interface AiChatPanelProps {
   onPreviewWork?: () => void
   onUndo?: () => void
   onRedo?: () => void
+  /** act-along 模式：AI 动作执行前由画布侧打「AI 批量操作」检查点 */
+  onMarkAiBatch?: () => void
+  /** act-along 模式：「回滚 AI 操作」按钮，返回是否成功回退（无批次可回退时为 false） */
+  onRollbackAiBatch?: () => boolean
+  workId?: string
 }
 
 function buildCallbacks(props: AiChatPanelProps): EditorCanvasCallbacks {
@@ -98,8 +112,25 @@ function buildCallbacks(props: AiChatPanelProps): EditorCanvasCallbacks {
 }
 
 export function AiChatPanel(props: AiChatPanelProps) {
-  const { nodes, edges, characters, scenes, onBindAsset } = props
+  const { nodes, edges, characters, scenes, onBindAsset, workId } = props
   const assistantName = useAssistantName()
+  const chatMode = useChatMode()
+
+  // —— 自定义工作流（Skill）：文本槽 / 编辑器操作槽通用（默认只显示 text 类，以后可扩展 editor）——
+  const textWorkflows = useCustomWorkflows('text')
+  const [activeTextWorkflowId, setActiveTextWorkflowId] = useState<string | null>(null)
+  const [showTextWorkflowPicker, setShowTextWorkflowPicker] = useState(false)
+  const activeTextWorkflow: CustomWorkflow | undefined = useMemo(
+    () => textWorkflows.find((wf) => wf.id === activeTextWorkflowId),
+    [textWorkflows, activeTextWorkflowId]
+  )
+  function applyTextWorkflow(id: string): void {
+    const wf = textWorkflows.find((x) => x.id === id)
+    if (!wf) return
+    setActiveTextWorkflowId(id)
+    setShowTextWorkflowPicker(false)
+    showToast('success', `已应用文本工作流「${wf.name}」`)
+  }
 
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -145,6 +176,19 @@ export function AiChatPanel(props: AiChatPanelProps) {
   const [rulePattern, setRulePattern] = useState('')
   const [ruleStateValue, setRuleStateValue] = useState(0)
   const [ruleAction, setRuleAction] = useState<'saveWork' | 'undo' | 'previewWork' | 'createNarration' | 'createDialogue' | 'createChoice'>('saveWork')
+
+  // —— 灵感库（创作者输入库）：采集自 AI 对话的输入记录；version 用于通知面板刷新 ——
+  const [creatorInputVersion, setCreatorInputVersion] = useState(0)
+  // 「生成时引用输入库」开关（localStorage 持久化，默认开启）
+  const [useCreatorInputsInContext, setUseCreatorInputsInContext] = useState(() => {
+    try {
+      return localStorage.getItem('subsilicon_ai_use_creator_inputs') !== 'false'
+    } catch { return true }
+  })
+  const toggleUseCreatorInputsInContext = useCallback((next: boolean) => {
+    setUseCreatorInputsInContext(next)
+    try { localStorage.setItem('subsilicon_ai_use_creator_inputs', next ? 'true' : 'false') } catch { /* ignore */ }
+  }, [])
 
   // 新增预设规则
   const handleAddRule = () => {
@@ -310,6 +354,30 @@ export function AiChatPanel(props: AiChatPanelProps) {
     inputRef.current?.focus()
   }
 
+  // 执行 AI 动作：act-along 模式下在执行前打「AI 批量操作」检查点（供「回滚 AI 操作」使用）
+  const runAiActions = useCallback((actions: import('@editor/lib/ai/chat-command-executor').AiAction[], callbacks: EditorCanvasCallbacks) => {
+    return executeAiActions(actions, callbacks, {
+      onBeforeExecute: chatMode === 'act-along' ? props.onMarkAiBatch : undefined,
+    })
+  }, [chatMode, props.onMarkAiBatch])
+
+  // 回滚 AI 操作：撤销到最近一次 AI 批次检查点之前的状态（无批次可回退时提示用户）
+  const handleRollbackAiBatch = useCallback(() => {
+    const ok = props.onRollbackAiBatch?.()
+    if (ok) {
+      showToast('success', '已回滚到 AI 操作前')
+    } else {
+      showToast('info', '没有可回滚的 AI 操作')
+    }
+  }, [props.onRollbackAiBatch])
+
+  // 灵感库注入：把条目内容填入输入框（保留已有输入，追加在下方），并聚焦等待编辑
+  const handleInjectCreatorInput = useCallback((content: string) => {
+    setInput((prev) => (prev.trim() ? `${prev}\n${content}` : content))
+    inputRef.current?.focus()
+    showToast('success', '已插入输入框，可编辑后发送')
+  }, [])
+
   // 发送消息
   const handleSend = async () => {
     const trimmed = input.trim()
@@ -329,6 +397,29 @@ export function AiChatPanel(props: AiChatPanelProps) {
     }
     setMessages((prev) => [...prev, userMessage])
 
+    // —— 生成上下文注入：读取与作品相关的最近输入条目（受「生成时引用」开关控制，读取失败静默跳过）——
+    //    先读再采集，避免把当前这条消息重复注入本轮上下文
+    let recentCreatorInputs: string[] | undefined
+    if (useCreatorInputsInContext) {
+      try {
+        const all = await listCreatorInputs()
+        const related = all.filter((e) => e.workId === workId || e.workId === '')
+        recentCreatorInputs = related.slice(0, 8).map((e) => `[${CREATOR_INPUT_TYPE_LABELS[e.type]}] ${e.content.slice(0, 300)}`)
+        if (recentCreatorInputs.length === 0) recentCreatorInputs = undefined
+      } catch {
+        // 读取失败静默跳过，不影响对话
+        recentCreatorInputs = undefined
+      }
+    }
+
+    // —— 创作者输入库：自动采集本次用户消息（遵循采集开关，store 内部已容错，失败静默）——
+    if (getInputCaptureEnabled()) {
+      void addCreatorInput({ workId: workId ?? '', type: 'chat', content: trimmed, source: 'chat' }).then(() => {
+        // 新增成功后再通知灵感库面板刷新
+        setCreatorInputVersion((v) => v + 1)
+      })
+    }
+
     // 构建创作助理请求（包含已标注的素材库，让 AI 能调度素材）
     let annotatedAssets: Awaited<ReturnType<typeof getAllAssets>> = []
     try {
@@ -336,8 +427,27 @@ export function AiChatPanel(props: AiChatPanelProps) {
     } catch {
       // IndexedDB 不可用时忽略
     }
-    const graphContext = serializeGraphContext(nodes, edges, characters, scenes, annotatedAssets, props.variables)
-    const systemPrompt = getChatSystemPrompt(graphContext)
+    const graphContext = serializeGraphContext(nodes, edges, characters, scenes, annotatedAssets, props.variables, {
+      workPremise: getWorkPremise(workId),
+      creatorInputs: recentCreatorInputs,
+    })
+    let systemPrompt = getChatSystemPrompt(graphContext, chatMode)
+
+    // —— 创作者自定义文本工作流（优先级最高）：
+    //    systemPrompt 顶部追加「你正遵循的工作流」段落，styleKeywords 注入文风要求，
+    //    temperature / maxTokens 覆盖默认值
+    const wfText: WorkflowTextDefaults | undefined = activeTextWorkflow?.text
+    if (wfText && activeTextWorkflow) {
+      const header: string[] = []
+      header.push(`## 创作者自定义工作流「${activeTextWorkflow.name}」（本回复必须严格遵守，优先级最高）`)
+      if (wfText.systemPrompt?.trim()) header.push(wfText.systemPrompt.trim())
+      if (wfText.styleKeywords?.trim()) header.push(`文风关键词（必须贯彻）：${wfText.styleKeywords.trim()}`)
+      if (activeTextWorkflow.description?.trim()) header.push(`工作流说明：${activeTextWorkflow.description.trim()}`)
+      header.push('')
+      systemPrompt = header.join('\n') + systemPrompt
+    }
+    const wfTemperature = wfText?.temperature
+    const wfMaxTokens = wfText?.maxTokens
 
     try {
       const available = isAiAvailable()
@@ -368,8 +478,8 @@ export function AiChatPanel(props: AiChatPanelProps) {
       const result = await callAiStreamForTask('editor', {
         systemPrompt,
         userPrompt,
-        temperature: 0.7,
-        maxTokens: 4096,
+        temperature: wfTemperature ?? 0.7,
+        maxTokens: wfMaxTokens ?? 4096,
       })
 
       let fullText = ''
@@ -413,7 +523,13 @@ export function AiChatPanel(props: AiChatPanelProps) {
         const commandBlocks = parseAllAiCommands(fullText)
         if (commandBlocks.length > 0) {
           const allActions = commandBlocks.flatMap((b) => b.actions)
+          // 校验未通过的非法动作（附带中文拒绝原因），提示用户哪些被跳过
+          const invalidActions = commandBlocks.flatMap((b) => b.invalid)
           debugEntry.actions = allActions as unknown[]
+          if (invalidActions.length > 0) {
+            const reasons = Array.from(new Set(invalidActions.map((i) => i.reason))).join('；')
+            fullText += `\n\n---\n⚠️ ${invalidActions.length} 个动作校验未通过已跳过（${reasons}）`
+          }
           const combined = [...automationActions, ...allActions]
           if (combined.length > 0) {
             const callbacks = buildCallbacks(props)
@@ -429,7 +545,7 @@ export function AiChatPanel(props: AiChatPanelProps) {
               appendDebugEntry(debugEntry as AiDebugEntry)
               fullText += `\n\n---\n⏸️ ${combined.length} 个操作等待确认（预览模式）`
             } else {
-              const result = await executeAiActions(combined, callbacks)
+              const result = await runAiActions(combined, callbacks)
               debugEntry.execution = result
               appendDebugEntry(debugEntry as AiDebugEntry)
               mediaRequests = result.mediaRequests
@@ -456,7 +572,7 @@ export function AiChatPanel(props: AiChatPanelProps) {
           appendDebugEntry(debugEntry as AiDebugEntry)
           fullText += `\n\n---\n🤖 预设规则命中 ${automationHits.map((h) => h.rule.name).join('、')}，等待确认`
         } else {
-          const result = await executeAiActions(automationActions, callbacks)
+          const result = await runAiActions(automationActions, callbacks)
           debugEntry.execution = result
           appendDebugEntry(debugEntry as AiDebugEntry)
           fullText += `\n\n---\n🤖 预设规则已执行：成功 ${result.success} 个操作${result.failed > 0 ? `, 失败 ${result.failed} 个` : ''}`
@@ -515,7 +631,7 @@ export function AiChatPanel(props: AiChatPanelProps) {
     if (!pendingPreview) return
     const { msgId, debugId, actions } = pendingPreview
     const callbacks = buildCallbacks(props)
-    const result = await executeAiActions(actions, callbacks)
+    const result = await runAiActions(actions, callbacks)
     const summary = `✅ 成功 ${result.success} 个操作` +
       (result.failed > 0 ? `, ❌ 失败 ${result.failed} 个` : '') +
       (result.mediaRequests.length > 0 ? `, 📋 ${result.mediaRequests.length} 个生成请求待确认` : '')
@@ -538,7 +654,7 @@ export function AiChatPanel(props: AiChatPanelProps) {
     }
     setPendingPreview(null)
     setActiveDebugId(null)
-  }, [pendingPreview, props])
+  }, [pendingPreview, props, runAiActions])
 
   // 预览拒绝：取消操作
   const handleRejectPreview = useCallback(() => {
@@ -817,8 +933,117 @@ export function AiChatPanel(props: AiChatPanelProps) {
               )}
             </div>
           )}
+          {/* AI 对话模式切换：先聊后做 / 边聊边做（持久化） */}
+          <div className="flex items-center gap-0.5 ml-0.5 rounded-md border border-slate-700/50 bg-slate-800/60 p-0.5" title="AI 对话模式：先聊后做（先讨论、确认后再落画布）/ 边聊边做（收到想法即可落地）">
+            <button
+              type="button"
+              onClick={() => setChatMode('discuss-first')}
+              className={`px-1.5 py-0.5 text-[10px] rounded transition-colors ${
+                chatMode === 'discuss-first' ? 'bg-amber-500/20 text-amber-300' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              先聊后做
+            </button>
+            <button
+              type="button"
+              onClick={() => setChatMode('act-along')}
+              className={`px-1.5 py-0.5 text-[10px] rounded transition-colors ${
+                chatMode === 'act-along' ? 'bg-amber-500/20 text-amber-300' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              边聊边做
+            </button>
+          </div>
+          {/* 边聊边做模式：「回滚 AI 操作」—— 撤销到最近一次 AI 批量操作之前（可重复回退更早批次） */}
+          {chatMode === 'act-along' && (
+            <button
+              type="button"
+              onClick={handleRollbackAiBatch}
+              className="flex items-center gap-1 px-1.5 py-0.5 text-[10px] rounded border border-slate-700/50 bg-slate-800/60 text-slate-400 hover:text-amber-300 hover:border-amber-500/30 transition-colors"
+              title="回滚到最近一次 AI 批量操作之前的状态（可重复回退到更早的 AI 批次）"
+            >
+              <Undo2 className="w-3 h-3" />
+              回滚 AI
+            </button>
+          )}
         </div>
         <div className="flex items-center gap-1">
+          {/* 自定义工作流选择器（文本 / 正文生成类） */}
+          <div className="relative mr-1">
+            <button
+              type="button"
+              onClick={() => setShowTextWorkflowPicker((v) => !v)}
+              onBlur={() => setTimeout(() => setShowTextWorkflowPicker(false), 120)}
+              className={`flex items-center gap-1.5 px-2 py-1.5 rounded border transition-colors max-w-[200px] ${
+                activeTextWorkflow
+                  ? 'bg-yellow-500/10 border-yellow-500/30 text-yellow-300'
+                  : 'border-transparent text-slate-400 hover:text-white hover:bg-slate-700 hover:border-slate-600'
+              }`}
+              title="选择文本类自定义工作流（Skill），自动注入系统提示词 + 控制温度/maxTokens"
+            >
+              <Sparkles className="w-3.5 h-3.5 flex-shrink-0" />
+              <span className="text-[11px] truncate">
+                {activeTextWorkflow ? activeTextWorkflow.name : '工作流（可选）'}
+              </span>
+              <ChevronDown className={`w-3 h-3 transition-transform flex-shrink-0 ${showTextWorkflowPicker ? 'rotate-180' : ''}`} />
+            </button>
+            {showTextWorkflowPicker && (
+              <div className="absolute right-0 top-full mt-1 w-72 rounded-md border border-slate-600 bg-slate-800 shadow-xl overflow-hidden max-h-72 overflow-y-auto z-50">
+                <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-slate-700/60 bg-slate-900/40">
+                  <p className="text-[10px] text-slate-400">文本类工作流（影响 AI 对话与正文生成）</p>
+                  {activeTextWorkflow && (
+                    <button
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => setActiveTextWorkflowId(null)}
+                      className="text-[9px] text-slate-500 hover:text-slate-200"
+                    >
+                      清空
+                    </button>
+                  )}
+                </div>
+                {textWorkflows.length === 0 ? (
+                  <div className="px-2.5 py-3 text-[10px] text-slate-500 leading-relaxed">
+                    暂无文本工作流。前往设置 → AI 任务路由 → 自定义工作流 Tab 新建，即可保存你喜欢的文风与参数组合。
+                  </div>
+                ) : (
+                  textWorkflows.map((wf) => {
+                    const active = wf.id === activeTextWorkflowId
+                    return (
+                      <button
+                        key={wf.id}
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => applyTextWorkflow(wf.id)}
+                        className={`w-full text-left px-2.5 py-2 border-b last:border-b-0 border-slate-700/50 transition-colors ${
+                          active ? 'bg-yellow-500/10' : 'hover:bg-slate-700/60'
+                        }`}
+                      >
+                        <div className="flex items-start gap-2">
+                          <Check className={`w-3 h-3 mt-0.5 flex-shrink-0 ${active ? 'text-yellow-400' : 'opacity-0'}`} />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5">
+                              <p className={`text-[11px] truncate ${active ? 'text-yellow-300 font-medium' : 'text-slate-200'}`}>{wf.name}</p>
+                              {wf.builtin && (
+                                <span className="text-[9px] px-1 rounded border border-slate-600 text-slate-500 flex-shrink-0">内置</span>
+                              )}
+                              {wf.text?.temperature != null && (
+                                <span className="text-[9px] px-1 rounded bg-slate-700 text-slate-400 font-mono flex-shrink-0">T {wf.text.temperature.toFixed(2)}</span>
+                              )}
+                            </div>
+                            {wf.description && (
+                              <p className="text-[9px] text-slate-500 leading-snug line-clamp-2 mt-0.5">{wf.description}</p>
+                            )}
+                          </div>
+                        </div>
+                      </button>
+                    )
+                  })
+                )}
+              </div>
+            )}
+          </div>
+
           <button
             onClick={togglePreviewMode}
             className={`p-1.5 rounded hover:bg-slate-700 transition-colors ${
@@ -1356,6 +1581,15 @@ export function AiChatPanel(props: AiChatPanelProps) {
           )}
         </div>
       )}
+
+      {/* 灵感库（创作者输入库）：AI 对话自动采集的输入记录，可查看/搜索/改类型/删除/注入对话 */}
+      <CreatorInputPanel
+        workId={workId ?? ''}
+        onInject={handleInjectCreatorInput}
+        refreshKey={creatorInputVersion}
+        useInContext={useCreatorInputsInContext}
+        onToggleUseInContext={toggleUseCreatorInputsInContext}
+      />
 
       {/* 输入区域 */}
       <div className="shrink-0 border-t border-slate-700/40 p-3 bg-slate-900/40 backdrop-blur-sm">

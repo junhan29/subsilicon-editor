@@ -5,10 +5,11 @@ import { Button } from '@editor/components/ui/button'
 import { Input } from '@editor/components/ui/input'
 import { Label } from '@editor/components/ui/label'
 import { Textarea } from '@editor/components/ui/textarea'
-import { AlertTriangle, ArrowRight, Check, ChevronDown, ChevronRight, Copy, Film, Layers, Loader2, MessageSquare, Plus, Sparkles, Trash2, Users, X } from 'lucide-react'
+import { AlertTriangle, ArrowRight, BookOpen, Check, ChevronDown, ChevronRight, Copy, Film, Layers, Loader2, MessageSquare, Plus, Sparkles, Trash2, Users, X } from 'lucide-react'
 import type { CharacterGender, NodeAnnotation, StoryCharacter, StoryEdge, StoryNode, StoryVariable } from '@editor/types/editor'
 import { enhanceCharacter } from '@editor/lib/ai'
 import { showToast } from './toast'
+import { getWorkPremise, saveWorkPremise } from '@editor/lib/work-premise-store'
 import {
   APPEARANCE_TAGS,
   CHARACTER_CUSTOM_TAGS,
@@ -194,6 +195,7 @@ interface PropertyPanelProps {
   onAddAnnotation?: (nodeId: string) => void
   onViewAnnotations?: () => void
   graph?: StoryGraph | null
+  workId?: string
 }
 
 function PropertyPanel({
@@ -222,9 +224,15 @@ function PropertyPanel({
   onAddAnnotation,
   onViewAnnotations,
   graph,
+  workId,
 }: PropertyPanelProps) {
   const [expandedCharId, setExpandedCharId] = useState<string | null>(null)
   const [copiedCharId, setCopiedCharId] = useState<string | null>(null)
+  const [workPremise, setWorkPremise] = useState<string>(() => getWorkPremise(workId))
+
+  useEffect(() => {
+    setWorkPremise(getWorkPremise(workId))
+  }, [workId])
 
   useEffect(() => {
     if (editCharId) {
@@ -386,6 +394,37 @@ function PropertyPanel({
               />
             </div>
             <p className="text-[10px] text-muted-foreground">已选 {tags.length}/10，支持自定义标签</p>
+          </div>
+
+          {/* 作品核心设定：世界观、基调、风格禁忌等；每作品独立保存；AI 聊天时注入上下文最顶端 */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <BookOpen className="w-3.5 h-3.5 text-amber-400" />
+                <Label className="text-xs">作品核心设定</Label>
+              </div>
+              <button
+                onClick={() => {
+                  saveWorkPremise(workId, workPremise)
+                  showToast('success', workPremise.trim() ? '核心设定已保存（AI 对话时自动带入）' : '核心设定已清空')
+                }}
+                className="flex items-center gap-1 px-2 py-1 text-[10px] rounded bg-amber-500/10 text-amber-500 border border-amber-500/20 hover:bg-amber-500/20 transition-colors"
+              >
+                <Check className="w-3 h-3" />
+                保存
+              </button>
+            </div>
+            <Textarea
+              value={workPremise}
+              onChange={(e) => setWorkPremise(e.target.value)}
+              onBlur={() => saveWorkPremise(workId, workPremise)}
+              rows={6}
+              placeholder={`在这里写清楚本作的世界观、核心基调、必须遵守的风格禁忌、人物关系等等，比如：\n• 世界观：赛博朋克 2099 年，东亚城邦「新沪」，巨型 AI 管理一切，人类失去自由意志\n• 基调：冷静克制的反乌托邦，不要热血逆袭\n• 禁忌：不要出现魔法/超自然元素；所有科技都要能找到现实原型\n• 主角与男二是义兄弟关系，互称「哥」时不能用外号\n\nAI 在每一轮聊天和生成内容时都会先看到这段设定。`}
+              className="text-xs leading-relaxed resize-y min-h-[120px]"
+            />
+            <p className="text-[10px] text-muted-foreground leading-relaxed">
+              按作品独立保存（本作品：{workId || 'default'}）；失焦自动保存。AI 对话时注入上下文最上方，减少前后矛盾、世界观冲突。
+            </p>
           </div>
 
           {/* 变量管理 */}

@@ -7,6 +7,8 @@ export interface AiAction {
 
 export interface AiCommandBlock {
   actions: AiAction[]
+  /** 校验未通过的非法动作（保留原始内容与拒绝原因，便于调试与提示用户） */
+  invalid: { raw: unknown; reason: string }[]
 }
 
 export interface MediaGenerationRequest {
@@ -40,6 +42,15 @@ export interface ExecuteResult {
   failed: number
   messages: string[]
   mediaRequests: MediaGenerationRequest[]
+}
+
+/** executeAiActions 的可选配置 */
+export interface ExecuteAiActionsOptions {
+  /**
+   * 执行第一批动作前回调一次（act-along 模式下由调用方传入，
+   * 用于在历史栈建立「AI 批量操作」检查点快照）。
+   */
+  onBeforeExecute?: () => void
 }
 
 /**
@@ -189,9 +200,132 @@ export interface EditorCanvasCallbacks {
   onRedo?: () => void
 }
 
+/** 合法的 AI 动作类型列表（与 AiAction 联合类型一一对应，共 21 种） */
+const AI_ACTION_TYPES = [
+  'createNode', 'updateNode', 'deleteNode', 'connectNodes', 'updateEdge', 'deleteEdge',
+  'selectNode', 'addCharacter', 'updateCharacter', 'deleteCharacter',
+  'addVariable', 'updateVariable', 'deleteVariable', 'bindAsset', 'requestMediaGeneration',
+  'renameWork', 'saveWork', 'exportWork', 'previewWork', 'undo', 'redo',
+] as const
+
+type AiActionType = (typeof AI_ACTION_TYPES)[number]
+
+/** 允许缺省 payload 的动作类型（JSON 中省略 payload 时按空对象处理） */
+const NO_PAYLOAD_TYPES = new Set<AiActionType>(['undo', 'redo', 'saveWork', 'exportWork', 'previewWork'])
+
+/**
+ * 校验单个 AI 动作的结构与常见字段类型。
+ * 目标：未知 type 必拒、明显类型错误必拒，避免非法动作被当作真实动作执行。
+ * 返回 ok:true 时附上归一化后的合法动作（缺省的 payload 补为空对象）。
+ */
+export function validateAiAction(
+  raw: unknown
+): { ok: true; action: AiAction } | { ok: false; reason: string } {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+    return { ok: false, reason: '动作必须是 JSON 对象' }
+  }
+
+  const candidate = raw as Record<string, unknown>
+  const type = candidate.type
+  if (typeof type !== 'string' || !(AI_ACTION_TYPES as readonly string[]).includes(type)) {
+    return { ok: false, reason: `未知动作类型: ${typeof type === 'string' ? type : String(type)}` }
+  }
+  const actionType = type as AiActionType
+
+  const payload = candidate.payload
+  if (payload !== undefined && (typeof payload !== 'object' || payload === null || Array.isArray(payload))) {
+    return { ok: false, reason: `${actionType} 的 payload 必须是对象` }
+  }
+  if (payload === undefined && !NO_PAYLOAD_TYPES.has(actionType)) {
+    return { ok: false, reason: `${actionType} 缺少 payload` }
+  }
+
+  const p = (payload ?? {}) as Record<string, unknown>
+  const fieldError = validateRequiredFields(actionType, p)
+  if (fieldError) return { ok: false, reason: fieldError }
+
+  return { ok: true, action: { type: actionType, payload: p } }
+}
+
+/** 对常见动作做轻量必填/类型校验，返回错误描述；合法时返回 null */
+function validateRequiredFields(type: AiActionType, p: Record<string, unknown>): string | null {
+  const needNonEmptyString = (field: string): string | null => {
+    const v = p[field]
+    if (typeof v !== 'string' || v.trim() === '') return `${type} 的 ${field} 必须为非空字符串`
+    return null
+  }
+
+  switch (type) {
+    case 'createNode':
+      return needNonEmptyString('nodeType')
+    case 'updateNode':
+    case 'deleteNode':
+    case 'selectNode':
+      return needNonEmptyString('nodeId')
+    case 'connectNodes':
+      return needNonEmptyString('source') ?? needNonEmptyString('target')
+    case 'updateEdge':
+    case 'deleteEdge':
+      return needNonEmptyString('edgeId')
+    case 'addCharacter':
+      return needNonEmptyString('name')
+    case 'updateCharacter':
+    case 'deleteCharacter':
+      return needNonEmptyString('characterId')
+    case 'renameWork':
+      return needNonEmptyString('title')
+    case 'addVariable': {
+      const variable = p.variable
+      const name = (typeof variable === 'object' && variable !== null && !Array.isArray(variable))
+        ? (variable as Record<string, unknown>).name
+        : p.name
+      if (typeof name !== 'string' || name.trim() === '') return 'addVariable 的 name 必须为非空字符串'
+      const varType = p.type
+      if (varType !== undefined && varType !== 'string' && varType !== 'number' && varType !== 'boolean') {
+        return 'addVariable 的 type 必须是 string | number | boolean'
+      }
+      return null
+    }
+    case 'updateVariable':
+    case 'deleteVariable':
+      return needNonEmptyString('variableId')
+    case 'bindAsset':
+      return needNonEmptyString('nodeId') ?? needNonEmptyString('assetHash')
+    case 'requestMediaGeneration': {
+      const mediaType = p.mediaType
+      if (mediaType !== undefined && mediaType !== 'image' && mediaType !== 'video' && mediaType !== 'audio') {
+        return 'requestMediaGeneration 的 mediaType 必须是 image | video | audio'
+      }
+      return null
+    }
+    default:
+      // 无需 payload 的动作（undo/redo/saveWork/exportWork/previewWork）不做字段校验
+      return null
+  }
+}
+
+/** 将 JSON 块中的动作逐一过校验：合法动作保留，非法动作收集到 invalid 并附拒绝原因 */
+function sanitizeCommandBlock(parsed: unknown): AiCommandBlock {
+  const block: AiCommandBlock = { actions: [], invalid: [] }
+  if (typeof parsed !== 'object' || parsed === null) return block
+  const actions = (parsed as Record<string, unknown>).actions
+  if (!Array.isArray(actions)) return block
+  for (const item of actions) {
+    const result = validateAiAction(item)
+    if (result.ok) {
+      block.actions.push(result.action)
+    } else {
+      block.invalid.push({ raw: item, reason: result.reason })
+    }
+  }
+  return block
+}
+
 /**
  * 解析创作助理响应文本中的 JSON 命令块。
  * 格式：```ai-action { "actions": [...] } ```
+ * 动作会逐一经过 validateAiAction 校验：合法动作保留在 actions，
+ * 非法动作收集到 invalid（带拒绝原因），确保执行器/预览不会执行非法动作。
  */
 export function parseAiCommands(text: string): AiCommandBlock | null {
   const regex = /```ai-action\s*\n?([\s\S]*?)```/
@@ -201,7 +335,7 @@ export function parseAiCommands(text: string): AiCommandBlock | null {
   try {
     const parsed = JSON.parse(match[1].trim())
     if (!parsed.actions || !Array.isArray(parsed.actions)) return null
-    return parsed as AiCommandBlock
+    return sanitizeCommandBlock(parsed)
   } catch {
     return null
   }
@@ -209,6 +343,7 @@ export function parseAiCommands(text: string): AiCommandBlock | null {
 
 /**
  * 提取创作助理响应中的所有 JSON 命令块（支持多个命令块）。
+ * 每个块内的动作同样经过 validateAiAction 校验过滤。
  */
 export function parseAllAiCommands(text: string): AiCommandBlock[] {
   const regex = /```ai-action\s*\n?([\s\S]*?)```/g
@@ -219,10 +354,10 @@ export function parseAllAiCommands(text: string): AiCommandBlock[] {
     try {
       const parsed = JSON.parse(match[1].trim())
       if (parsed.actions && Array.isArray(parsed.actions)) {
-        blocks.push(parsed as AiCommandBlock)
+        blocks.push(sanitizeCommandBlock(parsed))
       }
     } catch {
-      // skip invalid blocks
+      // 跳过无效 JSON 块
     }
   }
 
@@ -233,15 +368,20 @@ export function parseAllAiCommands(text: string): AiCommandBlock[] {
  * 逐一执行创作助理命令操作。
  * 每个操作独立执行，单个失败不影响后续操作。
  * 返回执行结果摘要。
+ * options.onBeforeExecute 在执行第一批动作前回调一次（用于打 AI 批次检查点）。
  */
 export async function executeAiActions(
   actions: AiAction[],
-  callbacks: EditorCanvasCallbacks
+  callbacks: EditorCanvasCallbacks,
+  options?: ExecuteAiActionsOptions
 ): Promise<ExecuteResult> {
   let success = 0
   let failed = 0
   const messages: string[] = []
   const mediaRequests: MediaGenerationRequest[] = []
+
+  // 执行第一批动作前回调（仅一次），act-along 模式下用于建立 AI 批次检查点
+  options?.onBeforeExecute?.()
 
   for (const action of actions) {
     try {

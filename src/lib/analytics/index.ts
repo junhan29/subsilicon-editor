@@ -7,5 +7,9 @@ export type {
   StoryAnalytics,
   NodeVisitStat,
   ChoiceStat,
+  DropOffStat,
+  DwellBucketLabel,
+  DwellBucketStat,
+  NodeDwellStat,
   AnalyticsFilter,
 } from './types'

@@ -14,6 +14,7 @@ import { EditorTour, isTourCompleted, markTourCompleted } from './components/edi
 import { DEFAULT_TOUR_STEPS } from './components/editor/onboarding/tour-steps'
 import { getDocumentFromWork, getGraphFromWork, saveWork } from '@editor/lib/local-db/work-store'
 import { migrateFromLocalStorage } from '@editor/lib/local-db'
+import { migrateLegacyCreatorAccounts } from '@editor/lib/creator-account-migration'
 import type { WorkDocument } from '@editor/types/work'
 import type { StoredWork } from '@editor/lib/local-db/work-store'
 import type { StoryGraph } from './types/editor'
@@ -87,6 +88,10 @@ function App() {
     // 启动时把旧版 localStorage 作品数据迁移到 IndexedDB（幂等，只执行一次）
     migrateFromLocalStorage().catch((err) => {
       console.error('LocalStorage 数据迁移失败:', err)
+    })
+    // 账号双轨统一：把旧创作者中心账号（creatorAccounts）迁移到本地账户（幂等，只执行一次）
+    migrateLegacyCreatorAccounts().catch((err) => {
+      console.error('创作者账号迁移失败:', err)
     })
   }, [])
 

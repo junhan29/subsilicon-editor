@@ -1,6 +1,8 @@
 /**
  * 作品墙提交提供商注册系统
  *
+ * // @deprecated 新提交流程走 platforms + platformConfigs（创作者中心平台配置），本注册表仅作旧兼容默认值
+ *
  * 提供商（SubmitProvider）抽象了"把作品提交到哪里"这一行为。
  * 默认内置 SubSilicon 官方作品墙；任何实现了下方协议的第三方展示服务
  * 都可以通过 addToRegistry 注册，或由用户在设置面板中添加。
@@ -21,8 +23,8 @@
  *     screenshot-N      File     可选  截图（N 从 0 起递增，≤6 张）
  *     contactInfo       string   可选  联系方式（如微信号）
  *     externalLink      string   可选  外部链接（如爱发电/面包多）
- *     previewHtml       File           预览 HTML（text/html）
- *     workId            string   可选  作品 ID（更新已有作品时传入）
+ *     previewHtml       File           预览 HTML（text/html）——已废弃：网站端不接收，不再发送
+ *     workId            string   可选  作品 ID（用于同作品更新，网站端 upsert）
  *
  *   Response:
  *     2xx                  成功
