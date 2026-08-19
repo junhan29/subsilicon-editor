@@ -1,8 +1,8 @@
 {
   "name": "subsilicon-editor",
-  "version": "1.16.0",
+  "version": "1.17.1",
   "license": "MIT",
-  "description": "\u96f6\u4ee3\u7801\u53ef\u89c6\u5316\u4e92\u52a8\u53d9\u4e8b\u7f16\u8f91\u5668 | Zero-code visual interactive narrative editor",
+  "description": "零代码可视化互动叙事编辑器 | Zero-code visual interactive narrative editor",
   "keywords": [
     "visual-novel",
     "interactive-fiction",

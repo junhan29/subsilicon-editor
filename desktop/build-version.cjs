@@ -3,7 +3,7 @@
 // 改动版本只需改这里一行 + 执行 `node scripts/bump-version.cjs patch|minor|major`。
 'use strict'
 
-const SEMVER = '1.16.0'
+const SEMVER = '1.17.1'
 // 可选后缀（beta / rc / nightly），留空字符串表示稳定版
 const PRERELEASE = ''
 // 构建信息：CI 或本地构建时覆盖 BUILD_NUMBER / GIT_COMMIT env
