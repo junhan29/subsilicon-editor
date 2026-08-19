@@ -2,9 +2,12 @@
 import React from 'react'
 import { ExternalLink, FileCode } from 'lucide-react'
 
+// @ts-ignore - 构建时由 build.cjs:preflightPatch 生成，避免读 package.json 漂移
+import buildInfo from '../../../build-info.json'
+
 export function AboutTab() {
   const appVer =
-    (typeof window !== 'undefined' && (window as any).__SUBVER__) || '1.16.1'
+    (typeof window !== 'undefined' && (window as any).__SUBVER__) || String((buildInfo as any)?.version || __APP_VERSION__)
   return (
     <div className="max-w-2xl mx-auto py-10 px-6 space-y-6">
       <div className="text-center space-y-3">

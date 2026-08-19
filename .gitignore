@@ -17,3 +17,5 @@ credentials/
 desktop/main.js
 desktop/preload.js
 .trae/
+src/build-info.json
+dist/build-info.json

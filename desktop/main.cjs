@@ -8,7 +8,19 @@ var import_electron_updater = require("electron-updater");
 var import_path = require("path");
 var import_fs = require("fs");
 var import_node_child_process = require("node:child_process");
-var APP_NAME = "SubSilicon Editor";
+var _buildInfoPath = (0, import_path.join)(__dirname, "..", "src", "build-info.json");
+var __BUILD_INFO__ = { version: "0.0.0", appName: "SubSilicon Editor" };
+try {
+  if ((0, import_fs.existsSync)(_buildInfoPath)) {
+    __BUILD_INFO__ = JSON.parse((0, import_fs.readFileSync)(_buildInfoPath, "utf-8"));
+  } else {
+    const alt = (0, import_path.join)(__dirname, "..", "dist", "build-info.json");
+    if ((0, import_fs.existsSync)(alt)) __BUILD_INFO__ = JSON.parse((0, import_fs.readFileSync)(alt, "utf-8"));
+  }
+} catch {
+}
+var APP_NAME = String(__BUILD_INFO__.appName || "SubSilicon Editor");
+var APP_VERSION = String(__BUILD_INFO__.version || "0.0.0");
 var PROJECT_DIR_NAME = ".subsilicon";
 var DOWNLOAD_PAGE_URL = "https://subsilicon.cn/download";
 var isDev = !import_electron.app.isPackaged;
@@ -339,7 +351,7 @@ __name(showSplashError, "showSplashError");
 async function createMainWindow() {
   const windowState = loadWindowState();
   mainWindow = new import_electron.BrowserWindow({
-    title: APP_NAME,
+    title: `${APP_NAME} v${APP_VERSION}`,
     width: windowState.width || 1400,
     height: windowState.height || 800,
     x: windowState.x,
@@ -489,7 +501,7 @@ function createPanelWindow() {
   const panelWidth = 560;
   const panelHeight = Math.min(mainBounds.height, 800);
   panelWindow = new import_electron.BrowserWindow({
-    title: `${APP_NAME} - \u7BA1\u7406\u9762\u677F`,
+    title: `${APP_NAME} v${APP_VERSION} - \u7BA1\u7406\u9762\u677F`,
     width: panelWidth,
     height: panelHeight,
     x: mainBounds.x + mainBounds.width + 10,
@@ -784,7 +796,8 @@ function setupIPC() {
       return { success: false, error: err.message };
     }
   });
-  import_electron.ipcMain.handle("getVersion", async () => ({ success: true, version: import_electron.app.getVersion() }));
+  import_electron.ipcMain.handle("getVersion", async () => ({ success: true, version: APP_VERSION }));
+  import_electron.ipcMain.handle("app:get-version", async () => ({ success: true, version: APP_VERSION, buildInfo: __BUILD_INFO__ }));
   import_electron.ipcMain.on("minimizeWindow", () => mainWindow?.minimize());
   import_electron.ipcMain.on("maximizeWindow", () => {
     if (!mainWindow) return;
@@ -936,6 +949,8 @@ import_electron.app.commandLine.appendSwitch("disable-software-rasterizer");
 import_electron.app.commandLine.appendSwitch("disable-features", "HardwareMediaKeyHandling,MediaSessionService");
 import_electron.app.disableHardwareAcceleration();
 import_electron.app.whenReady().then(() => {
+  import_electron.app.setName(APP_NAME);
+  import_electron.app.setVersion(APP_VERSION);
   initAllowlist();
   migrateRecentFiles();
   loadRecentFiles();

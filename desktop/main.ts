@@ -4,10 +4,26 @@ import { join, resolve, basename, dirname, extname, sep } from 'path'
 import { readFileSync, writeFileSync, existsSync, mkdirSync, statSync, copyFileSync, readdirSync } from 'fs'
 import { spawn } from 'node:child_process'
 
+
 // ============================================================
-// 常量
+// 单源版本号（由 desktop/build.cjs:preflightPatch 在编译前生成，永远以此为准）
 // ============================================================
-const APP_NAME = 'SubSilicon Editor'
+const _buildInfoPath = join(__dirname, '..', 'src', 'build-info.json')
+let __BUILD_INFO__: any = { version: '0.0.0', appName: 'SubSilicon Editor' }
+try {
+  if (existsSync(_buildInfoPath)) {
+    __BUILD_INFO__ = JSON.parse(readFileSync(_buildInfoPath, 'utf-8'))
+  } else {
+    // fallback：dist 打包时 build-info 会被放 dist/build-info.json
+    const alt = join(__dirname, '..', 'dist', 'build-info.json')
+    if (existsSync(alt)) __BUILD_INFO__ = JSON.parse(readFileSync(alt, 'utf-8'))
+  }
+} catch {}
+const APP_NAME = String(__BUILD_INFO__.appName || 'SubSilicon Editor')
+const APP_VERSION = String(__BUILD_INFO__.version || '0.0.0')
+// ============================================================
+// 常量 (APP_NAME/APP_VERSION 已在上方从 build-info.json 注入)
+// ============================================================
 const PROJECT_DIR_NAME = '.subsilicon'
 const DOWNLOAD_PAGE_URL = 'https://subsilicon.cn/download'
 
@@ -312,7 +328,7 @@ function showSplashError(message: string): void {
 async function createMainWindow(): Promise<void> {
   const windowState = loadWindowState()
   mainWindow = new BrowserWindow({
-    title: APP_NAME,
+    title: `${APP_NAME} v${APP_VERSION}`,
     width: windowState.width || 1400,
     height: windowState.height || 800,
     x: windowState.x,
@@ -454,7 +470,7 @@ function createPanelWindow(): void {
   const panelHeight = Math.min(mainBounds.height, 800)
 
   panelWindow = new BrowserWindow({
-    title: `${APP_NAME} - 管理面板`,
+    title: `${APP_NAME} v${APP_VERSION} - 管理面板`,
     width: panelWidth,
     height: panelHeight,
     x: mainBounds.x + mainBounds.width + 10,
@@ -721,7 +737,8 @@ function setupIPC(): void {
       return { success: true, files: recentFiles }
     } catch (err: any) { return { success: false, error: (err as Error).message } }
   })
-  ipcMain.handle('getVersion', async () => ({ success: true, version: app.getVersion() }))
+  ipcMain.handle('getVersion', async () => ({ success: true, version: APP_VERSION }))
+  ipcMain.handle('app:get-version', async () => ({ success: true, version: APP_VERSION, buildInfo: __BUILD_INFO__ }))
 
   // ---- Window control ----
   ipcMain.on('minimizeWindow', () => mainWindow?.minimize())
@@ -888,6 +905,8 @@ app.disableHardwareAcceleration()
 // App lifecycle
 // ============================================================
 app.whenReady().then(() => {
+  app.setName(APP_NAME)
+  app.setVersion(APP_VERSION)
   initAllowlist()
   migrateRecentFiles()
   loadRecentFiles()
