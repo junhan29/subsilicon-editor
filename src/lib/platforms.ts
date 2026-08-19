@@ -5,11 +5,11 @@ const CUSTOM_PLATFORMS_KEY = 'subsilicon_custom_platforms'
 export const BUILTIN_PLATFORMS: PublishPlatform[] = [
   {
     id: 'subsilicon',
-    name: 'SubSilicon 作品墙',
+    name: 'SubSilicon 自由集市',
     type: 'subsilicon',
     apiUrl: 'https://subsilicon.cn/api/creator/preview/submit',
     submitTokenKey: 'X-Submit-Token',
-    description: '官方作品墙，审核通过后展示给所有用户',
+    description: '官方自由集市，审核通过后展示给所有用户',
     icon: '🏠',
     supportedFields: {
       title: true,

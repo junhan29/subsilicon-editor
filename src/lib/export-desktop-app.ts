@@ -135,6 +135,7 @@ try { contextBridge.exposeInMainWorld('SubSiliconDesktop', bridge); } catch { wi
   "name": "subsilicon-work-shell",
   "version": "__VERSION__",
   "private": true,
+  "_subsiliconStandaloneShell": true,
   "description": "__DESCRIPTION__",
   "main": "main.cjs",
   "author": "__AUTHOR__",

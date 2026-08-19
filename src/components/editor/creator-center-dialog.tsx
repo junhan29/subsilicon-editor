@@ -72,9 +72,9 @@ const MAX_SCREENSHOT_SIZE = 2 * 1024 * 1024
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
 
 const SUBSILICON_PLATFORM_ID = 'subsilicon'
-const SUBSILICON_DEFAULT_NAME = 'SubSilicon 作品墙'
+const SUBSILICON_DEFAULT_NAME = 'SubSilicon 自由集市'
 const SUBSILICON_DEFAULT_API = 'https://subsilicon.cn/api/creator/preview/submit'
-const SUBSILICON_DEFAULT_DESC = '官方作品墙，审核通过后展示给所有用户'
+const SUBSILICON_DEFAULT_DESC = '官方自由集市，审核通过后展示给所有用户'
 // 与 submit-config.ts 的 storyUnlockUrl 判定写法保持一致：开发环境指向本地服务端便于联调
 const SUBMIT_TOKEN_ORIGIN = (import.meta as any).env?.DEV ? 'http://localhost:3000' : 'https://subsilicon.cn'
 
@@ -728,7 +728,7 @@ export function CreatorCenterDialog({
                   <div className="font-semibold text-amber-200 mb-1">创作者中心使用流程</div>
                   <ol className="space-y-0.5 list-decimal list-inside text-[11px] text-amber-100/80">
                     <li><b>账号管理</b>：注册或登录本地账号（数据存储在本机 IndexedDB）</li>
-                    <li><b>平台管理</b>：添加发布平台（如 SubSilicon 作品墙），填写独立账号</li>
+                    <li><b>平台管理</b>：添加发布平台（如 SubSilicon 自由集市），填写独立账号</li>
                     <li><b>发布作品</b>：填写标题/简介/标签/封面，提交至所选平台</li>
                     <li><b>发布记录</b>：查看各平台审核状态</li>
                     <li><b>解锁码</b>：离线支付后，用读者发来的凭证生成解锁码</li>
@@ -997,7 +997,7 @@ export function CreatorCenterDialog({
                           platformForm.isBuiltin ? 'bg-muted text-white' : 'bg-transparent text-muted-foreground hover:text-foreground'
                         }`}
                       >
-                        SubSilicon 作品墙
+                        SubSilicon 自由集市
                       </button>
                       <button
                         onClick={() =>

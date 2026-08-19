@@ -2,6 +2,7 @@
   "name": "subsilicon-work-shell",
   "version": "1.0.0",
   "private": true,
+  "_subsiliconStandaloneShell": true,
   "description": "SubSilicon 作品独立桌面壳（由编辑器导出器生成）",
   "main": "main.cjs",
   "author": "SubSilicon Work Author",
