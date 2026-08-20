@@ -132,22 +132,26 @@ function copyIcon(outDir) {
 
 // ================================================================
 // V3 postProcessReleases()
-//   1) 最新 yml 永久去掉 url/path 前缀（我们现在要的是相对 yml 所在目录）
-//      说明：发布脚本会把 dmg/exe/blockmap/yml 一起放到网站 releases/vX.Y.Z/
-//      子目录下，因此 yml 中的 url/path 应当就是 "裸文件名"，不加 vX.Y.Z/
-//      前缀。否则 electron-updater 会拼成 /releases/vX.Y.Z/vX.Y.Z/xxx 错 2 层。
-//   2) 还原 %20 → 空格（因为文件在磁盘 / CDN 上真实存在空格。URL encode 交给
-//      electron-updater 或 web 端自己处理）
+//   1) 给 latest*.yml 的 files[].url 与顶层 path 显式加上 v<SEMVER>/ 前缀。
+//      原因：electron-updater 的 generic provider feedURL = https://subsilicon.cn/releases
+//      它会以 <feedURL>/<yml.url> 拼接真实下载地址 → 必须是
+//      https://subsilicon.cn/releases/vX.Y.Z/<文件名> 才能命中 nginx alias。
+//   2) 还原 %20 → 空格（URL encode 交给 electron-updater 或 web 端处理）
 //   3) 校验 sha512/size 完全匹配（防打包/传输中途损坏）
 //   4) 生成 releases-manifest.json 给网站端 download-config 读
 //   5) 生成 CHECKSUMS_SHA256.txt
 // ================================================================
-function stripPrefix(value, semver) {
-  // value 可能形如 "v1.16.0/SubSilicon%20Editor-..." 或 "1.16.0/..." 或纯文件名
-  const v1 = value.replace(/^%20/, '')
-  const v2 = v1.replace(new RegExp(`^v?${semver.replace(/\./g, '\\.')}/`, ''), '')
-  return v2.replace(/%20/g, ' ')
+function normalizeAndEnsureVersionPrefix(value, semver) {
+  const prefix = `v${semver}/`
+  const v1 = value.replace(/%20/g, ' ').trim()
+  const hasQuote = v1.startsWith('"') || v1.startsWith("'")
+  const quote = hasQuote ? v1[0] : ''
+  const inner = hasQuote ? v1.slice(1, v1.length - 1) : v1
+  let stripped = inner.replace(new RegExp(`^/?v?${semver.replace(/\\./g, '\\\\.')}/`), '')
+  stripped = stripped.replace(/^\/+/, '')
+  return quote ? quote + prefix + stripped + quote : prefix + stripped
 }
+
 
 function sha512File(filePath) {
   const h = crypto.createHash('sha512')
@@ -173,12 +177,12 @@ function fixYml(ymlPath, semver) {
     const hasQuote = trimmed.startsWith('"') || trimmed.startsWith("'")
     const quote = hasQuote ? trimmed[0] : ''
     const inner = hasQuote ? trimmed.slice(1, trimmed.length - 1) : trimmed
-    const fixed = stripPrefix(inner, semver)
+    const fixed = normalizeAndEnsureVersionPrefix(inner, semver)
     const restored = quote ? quote + fixed + quote : fixed
     return head + restored
   })
   fs.writeFileSync(ymlPath, text, 'utf-8')
-  console.log(`${GREEN('[post:yml]')} ${path.basename(ymlPath)} 已去除版本前缀 + 还原空格`)
+  console.log(`${GREEN('[post:yml]')} ${path.basename(ymlPath)} 已加上 v<SEMVER>/ 版本前缀（对齐 feedURL=https://subsilicon.cn/releases） + 还原空格`)
   return text
 }
 
@@ -225,7 +229,8 @@ function validateYml(ymlPath, releaseDir) {
   let failures = 0
   for (const f of all) {
     if (!f || !f.url) continue
-    const fp = path.join(releaseDir, f.url)
+    // yml 里 url/path 已加 vX.Y.Z/ 前缀，但 releaseDir 根直接存放二进制文件
+    const fp = path.join(releaseDir, path.basename(f.url))
     if (!fs.existsSync(fp)) {
       console.error(`${RED('[post:validate]')} [${ymlName}] 文件不存在：${fp}`)
       failures++; continue
