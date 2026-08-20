@@ -186,7 +186,7 @@ export function UnlockCodeGenerator({ workId, paidChapters }: UnlockCodeGenerato
   return (
     <div className="space-y-4">
       {/* 种子密钥 */}
-      <div className="p-4 bg-muted/30 rounded-xl">
+      <div className="p-4 bg-muted/30 rounded-[2px] shadow-[3px_3px_0_hsl(var(--gold)/0.1)]">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <Key className="w-4 h-4 text-primary" />
@@ -202,7 +202,7 @@ export function UnlockCodeGenerator({ workId, paidChapters }: UnlockCodeGenerato
         
         {seedKey ? (
           <div className="flex items-center gap-2">
-            <div className="flex-1 px-3 py-2 bg-muted border border-border rounded-lg font-mono text-sm">
+            <div className="flex-1 px-3 py-2 bg-muted border border-border rounded-[2px] font-mono text-sm">
               {showSeedKey ? seedKey : SEED_KEY_PREFIX + '••••••••••••••••••••••••••••••••'}
             </div>
             <CheckCircle2 className="w-4 h-4 text-green-500" />
@@ -213,7 +213,7 @@ export function UnlockCodeGenerator({ workId, paidChapters }: UnlockCodeGenerato
             value={seedKey}
             onChange={(e) => setSeedKey(e.target.value)}
             placeholder="输入种子密钥"
-            className="w-full px-3 py-2 bg-muted border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+            className="w-full px-3 py-2 bg-muted border border-border rounded-[2px] text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
           />
         )}
         
@@ -234,7 +234,7 @@ export function UnlockCodeGenerator({ workId, paidChapters }: UnlockCodeGenerato
           onChange={(e) => setRequestCodeInput(e.target.value.toUpperCase())}
           placeholder="SUBSL-REQ-XXXXXXXX"
           maxLength={UNLOCK_REQUEST_PREFIX.length + 8}
-          className={`w-full px-3 py-2 bg-muted border rounded-lg text-sm font-mono focus:outline-none focus:ring-2 ${
+          className={`w-full px-3 py-2 bg-muted border rounded-[2px] text-sm font-mono focus:outline-none focus:ring-2 ${
             requestCodeInput.length > 0 && !requestCodeValid
               ? 'border-primary focus:ring-red-500/50'
               : 'border-border focus:ring-primary/50'
@@ -266,7 +266,7 @@ export function UnlockCodeGenerator({ workId, paidChapters }: UnlockCodeGenerato
           <select
             value={selectedChapterId}
             onChange={(e) => setSelectedChapterId(e.target.value)}
-            className="w-full px-3 py-2 bg-muted border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+            className="w-full px-3 py-2 bg-muted border border-border rounded-[2px] text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
           >
             {chapterOptions.map(opt => (
               <option key={opt.id} value={opt.id}>
@@ -288,7 +288,7 @@ export function UnlockCodeGenerator({ workId, paidChapters }: UnlockCodeGenerato
             <button
               key={opt.hours}
               onClick={() => setValidHours(opt.hours)}
-              className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
+              className={`px-3 py-1.5 rounded-[2px] text-sm transition-colors ${
                 validHours === opt.hours
                   ? 'bg-primary text-primary-foreground'
                   : 'bg-muted hover:bg-muted/80'
@@ -321,13 +321,13 @@ export function UnlockCodeGenerator({ workId, paidChapters }: UnlockCodeGenerato
       
       {/* 生成的解锁码 */}
       {generatedCode && (
-        <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-xl">
+        <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-[2px] shadow-[2px_2px_0_hsl(var(--emerald)/0.2)]">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-green-500">解锁码已生成</span>
             <CheckCircle2 className="w-4 h-4 text-green-500" />
           </div>
           
-          <div className="bg-muted border border-border rounded-lg p-3 font-mono text-lg text-center mb-3">
+          <div className="bg-muted border border-border rounded-[2px] p-3 font-mono text-lg text-center mb-3">
             {generatedCode.code}
           </div>
           
@@ -366,7 +366,7 @@ export function UnlockCodeGenerator({ workId, paidChapters }: UnlockCodeGenerato
             {history.map((record, i) => (
               <div
                 key={i}
-                className="p-2 bg-muted/30 border border-border rounded-lg flex items-center justify-between"
+                className="p-2 bg-muted/30 border border-border rounded-[2px] flex items-center justify-between"
               >
                 <div className="flex-1 min-w-0">
                   <div className="text-xs text-muted-foreground truncate mb-1">
@@ -395,7 +395,7 @@ export function UnlockCodeGenerator({ workId, paidChapters }: UnlockCodeGenerato
       )}
       
       {/* 使用提示 */}
-      <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+      <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-[2px] shadow-[2px_2px_0_hsl(var(--cyan)/0.15)]">
         <p className="text-xs text-muted-foreground">
           <strong className="text-blue-500">使用流程：</strong>
           读者支付后 → 发来解锁凭证（SUBSL-REQ-XXXX） → 你生成解锁码 → 发给读者 → 读者粘贴解锁

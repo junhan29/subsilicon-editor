@@ -204,7 +204,7 @@ export function AiMediaPanel({ characters, onImageGenerated }: AiMediaPanelProps
         </div>
         <button
           onClick={() => setShowSettings(!showSettings)}
-          className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-white transition-colors"
+          className="p-1.5 rounded-[2px] hover:bg-secondary text-muted-foreground hover:text-white transition-colors"
           title="配置服务商"
         >
           <Settings className="w-3.5 h-3.5" />
@@ -223,18 +223,16 @@ export function AiMediaPanel({ characters, onImageGenerated }: AiMediaPanelProps
       <div className="flex gap-2">
         <button
           onClick={() => setMediaType('image')}
-          className={`flex-1 py-1.5 text-[11px] rounded-md border transition-colors ${
+          className={`flex-1 py-1.5 text-[11px] rounded-md border transition-colors [clip-path:polygon(4px_0,100%_0,100%_calc(100%-4px),calc(100%-4px)_100%,0_100%,0_4px)] ${
             mediaType === 'image'
-              ? 'bg-primary/15 text-primary border-primary/30'
-              : 'bg-secondary text-muted-foreground border-border hover:border-slate-500'
-          }`}
+              ? 'bg-gold-400/15 text-gold-500 border-gold-400/40' : 'bg-secondary text-muted-foreground border-border hover:border-slate-500' }`}
         >
           <Image className="w-3 h-3 inline mr-1" />
           图片
         </button>
         <button
           onClick={() => setMediaType('video')}
-          className={`flex-1 py-1.5 text-[11px] rounded-md border transition-colors ${
+          className={`flex-1 py-1.5 text-[11px] rounded-md border transition-colors [clip-path:polygon(4px_0,100%_0,100%_calc(100%-4px),calc(100%-4px)_100%,0_100%,0_4px)] ${
             mediaType === 'video'
               ? 'bg-purple-500/15 text-purple-400 border-purple-500/30'
               : 'bg-secondary text-muted-foreground border-border hover:border-slate-500'
@@ -266,7 +264,7 @@ export function AiMediaPanel({ characters, onImageGenerated }: AiMediaPanelProps
           type="button"
           onClick={() => setShowWorkflowPicker((v) => !v)}
           onBlur={() => setTimeout(() => setShowWorkflowPicker(false), 120)}
-          className={`w-full flex items-center justify-between px-2.5 py-2 rounded-md border text-left transition-colors ${
+          className={`w-full flex items-center justify-between px-2.5 py-2 rounded-md border text-left transition-colors [clip-path:polygon(4px_0,100%_0,100%_calc(100%-4px),calc(100%-4px)_100%,0_100%,0_4px)] ${
             activeWorkflow
               ? 'bg-yellow-500/10 border-yellow-500/30 text-yellow-300'
               : 'bg-secondary border-border text-muted-foreground hover:border-slate-500'
@@ -284,7 +282,7 @@ export function AiMediaPanel({ characters, onImageGenerated }: AiMediaPanelProps
           <ChevronDown className={`w-3 h-3 transition-transform flex-shrink-0 ${showWorkflowPicker ? 'rotate-180' : ''}`} />
         </button>
         {showWorkflowPicker && (
-          <div className="absolute left-0 right-0 z-20 mt-1 rounded-md border border-border bg-muted shadow-xl overflow-hidden max-h-64 overflow-y-auto">
+          <div className="absolute left-0 right-0 z-20 mt-1 rounded-md border border-border bg-muted shadow-xl overflow-hidden max-h-64 overflow-y-auto [clip-path:polygon(4px_0,100%_0,100%_calc(100%-4px),calc(100%-4px)_100%,0_100%,0_4px)]">
             {mediaWorkflows.length === 0 ? (
               <div className="px-2.5 py-2 text-[10px] text-muted-foreground">暂无工作流：前往设置 → AI 任务路由 → 自定义工作流新建</div>
             ) : (
@@ -335,7 +333,7 @@ export function AiMediaPanel({ characters, onImageGenerated }: AiMediaPanelProps
                       : [...prev, char.id]
                   )
                 }}
-                className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] border transition-colors ${
+                className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] border transition-colors [clip-path:polygon(4px_0,100%_0,100%_calc(100%-4px),calc(100%-4px)_100%,0_100%,0_4px)] ${
                   selectedChars.includes(char.id)
                     ? 'bg-gold-400/15 text-gold-400 border-gold-400/30'
                     : 'bg-secondary text-muted-foreground border-border hover:border-slate-500'
@@ -357,11 +355,9 @@ export function AiMediaPanel({ characters, onImageGenerated }: AiMediaPanelProps
             <button
               key={s.value}
               onClick={() => setStyle(s.value)}
-              className={`p-2 rounded-md border text-left transition-colors ${
+              className={`p-2 rounded-md border text-left transition-colors [clip-path:polygon(4px_0,100%_0,100%_calc(100%-4px),calc(100%-4px)_100%,0_100%,0_4px)] ${
                 style === s.value
-                  ? 'bg-primary/15 text-primary border-primary/30'
-                  : 'bg-secondary text-muted-foreground border-border hover:border-slate-500'
-              }`}
+                  ? 'bg-gold-400/15 text-gold-500 border-gold-400/40' : 'bg-secondary text-muted-foreground border-border hover:border-slate-500' }`}
             >
               <p className="text-[11px] font-medium">{s.label}</p>
               <p className="text-[9px] text-muted-foreground">{s.desc}</p>
@@ -377,13 +373,13 @@ export function AiMediaPanel({ characters, onImageGenerated }: AiMediaPanelProps
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           placeholder="描述你想要生成的场景画面..."
-          className="w-full h-20 text-xs rounded-lg border border-border bg-secondary px-3 py-2 text-white placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+          className="w-full h-20 text-xs rounded-[2px] border border-border bg-secondary px-3 py-2 text-white placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-gold-400/50 focus:border-gold-400/60 resize-none [clip-path:polygon(4px_0,100%_0,100%_calc(100%-4px),calc(100%-4px)_100%,0_100%,0_4px)]"
         />
       </div>
 
       {/* 视频专属参数（时长 + 画幅比例） */}
       {mediaType === 'video' && (
-        <div className="space-y-3 p-2.5 rounded-lg border border-indigo-500/20 bg-indigo-500/5">
+        <div className="space-y-3 p-2.5 rounded-[2px] border border-indigo-500/20 bg-indigo-500/5 [clip-path:polygon(4px_0,100%_0,100%_calc(100%-4px),calc(100%-4px)_100%,0_100%,0_4px)]">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
               <Video className="w-3 h-3 text-indigo-400" />
@@ -429,7 +425,7 @@ export function AiMediaPanel({ characters, onImageGenerated }: AiMediaPanelProps
                   type="button"
                   key={r.value}
                   onClick={() => setVideoRatio(r.value)}
-                  className={`p-1.5 rounded-md border text-left transition-colors ${
+                  className={`p-1.5 rounded-md border text-left transition-colors [clip-path:polygon(4px_0,100%_0,100%_calc(100%-4px),calc(100%-4px)_100%,0_100%,0_4px)] ${
                     videoRatio === r.value
                       ? 'bg-indigo-500/15 text-indigo-300 border-indigo-500/40'
                       : 'bg-secondary text-muted-foreground border-border hover:border-slate-500'
@@ -448,7 +444,7 @@ export function AiMediaPanel({ characters, onImageGenerated }: AiMediaPanelProps
       <button
         onClick={handleGenerate}
         disabled={generating || !prompt.trim()}
-        className="w-full flex items-center justify-center gap-2 py-2 text-xs bg-primary/15 text-primary border border-primary/30 hover:bg-primary/25 rounded-lg transition-colors disabled:opacity-50"
+        className="w-full flex items-center justify-center gap-2 py-2 text-xs bg-gold-400/15 text-gold-500 border border-gold-400/40 hover:bg-gold-400/25 rounded-[2px] transition-colors disabled:opacity-50 [clip-path:polygon(4px_0,100%_0,100%_calc(100%-4px),calc(100%-4px)_100%,0_100%,0_4px)]"
       >
         {generating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
         {generating ? '生成中...' : `生成${mediaType === 'image' ? '图片' : '视频'}`}
@@ -465,7 +461,7 @@ export function AiMediaPanel({ characters, onImageGenerated }: AiMediaPanelProps
                 ? ratioToTailwindClass(result.ratio as VideoAspectRatio | undefined | null, 'video')
                 : 'aspect-square'
               return (
-                <div key={i} className="relative rounded-lg overflow-hidden border border-border group flex-col">
+                <div key={i} className="relative rounded-[2px] overflow-hidden border border-border group flex-col [clip-path:polygon(4px_0,100%_0,100%_calc(100%-4px),calc(100%-4px)_100%,0_100%,0_4px)]">
                   <div className={`${cardClass} w-full`}>
                     {isVideo ? (
                       <video src={result.url} className="w-full h-full object-cover" controls />
@@ -529,7 +525,7 @@ function ProviderSettingsPanel({
   }
 
   return (
-    <div className="p-3 bg-secondary/40 rounded-lg border border-border/50 space-y-3">
+    <div className="p-3 bg-secondary/40 rounded-[2px] border border-border/50 space-y-3 [clip-path:polygon(4px_0,100%_0,100%_calc(100%-4px),calc(100%-4px)_100%,0_100%,0_4px)]">
       <div className="flex items-center gap-2 mb-2">
         <AlertCircle className="w-3.5 h-3.5 text-gold-400" />
         <p className="text-[11px] text-foreground">配置媒体生成服务商</p>
@@ -542,7 +538,7 @@ function ProviderSettingsPanel({
             <button
               key={p.value}
               onClick={() => setType(p.value)}
-              className={`p-2 rounded-md border text-left transition-colors ${
+              className={`p-2 rounded-md border text-left transition-colors [clip-path:polygon(4px_0,100%_0,100%_calc(100%-4px),calc(100%-4px)_100%,0_100%,0_4px)] ${
                 type === p.value
                   ? 'bg-gold-400/15 text-gold-400 border-gold-400/30'
                   : 'bg-secondary text-muted-foreground border-border hover:border-slate-500'
@@ -562,7 +558,7 @@ function ProviderSettingsPanel({
           value={apiKey}
           onChange={(e) => setApiKey(e.target.value)}
           placeholder="输入 API Key"
-          className="w-full h-8 text-xs rounded-lg border border-border bg-secondary px-3 text-white placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+          className="w-full h-8 text-xs rounded-[2px] border border-border bg-secondary px-3 text-white placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-gold-400/50 focus:border-gold-400/60 [clip-path:polygon(4px_0,100%_0,100%_calc(100%-4px),calc(100%-4px)_100%,0_100%,0_4px)]"
         />
       </div>
 
@@ -574,7 +570,7 @@ function ProviderSettingsPanel({
             value={apiUrl}
             onChange={(e) => setApiUrl(e.target.value)}
             placeholder="http://localhost:8188"
-            className="w-full h-8 text-xs rounded-lg border border-border bg-secondary px-3 text-white placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+            className="w-full h-8 text-xs rounded-[2px] border border-border bg-secondary px-3 text-white placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-gold-400/50 focus:border-gold-400/60 [clip-path:polygon(4px_0,100%_0,100%_calc(100%-4px),calc(100%-4px)_100%,0_100%,0_4px)]"
           />
         </div>
       )}
@@ -588,7 +584,7 @@ function ProviderSettingsPanel({
         </button>
         <button
           onClick={handleSave}
-          className="flex-1 py-1.5 text-[11px] bg-gold-400/15 text-gold-400 border border-gold-400/30 hover:bg-gold-400/25 rounded-lg transition-colors"
+          className="flex-1 py-1.5 text-[11px] bg-gold-400/15 text-gold-400 border border-gold-400/30 hover:bg-gold-400/25 rounded-[2px] transition-colors [clip-path:polygon(4px_0,100%_0,100%_calc(100%-4px),calc(100%-4px)_100%,0_100%,0_4px)]"
         >
           <Check className="w-3 h-3 inline mr-1" />
           保存

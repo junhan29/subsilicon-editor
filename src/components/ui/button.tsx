@@ -33,6 +33,21 @@ const buttonVariants = cva(
         /* 艺术家手绘风 */
         artist:
           'bg-gradient-to-br from-gold-500 to-gold-400 text-white shadow-md hover:shadow-lg hover:brightness-105 border border-gold-400/30',
+        /* P5 纸板剪贴风：右上角斜切 + 硬阴影 + 红边框 */
+        'p5-clipped':
+          'relative bg-card text-foreground border-2 border-primary shadow-[4px_4px_0_hsl(var(--primary)/0.3)] hover:shadow-[6px_6px_0_hsl(var(--primary)/0.35)] hover:-translate-x-0.5 hover:-translate-y-0.5 active:shadow-[2px_2px_0_hsl(var(--primary)/0.3)] active:translate-x-0 active:translate-y-0',
+        /* 霓虹青：赛博朋克风 */
+        'cyber-cyan':
+          'bg-cyber-cyan-500/15 text-cyber-cyan-500 border border-cyber-cyan-500/50 hover:bg-cyber-cyan-500/25 hover:border-cyber-cyan-500 shadow-[0_0_0_1px_hsl(var(--cyber-cyan-500)/0.15),0_0_16px_hsl(var(--cyber-cyan-500)/0.2)] hover:shadow-[0_0_0_1px_hsl(var(--cyber-cyan-500)/0.25),0_0_24px_hsl(var(--cyber-cyan-500)/0.35)]',
+        /* 霓虹洋红：赛博朋克风 */
+        'cyber-magenta':
+          'bg-cyber-magenta-500/15 text-cyber-magenta-500 border border-cyber-magenta-500/50 hover:bg-cyber-magenta-500/25 hover:border-cyber-magenta-500 shadow-[0_0_0_1px_hsl(var(--cyber-magenta-500)/0.15),0_0_16px_hsl(var(--cyber-magenta-500)/0.2)] hover:shadow-[0_0_0_1px_hsl(var(--cyber-magenta-500)/0.25),0_0_24px_hsl(var(--cyber-magenta-500)/0.35)]',
+        /* 金印章风：强对比金色按钮 */
+        'stamp-gold':
+          'bg-gold-400/10 text-gold-400 border-2 border-gold-400 hover:bg-gold-400/20 hover:text-gold-300 font-bold tracking-wide shadow-[inset_0_0_0_1px_hsl(var(--gold)/0.25)]',
+        /* 红印章风：斜切 + 旋转小角度 */
+        'stamp-red':
+          'bg-primary/10 text-primary border-2 border-primary hover:bg-primary/18 hover:text-primary-foreground font-bold tracking-wide shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.25)]',
       },
       size: {
         default: 'h-10 px-5 py-2.5 rounded-lg',

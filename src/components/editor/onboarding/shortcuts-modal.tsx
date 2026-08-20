@@ -5,7 +5,9 @@ import {
   CheckSquare,
   CircleSlash,
   Clipboard,
+  Clapperboard,
   Copy,
+  CopyPlus,
   Download,
   Eye,
   FileText,
@@ -13,18 +15,22 @@ import {
   Flag,
   Focus,
   GitBranch,
+  Grid3x3,
   HelpCircle,
   Keyboard,
+  Languages,
   Layers,
   Lock,
   Map as MapIcon,
   Maximize2,
   Merge,
   MessageCircle,
+  MessageSquare,
   Moon,
   MousePointer2,
   PanelLeft,
   PanelRight,
+  Pencil,
   Play,
   Redo,
   Replace,
@@ -33,11 +39,14 @@ import {
   Settings as SettingsIcon,
   ShieldCheck,
   Shuffle,
+  Sparkles,
   SplitSquareVertical,
+  Subtitles,
   Sun,
   Trash2,
   Undo,
   Ungroup,
+  Wand2,
   X,
   Zap,
   ZoomIn,
@@ -75,6 +84,7 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   Undo: Undo2Icon,
   Redo: Redo2Icon,
   MessageCircle,
+  MessageSquare,
   GitBranch,
   Flag,
   SplitSquareVertical,
@@ -88,6 +98,7 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   CheckSquare,
   CircleSlash,
   Copy,
+  CopyPlus,
   Clipboard,
   Layers,
   Ungroup,
@@ -99,6 +110,15 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   Sun,
   HelpCircle,
   Play,
+  // AI 分区图标
+  Settings: SettingsIcon,
+  Wand2,
+  Pencil,
+  Sparkles,
+  Grid3x3,
+  Clapperboard,
+  Subtitles,
+  Languages,
 }
 
 // 兼容旧图标名
@@ -180,6 +200,12 @@ export function ShortcutsModal({ open, onClose, onOpenSettings }: ShortcutsModal
     }))
   }, [bindings])
 
+  // AI 全局快览（顶部金色彩带卡片），仅展示全局可见的 AI 键
+  const aiGlobalSpotlight = useMemo(() => {
+    const ids = new Set(['toggleAiPanel', 'aiOutline', 'aiContinue', 'aiPolish', 'aiGlobalSettings'])
+    return bindings.filter((b) => ids.has(b.id) && b.keys.length > 0)
+  }, [bindings])
+
   if (!open) return null
 
   return (
@@ -214,6 +240,50 @@ export function ShortcutsModal({ open, onClose, onOpenSettings }: ShortcutsModal
 
           {/* 快捷键列表 */}
           <div className="max-h-[55vh] overflow-y-auto p-5 space-y-5">
+            {/* AI 顶部快览：金色语义色带 */}
+            {aiGlobalSpotlight.length > 0 && (
+              <div className="rounded-xl border border-dashed border-gold-400/40 bg-gold-400/5 p-3">
+                <div className="flex items-center gap-1.5 mb-2 px-1">
+                  <Sparkles className="w-3.5 h-3.5 text-gold-500" aria-hidden />
+                  <h4 className="text-[10px] font-semibold text-gold-600 dark:text-gold-400 uppercase tracking-wider">
+                    AI 快捷键快览
+                  </h4>
+                </div>
+                <div className="space-y-1.5">
+                  {aiGlobalSpotlight.map((b) => {
+                    const IconComp = b.icon ? ICON_MAP[b.icon] : null
+                    return (
+                      <div
+                        key={`spot-${b.id}`}
+                        className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gold-400/10 transition-colors"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          {IconComp && (
+                            <span className="text-gold-600 dark:text-gold-400 shrink-0">
+                              <IconComp className="w-3.5 h-3.5" />
+                            </span>
+                          )}
+                          <span className="text-sm truncate">{b.action}</span>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {b.keys.map((key, ki) => (
+                            <span key={ki} className="flex items-center gap-1">
+                              {ki > 0 && (
+                                <span className="text-[10px] text-gold-600/60 mx-0.5">+</span>
+                              )}
+                              <kbd className="min-w-[24px] h-6 px-1.5 inline-flex items-center justify-center text-[10px] font-mono font-medium rounded-md bg-gold-400/10 border border-gold-400/30 text-gold-700 dark:text-gold-300">
+                                {key}
+                              </kbd>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
             {grouped.map((group) => (
               <div key={group.category}>
                 <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2.5">

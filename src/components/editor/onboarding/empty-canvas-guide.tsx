@@ -170,12 +170,30 @@ function GuideCard({ step, total, guide, onNext, onSkip, isLast }: GuideCardProp
   }
 
   return (
-    <div className="pointer-events-auto w-[min(92vw,420px)]">
-      <div className="relative overflow-hidden rounded-2xl border border-gold-400/30 bg-gradient-to-b from-slate-800/95 to-slate-900/95 shadow-2xl shadow-amber-500/10 backdrop-blur">
-        {/* 顶部进度条 */}
-        <div className="h-1 w-full bg-secondary/60">
+    <div className="pointer-events-auto w-[min(92vw,440px)] tape-top">
+      <div className="relative overflow-hidden rounded-xl border-2 border-primary shadow-[6px_6px_0_hsl(var(--primary)/0.35)] bg-card">
+        {/* 半调网点背景（P5 怪盗视觉） */}
+        <div className="absolute inset-0 halftone-bg opacity-25 pointer-events-none" aria-hidden />
+        {/* 左上红印章 + 右上金色斜切装饰 */}
+        <div className="absolute top-3 left-3 z-10 pointer-events-none">
+          <div className="stamp-red text-[10px] px-2 py-0.5">
+            第 {step + 1} 章 / {total}
+          </div>
+        </div>
+        <div className="pointer-events-none absolute top-0 right-0 w-24 h-24 overflow-hidden" aria-hidden>
           <div
-            className="h-full bg-gradient-to-r from-amber-400 to-amber-500 transition-all duration-300"
+            className="absolute top-0 right-0 w-16 h-16 rotate-12 translate-y-[-50%] translate-x-[25%]"
+            style={{
+              background:
+                'linear-gradient(135deg, hsl(var(--gold)) 0%, hsl(var(--primary)) 100%)',
+            }}
+          />
+        </div>
+
+        {/* 顶部进度条 */}
+        <div className="relative h-1.5 w-full bg-muted/80 border-b border-border/50">
+          <div
+            className="h-full bg-gradient-to-r from-primary via-gold-400 to-cyber-cyan-500 transition-all duration-300"
             style={{ width: `${((step + 1) / total) * 100}%` }}
           />
         </div>
@@ -184,32 +202,29 @@ function GuideCard({ step, total, guide, onNext, onSkip, isLast }: GuideCardProp
         <button
           onClick={onSkip}
           aria-label="跳过引导"
-          className="absolute top-3 right-3 z-10 w-7 h-7 rounded-full bg-secondary/50 hover:bg-secondary flex items-center justify-center text-foreground hover:text-white transition-colors"
+          className="absolute top-3 right-3 z-20 w-8 h-8 rounded-md border border-border/60 bg-card/90 hover:bg-destructive/10 hover:border-destructive/50 flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors"
         >
-          <X className="w-3.5 h-3.5" />
+          <X className="w-4 h-4" />
         </button>
 
-        <div className="p-5">
-          {/* 步骤标签 + 进度 */}
-          <div className="flex items-center gap-2 mb-4">
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gold-400/15 text-gold-400 text-[10px] font-semibold tracking-wide">
-              <Sparkles className="w-3 h-3" />
+        <div className="relative p-5 pt-8">
+          {/* 顶部标签栏 */}
+          <div className="flex items-center gap-2 mb-5 flex-wrap">
+            <span className="p5-sash-gold text-[10px] !py-1 !px-3">
+              <span className="mr-1.5">✦</span>
               新手引导
             </span>
-            <span className="text-[10px] font-mono text-muted-foreground">
-              {step + 1} / {total}
-            </span>
             {/* 圆点进度指示 */}
-            <div className="flex items-center gap-1 ml-1">
+            <div className="flex items-center gap-1">
               {Array.from({ length: total }).map((_, i) => (
                 <span
                   key={i}
-                  className={`h-1.5 rounded-full transition-all ${
+                  className={`transition-all rounded-sm ${
                     i === step
-                      ? 'w-4 bg-amber-400'
+                      ? 'w-5 h-2 bg-primary shadow-[0_0_8px_hsl(var(--primary)/0.4)]'
                       : i < step
-                      ? 'w-1.5 bg-gold-400/60'
-                      : 'w-1.5 bg-slate-600'
+                      ? 'w-2 h-2 bg-gold-400'
+                      : 'w-2 h-2 bg-border'
                   }`}
                 />
               ))}
@@ -217,51 +232,55 @@ function GuideCard({ step, total, guide, onNext, onSkip, isLast }: GuideCardProp
           </div>
 
           {/* 图标 + 标题 */}
-          <div className="flex items-start gap-3 mb-3">
-            <div className="w-10 h-10 rounded-xl bg-gold-400/15 border border-gold-400/30 flex items-center justify-center shrink-0 text-gold-400">
-              {guide.icon}
+          <div className="flex items-start gap-3 mb-4">
+            <div className="relative">
+              <div className="w-11 h-11 rounded-lg bg-card border-2 border-gold-400/60 flex items-center justify-center shrink-0 text-gold-400 shadow-[3px_3px_0_hsl(var(--gold)/0.35)] rotate-[-3deg]">
+                {guide.icon}
+              </div>
+              <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-cyber-cyan-500 border-2 border-card" />
             </div>
-            <div className="flex-1 min-w-0 pt-0.5">
-              <h3 className="text-base font-semibold text-slate-50 leading-snug">
+            <div className="flex-1 min-w-0 pt-1">
+              <h3 className="text-lg font-black text-foreground leading-snug tracking-wide">
                 {guide.title}
               </h3>
             </div>
           </div>
 
           {/* 描述 */}
-          <p className="text-xs text-foreground leading-relaxed mb-4 pl-13">
+          <p className="text-sm text-foreground leading-relaxed mb-5 border-l-2 border-primary/60 pl-3">
             {guide.description}
           </p>
 
           {/* 方向提示 */}
-          <div className="mb-4 px-3 py-2 rounded-lg bg-muted/60 border border-border/60">
+          <div className="mb-5 px-3 py-2.5 rounded-md bg-gold-400/8 border border-gold-400/30 relative">
             <DirectionArrow />
+            <div className="absolute inset-0 pointer-events-none halftone-bg-gold opacity-30" aria-hidden />
           </div>
 
           {/* 操作按钮 */}
           <div className="flex items-center gap-2">
             <Button
-              variant="ghost"
+              variant="stamp-gold"
               size="sm"
               onClick={onSkip}
-              className="text-muted-foreground hover:text-foreground hover:bg-secondary/50"
             >
               跳过
             </Button>
             <Button
+              variant="p5-clipped"
               size="sm"
               onClick={onNext}
-              className="flex-1 gap-1.5 bg-gradient-to-r from-gold-400 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white border-amber-400/40"
+              className="flex-1 gap-1.5 text-foreground"
             >
               {isLast ? (
                 <>
-                  <Sparkles className="w-3.5 h-3.5" />
+                  <Sparkles className="w-4 h-4 text-primary" />
                   开始创作
                 </>
               ) : (
                 <>
                   下一步
-                  <ChevronRight className="w-3.5 h-3.5" />
+                  <ChevronRight className="w-4 h-4" />
                 </>
               )}
             </Button>
@@ -279,48 +298,79 @@ interface QuickAddPanelProps {
 
 function QuickAddPanel({ onQuickAdd, onStartTour }: QuickAddPanelProps) {
   return (
-    <div className="text-center pointer-events-auto">
-      {/* 主图标 */}
-      <div className="relative inline-block mb-6">
-        <div className="w-20 h-20 rounded-3xl bg-muted/60 border-2 border-dashed border-gold-400/40 flex items-center justify-center">
-          <MousePointerClick className="w-9 h-9 text-gold-400/70" />
-        </div>
-        <div className="absolute -right-8 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-gold-400/70">
-          <span className="text-xs">从左侧拖拽</span>
-          <ArrowRight className="w-4 h-4 animate-pulse" />
-        </div>
-      </div>
+    <div className="relative text-center pointer-events-auto w-[min(92vw,480px)]">
+      {/* 顶部金色胶带 */}
+      <div className="relative inline-block tape-top mb-2">
+        {/* 标题板 */}
+        <div className="relative p-5 pr-7 rounded-xl border-2 border-gold-400/60 bg-card shadow-[6px_6px_0_hsl(var(--gold)/0.3)]">
+          {/* 半调网点背景 */}
+          <div className="absolute inset-0 halftone-bg-gold opacity-25 pointer-events-none" aria-hidden />
+          {/* 左上角斜切红装饰 */}
+          <div className="pointer-events-none absolute top-0 left-0 w-20 h-20 overflow-hidden" aria-hidden>
+            <div
+              className="absolute top-0 left-0 w-14 h-14 -rotate-12 translate-y-[-50%] translate-x-[-25%]"
+              style={{
+                background:
+                  'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--gold)) 100%)',
+              }}
+            />
+          </div>
 
-      {/* 提示文字 */}
-      <h3 className="text-base font-semibold text-foreground mb-1">开始你的故事</h3>
-      <p className="text-xs text-muted-foreground mb-5 max-w-xs mx-auto">
-        从左侧面板拖拽节点到画布，或点击下方快速添加
-      </p>
+          {/* 主图标（怪盗 LOGO 风） */}
+          <div className="relative inline-block mb-5 mt-2">
+            <div className="w-20 h-20 rounded-xl border-2 border-primary bg-card flex items-center justify-center shadow-[4px_4px_0_hsl(var(--primary)/0.35)] rotate-[-4deg]">
+              <MousePointerClick className="w-10 h-10 text-primary" />
+            </div>
+            <div className="absolute -bottom-1 -right-2 rotate-[8deg]">
+              <div className="stamp-gold text-[10px] !py-0.5 !px-2">
+                START!
+              </div>
+            </div>
+            <div className="absolute -right-10 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-primary/80">
+              <ArrowRight className="w-4 h-4 animate-pulse" />
+              <span className="text-xs font-bold">从左侧拖拽</span>
+            </div>
+          </div>
 
-      {/* 快速添加按钮 */}
-      <div className="flex items-center justify-center gap-2 mb-5">
-        {QUICK_ACTIONS.map((action) => (
-          <button
-            key={action.type}
-            onClick={() => onQuickAdd(action.type)}
-            className={`flex flex-col items-center gap-1 px-3 py-2.5 rounded-xl border-2 border-dashed transition-all bg-muted/40 ${action.color}`}
+          {/* 提示文字 */}
+          <h3 className="text-xl font-black text-foreground mb-1 tracking-wide">
+            开始你的故事
+          </h3>
+          <p className="text-xs text-muted-foreground mb-5 max-w-xs mx-auto leading-relaxed">
+            从左侧面板拖拽节点到画布，或点击下方按钮<span className="text-gold-400 font-bold"> 快速添加 </span>故事节点
+          </p>
+
+          {/* 快速添加按钮 — 6 个节点 */}
+          <div className="grid grid-cols-3 gap-2 mb-5">
+            {QUICK_ACTIONS.map((action, i) => (
+              <button
+                key={action.type}
+                onClick={() => onQuickAdd(action.type)}
+                className={`relative flex flex-col items-center gap-1 px-2 py-3 rounded-md border-2 transition-all bg-card hover:-translate-y-0.5 ${
+                  i % 2 === 0
+                    ? 'border-primary/50 shadow-[3px_3px_0_hsl(var(--primary)/0.25)] hover:shadow-[4px_4px_0_hsl(var(--primary)/0.35)]'
+                    : 'border-gold-400/50 shadow-[3px_3px_0_hsl(var(--gold)/0.25)] hover:shadow-[4px_4px_0_hsl(var(--gold)/0.35)]'
+                } ${action.color}`}
+                style={{ transform: `rotate(${i % 2 === 0 ? -1 : 1}deg)` }}
+              >
+                <span className="text-sm font-black tracking-wide">{action.label}</span>
+                <span className="text-[10px] opacity-80">{action.desc}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* 重新引导按钮 */}
+          <Button
+            variant="cyber-magenta"
+            size="sm"
+            onClick={onStartTour}
+            className="gap-1.5"
           >
-            <span className="text-sm font-medium">{action.label}</span>
-            <span className="text-[10px] opacity-70">{action.desc}</span>
-          </button>
-        ))}
+            <Play className="w-3.5 h-3.5" />
+            重新播放引导
+          </Button>
+        </div>
       </div>
-
-      {/* 重新引导按钮 */}
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={onStartTour}
-        className="gap-1.5 text-muted-foreground hover:text-gold-400 hover:bg-muted/50"
-      >
-        <Play className="w-3.5 h-3.5" />
-        重新播放引导
-      </Button>
     </div>
   )
 }

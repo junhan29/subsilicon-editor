@@ -70,33 +70,43 @@ function RandomNodeComponent({ id, data, selected, onUpdateNode }: RandomNodePro
 
   return (
     <div className={`
-      relative bg-gradient-to-br from-cyan-500/20 to-blue-500/20
-      border-2 rounded-xl px-4 py-3 min-w-[240px]
-      ${selected ? 'border-cyan-400 shadow-lg shadow-cyan-500/30' : 'border-cyan-500/50'}
+      relative bg-card px-3 py-2.5 min-w-[240px] rounded-[2px] border-2
+      clip-path-polygon-[0_0,calc(100%-12px)_0,100%_12px,100%_100%,0_100%]
+      ${selected
+        ? 'border-cyber-cyan-400 shadow-[6px_6px_0_hsl(var(--cyber-cyan)/0.28)]'
+        : 'border-border shadow-[4px_4px_0_hsl(var(--cyber-cyan)/0.18)]'
+      }
     `}>
+      {/* 骰子半调装饰 */}
+      <div className="absolute -top-2 -right-2 w-5 h-5 rounded-[1px] bg-cyber-cyan-400 rotate-12 flex items-center justify-center shadow-[2px_2px_0_hsl(var(--cyber-cyan)/0.3)] z-10">
+        <span className="text-[8px] font-black text-white">⚅</span>
+      </div>
+      <div className="absolute -top-1 left-6 w-1.5 h-1.5 rounded-full bg-cyber-cyan-400/60" />
+      <div className="absolute -top-1 left-9 w-1.5 h-1.5 rounded-full bg-cyber-cyan-400/40" />
+
       <Handle
         type="target"
         position={Position.Top}
-        className="!w-4 !h-4 !rounded-full !z-20 !bg-white !border-2 !border-cyan-400 !-top-2 !transition-all hover:!scale-125 hover:!shadow-lg hover:!shadow-cyan-400/30"
+        className="!w-4 !h-4 !rounded-full !z-20 !bg-white !border-2 !border-cyber-cyan-400 !-top-2 !transition-all hover:!scale-125"
       />
 
-      <div className="flex items-center gap-2 mb-3">
-        <div className="w-8 h-8 rounded-lg bg-cyan-500/30 flex items-center justify-center">
-          <Shuffle className="w-4 h-4 text-cyan-400" />
+      <div className="flex items-center gap-2 mb-2.5">
+        <div className="w-8 h-8 rounded-[2px] bg-cyber-cyan-400/15 border border-cyber-cyan-400/30 flex items-center justify-center shadow-[2px_2px_0_hsl(var(--cyber-cyan)/0.15)]">
+          <Shuffle className="w-4 h-4 text-cyber-cyan-400" />
         </div>
-        <span className="text-xs font-medium text-cyan-400">
+        <span className="text-xs font-bold text-cyber-cyan-400 tracking-wider uppercase">
           随机节点
         </span>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         {options.map((opt, index) => (
-          <div key={opt.id} className="flex items-center gap-2 bg-black/30 rounded px-2 py-1.5">
+          <div key={opt.id} className="flex items-center gap-1.5 bg-cyber-cyan-400/8 rounded-[2px] px-2 py-1 border border-cyber-cyan-400/15 shadow-[2px_2px_0_hsl(var(--cyber-cyan)/0.1)]">
             <input
               type="text"
               value={opt.label}
               onChange={(e) => updateOption(opt.id, 'label', e.target.value)}
-              className="flex-1 bg-transparent border-none text-sm text-white placeholder:text-cyan-300/50 focus:outline-none"
+              className="flex-1 bg-transparent border-none text-sm text-foreground placeholder:text-cyber-cyan-300/50 focus:outline-none"
               placeholder={`选项 ${String.fromCharCode(65 + index)}`}
             />
             <div className="flex items-center gap-1">
@@ -104,23 +114,23 @@ function RandomNodeComponent({ id, data, selected, onUpdateNode }: RandomNodePro
                 type="number"
                 value={opt.weight}
                 onChange={(e) => updateOption(opt.id, 'weight', parseInt(e.target.value) || 0)}
-                className="w-12 bg-black/30 border border-cyan-500/30 rounded px-1.5 py-0.5 text-xs text-cyan-200 text-right focus:outline-none focus:border-cyan-400"
+                className="w-12 bg-card border border-border rounded-[2px] px-1.5 py-0.5 text-xs text-foreground text-right focus:outline-none focus:border-cyber-cyan-400"
                 min="0"
                 max="100"
               />
-              <Percent className="w-3 h-3 text-cyan-400/70" />
+              <Percent className="w-3 h-3 text-cyber-cyan-400/70" />
             </div>
             {opt.targetId ? (
-              <span className="text-[10px] text-cyan-300/70 truncate max-w-[60px]">
-                → {opt.targetId.slice(0, 6)}
+              <span className="text-[10px] text-cyber-cyan-300/70 truncate max-w-[50px] font-mono">
+                →{opt.targetId.slice(0, 4)}
               </span>
             ) : (
-              <span className="text-[10px] text-cyan-300/50">未连接</span>
+              <span className="text-[10px] text-cyber-cyan-300/50">∅</span>
             )}
             <button
               onClick={() => removeOption(opt.id)}
               disabled={options.length <= 2}
-              className={`p-0.5 rounded transition-colors ${options.length <= 2 ? 'text-cyan-300/30 cursor-not-allowed' : 'text-cyan-400/70 hover:text-red-400 hover:bg-primary/20'}`}
+              className={`p-0.5 rounded-[2px] transition-colors ${options.length <= 2 ? 'text-cyber-cyan-300/30 cursor-not-allowed' : 'text-cyber-cyan-400/70 hover:text-p5-red hover:bg-p5-red/15'}`}
             >
               <Trash2 className="w-3 h-3" />
             </button>
@@ -130,21 +140,21 @@ function RandomNodeComponent({ id, data, selected, onUpdateNode }: RandomNodePro
 
       <button
         onClick={addOption}
-        className="w-full mt-2 flex items-center justify-center gap-1 py-1.5 bg-cyan-500/10 hover:bg-cyan-500/20 border border-dashed border-cyan-500/30 rounded text-xs text-cyan-400 transition-colors"
+        className="w-full mt-2 flex items-center justify-center gap-1 py-1.5 bg-cyber-cyan-400/8 hover:bg-cyber-cyan-400/15 border border-dashed border-cyber-cyan-400/30 rounded-[2px] text-xs text-cyber-cyan-400 transition-colors shadow-[2px_2px_0_hsl(var(--cyber-cyan)/0.08)]"
       >
         <Plus className="w-3 h-3" />
         添加选项
       </button>
 
-      <div className="mt-2 flex items-center justify-between text-[10px] text-cyan-300/70">
-        <span>总计权重</span>
-        <span className="font-medium text-cyan-400">{totalWeight}%</span>
+      <div className="mt-2 flex items-center justify-between text-[10px] text-cyber-cyan-300/70">
+        <span className="tracking-wide">总计权重</span>
+        <span className="font-bold text-cyber-cyan-400 bg-cyber-cyan-400/10 px-1.5 rounded-[2px]">{totalWeight}%</span>
       </div>
 
       <Handle
         type="source"
         position={Position.Bottom}
-        className="!w-4 !h-4 !rounded-full !z-20 !bg-cyan-400 !border-2 !border-white !-bottom-2 !transition-all hover:!scale-125 hover:!shadow-lg hover:!shadow-cyan-400/30"
+        className="!w-4 !h-4 !rounded-full !z-20 !bg-cyber-cyan-400 !border-2 !border-white !-bottom-2 !transition-all hover:!scale-125"
       />
     </div>
   )

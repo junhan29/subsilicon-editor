@@ -3,7 +3,7 @@ export interface ShortcutBinding {
   action: string
   description: string
   defaultKeys: string[]
-  category: 'general' | 'canvas' | 'node' | 'edit' | 'view' | 'help'
+  category: 'general' | 'canvas' | 'node' | 'edit' | 'view' | 'help' | 'ai'
   icon?: string
 }
 
@@ -52,7 +52,19 @@ const DEFAULT_BINDINGS: ShortcutBinding[] = [
 
   { id: 'toggleSidebar', action: '切换左侧栏', description: '显示或隐藏左侧节点面板', defaultKeys: ['B'], category: 'view', icon: 'PanelLeft' },
   { id: 'toggleRightPanel', action: '切换属性面板', description: '显示或隐藏右栏内属性面板', defaultKeys: ['P'], category: 'view', icon: 'PanelRight' },
-  { id: 'toggleAiPanel', action: '切换 AI 面板', description: '显示或隐藏 AI 创作助理面板 (Ctrl+K)', defaultKeys: ['Ctrl', 'K'], category: 'view', icon: 'MessageSquare' },
+  { id: 'toggleAiPanel', action: '切换 AI 面板', description: '显示或隐藏 AI 创作助理面板 (Ctrl+K)', defaultKeys: ['Ctrl', 'K'], category: 'ai', icon: 'MessageSquare' },
+  { id: 'aiOutline', action: 'AI 生成大纲', description: '生成互动故事大纲并铺节点（Ctrl+Shift+O）', defaultKeys: ['Ctrl', 'Shift', 'O'], category: 'ai', icon: 'Wand2' },
+  { id: 'aiContinue', action: 'AI 续写', description: '在当前选中节点后续写后续节点', defaultKeys: ['Ctrl', 'Shift', 'J'], category: 'ai', icon: 'Pencil' },
+  { id: 'aiPolish', action: 'AI 润色', description: '润色当前选中节点文案', defaultKeys: ['Ctrl', 'Shift', 'R'], category: 'ai', icon: 'Sparkles' },
+  { id: 'aiGlobalSettings', action: 'AI 全局设置', description: '打开 AI 全局配置弹窗（密钥 / 模型 / 供应商）', defaultKeys: ['Ctrl', ','], category: 'ai', icon: 'Settings' },
+  // 漫画编辑器 AI 快捷键（仅在漫画编辑器内生效，由组件自行匹配）
+  { id: 'comicAiGeneratePanels', action: '漫画 · 生成面板', description: 'AI 按当前故事自动生成漫画分镜', defaultKeys: ['Alt', '1'], category: 'ai', icon: 'Grid3x3' },
+  { id: 'comicAiPolishNarration', action: '漫画 · 润色旁白', description: '润色选中分镜的旁白与台词', defaultKeys: ['Alt', '2'], category: 'ai', icon: 'FileText' },
+  { id: 'comicAiContinuePanels', action: '漫画 · 续写 3 格', description: '在当前分镜后 AI 续写 3 格', defaultKeys: ['Alt', '3'], category: 'ai', icon: 'CopyPlus' },
+  // 视频编辑器 AI 快捷键（仅在视频编辑器内生效）
+  { id: 'videoAiGenerateClip', action: '视频 · 生成片段', description: 'AI 生成下一段视频片段的字幕与素材占位', defaultKeys: ['Alt', '1'], category: 'ai', icon: 'Clapperboard' },
+  { id: 'videoAiAutoSubtitle', action: '视频 · 一键字幕', description: '批量为无字幕片段填充 AI 字幕', defaultKeys: ['Alt', '2'], category: 'ai', icon: 'Subtitles' },
+  { id: 'videoAiPolishSubtitle', action: '视频 · 润色字幕', description: '润色选中片段的字幕文案', defaultKeys: ['Alt', '3'], category: 'ai', icon: 'Languages' },
   { id: 'toggleRightFullscreen', action: '画布全屏', description: '将右栏画布展开或退出全屏', defaultKeys: [], category: 'view', icon: 'Maximize' },
   // 专注模式（ADHD 适配）已取代画布全屏：toggleRightFullscreen 条目保留以兼容旧版自定义绑定，不做删除。
   // 默认键用 Ctrl+Shift+L 而非 Ctrl+Shift+F：后者在 macOS 是系统级「全屏切换」，会被系统拦截导致编辑器内快捷键失效
@@ -70,6 +82,7 @@ const DEFAULT_BINDINGS: ShortcutBinding[] = [
 ]
 
 export const SHORTCUT_CATEGORY_LABELS: Record<ShortcutBinding['category'], string> = {
+  ai: 'AI 创作',
   general: '通用',
   canvas: '画布操作',
   node: '节点操作',
@@ -79,6 +92,7 @@ export const SHORTCUT_CATEGORY_LABELS: Record<ShortcutBinding['category'], strin
 }
 
 export const SHORTCUT_CATEGORY_ORDER: ShortcutBinding['category'][] = [
+  'ai',
   'general',
   'canvas',
   'node',

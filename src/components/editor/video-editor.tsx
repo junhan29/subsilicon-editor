@@ -58,6 +58,7 @@ import {
   generateVideoThumbnail,
   validateFileSize,
 } from '@editor/lib/media-processor'
+import { matchShortcut } from '@editor/lib/shortcut-manager'
 import { type PlayerClip, TimelinePlayer } from './timeline-player'
 import { CreatorCenterDialog } from './creator-center-dialog'
 import { showToast } from './toast'
@@ -357,6 +358,65 @@ export function VideoEditor({ work, onBack }: VideoEditorProps) {
     scheduleSave(next, title)
     setSelectedClipId(clip.id)
   }
+
+  // ── Phase 2: 视频编辑器 AI 快捷键（Alt+1/2/3）──
+  // 注：useEffect 放在 addEmptyClip / updateClip 等定义之后，避免块级变量声明前使用的 TSC 错误。
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null
+      const inEditable =
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable)
+      if (inEditable) return
+
+      if (matchShortcut(e, 'videoAiGenerateClip')) {
+        e.preventDefault()
+        // Alt+1：生成片段（默认新增视频占位片段，接入 AI 后自动补字幕/素材推荐）
+        addEmptyClip('video')
+        showToast('info', 'AI 生成片段：已新增占位视频片段，接入 AI 后自动补全字幕与素材')
+        return
+      }
+      if (matchShortcut(e, 'videoAiAutoSubtitle')) {
+        e.preventDefault()
+        // Alt+2：一键字幕（为所有无字幕片段打占位提示，AI 接入后批量生成）
+        if (data.clips.length === 0) {
+          showToast('error', '先添加片段，再执行一键字幕')
+          return
+        }
+        const touchedIds: string[] = []
+        const nextClips = data.clips.map((c) => {
+          if (!c.subtitle?.trim()) {
+            touchedIds.push(c.id)
+            return { ...c, subtitle: '（待 AI 补全字幕）' }
+          }
+          return c
+        })
+        if (touchedIds.length === 0) {
+          showToast('info', '所有片段已有字幕，无需处理')
+          return
+        }
+        const next: VideoData = { ...data, clips: nextClips }
+        setData(next)
+        scheduleSave(next, title)
+        showToast('success', `一键字幕：已为 ${touchedIds.length} 段写入占位，接入 AI 后自动生成真实字幕`)
+        return
+      }
+      if (matchShortcut(e, 'videoAiPolishSubtitle')) {
+        e.preventDefault()
+        // Alt+3：润色选中片段的字幕
+        if (!selectedClip) {
+          showToast('error', '先选择一个片段，再润色字幕')
+          return
+        }
+        showToast('info', 'AI 润色字幕：接入 AI 服务后自动优化当前片段字幕文案')
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data.clips, selectedClip, addEmptyClip])
 
   const deleteClip = (id: string) => {
     const next: VideoData = {

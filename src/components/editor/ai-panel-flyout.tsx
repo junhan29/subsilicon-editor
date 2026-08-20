@@ -19,14 +19,15 @@ export function AiPanelFlyout({ open, pinned, onClose, onPin, children }: AiPane
   return (
     <div
       className={`
-        fixed z-40 flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-2xl
+        fixed z-50 flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-2xl
+        transition-all duration-300 ease-out
         ${pinned
-          ? 'inset-y-2 right-14 w-96'
-          : 'bottom-20 right-6 h-[480px] w-96'
+          ? 'inset-y-2 left-2 right-[314px] min-w-[320px] max-w-[640px]'
+          : 'bottom-16 right-6 w-[384px] max-w-[90vw] max-h-[calc(100vh-5rem)] min-h-[400px]'
         }
       `}
     >
-      <div className="flex items-center justify-between border-b border-border px-3 py-2">
+      <div className="flex items-center justify-between border-b border-border px-3 py-2 shrink-0">
         <span className="text-xs font-semibold text-foreground">AI {assistantName}</span>
         <div className="flex items-center gap-1">
           <button
@@ -49,7 +50,7 @@ export function AiPanelFlyout({ open, pinned, onClose, onPin, children }: AiPane
           </button>
         </div>
       </div>
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden min-h-0">
         {children || (
           <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
             AI Chat Panel 将在后续集成

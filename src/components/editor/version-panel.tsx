@@ -210,7 +210,7 @@ export function VersionPanel({
           return (
             <div
               key={version.id}
-              className="group rounded-lg border border-border bg-muted/40 hover:border-primary/40 transition-colors overflow-hidden"
+              className="group rounded-[2px] border border-border bg-muted/40 hover:border-primary/40 transition-colors overflow-hidden clip-path-polygon-[0_0,calc(100%-6px)_0,100%_6px,100%_100%,0_100%]"
             >
               <div className="p-2.5">
                 <div className="flex items-start gap-2">

@@ -105,7 +105,7 @@ export function AccountDialog({ open, onClose, onSuccess }: AccountDialogProps) 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="w-full max-w-md rounded-2xl bg-card text-white shadow-2xl border border-border overflow-hidden">
+      <div className="w-full max-w-md rounded-[2px] bg-card text-white shadow-[6px_6px_0_hsl(var(--gold)/0.2)] [clip-path:polygon(0_0,calc(100%-12px)_0,100%_12px,100%_100%,0_100%)] border border-gold-400/40 overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <h2 className="font-semibold text-sm">账号</h2>
           <button
@@ -120,7 +120,7 @@ export function AccountDialog({ open, onClose, onSuccess }: AccountDialogProps) 
         <div className="px-5 py-4">
           {currentAccount ? (
             <div className="space-y-4">
-              <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/60 border border-border">
+              <div className="flex items-center gap-3 p-3 rounded-[2px] bg-muted/60 border border-border [clip-path:polygon(0_0,calc(100%-8px)_0,100%_8px,100%_100%,0_100%)]">
                 <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
                   <User className="w-5 h-5 text-emerald-400" />
                 </div>
@@ -143,14 +143,14 @@ export function AccountDialog({ open, onClose, onSuccess }: AccountDialogProps) 
                   handleLogout()
                   onClose()
                 }}
-                className="w-full rounded-lg border border-border hover:bg-muted text-foreground text-sm py-2 transition-colors"
+                className="w-full rounded-[2px] border border-border hover:bg-muted text-foreground text-sm py-2 transition-colors"
               >
                 退出登录
               </button>
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="flex rounded-lg border border-border overflow-hidden">
+              <div className="flex rounded-[2px] border border-border overflow-hidden [clip-path:polygon(0_0,calc(100%-8px)_0,100%_8px,100%_100%,0_100%)]">
                 <button
                   onClick={() => { setTab('login'); setError('') }}
                   className={`flex-1 py-2 text-sm font-medium transition-colors ${
@@ -182,7 +182,7 @@ export function AccountDialog({ open, onClose, onSuccess }: AccountDialogProps) 
                       value={loginEmail}
                       onChange={(e) => setLoginEmail(e.target.value)}
                       placeholder="邮箱"
-                      className="w-full pl-9 pr-3 py-2 text-sm bg-muted border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-gold-400/60"
+                      className="w-full pl-9 pr-3 py-2 text-sm bg-muted border border-border rounded-[2px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-gold-400/60"
                     />
                   </div>
                   <div className="relative">
@@ -193,13 +193,13 @@ export function AccountDialog({ open, onClose, onSuccess }: AccountDialogProps) 
                       onChange={(e) => setLoginPassword(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
                       placeholder="密码"
-                      className="w-full pl-9 pr-3 py-2 text-sm bg-muted border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-gold-400/60"
+                      className="w-full pl-9 pr-3 py-2 text-sm bg-muted border border-border rounded-[2px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-gold-400/60"
                     />
                   </div>
                   <button
                     onClick={handleLogin}
                     disabled={submitting}
-                    className="w-full flex items-center justify-center gap-2 rounded-lg bg-gold-400 hover:bg-amber-400 disabled:opacity-60 text-slate-900 font-medium text-sm py-2.5 transition-colors"
+                    className="w-full flex items-center justify-center gap-2 rounded-[2px] bg-gold-400 hover:bg-gold-300 disabled:opacity-60 text-slate-900 font-semibold text-sm py-2.5 shadow-[3px_3px_0_hsl(var(--gold)/0.3)] transition-colors"
                   >
                     {submitting ? (
                       <><Loader2 className="w-4 h-4 animate-spin" />登录中...</>
@@ -215,7 +215,7 @@ export function AccountDialog({ open, onClose, onSuccess }: AccountDialogProps) 
                       value={regEmail}
                       onChange={(e) => setRegEmail(e.target.value)}
                       placeholder="邮箱"
-                      className="w-full pl-9 pr-3 py-2 text-sm bg-muted border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-gold-400/60"
+                      className="w-full pl-9 pr-3 py-2 text-sm bg-muted border border-border rounded-[2px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-gold-400/60"
                     />
                   </div>
                   <div className="relative">
@@ -225,7 +225,7 @@ export function AccountDialog({ open, onClose, onSuccess }: AccountDialogProps) 
                       value={regPassword}
                       onChange={(e) => setRegPassword(e.target.value)}
                       placeholder="密码（至少 8 位，含字母和数字）"
-                      className="w-full pl-9 pr-3 py-2 text-sm bg-muted border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-gold-400/60"
+                      className="w-full pl-9 pr-3 py-2 text-sm bg-muted border border-border rounded-[2px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-gold-400/60"
                     />
                   </div>
                   <div className="relative">
@@ -235,7 +235,7 @@ export function AccountDialog({ open, onClose, onSuccess }: AccountDialogProps) 
                       value={regConfirm}
                       onChange={(e) => setRegConfirm(e.target.value)}
                       placeholder="确认密码"
-                      className="w-full pl-9 pr-3 py-2 text-sm bg-muted border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-gold-400/60"
+                      className="w-full pl-9 pr-3 py-2 text-sm bg-muted border border-border rounded-[2px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-gold-400/60"
                     />
                   </div>
                   <div className="relative">
@@ -245,7 +245,7 @@ export function AccountDialog({ open, onClose, onSuccess }: AccountDialogProps) 
                       value={regDisplayName}
                       onChange={(e) => setRegDisplayName(e.target.value)}
                       placeholder="显示名称（创作者署名）"
-                      className="w-full pl-9 pr-3 py-2 text-sm bg-muted border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-gold-400/60"
+                      className="w-full pl-9 pr-3 py-2 text-sm bg-muted border border-border rounded-[2px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-gold-400/60"
                     />
                   </div>
                   <textarea
@@ -253,12 +253,12 @@ export function AccountDialog({ open, onClose, onSuccess }: AccountDialogProps) 
                     onChange={(e) => setRegBio(e.target.value)}
                     placeholder="个人简介（可选）"
                     rows={2}
-                    className="w-full px-3 py-2 text-sm bg-muted border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-gold-400/60 resize-none"
+                    className="w-full px-3 py-2 text-sm bg-muted border border-border rounded-[2px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-gold-400/60 resize-none"
                   />
                   <button
                     onClick={handleRegister}
                     disabled={submitting}
-                    className="w-full flex items-center justify-center gap-2 rounded-lg bg-gold-400 hover:bg-amber-400 disabled:opacity-60 text-slate-900 font-medium text-sm py-2.5 transition-colors"
+                    className="w-full flex items-center justify-center gap-2 rounded-[2px] bg-gold-400 hover:bg-gold-300 disabled:opacity-60 text-slate-900 font-semibold text-sm py-2.5 shadow-[3px_3px_0_hsl(var(--gold)/0.3)] transition-colors"
                   >
                     {submitting ? (
                       <><Loader2 className="w-4 h-4 animate-spin" />注册中...</>
@@ -268,7 +268,7 @@ export function AccountDialog({ open, onClose, onSuccess }: AccountDialogProps) 
               )}
 
               {error && (
-                <div className="flex items-center gap-2 text-sm text-red-400 bg-red-900/20 rounded-lg px-3 py-2">
+                <div className="flex items-center gap-2 text-sm text-red-400 bg-red-900/20 rounded-[2px] px-3 py-2 border border-p5-red/30 shadow-[2px_2px_0_hsl(var(--p5-red)/0.2)]">
                   <AlertCircle className="w-4 h-4 shrink-0" />
                   <span>{error}</span>
                 </div>

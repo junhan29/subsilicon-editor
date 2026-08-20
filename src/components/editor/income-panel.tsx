@@ -119,7 +119,7 @@ export function IncomePanel({ graph, workId }: IncomePanelProps) {
       </div>
 
       {showAdd && (
-        <div className="p-3 bg-muted/50 rounded-lg border border-border space-y-2.5">
+        <div className="p-3 bg-muted/50 rounded-[2px] border border-border space-y-2.5">
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground w-12">金额</span>
             <input
@@ -231,7 +231,7 @@ export function IncomePanel({ graph, workId }: IncomePanelProps) {
             </ul>
           </div>
           {/* 月度聚合 */}
-          <div className="p-3 rounded-lg bg-muted/50 border border-border">
+          <div className="p-3 rounded-[2px] bg-muted/50 border border-border">
             <h4 className="text-xs font-medium text-foreground mb-1">月度收入</h4>
             <div className="overflow-x-auto pb-1">
               <BarChart

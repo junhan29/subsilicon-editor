@@ -53,6 +53,7 @@ import {
   exportComicToZip,
 } from '@editor/lib/export-comic'
 import { detectMediaType, generateHash, validateFileSize } from '@editor/lib/media-processor'
+import { matchShortcut } from '@editor/lib/shortcut-manager'
 import { CreatorCenterDialog } from './creator-center-dialog'
 import { showToast } from './toast'
 
@@ -306,6 +307,52 @@ export function ComicEditor({ work, onBack }: ComicEditorProps) {
     scheduleSave(next, title)
     setSelectedPanelId(panel.id)
   }
+
+  // ── Phase 2: 漫画编辑器 AI 快捷键（Alt+1/2/3）──
+  // 注：useEffect 放在 addPanel / updatePanel 之后定义，避免块级变量声明前使用的 TSC 错误。
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null
+      const inEditable =
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable)
+      if (inEditable) return
+
+      if (matchShortcut(e, 'comicAiGeneratePanels')) {
+        e.preventDefault()
+        // Alt+1：触发「AI 生成面板」语义（当前占位：预留接入点，Creator 可在接入后用 AI 批量铺分镜）
+        if (data.panels.length === 0) {
+          // 空文档：先建 1 格作为种子，方便后续接 AI
+          addPanel()
+          showToast('info', '已创建种子分镜，AI 生成面板接口可在下一步接入')
+        } else {
+          showToast('info', 'AI 生成面板：接入 AI 服务后自动按故事铺分镜')
+        }
+        return
+      }
+      if (matchShortcut(e, 'comicAiPolishNarration')) {
+        e.preventDefault()
+        if (!selectedPanel) {
+          showToast('error', '先选择一个分镜，再润色旁白与台词')
+          return
+        }
+        // Alt+2：润色语义接入点（占位）
+        showToast('info', 'AI 润色旁白：接入 AI 服务后自动优化当前分镜文案')
+        return
+      }
+      if (matchShortcut(e, 'comicAiContinuePanels')) {
+        e.preventDefault()
+        // Alt+3：续写 3 格（暂用 3 个空面板占位，等 AI 接入后替换为自动内容）
+        for (let i = 0; i < 3; i += 1) addPanel()
+        showToast('success', 'AI 续写 3 格：已追加 3 格占位，接入 AI 后自动填充旁白与素材建议')
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data.panels.length, selectedPanel, addPanel])
 
   const deletePanel = (id: string) => {
     // 删除后按 (page, order) 语义重建：order 是页内顺序，每页内从 0 重编号，

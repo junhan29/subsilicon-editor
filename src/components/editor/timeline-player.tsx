@@ -156,7 +156,7 @@ export function TimelinePlayer({ clips, onEnd, compact }: TimelinePlayerProps) {
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden border border-border">
+      <div className="relative w-full aspect-video bg-black rounded-[2px] overflow-hidden border border-border">
         <video ref={vidRef} className="absolute inset-0 w-full h-full object-contain" playsInline muted={false} />
         <img ref={imgRef} alt="" className="absolute inset-0 w-full h-full object-contain" style={{ display: 'none' }} />
         {current?.subtitle && (
@@ -174,7 +174,7 @@ export function TimelinePlayer({ clips, onEnd, compact }: TimelinePlayerProps) {
         <div className="flex items-center gap-2.5">
           <button
             onClick={restart}
-            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            className="p-1.5 rounded-[2px] text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
             title="重播"
           >
             <RotateCcw className="w-3.5 h-3.5" />
@@ -182,7 +182,7 @@ export function TimelinePlayer({ clips, onEnd, compact }: TimelinePlayerProps) {
           <button
             onClick={toggle}
             disabled={clips.length === 0}
-            className="p-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 disabled:opacity-40 transition-colors"
+            className="p-1.5 rounded-[2px] bg-primary/10 text-primary hover:bg-primary/20 disabled:opacity-40 transition-colors"
             title={playing ? '暂停' : '播放'}
           >
             {playing ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}

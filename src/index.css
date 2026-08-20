@@ -171,9 +171,46 @@
     --animate-pulse-soft: pulse-soft 2s ease-in-out infinite;
     --animate-shimmer: shimmer 2s linear infinite;
     --animate-float: float 6s ease-in-out infinite;
+
+    /* ===== Cyber / Neon palette — 赛博朋克点缀色 ===== */
+    --cyber-cyan-50: 185 100% 96%;
+    --cyber-cyan-100: 182 100% 90%;
+    --cyber-cyan-200: 181 100% 80%;
+    --cyber-cyan-300: 180 100% 68%;
+    --cyber-cyan-400: 180 100% 58%;
+    --cyber-cyan-500: 180 100% 50%;
+    --cyber-cyan-600: 180 85% 42%;
+    --cyber-cyan-700: 180 75% 34%;
+    --cyber-cyan-800: 180 65% 26%;
+    --cyber-cyan-900: 180 55% 18%;
+
+    --cyber-magenta-50: 325 100% 96%;
+    --cyber-magenta-100: 322 100% 90%;
+    --cyber-magenta-200: 321 100% 80%;
+    --cyber-magenta-300: 320 100% 68%;
+    --cyber-magenta-400: 320 100% 60%;
+    --cyber-magenta-500: 320 100% 55%;
+    --cyber-magenta-600: 320 85% 45%;
+    --cyber-magenta-700: 320 75% 37%;
+    --cyber-magenta-800: 320 65% 28%;
+    --cyber-magenta-900: 320 55% 20%;
+
+    --cyber-purple-50: 275 100% 96%;
+    --cyber-purple-100: 272 95% 90%;
+    --cyber-purple-200: 271 90% 80%;
+    --cyber-purple-300: 270 90% 70%;
+    --cyber-purple-400: 270 90% 64%;
+    --cyber-purple-500: 270 90% 60%;
+    --cyber-purple-600: 270 80% 50%;
+    --cyber-purple-700: 270 70% 42%;
+    --cyber-purple-800: 270 60% 32%;
+    --cyber-purple-900: 270 50% 22%;
+
+    --cyber-yellow-400: 55 100% 58%;
+    --cyber-lime-400: 110 90% 55%;
   }
 
-  /* ===== .dark — 深色（预告函暗色） ===== */
+  /* ===== .dark — 深色（霓虹剪贴·红黑金） ===== */
   .dark {
     --background: 0 0% 5%;
     --foreground: 0 0% 96%;
@@ -289,7 +326,7 @@
     --shadow-glow-primary: 0 0 20px hsl(var(--primary) / 0.3);
   }
 
-  /* ===== .sepia — 旧纸预告函 ===== */
+  /* ===== .sepia — 羊皮纸 · 棕 ===== */
   .sepia {
     --background: 25 15% 94%;
     --foreground: 25 20% 15%;
@@ -670,4 +707,228 @@ body {
     background: hsl(var(--card));
     border: 1px solid hsl(var(--border));
   }
+
+  /* ====== P5 剪贴 + 赛博朋克装饰类 ====== */
+
+  /** 斜切卡片（纸板剪贴风右上角斜切） */
+  .clipped-card {
+    position: relative;
+    clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 0 100%);
+    background: hsl(var(--card));
+    border: 2px solid hsl(var(--primary));
+    box-shadow: 4px 4px 0 hsl(var(--primary) / 0.2);
+  }
+  .clipped-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 14px;
+    height: 14px;
+    background: linear-gradient(135deg, transparent 50%, hsl(var(--primary)) 50%);
+  }
+
+  /** 双切角：左上 + 右下（更有动感） */
+  .clipped-card-both {
+    position: relative;
+    clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px);
+    background: hsl(var(--card));
+    border: 2px solid hsl(var(--primary));
+    box-shadow: 4px 4px 0 hsl(var(--primary) / 0.25);
+  }
+
+  /** 硬阴影：扁平风格实心偏移阴影，4 个尺寸 */
+  .hard-shadow { box-shadow: 3px 3px 0 hsl(var(--primary) / 0.4); }
+  .hard-shadow-gold { box-shadow: 3px 3px 0 hsl(var(--gold) / 0.5); }
+  .hard-shadow-lg { box-shadow: 5px 5px 0 hsl(var(--primary) / 0.5); }
+  .hard-shadow-cyan { box-shadow: 3px 3px 0 hsl(var(--cyber-cyan-500) / 0.45); }
+  .hard-shadow-magenta { box-shadow: 3px 3px 0 hsl(var(--cyber-magenta-500) / 0.45); }
+
+  /** 邮票齿孔边（P5 通知单的邮票装饰） */
+  .perf-edge {
+    position: relative;
+    border: 2px dashed hsl(var(--primary) / 0.6);
+    background: hsl(var(--card));
+  }
+  .perf-edge::before,
+  .perf-edge::after {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border: 2px solid hsl(var(--primary) / 0.15);
+    mask: radial-gradient(circle at 6px 6px, transparent 2.5px, #000 3px) 0 0 / 12px 12px;
+    pointer-events: none;
+  }
+
+  /** 红印章（stamp）—— 怪盗 LOGO 风 */
+  .stamp-red {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.25rem 0.75rem;
+    border: 2px solid hsl(var(--primary));
+    color: hsl(var(--primary));
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    background: hsl(var(--primary) / 0.05);
+    transform: rotate(-2deg);
+    box-shadow: inset 0 0 0 1px hsl(var(--primary) / 0.3), 0 0 0 1px hsl(var(--primary) / 0.2);
+  }
+  .stamp-gold {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.25rem 0.75rem;
+    border: 2px solid hsl(var(--gold));
+    color: hsl(var(--gold));
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    background: hsl(var(--gold) / 0.06);
+    transform: rotate(1.5deg);
+    box-shadow: inset 0 0 0 1px hsl(var(--gold) / 0.3), 0 0 0 1px hsl(var(--gold) / 0.2);
+  }
+
+  /** 半调网点背景（用于主视觉卡片背后） */
+  .halftone-bg {
+    background-image: radial-gradient(
+      circle at center,
+      hsl(var(--primary) / 0.18) 1.2px,
+      transparent 1.6px
+    );
+    background-size: 8px 8px;
+  }
+  .halftone-bg-gold {
+    background-image: radial-gradient(
+      circle at center,
+      hsl(var(--gold) / 0.22) 1.2px,
+      transparent 1.6px
+    );
+    background-size: 8px 8px;
+  }
+  .halftone-bg-cyan {
+    background-image: radial-gradient(
+      circle at center,
+      hsl(var(--cyber-cyan-500) / 0.2) 1.2px,
+      transparent 1.6px
+    );
+    background-size: 8px 8px;
+  }
+
+  /** 霓虹描边（赛博朋克） */
+  .neon-border-cyan {
+    border: 1px solid hsl(var(--cyber-cyan-500) / 0.55);
+    box-shadow: 0 0 0 1px hsl(var(--cyber-cyan-500) / 0.15),
+                0 0 12px hsl(var(--cyber-cyan-500) / 0.25);
+  }
+  .neon-border-magenta {
+    border: 1px solid hsl(var(--cyber-magenta-500) / 0.55);
+    box-shadow: 0 0 0 1px hsl(var(--cyber-magenta-500) / 0.15),
+                0 0 12px hsl(var(--cyber-magenta-500) / 0.25);
+  }
+  .neon-border-primary {
+    border: 1px solid hsl(var(--primary) / 0.55);
+    box-shadow: 0 0 0 1px hsl(var(--primary) / 0.15),
+                0 0 12px hsl(var(--primary) / 0.25);
+  }
+  .neon-border-gold {
+    border: 1px solid hsl(var(--gold) / 0.6);
+    box-shadow: 0 0 0 1px hsl(var(--gold) / 0.18),
+                0 0 14px hsl(var(--gold) / 0.3);
+  }
+
+  /** 双层描边：外粗黑 + 内细彩 */
+  .double-border {
+    border: 1px solid hsl(var(--foreground) / 0.8);
+    box-shadow: 0 0 0 3px hsl(var(--card)),
+                0 0 0 5px hsl(var(--primary));
+  }
+
+  /** 胶带粘贴：顶部黄色或白色胶带（纸板剪贴风） */
+  .tape-top {
+    position: relative;
+  }
+  .tape-top::before {
+    content: '';
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%) rotate(-1.5deg);
+    width: 80px;
+    height: 20px;
+    background: hsl(var(--gold) / 0.55);
+    backdrop-filter: blur(1px);
+    box-shadow: 0 1px 3px hsl(0 0% 0% / 0.08);
+  }
+  .tape-red::before { background: hsl(var(--primary) / 0.4); }
+
+  /** 斜切文字带（P5 主视觉） */
+  .p5-sash {
+    display: inline-block;
+    padding: 0.35rem 1.1rem;
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+    box-shadow: 3px 3px 0 hsl(var(--primary) / 0.4);
+  }
+  .p5-sash-gold {
+    display: inline-block;
+    padding: 0.35rem 1.1rem;
+    background: hsl(var(--gold));
+    color: hsl(0 0% 10%);
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+    box-shadow: 3px 3px 0 hsl(var(--gold) / 0.4);
+  }
+  .p5-sash-cyan {
+    display: inline-block;
+    padding: 0.35rem 1.1rem;
+    background: hsl(var(--cyber-cyan-500));
+    color: hsl(0 0% 0%);
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+    box-shadow: 3px 3px 0 hsl(var(--cyber-cyan-500) / 0.4);
+  }
+
+  /** 霓虹文字 glow */
+  .text-glow-cyan {
+    text-shadow: 0 0 8px hsl(var(--cyber-cyan-500) / 0.6),
+                 0 0 16px hsl(var(--cyber-cyan-500) / 0.3);
+  }
+  .text-glow-magenta {
+    text-shadow: 0 0 8px hsl(var(--cyber-magenta-500) / 0.6),
+                 0 0 16px hsl(var(--cyber-magenta-500) / 0.3);
+  }
+  .text-glow-gold {
+    text-shadow: 0 0 8px hsl(var(--gold) / 0.65),
+                 0 0 16px hsl(var(--gold) / 0.35);
+  }
+  .text-glow-primary {
+    text-shadow: 0 0 8px hsl(var(--primary) / 0.55),
+                 0 0 16px hsl(var(--primary) / 0.3);
+  }
+
+  /** 赛博扫描线（纯装饰，带感的背景动画） */
+  .scanlines {
+    position: relative;
+    overflow: hidden;
+  }
+  .scanlines::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      to bottom,
+      hsl(0 0% 100% / 0.03) 0px,
+      hsl(0 0% 100% / 0.03) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+  }
 }
+
+/* @NOTE: tailwind 颜色映射见 tailwind.config.js */

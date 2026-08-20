@@ -85,7 +85,7 @@ function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: () => void }) 
 
   return (
     <div
-      className={`pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-xl border shadow-lg animate-slide-in-toast ${config.bg}`}
+      className={`pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-[2px] border shadow-lg shadow-[3px_3px_0_hsl(var(--gold)/0.15)] clip-path-polygon-[0_0,calc(100%-8px)_0,100%_8px,100%_100%,0_100%] animate-slide-in-toast ${config.bg}`}
     >
       {config.icon}
       <span className={`text-sm ${config.text}`}>{toast.message}</span>

@@ -90,7 +90,7 @@ const AnnotationItem = memo(function AnnotationItem({
 
   return (
     <div
-      className="rounded-lg border p-2.5 transition-colors"
+      className="rounded-[2px] border p-2.5 transition-colors clip-path-polygon-[0_0,calc(100%-8px)_0,100%_8px,100%_100%,0_100%]"
       style={{
         backgroundColor: annotation.resolved ? 'rgba(107, 114, 128, 0.06)' : meta.bg,
         borderColor: annotation.resolved ? 'rgba(107, 114, 128, 0.3)' : meta.border,
@@ -213,7 +213,7 @@ const AddAnnotationForm = memo(function AddAnnotationForm({
   }, [handleSubmit, onCancel])
 
   return (
-    <div className="rounded-lg border border-border bg-muted/50 p-2.5 space-y-2">
+    <div className="rounded-[2px] border border-border bg-muted/50 p-2.5 space-y-2 clip-path-polygon-[0_0,calc(100%-8px)_0,100%_8px,100%_100%,0_100%]">
       <div className="flex items-center gap-1">
         {(['comment', 'todo', 'warning', 'idea'] as AnnotationType[]).map((t) => {
           const m = ANNOTATION_TYPE_META[t]

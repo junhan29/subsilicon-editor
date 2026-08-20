@@ -246,6 +246,7 @@ function App() {
             onBack={handleBackToProjects}
             workType={workType}
             workId={currentWork.id}
+            onStartTour={() => setShowTour(true)}
           />
         )}
         {appMode === 'settings' && (

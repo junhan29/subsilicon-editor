@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { AlertCircle, Bot, Bug, Check, ChevronDown, ChevronRight, Eye, Image, ListChecks, Loader2, Music, Send, Settings, Sparkles, Trash2, Undo2, User, Video, X } from 'lucide-react'
+import { AlertCircle, Bot, BookOpen, Bug, Check, ChevronDown, ChevronRight, Eye, Image, ListChecks, Loader2, MessageSquare, Music, Send, Settings, Sparkles, Trash2, Undo2, User, Video, X } from 'lucide-react'
 import { showToast } from './toast'
 import { AiSettingsDialog } from './ai-settings-dialog'
 import { CreatorInputPanel, CREATOR_INPUT_TYPE_LABELS } from './creator-input-panel'
@@ -179,6 +179,8 @@ export function AiChatPanel(props: AiChatPanelProps) {
 
   // —— 灵感库（创作者输入库）：采集自 AI 对话的输入记录；version 用于通知面板刷新 ——
   const [creatorInputVersion, setCreatorInputVersion] = useState(0)
+  const [showCreatorInputDrawer, setShowCreatorInputDrawer] = useState(false)
+  const [creatorInputCount, setCreatorInputCount] = useState(0)
   // 「生成时引用输入库」开关（localStorage 持久化，默认开启）
   const [useCreatorInputsInContext, setUseCreatorInputsInContext] = useState(() => {
     try {
@@ -189,6 +191,21 @@ export function AiChatPanel(props: AiChatPanelProps) {
     setUseCreatorInputsInContext(next)
     try { localStorage.setItem('subsilicon_ai_use_creator_inputs', next ? 'true' : 'false') } catch { /* ignore */ }
   }, [])
+
+  // 刷新灵感库条目计数
+  const refreshCreatorInputCount = useCallback(async () => {
+    try {
+      const all = await listCreatorInputs()
+      const filtered = workId ? all.filter((e) => e.workId === workId || e.workId === '') : all
+      setCreatorInputCount(filtered.length)
+    } catch {
+      setCreatorInputCount(0)
+    }
+  }, [workId])
+
+  useEffect(() => {
+    refreshCreatorInputCount()
+  }, [refreshCreatorInputCount, creatorInputVersion])
 
   // 新增预设规则
   const handleAddRule = () => {
@@ -879,26 +896,65 @@ export function AiChatPanel(props: AiChatPanelProps) {
   }
 
   return (
-    <div className="flex flex-col h-full min-w-0">
-      {/* 顶部工具栏 */}
-      <div className="flex items-center justify-between px-3 py-2.5 border-b border-border/40 shrink-0 bg-card/40 backdrop-blur-sm">
-        <div className="flex items-center gap-2 min-w-0">
-          <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-gold-400 to-cyan-400 flex items-center justify-center shrink-0 shadow-sm shadow-gold-400/20">
-            <Sparkles className="w-3.5 h-3.5 text-white" />
+    <div className="flex flex-col h-full min-w-0 relative overflow-hidden">
+      {/* 顶部工具栏：2 行分组布局 */}
+      <div className="flex flex-col gap-1 px-3 py-2 border-b border-border/40 shrink-0 bg-card/40 backdrop-blur-sm">
+        {/* 第一行：身份 + 右侧快捷操作 */}
+        <div className="flex items-center justify-between gap-2 min-w-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-gold-400 via-primary to-cyber-cyan-500/70 flex items-center justify-center shrink-0 shadow-md shadow-primary/30 border border-gold-400/30">
+              <Sparkles className="w-4 h-4 text-white" />
+            </div>
+            <span className="text-sm font-bold text-foreground tracking-wide">{assistantName}</span>
+            {aiEnabled ? (
+              <span className="inline-flex items-center gap-1 text-[10px] text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-full shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                已连接
+              </span>
+            ) : (
+              <span className="text-[10px] text-destructive bg-destructive/10 border border-destructive/20 px-1.5 py-0.5 rounded-full shrink-0">未配置</span>
+            )}
           </div>
-          <span className="text-sm font-semibold text-white tracking-wide">{assistantName}</span>
-          {aiEnabled && (
-            <span className="text-[10px] text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-full">已连接</span>
-          )}
+          <div className="flex items-center gap-1 shrink-0">
+            {/* 灵感库图标按钮：点击打开右侧抽屉 */}
+            <button
+              type="button"
+              onClick={() => setShowCreatorInputDrawer(true)}
+              className="relative flex items-center gap-1 px-2 py-1 rounded-md border border-gold-400/20 bg-gold-400/5 text-muted-foreground hover:text-gold-400 hover:border-gold-400/40 hover:bg-gold-400/10 transition-colors"
+              title={`灵感库（${creatorInputCount} 条）`}
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+              <span className="text-[10px] hidden sm:inline">灵感库</span>
+              {creatorInputCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[14px] h-[14px] px-1 text-[9px] font-bold flex items-center justify-center rounded-full bg-primary text-white border border-primary-foreground/20">
+                  {creatorInputCount > 99 ? '99+' : creatorInputCount}
+                </span>
+              )}
+            </button>
+            {/* 设置按钮 */}
+            <button
+              type="button"
+              onClick={() => setShowSettings(true)}
+              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
+              title="AI 设置"
+            >
+              <Settings className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* 第二行：功能控制组（flex-wrap 自动换行，避免窄屏覆盖） */}
+        <div className="flex flex-wrap items-center gap-1.5">
           {/* 模型切换器 */}
           {aiEnabled && currentModel && (
             <div className="relative" ref={modelSwitcherRef}>
               <button
                 onClick={() => setShowModelSwitcher(!showModelSwitcher)}
-                className="flex items-center gap-1 px-1.5 py-0.5 text-[10px] bg-secondary/50 hover:bg-secondary text-foreground rounded transition-colors"
+                className="flex items-center gap-1 px-2 py-1 text-[11px] bg-secondary/50 hover:bg-secondary text-foreground rounded-md border border-border/40 transition-colors"
                 title="切换模型"
               >
-                {currentModel}
+                <Bot className="w-3 h-3 text-cyber-cyan-500/80" />
+                <span className="max-w-[120px] truncate">{currentModel}</span>
                 <ChevronDown className="w-3 h-3" />
               </button>
               {showModelSwitcher && (
@@ -933,57 +989,72 @@ export function AiChatPanel(props: AiChatPanelProps) {
               )}
             </div>
           )}
-          {/* AI 对话模式切换：先聊后做 / 边聊边做（持久化） */}
-          <div className="flex items-center gap-0.5 ml-0.5 rounded-md border border-border/50 bg-muted/60 p-0.5" title="AI 对话模式：先聊后做（先讨论、确认后再落画布）/ 边聊边做（收到想法即可落地）">
+
+          {/* 聊天模式切换：Segmented Control */}
+          <div
+            role="tablist"
+            className="inline-flex items-center rounded-md border border-border/50 bg-muted/60 p-0.5 gap-0.5"
+            title="AI 对话模式：先聊后做（讨论确认后落画布）/ 边聊边做（收到想法即可落地）"
+          >
             <button
               type="button"
+              role="tab"
+              aria-selected={chatMode === 'discuss-first'}
               onClick={() => setChatMode('discuss-first')}
-              className={`px-1.5 py-0.5 text-[10px] rounded transition-colors ${
-                chatMode === 'discuss-first' ? 'bg-gold-400/20 text-gold-400' : 'text-muted-foreground hover:text-foreground'
+              className={`inline-flex items-center gap-1 px-2 py-1 text-[11px] rounded transition-all ${
+                chatMode === 'discuss-first'
+                  ? 'bg-primary/15 text-primary border border-primary/30 shadow-sm shadow-primary/10 font-medium'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
               }`}
             >
+              <MessageSquare className="w-3 h-3" />
               先聊后做
             </button>
             <button
               type="button"
+              role="tab"
+              aria-selected={chatMode === 'act-along'}
               onClick={() => setChatMode('act-along')}
-              className={`px-1.5 py-0.5 text-[10px] rounded transition-colors ${
-                chatMode === 'act-along' ? 'bg-gold-400/20 text-gold-400' : 'text-muted-foreground hover:text-foreground'
+              className={`inline-flex items-center gap-1 px-2 py-1 text-[11px] rounded transition-all ${
+                chatMode === 'act-along'
+                  ? 'bg-cyber-cyan-500/15 text-cyber-cyan-500 border border-cyber-cyan-500/30 shadow-sm shadow-cyber-cyan-500/10 font-medium'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
               }`}
             >
+              <Sparkles className="w-3 h-3" />
               边聊边做
             </button>
           </div>
-          {/* 边聊边做模式：「回滚 AI 操作」—— 撤销到最近一次 AI 批量操作之前（可重复回退更早批次） */}
+
+          {/* 边聊边做模式：回滚 AI 按钮 */}
           {chatMode === 'act-along' && (
             <button
               type="button"
               onClick={handleRollbackAiBatch}
-              className="flex items-center gap-1 px-1.5 py-0.5 text-[10px] rounded border border-border/50 bg-muted/60 text-muted-foreground hover:text-gold-400 hover:border-gold-400/30 transition-colors"
-              title="回滚到最近一次 AI 批量操作之前的状态（可重复回退到更早的 AI 批次）"
+              className="inline-flex items-center gap-1 px-2 py-1 text-[11px] rounded-md border border-destructive/30 bg-destructive/5 text-destructive hover:bg-destructive/15 hover:border-destructive/50 transition-colors"
+              title="回滚到最近一次 AI 批量操作之前的状态（可重复回退更早批次）"
             >
               <Undo2 className="w-3 h-3" />
               回滚 AI
             </button>
           )}
-        </div>
-        <div className="flex items-center gap-1">
-          {/* 自定义工作流选择器（文本 / 正文生成类） */}
-          <div className="relative mr-1">
+
+          {/* 自定义工作流选择器 */}
+          <div className="relative">
             <button
               type="button"
               onClick={() => setShowTextWorkflowPicker((v) => !v)}
               onBlur={() => setTimeout(() => setShowTextWorkflowPicker(false), 120)}
-              className={`flex items-center gap-1.5 px-2 py-1.5 rounded border transition-colors max-w-[200px] ${
+              className={`flex items-center gap-1.5 px-2 py-1 rounded-md border transition-colors max-w-[200px] text-[11px] ${
                 activeTextWorkflow
-                  ? 'bg-yellow-500/10 border-yellow-500/30 text-yellow-300'
-                  : 'border-transparent text-muted-foreground hover:text-white hover:bg-secondary hover:border-border'
+                  ? 'bg-cyber-magenta-500/10 border-cyber-magenta-500/30 text-cyber-magenta-500'
+                  : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-secondary hover:border-border/50'
               }`}
-              title="选择文本类自定义工作流（Skill），自动注入系统提示词 + 控制温度/maxTokens"
+              title="选择文本类自定义工作流（Skill），自动注入系统提示词"
             >
-              <Sparkles className="w-3.5 h-3.5 flex-shrink-0" />
-              <span className="text-[11px] truncate">
-                {activeTextWorkflow ? activeTextWorkflow.name : '工作流（可选）'}
+              <ListChecks className="w-3.5 h-3.5 flex-shrink-0" />
+              <span className="truncate">
+                {activeTextWorkflow ? activeTextWorkflow.name : '工作流'}
               </span>
               <ChevronDown className={`w-3 h-3 transition-transform flex-shrink-0 ${showTextWorkflowPicker ? 'rotate-180' : ''}`} />
             </button>
@@ -1016,26 +1087,18 @@ export function AiChatPanel(props: AiChatPanelProps) {
                         onMouseDown={(e) => e.preventDefault()}
                         onClick={() => applyTextWorkflow(wf.id)}
                         className={`w-full text-left px-2.5 py-2 border-b last:border-b-0 border-border/50 transition-colors ${
-                          active ? 'bg-yellow-500/10' : 'hover:bg-secondary/60'
+                          active ? 'bg-cyber-magenta-500/10' : 'hover:bg-secondary/60'
                         }`}
                       >
                         <div className="flex items-start gap-2">
-                          <Check className={`w-3 h-3 mt-0.5 flex-shrink-0 ${active ? 'text-yellow-400' : 'opacity-0'}`} />
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-1.5">
-                              <p className={`text-[11px] truncate ${active ? 'text-yellow-300 font-medium' : 'text-foreground'}`}>{wf.name}</p>
-                              {wf.builtin && (
-                                <span className="text-[9px] px-1 rounded border border-border text-muted-foreground flex-shrink-0">内置</span>
-                              )}
-                              {wf.text?.temperature != null && (
-                                <span className="text-[9px] px-1 rounded bg-secondary text-muted-foreground font-mono flex-shrink-0">T {wf.text.temperature.toFixed(2)}</span>
-                              )}
-                            </div>
-                            {wf.description && (
-                              <p className="text-[9px] text-muted-foreground leading-snug line-clamp-2 mt-0.5">{wf.description}</p>
-                            )}
-                          </div>
+                          <span className={`text-[11px] font-medium flex-1 ${active ? 'text-cyber-magenta-500' : 'text-foreground'}`}>
+                            {wf.name}
+                          </span>
+                          {active && <Check className="w-3 h-3 text-cyber-magenta-500 mt-0.5 shrink-0" />}
                         </div>
+                        {wf.description && (
+                          <p className="mt-0.5 text-[10px] text-muted-foreground leading-snug">{wf.description}</p>
+                        )}
                       </button>
                     )
                   })
@@ -1043,72 +1106,69 @@ export function AiChatPanel(props: AiChatPanelProps) {
               </div>
             )}
           </div>
-
-          <button
-            onClick={togglePreviewMode}
-            className={`p-1.5 rounded hover:bg-secondary transition-colors ${
-              previewMode ? 'text-gold-400 bg-gold-400/10' : 'text-muted-foreground hover:text-white'
-            }`}
-            title={previewMode ? '命令预览已开启：AI 操作前先确认' : '命令预览已关闭：AI 直接执行操作'}
-          >
-            <Eye className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={() => {
-              setShowDebugPanel(!showDebugPanel)
-              setDebugEntries(getDebugEntries())
-            }}
-            className={`p-1.5 rounded hover:bg-secondary transition-colors ${
-              showDebugPanel ? 'text-cyan-400 bg-cyan-500/10' : 'text-muted-foreground hover:text-white'
-            }`}
-            title="调试面板"
-          >
-            <Bug className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={() => setShowSettings(true)}
-            className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-white transition-colors"
-            title={`${assistantName}设置`}
-          >
-            <Settings className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={handleClear}
-            className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-white transition-colors"
-            title="清空对话"
-            disabled={messages.length <= 1 && !streamingContent}
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
         </div>
       </div>
 
-      {/* 消息列表 */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      {/* 消息区域 + 灵感库抽屉（并排） */}
+      <div className="flex flex-1 min-h-0 overflow-hidden">
+        {/* 消息列表主区域 */}
+        <div className="flex-1 flex flex-col min-w-0 min-h-0">
+          {/* 调试面板开关条（仅在 showDebugPanel 时不渲染此条，直接显示面板） */}
+          {!showDebugPanel && (
+            <div className="flex items-center gap-2 px-3 py-1.5 border-b border-border/20 shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowDebugPanel(true)}
+                className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <Bug className="w-3 h-3" />
+                调试
+              </button>
+              <span className="text-[10px] text-muted-foreground/50 ml-auto">
+                {chatMode === 'act-along' ? '已开启边聊边做' : '先聊后做模式'}
+              </span>
+            </div>
+          )}
+          {/* 消息列表 - 添加 min-h-0 确保在 flex 容器中正确滚动 */}
+          <div ref={messagesEndRef} className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
         {messages.map((msg) => (
           <div
             key={msg.id}
             className={`flex gap-2.5 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             {msg.role !== 'user' && (
-              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gold-400/30 to-cyan-400/30 border border-border/50 flex items-center justify-center shrink-0 mt-0.5">
-                {msg.role === 'system' ? (
-                  <Sparkles className="w-3.5 h-3.5 text-gold-400" />
-                ) : (
-                  <Bot className="w-3.5 h-3.5 text-cyan-300" />
-                )}
+              <div className="w-7 h-7 shrink-0 mt-0.5 relative">
+                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-gold-400/40 via-primary/40 to-cyber-cyan-500/40 border border-gold-400/30 flex items-center justify-center shadow-md shadow-primary/10 rotate-[-4deg]">
+                  {msg.role === 'system' ? (
+                    <Sparkles className="w-3.5 h-3.5 text-gold-400" />
+                  ) : (
+                    <Bot className="w-3.5 h-3.5 text-cyber-cyan-400" />
+                  )}
+                </div>
               </div>
             )}
             <div
-              className={`max-w-[85%] px-3.5 py-2.5 rounded-2xl text-[13px] leading-relaxed ${
+              className={`max-w-[85%] px-3.5 py-2.5 text-[13px] leading-relaxed ${
                 msg.role === 'user'
-                  ? 'bg-gradient-to-br from-gold-400/25 to-gold-500/15 text-amber-50 border border-gold-400/25 rounded-tr-sm'
+                  // 用户气泡：右上角斜切 + 金红渐变 + 硬阴影（P5 剪贴风）
+                  ? 'bg-gradient-to-br from-gold-400 to-primary text-white rounded-xl rounded-tr-[2px] shadow-[3px_3px_0_hsl(var(--primary)/0.25)] border border-primary/30 relative overflow-hidden'
                   : msg.role === 'system'
-                    ? 'yasgui-ai-bubble text-foreground'
-                    : 'yasgui-ai-bubble text-foreground'
+                    // System 欢迎消息：双切角纸板 + 半调网点背景
+                    ? 'yasgui-ai-bubble text-foreground rounded-xl relative overflow-hidden border-2 border-gold-400/40 shadow-[3px_3px_0_hsl(var(--gold)/0.2)] bg-card'
+                    // AI 助手回复：左上角斜切 + 霓虹青边
+                    : 'yasgui-ai-bubble text-foreground rounded-xl rounded-tl-[2px] relative overflow-hidden border border-cyber-cyan-500/25 shadow-[3px_3px_0_hsl(var(--cyber-cyan-500)/0.12)]'
               }`}
             >
-              {renderContent(msg.content)}
+              {msg.role === 'user' && (
+                <div className="absolute top-0 right-0 w-10 h-10 halftone-bg-gold opacity-20 pointer-events-none" aria-hidden />
+              )}
+              {msg.role === 'system' && (
+                <div className="absolute inset-0 halftone-bg-cyan opacity-10 pointer-events-none" aria-hidden />
+              )}
+              {msg.role === 'assistant' && (
+                <div className="absolute top-0 left-0 w-10 h-10 halftone-bg opacity-15 pointer-events-none" aria-hidden />
+              )}
+              <div className="relative">{renderContent(msg.content)}</div>
               {/* 媒体生成请求卡片 */}
               {msg.mediaRequests && msg.mediaRequests.length > 0 && (
                 <div className="mt-2 space-y-2 border-t border-border/30 pt-2">
@@ -1117,9 +1177,9 @@ export function AiChatPanel(props: AiChatPanelProps) {
                     const result = req._result
                     const assetHash = req._assetHash
                     const mediaIcon = req.mediaType === 'image' ? Image : req.mediaType === 'video' ? Video : Music
-                    const mediaColor = req.mediaType === 'image' ? 'text-primary' : req.mediaType === 'video' ? 'text-purple-400' : 'text-green-400'
+                    const mediaColor = req.mediaType === 'image' ? 'text-primary' : req.mediaType === 'video' ? 'text-gold-400' : 'text-gold-600'
                     const mediaBg = req.mediaType === 'image' ? 'bg-primary/10 border-primary/20' :
-                                    req.mediaType === 'video' ? 'bg-purple-500/10 border-purple-500/20' : 'bg-green-500/10 border-green-500/20'
+                                    req.mediaType === 'video' ? 'bg-gold-500/10 border-gold-500/20' : 'bg-gold-500/10 border-gold-500/20'
 
                     if (status === 'done' && result) {
                       return (
@@ -1197,7 +1257,7 @@ export function AiChatPanel(props: AiChatPanelProps) {
                               </span>
                             )}
                             {req.nodeId && (
-                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-300">
+                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-gold-500/15 text-gold-300">
                                 → {String(nodes.find((n) => n.id === req.nodeId)?.data?.title || '节点')}
                               </span>
                             )}
@@ -1582,50 +1642,88 @@ export function AiChatPanel(props: AiChatPanelProps) {
         </div>
       )}
 
-      {/* 灵感库（创作者输入库）：AI 对话自动采集的输入记录，可查看/搜索/改类型/删除/注入对话 */}
-      <CreatorInputPanel
-        workId={workId ?? ''}
-        onInject={handleInjectCreatorInput}
-        refreshKey={creatorInputVersion}
-        useInContext={useCreatorInputsInContext}
-        onToggleUseInContext={toggleUseCreatorInputsInContext}
-      />
-
-      {/* 输入区域 */}
-      <div className="shrink-0 border-t border-border/40 p-3 bg-card/40 backdrop-blur-sm">
-        <div className="flex items-end gap-2">
-          <textarea
-            ref={inputRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="聊聊你的灵感或故事大纲……（Enter 发送）"
-            rows={1}
-            disabled={isStreaming}
-            className="flex-1 text-[13px] rounded-xl border border-border/60 bg-muted/60 px-3.5 py-2.5 text-white placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-amber-500/40 focus:border-gold-400/40 resize-none min-h-[38px] max-h-[120px] disabled:opacity-50 transition-shadow"
-          />
-          {isStreaming ? (
-            <button
-              onClick={handleStop}
-              className="px-3.5 py-2.5 bg-primary/15 text-red-300 border border-primary/30 rounded-xl hover:bg-primary/25 transition-colors shrink-0"
-              title="停止生成"
-            >
-              <Loader2 className="w-4 h-4 animate-spin" />
-            </button>
-          ) : (
-            <button
-              onClick={handleSend}
-              disabled={!input.trim() || !aiEnabled}
-              className="px-3.5 py-2.5 bg-gradient-to-br from-gold-400 to-gold-500 text-white rounded-xl hover:opacity-90 active:scale-95 transition-all disabled:opacity-30 disabled:active:scale-100 shrink-0 shadow-sm shadow-gold-400/20"
-              title="发送"
-            >
-              <Send className="w-4 h-4" />
-            </button>
-          )}
+          {/* 输入区域 - 添加 flex-col 确保在受限高度下正确显示 */}
+          <div className="shrink-0 border-t border-border/40 p-3 bg-card/40 backdrop-blur-sm flex flex-col">
+            <div className="flex items-end gap-2">
+              <textarea
+                ref={inputRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder={chatMode === 'act-along'
+                  ? '边聊边做：说出你的想法，AI 会直接在画布上落地（Enter 发送）'
+                  : '聊聊你的灵感或故事大纲……（Enter 发送）'
+                }
+                rows={1}
+                disabled={isStreaming}
+                className="flex-1 text-[13px] rounded-xl border border-border/60 bg-muted/60 px-3.5 py-2.5 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-gold-400/30 focus:border-gold-400/40 resize-none min-h-[38px] max-h-[120px] disabled:opacity-50 transition-shadow"
+              />
+              {isStreaming ? (
+                <button
+                  onClick={handleStop}
+                  className="px-3.5 py-2.5 bg-destructive/15 text-destructive border border-destructive/30 rounded-xl hover:bg-destructive/25 transition-colors shrink-0"
+                  title="停止生成"
+                >
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                </button>
+              ) : (
+                <button
+                  onClick={handleSend}
+                  disabled={!input.trim() || !aiEnabled}
+                  className="px-3.5 py-2.5 bg-gradient-to-br from-gold-400 to-primary text-white rounded-xl hover:opacity-90 active:scale-95 transition-all disabled:opacity-30 disabled:active:scale-100 shrink-0 shadow-md shadow-primary/20"
+                  title="发送"
+                >
+                  <Send className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+            <p className="mt-1.5 text-[10px] text-muted-foreground text-center leading-snug">
+              {chatMode === 'discuss-first'
+                ? '先聊想法，我会帮你分析并梳理大纲，确认后再落到画布'
+                : '边聊边做已开启，你的想法会直接在画布上落地，随时点击「回滚 AI」撤销'}
+            </p>
+          </div>
         </div>
-        <p className="mt-1.5 text-[10px] text-muted-foreground text-center">
-          先聊想法，我会帮你分析并梳理大纲，确认后再落到画布
-        </p>
+
+        {/* 灵感库右侧抽屉：点击灵感库按钮时滑出 */}
+        <aside
+          className={`shrink-0 h-full border-l border-border/50 bg-card/60 backdrop-blur-sm transition-[width,opacity] duration-300 ease-out overflow-hidden flex flex-col ${
+            showCreatorInputDrawer ? 'w-[280px] opacity-100' : 'w-0 opacity-0'
+          }`}
+          aria-hidden={!showCreatorInputDrawer}
+        >
+          {showCreatorInputDrawer && (
+            <>
+              <div className="flex items-center justify-between px-3 py-2 border-b border-border/50 shrink-0">
+                <div className="flex items-center gap-2">
+                  <BookOpen className="w-4 h-4 text-gold-400" />
+                  <span className="text-sm font-bold text-foreground">灵感库</span>
+                  <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">
+                    {creatorInputCount}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowCreatorInputDrawer(false)}
+                  className="p-1 rounded hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors"
+                  title="关闭"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-hidden min-h-0">
+                <CreatorInputPanel
+                  workId={workId ?? ''}
+                  onInject={handleInjectCreatorInput}
+                  refreshKey={creatorInputVersion}
+                  useInContext={useCreatorInputsInContext}
+                  onToggleUseInContext={toggleUseCreatorInputsInContext}
+                  compact
+                />
+              </div>
+            </>
+          )}
+        </aside>
       </div>
 
       {/* 创作助理设置弹窗 */}

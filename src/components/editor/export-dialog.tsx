@@ -564,11 +564,11 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={descId}
-        className="w-full max-w-2xl max-h-[90vh] bg-background rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+        className="w-full max-w-2xl max-h-[90vh] bg-background rounded-[2px] shadow-[6px_6px_0_hsl(var(--gold)/0.2)] clip-path-polygon-[0_0,calc(100%-12px)_0,100%_12px,100%_100%,0_100%] border border-gold-400/40 overflow-hidden flex flex-col"
       >
         <div className="flex items-center justify-between px-5 py-4 border-b shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-[2px] bg-gold-400/15 border border-gold-400/30 shadow-[2px_2px_0_hsl(var(--gold)/0.15)] flex items-center justify-center">
               <Download className="w-5 h-5 text-primary" />
             </div>
             <div>
@@ -579,7 +579,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
           <button
             onClick={onClose}
             disabled={exporting}
-            className="w-8 h-8 rounded-full hover:bg-muted flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="w-8 h-8 rounded-[2px] hover:bg-gold-400/10 border border-transparent hover:border-gold-400/30 flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <X className="w-4 h-4 text-muted-foreground" />
           </button>
@@ -603,13 +603,13 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                     type="button"
                     onClick={() => setFormat(fmt.id)}
                     disabled={exporting}
-                    className={`flex items-start gap-2.5 p-3 rounded-lg border text-left transition-all disabled:cursor-not-allowed ${
+                    className={`flex items-start gap-2.5 p-3 rounded-[2px] border clip-path-polygon-[0_0,calc(100%-8px)_0,100%_8px,100%_100%,0_100%] transition-all disabled:cursor-not-allowed ${
                       isActive
-                        ? 'border-primary bg-primary/5 ring-1 ring-primary/30'
+                        ? 'border-gold-400 bg-gold-400/15 shadow-[3px_3px_0_hsl(var(--gold)/0.2)]'
                         : 'border-border hover:border-primary/40 hover:bg-muted/40'
                     }`}
                   >
-                    <Icon className={`w-4 h-4 mt-0.5 shrink-0 ${isActive ? 'text-primary' : 'text-muted-foreground'}`} />
+                    <Icon className={`w-4 h-4 mt-0.5 shrink-0 ${isActive ? 'text-gold-500' : 'text-muted-foreground'}`} />
                     <div className="min-w-0">
                       <div className="text-sm font-medium flex items-center gap-1.5">
                         {fmt.name}
@@ -650,7 +650,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                       value={desktopVersion}
                       onChange={(e) => setDesktopVersion(e.target.value)}
                       placeholder="1.0.0"
-                      className="w-full px-2 py-1.5 rounded border border-border bg-background text-xs"
+                      className="w-full px-2 py-1.5 rounded-[2px]border border-border bg-background text-xs"
                     />
                   </div>
                   <div>
@@ -660,7 +660,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                       value={desktopAuthor}
                       onChange={(e) => setDesktopAuthor(e.target.value)}
                       placeholder="可选"
-                      className="w-full px-2 py-1.5 rounded border border-border bg-background text-xs"
+                      className="w-full px-2 py-1.5 rounded-[2px]border border-border bg-background text-xs"
                     />
                   </div>
                 </div>
@@ -671,7 +671,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                     onChange={(e) => setDesktopDescription(e.target.value)}
                     rows={2}
                     placeholder="可选"
-                    className="w-full px-2 py-1.5 rounded border border-border bg-background text-xs resize-none"
+                    className="w-full px-2 py-1.5 rounded-[2px]border border-border bg-background text-xs resize-none"
                   />
                 </div>
               </section>
@@ -682,10 +682,10 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                     打包目标平台
                   </h4>
                 </div>
-                <div className={`p-2.5 rounded-lg border border-border space-y-2 ${canDirectBuild ? '' : 'opacity-80'}`}>
+                <div className={`p-2.5 rounded-[2px] border border-border space-y-2 ${canDirectBuild ? '' : 'opacity-80'}`}>
                   <div className="grid grid-cols-4 gap-1.5">
                     {(['current', 'mac', 'win', 'linux'] as const).map((p) => (
-                      <label key={p} className={`flex items-center justify-center gap-1.5 py-2 rounded border text-[11px] cursor-pointer transition-colors ${desktopTargets[p] ? 'bg-primary/10 border-primary text-primary' : 'border-border hover:bg-muted/40'}`}>
+                      <label key={p} className={`flex items-center justify-center gap-1.5 py-2 rounded-[2px]border text-[11px] cursor-pointer transition-colors ${desktopTargets[p] ? 'bg-primary/10 border-primary text-primary' : 'border-border hover:bg-muted/40'}`}>
                         <input
                           type="checkbox"
                           className="w-3.5 h-3.5 accent-primary"
@@ -721,7 +721,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                     </button>
                   </div>
                   {!buildLogCollapsed && (
-                    <pre className="max-h-40 overflow-auto rounded-lg border border-border bg-muted/40 p-2 text-[10px] leading-snug font-mono">
+                    <pre className="max-h-40 overflow-auto rounded-[2px] border border-border bg-muted/40 p-2 text-[10px] leading-snug font-mono">
                       {desktopBuildLog.map((l, i) => (
                         <div key={i} className={
                           l.level === 'error' ? 'text-rose-600' :
@@ -748,7 +748,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                   <button
                     type="button"
                     onClick={() => setBiliMode('interactive')}
-                    className={`p-2.5 rounded-lg border text-left text-xs transition-all ${
+                    className={`p-2.5 rounded-[2px] border text-left text-xs transition-all ${
                       biliMode === 'interactive'
                         ? 'border-primary bg-primary/5 ring-1 ring-primary/30'
                         : 'border-border hover:bg-muted/40'
@@ -762,7 +762,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                   <button
                     type="button"
                     onClick={() => setBiliMode('pseudo')}
-                    className={`p-2.5 rounded-lg border text-left text-xs transition-all ${
+                    className={`p-2.5 rounded-[2px] border text-left text-xs transition-all ${
                       biliMode === 'pseudo'
                         ? 'border-primary bg-primary/5 ring-1 ring-primary/30'
                         : 'border-border hover:bg-muted/40'
@@ -774,7 +774,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                     </div>
                   </button>
                 </div>
-                <div className="p-2.5 rounded-lg border border-border mb-2">
+                <div className="p-2.5 rounded-[2px] border border-border mb-2">
                   <label className="text-[11px] text-muted-foreground block mb-1">
                     默认每段占位时长（秒） · 未单独绑定素材的节点用这个值排期
                   </label>
@@ -784,7 +784,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                     max={300}
                     value={biliDefaultSegSec}
                     onChange={(e) => setBiliDefaultSegSec(Math.max(3, Math.min(300, Number(e.target.value))))}
-                    className="w-24 px-2 py-1.5 rounded border border-border bg-background text-sm text-center"
+                    className="w-24 px-2 py-1.5 rounded-[2px]border border-border bg-background text-sm text-center"
                   />
                 </div>
               </section>
@@ -819,7 +819,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                     刷新列表
                   </button>
                 </div>
-                <div className="max-h-72 overflow-auto rounded-lg border border-border divide-y text-[11px]">
+                <div className="max-h-72 overflow-auto rounded-[2px] border border-border divide-y text-[11px]">
                   {(graph.nodes || []).slice(0, 200).map((n, idx) => {
                     const cur = biliBindings[n.id] || { nodeId: n.id }
                     const set = <K extends keyof VideoBinding>(k: K, v: VideoBinding[K]) =>
@@ -833,7 +833,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                             value={cur.partTitle || ''}
                             onChange={(e) => set('partTitle', e.target.value)}
                             placeholder="分 P 标题（建议 20 字内）"
-                            className="w-full px-1.5 py-1 rounded border border-border bg-background text-[11px]"
+                            className="w-full px-1.5 py-1 rounded-[2px]border border-border bg-background text-[11px]"
                           />
                         </div>
                         <div className="col-span-2">
@@ -842,7 +842,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                             value={cur.durationSec == null ? '' : cur.durationSec}
                             onChange={(e) => set('durationSec', e.target.value === '' ? undefined : Math.max(1, Number(e.target.value)))}
                             placeholder="秒"
-                            className="w-full px-1.5 py-1 rounded border border-border bg-background text-[11px] text-center"
+                            className="w-full px-1.5 py-1 rounded-[2px]border border-border bg-background text-[11px] text-center"
                           />
                         </div>
                         <div className="col-span-4">
@@ -851,7 +851,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                             value={cur.assetRef || ''}
                             onChange={(e) => set('assetRef', e.target.value)}
                             placeholder="素材路径 / 素材库 ID"
-                            className="w-full px-1.5 py-1 rounded border border-border bg-background text-[11px]"
+                            className="w-full px-1.5 py-1 rounded-[2px]border border-border bg-background text-[11px]"
                           />
                         </div>
                       </div>
@@ -881,12 +881,12 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
               </h4>
             </div>
             <div className="space-y-3">
-              <label className="flex items-center gap-2.5 p-2.5 rounded-lg border border-border hover:bg-muted/40 transition-colors cursor-pointer">
+              <label className="flex items-center gap-2.5 p-2.5 rounded-[2px] border border-border hover:bg-muted/40 transition-colors cursor-pointer">
                 <input
                   type="checkbox"
                   checked={drmEnabled}
                   onChange={(e) => setDrmEnabled(e.target.checked)}
-                  className="w-4 h-4 rounded border-border accent-primary"
+                  className="w-4 h-4 rounded-[2px]border-border accent-primary"
                 />
                 <div className="flex-1">
                   <div className="text-sm font-medium">启用付费解锁</div>
@@ -898,7 +898,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
 
               {drmEnabled && (
                 <>
-                  <div className="p-2.5 rounded-lg border border-border">
+                  <div className="p-2.5 rounded-[2px] border border-border">
                     <div className="text-sm mb-2">作品价格</div>
                     <div className="flex items-center gap-2">
                       <span className="text-muted-foreground text-sm">¥</span>
@@ -909,13 +909,13 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                         min={0}
                         max={999}
                         step={0.01}
-                        className="w-24 px-2 py-1.5 rounded border border-border bg-background text-sm text-center"
+                        className="w-24 px-2 py-1.5 rounded-[2px]border border-border bg-background text-sm text-center"
                       />
                       <span className="text-[11px] text-muted-foreground">元</span>
                     </div>
                   </div>
 
-                  <div className="p-2.5 rounded-lg border border-border">
+                  <div className="p-2.5 rounded-[2px] border border-border">
                     <div className="text-sm mb-2">免费试读节点数</div>
                     <div className="flex items-center gap-2">
                       <input
@@ -924,7 +924,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                         onChange={(e) => setDrmFreePreview(Math.max(0, Math.min(99, Number(e.target.value))))}
                         min={0}
                         max={99}
-                        className="w-20 px-2 py-1.5 rounded border border-border bg-background text-sm text-center"
+                        className="w-20 px-2 py-1.5 rounded-[2px]border border-border bg-background text-sm text-center"
                       />
                       <span className="text-[11px] text-muted-foreground">
                         个节点 · 设为 0 则所有内容均需付费
@@ -932,13 +932,13 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                     </div>
                   </div>
 
-                  <div className="p-2.5 rounded-lg border border-border">
+                  <div className="p-2.5 rounded-[2px] border border-border">
                     <div className="text-sm mb-2">解锁方式</div>
                     <div className="grid grid-cols-3 gap-2">
                       <button
                         type="button"
                         onClick={() => setDrmUnlockMode('hybrid')}
-                        className={`p-2.5 rounded-lg border text-left text-xs transition-all ${
+                        className={`p-2.5 rounded-[2px] border text-left text-xs transition-all ${
                           drmUnlockMode === 'hybrid'
                             ? 'border-primary bg-primary/5 ring-1 ring-primary/30'
                             : 'border-border hover:bg-muted/40'
@@ -952,7 +952,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                       <button
                         type="button"
                         onClick={() => setDrmUnlockMode('offline')}
-                        className={`p-2.5 rounded-lg border text-left text-xs transition-all ${
+                        className={`p-2.5 rounded-[2px] border text-left text-xs transition-all ${
                           drmUnlockMode === 'offline'
                             ? 'border-primary bg-primary/5 ring-1 ring-primary/30'
                             : 'border-border hover:bg-muted/40'
@@ -966,7 +966,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                       <button
                         type="button"
                         onClick={() => setDrmUnlockMode('webhook')}
-                        className={`p-2.5 rounded-lg border text-left text-xs transition-all ${
+                        className={`p-2.5 rounded-[2px] border text-left text-xs transition-all ${
                           drmUnlockMode === 'webhook'
                             ? 'border-primary bg-primary/5 ring-1 ring-primary/30'
                             : 'border-border hover:bg-muted/40'
@@ -982,7 +982,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                       <button
                         type="button"
                         onClick={() => setDrmUnlockMode('semi_auto')}
-                        className={`p-2 rounded-lg border text-left text-xs transition-all ${
+                        className={`p-2 rounded-[2px] border text-left text-xs transition-all ${
                           drmUnlockMode === 'semi_auto'
                             ? 'border-primary bg-primary/5 ring-1 ring-primary/30'
                             : 'border-border hover:bg-muted/40'
@@ -994,7 +994,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                       <button
                         type="button"
                         onClick={() => setDrmUnlockMode('manual')}
-                        className={`p-2 rounded-lg border text-left text-xs transition-all ${
+                        className={`p-2 rounded-[2px] border text-left text-xs transition-all ${
                           drmUnlockMode === 'manual'
                             ? 'border-primary bg-primary/5 ring-1 ring-primary/30'
                             : 'border-border hover:bg-muted/40'
@@ -1006,15 +1006,15 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                     </div>
                   </div>
 
-                  <div className="p-2.5 rounded-lg border border-border">
+                  <div className="p-2.5 rounded-[2px] border border-border">
                     <div className="text-sm mb-2">在线解锁服务</div>
                     <div className="space-y-2">
-                      <label className="flex items-center gap-2.5 rounded-lg border border-border p-2.5 hover:bg-muted/40 transition-colors cursor-pointer">
+                      <label className="flex items-center gap-2.5 rounded-[2px] border border-border p-2.5 hover:bg-muted/40 transition-colors cursor-pointer">
                         <input
                           type="checkbox"
                           checked={drmOnlineCodeVerify}
                           onChange={(e) => setDrmOnlineCodeVerify(e.target.checked)}
-                          className="w-4 h-4 rounded border-border accent-primary"
+                          className="w-4 h-4 rounded-[2px]border-border accent-primary"
                         />
                         <div className="flex-1">
                           <div className="text-sm">在线验码（严格一次一用）</div>
@@ -1024,12 +1024,12 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                         </div>
                       </label>
 
-                      <label className="flex items-center gap-2.5 rounded-lg border border-border p-2.5 hover:bg-muted/40 transition-colors cursor-pointer">
+                      <label className="flex items-center gap-2.5 rounded-[2px] border border-border p-2.5 hover:bg-muted/40 transition-colors cursor-pointer">
                         <input
                           type="checkbox"
                           checked={drmInWorkCodeRequest}
                           onChange={(e) => setDrmInWorkCodeRequest(e.target.checked)}
-                          className="w-4 h-4 rounded border-border accent-primary"
+                          className="w-4 h-4 rounded-[2px]border-border accent-primary"
                         />
                         <div className="flex-1">
                           <div className="text-sm">作品内发码申请</div>
@@ -1047,7 +1047,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                     </div>
                   </div>
 
-                  <div className="p-2.5 rounded-lg border border-border">
+                  <div className="p-2.5 rounded-[2px] border border-border">
                     <div className="text-sm mb-2">第三方平台自动验证（爱发电）</div>
                     <div className="space-y-2">
                       <div>
@@ -1066,16 +1066,16 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                             }
                           }}
                           placeholder="https://afdian.com/a/你的主页"
-                          className="w-full px-2 py-1.5 rounded border border-border bg-background text-xs"
+                          className="w-full px-2 py-1.5 rounded-[2px]border border-border bg-background text-xs"
                         />
                       </div>
 
-                      <label className="flex items-center gap-2.5 rounded-lg border border-border p-2.5 hover:bg-muted/40 transition-colors cursor-pointer">
+                      <label className="flex items-center gap-2.5 rounded-[2px] border border-border p-2.5 hover:bg-muted/40 transition-colors cursor-pointer">
                         <input
                           type="checkbox"
                           checked={drmAfdianAutoVerify}
                           onChange={(e) => setDrmAfdianAutoVerify(e.target.checked)}
-                          className="w-4 h-4 rounded border-border accent-primary"
+                          className="w-4 h-4 rounded-[2px]border-border accent-primary"
                         />
                         <div className="flex-1">
                           <div className="text-sm">自动验证订单</div>
@@ -1094,7 +1094,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                               value={drmAfdianUserId}
                               onChange={(e) => setDrmAfdianUserId(e.target.value)}
                               placeholder="如 8d6f5a9c3e21"
-                              className="w-full px-2 py-1.5 rounded border border-border bg-background text-xs"
+                              className="w-full px-2 py-1.5 rounded-[2px]border border-border bg-background text-xs"
                             />
                           </div>
                           <div>
@@ -1104,7 +1104,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                               value={drmAfdianToken}
                               onChange={(e) => setDrmAfdianToken(e.target.value)}
                               placeholder="仅用于导出时注册验证服务，不随作品保存"
-                              className="w-full px-2 py-1.5 rounded border border-border bg-background text-xs"
+                              className="w-full px-2 py-1.5 rounded-[2px]border border-border bg-background text-xs"
                             />
                           </div>
                           <div>
@@ -1114,7 +1114,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                               value={drmAfdianPlanId}
                               onChange={(e) => setDrmAfdianPlanId(e.target.value)}
                               placeholder="如 plan_xxxxxx"
-                              className="w-full px-2 py-1.5 rounded border border-border bg-background text-xs"
+                              className="w-full px-2 py-1.5 rounded-[2px]border border-border bg-background text-xs"
                             />
                           </div>
                           <div className="text-[11px] text-muted-foreground leading-relaxed">
@@ -1126,7 +1126,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                   </div>
 
                   {drmUnlockMode !== 'webhook' && (
-                    <div className="p-2.5 rounded-lg border border-border">
+                    <div className="p-2.5 rounded-[2px] border border-border">
                       <div className="text-sm mb-2">收款二维码（可选）</div>
                       <div className="text-[11px] text-muted-foreground mb-2">
                         粘贴你个人微信/支付宝收款码的图片 URL，读者的付款直接到你的账户。
@@ -1140,7 +1140,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                             value={drmWechatQR}
                             onChange={(e) => setDrmWechatQR(e.target.value)}
                             placeholder="data:image/png;base64,..."
-                            className="w-full px-2 py-1.5 rounded border border-border bg-background text-xs"
+                            className="w-full px-2 py-1.5 rounded-[2px]border border-border bg-background text-xs"
                           />
                         </div>
                         <div>
@@ -1150,7 +1150,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                             value={drmAlipayQR}
                             onChange={(e) => setDrmAlipayQR(e.target.value)}
                             placeholder="data:image/png;base64,..."
-                            className="w-full px-2 py-1.5 rounded border border-border bg-background text-xs"
+                            className="w-full px-2 py-1.5 rounded-[2px]border border-border bg-background text-xs"
                           />
                         </div>
                       </div>
@@ -1159,27 +1159,27 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
 
                   {drmUnlockMode === 'webhook' && (
                     <>
-                      <div className="p-2.5 rounded-lg border border-border">
+                      <div className="p-2.5 rounded-[2px] border border-border">
                         <div className="text-sm mb-2">货币</div>
                         <div className="flex gap-2">
                           <button
                             type="button"
                             onClick={() => setDrmCurrency('CNY')}
-                            className={`px-3 py-1.5 rounded text-xs ${drmCurrency === 'CNY' ? 'bg-primary text-white' : 'bg-muted'}`}
+                            className={`px-3 py-1.5 rounded-[2px]text-xs ${drmCurrency === 'CNY' ? 'bg-primary text-white' : 'bg-muted'}`}
                           >
                             CNY (人民币)
                           </button>
                           <button
                             type="button"
                             onClick={() => setDrmCurrency('USD')}
-                            className={`px-3 py-1.5 rounded text-xs ${drmCurrency === 'USD' ? 'bg-primary text-white' : 'bg-muted'}`}
+                            className={`px-3 py-1.5 rounded-[2px]text-xs ${drmCurrency === 'USD' ? 'bg-primary text-white' : 'bg-muted'}`}
                           >
                             USD (美元)
                           </button>
                         </div>
                       </div>
 
-                      <div className="p-2.5 rounded-lg border border-border">
+                      <div className="p-2.5 rounded-[2px] border border-border">
                         <div className="text-sm mb-2">付款渠道</div>
                         <div className="grid grid-cols-5 gap-1.5 mb-3">
                           {['stripe', 'paypal', 'patreon', 'kofi', 'custom'].map((p) => (
@@ -1187,7 +1187,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                               key={p}
                               type="button"
                               onClick={() => setDrmWebhookProvider(p)}
-                              className={`py-1.5 px-2 rounded text-[10px] font-medium transition-all ${
+                              className={`py-1.5 px-2 rounded-[2px]text-[10px] font-medium transition-all ${
                                 drmWebhookProvider === p ? 'bg-primary text-white' : 'bg-muted hover:bg-muted/80'
                               }`}
                             >
@@ -1204,7 +1204,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                               value={drmWebhookUrl}
                               onChange={(e) => setDrmWebhookUrl(e.target.value)}
                               placeholder="https://your-server.com/api/unlock"
-                              className="w-full px-2 py-1.5 rounded border border-border bg-background text-xs"
+                              className="w-full px-2 py-1.5 rounded-[2px]border border-border bg-background text-xs"
                             />
                             <div className="text-[10px] text-muted-foreground mt-1">
                               读者付款后，系统将向此地址 POST 请求以获取解锁码
@@ -1218,7 +1218,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                               value={drmStripeUrl}
                               onChange={(e) => setDrmStripeUrl(e.target.value)}
                               placeholder="https://buy.stripe.com/..."
-                              className="w-full px-2 py-1.5 rounded border border-border bg-background text-xs"
+                              className="w-full px-2 py-1.5 rounded-[2px]border border-border bg-background text-xs"
                             />
                           </div>
 
@@ -1229,7 +1229,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                               value={drmPaypalUrl}
                               onChange={(e) => setDrmPaypalUrl(e.target.value)}
                               placeholder="https://paypal.me/..."
-                              className="w-full px-2 py-1.5 rounded border border-border bg-background text-xs"
+                              className="w-full px-2 py-1.5 rounded-[2px]border border-border bg-background text-xs"
                             />
                           </div>
 
@@ -1240,7 +1240,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                               value={drmPatreonUrl}
                               onChange={(e) => setDrmPatreonUrl(e.target.value)}
                               placeholder="https://patreon.com/..."
-                              className="w-full px-2 py-1.5 rounded border border-border bg-background text-xs"
+                              className="w-full px-2 py-1.5 rounded-[2px]border border-border bg-background text-xs"
                             />
                           </div>
 
@@ -1251,7 +1251,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                               value={drmKofiUrl}
                               onChange={(e) => setDrmKofiUrl(e.target.value)}
                               placeholder="https://ko-fi.com/..."
-                              className="w-full px-2 py-1.5 rounded border border-border bg-background text-xs"
+                              className="w-full px-2 py-1.5 rounded-[2px]border border-border bg-background text-xs"
                             />
                           </div>
                         </div>
@@ -1259,14 +1259,14 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                     </>
                   )}
 
-                  <div className="p-2.5 rounded-lg border border-border">
+                  <div className="p-2.5 rounded-[2px] border border-border">
                     <div className="text-sm mb-2">联系方式（可选）</div>
                     <input
                       type="text"
                       value={drmContact}
                       onChange={(e) => setDrmContact(e.target.value)}
                       placeholder="微信号：xxx 或 邮箱：xxx@example.com"
-                      className="w-full px-2 py-1.5 rounded border border-border bg-background text-xs"
+                      className="w-full px-2 py-1.5 rounded-[2px]border border-border bg-background text-xs"
                     />
                     <div className="text-[10px] text-muted-foreground mt-1">
                       将显示在付款页，方便读者在付款遇到问题时联系你
@@ -1298,7 +1298,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                     type="button"
                     onClick={() => setThemeId(theme.id)}
                     disabled={exporting || !themeApplicable}
-                    className={`group relative rounded-lg overflow-hidden border-2 transition-all disabled:cursor-not-allowed ${
+                    className={`group relative rounded-[2px] overflow-hidden border-2 clip-path-polygon-[0_0,calc(100%-6px)_0,100%_6px,100%_100%,0_100%] transition-all disabled:cursor-not-allowed ${
                       isActive ? 'border-primary scale-[1.02]' : 'border-border hover:border-primary/50'
                     }`}
                     title={theme.name}
@@ -1354,7 +1354,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
             </div>
             <div className="space-y-2.5">
               <label
-                className={`flex items-center gap-2.5 p-2.5 rounded-lg border border-border hover:bg-muted/40 transition-colors cursor-pointer ${
+                className={`flex items-center gap-2.5 p-2.5 rounded-[2px] border border-border hover:bg-muted/40 transition-colors cursor-pointer ${
                   !assetsApplicable ? 'opacity-40 pointer-events-none' : ''
                 }`}
               >
@@ -1362,7 +1362,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                   type="checkbox"
                   checked={includeAssets && assetsApplicable}
                   onChange={(e) => setIncludeAssets(e.target.checked)}
-                  className="w-4 h-4 rounded border-border accent-primary"
+                  className="w-4 h-4 rounded-[2px]border-border accent-primary"
                   disabled={!assetsApplicable}
                 />
                 <div className="flex-1">
@@ -1374,7 +1374,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
               </label>
 
               <div
-                className={`p-2.5 rounded-lg border border-border ${
+                className={`p-2.5 rounded-[2px] border border-border ${
                   !assetsApplicable ? 'opacity-40 pointer-events-none' : ''
                 }`}
               >
@@ -1385,7 +1385,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                       降低图片体积以加快加载
                     </div>
                   </div>
-                  <span className="text-xs font-mono px-2 py-0.5 rounded bg-muted">
+                  <span className="text-xs font-mono px-2 py-0.5 rounded-[2px]bg-muted">
                     {IMAGE_QUALITY_OPTIONS.find((q) => q.id === imageQuality)?.label}
                   </span>
                 </div>
@@ -1396,7 +1396,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                       type="button"
                       onClick={() => setImageQuality(q.id)}
                       disabled={!assetsApplicable || exporting}
-                      className={`text-xs py-1.5 rounded border transition-all ${
+                      className={`text-xs py-1.5 rounded-[2px]border transition-all ${
                         imageQuality === q.id
                           ? 'border-primary bg-primary/10 text-primary'
                           : 'border-border hover:bg-muted/40 text-muted-foreground'
@@ -1408,12 +1408,12 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
                 </div>
               </div>
 
-              <label className="flex items-center gap-2.5 p-2.5 rounded-lg border border-border hover:bg-muted/40 transition-colors cursor-pointer">
+              <label className="flex items-center gap-2.5 p-2.5 rounded-[2px] border border-border hover:bg-muted/40 transition-colors cursor-pointer">
                 <input
                   type="checkbox"
                   checked={includeDebug}
                   onChange={(e) => setIncludeDebug(e.target.checked)}
-                  className="w-4 h-4 rounded border-border accent-primary"
+                  className="w-4 h-4 rounded-[2px]border-border accent-primary"
                 />
                 <div className="flex-1">
                   <div className="text-sm">包含调试信息</div>
@@ -1458,6 +1458,7 @@ export function ExportDialog({ open, graph, onClose, onImportTranslation, moneti
             {!isI18nFormat && (
               <Button
                 size="sm"
+                className="rounded-[2px] bg-gold-400 text-slate-900 hover:bg-gold-300 shadow-[3px_3px_0_hsl(var(--gold)/0.3)] font-semibold"
                 onClick={handleExport}
                 disabled={exporting}
               >

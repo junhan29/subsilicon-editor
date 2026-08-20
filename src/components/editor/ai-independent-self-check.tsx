@@ -22,7 +22,7 @@ function ResultGroup({ title, items, summary }: ResultGroupProps) {
   const total = items?.length || 0
   const ok = (items || []).filter((x) => x.ok).length
   return (
-    <div className="rounded-lg border border-border/60 bg-background overflow-hidden">
+    <div className="rounded-[2px] border border-border/60 bg-background overflow-hidden">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -118,10 +118,10 @@ export function AiIndependentSelfCheckPanel() {
   }
 
   return (
-    <div className="rounded-xl border border-border/60 bg-muted/20 p-3.5 space-y-3">
+    <div className="rounded-[2px] border border-border/60 bg-muted/20 p-3.5 space-y-3">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
-          <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center shrink-0">
+          <div className="w-8 h-8 rounded-[2px] bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center shrink-0">
             <Bot className="w-4 h-4 text-cyan-600" />
           </div>
           <div className="min-w-0">
@@ -152,7 +152,7 @@ export function AiIndependentSelfCheckPanel() {
       {report && (
         <div className="space-y-2.5">
           <div className="grid grid-cols-3 gap-2">
-            <div className="rounded-lg border border-border/60 bg-background p-2.5">
+            <div className="rounded-[2px] border border-border/60 bg-background p-2.5">
               <div className="text-[10px] text-muted-foreground">配置完整度</div>
               <div className="mt-1 flex items-center gap-1.5">
                 {report.configReady ? (
@@ -165,7 +165,7 @@ export function AiIndependentSelfCheckPanel() {
                 </span>
               </div>
             </div>
-            <div className="rounded-lg border border-border/60 bg-background p-2.5">
+            <div className="rounded-[2px] border border-border/60 bg-background p-2.5">
               <div className="text-[10px] text-muted-foreground">远程连通性</div>
               <div className="mt-1 flex items-center gap-1.5">
                 {report.remoteResults.every((r) => r.ok) && report.remoteResults.length > 0 ? (
@@ -180,7 +180,7 @@ export function AiIndependentSelfCheckPanel() {
                 </span>
               </div>
             </div>
-            <div className="rounded-lg border border-border/60 bg-background p-2.5">
+            <div className="rounded-[2px] border border-border/60 bg-background p-2.5">
               <div className="text-[10px] text-muted-foreground">总体可独立运行</div>
               <div className="mt-1 flex items-center gap-1.5">
                 {report.overallOk ? (
@@ -212,7 +212,7 @@ export function AiIndependentSelfCheckPanel() {
           />
 
           {report.suggestions.length > 0 && (
-            <div className="rounded-lg border border-gold-400/30 bg-gold-400/5 p-2.5">
+            <div className="rounded-[2px] border border-gold-400/30 bg-gold-400/5 p-2.5 shadow-[3px_3px_0_hsl(var(--gold)/0.2)]">
               <div className="flex items-center gap-1.5 text-[11px] font-medium text-amber-700 mb-1">
                 <AlertTriangle className="w-3.5 h-3.5" />
                 修复建议（{report.suggestions.length} 条）

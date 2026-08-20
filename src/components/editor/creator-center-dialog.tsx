@@ -100,9 +100,9 @@ const TAB_ITEMS: { id: Tab; label: string; icon: typeof User }[] = [
 ]
 
 const inputClass =
-  'w-full px-3 py-2 text-sm bg-muted border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-gold-400/60 focus:ring-1 focus:ring-gold-400/30'
+  'w-full px-3 py-2 text-sm bg-muted border border-border rounded-[2px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-gold-400/60 focus:ring-1 focus:ring-gold-400/30'
 const iconInputClass =
-  'w-full pl-9 pr-3 py-2 text-sm bg-muted border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-gold-400/60'
+  'w-full pl-9 pr-3 py-2 text-sm bg-muted border border-border rounded-[2px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-gold-400/60'
 const labelClass = 'flex items-center gap-1.5 text-xs font-medium text-foreground mb-1.5'
 const errorTextClass = 'mt-1 text-[11px] text-red-400 flex items-center gap-1'
 
@@ -698,10 +698,10 @@ export function CreatorCenterDialog({
           if (e.target === e.currentTarget && !busy) onClose()
         }}
       />
-      <div className="fixed right-0 top-0 z-[60] h-full w-full max-w-6xl max-h-[92vh] bg-card border-l border-border shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-right duration-300">
+      <div className="fixed right-0 top-0 z-[60] h-full w-full max-w-6xl max-h-[92vh] bg-card border-l border-border shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-right duration-300" style={{ clipPath: 'polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px)' }}>
         <div className="flex items-center justify-between p-6 border-b border-border shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gold-400/15 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-[2px] bg-gold-400/15 flex items-center justify-center">
               <Send className="w-5 h-5 text-gold-400" />
             </div>
             <div>
@@ -721,7 +721,7 @@ export function CreatorCenterDialog({
 
         <div className="flex flex-1 min-h-0">
           {!guideDismissed && (
-            <div className="absolute top-[57px] right-3 z-10 w-[min(92%,480px)] rounded-xl border border-gold-400/30 bg-gold-400/10 backdrop-blur p-3 shadow-lg">
+            <div className="absolute top-[57px] right-3 z-10 w-[min(92%,480px)] rounded-[2px] border border-gold-400/30 bg-gold-400/10 backdrop-blur p-3 shadow-[4px_4px_0_hsl(var(--gold)/0.2)]">
               <div className="flex items-start gap-2.5">
                 <Sparkles className="w-4 h-4 text-gold-400 shrink-0 mt-0.5" />
                 <div className="flex-1 min-w-0 text-xs text-amber-100/90 leading-relaxed">
@@ -773,7 +773,7 @@ export function CreatorCenterDialog({
               <div className="space-y-4">
                 {account ? (
                   <div className="space-y-4">
-                    <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/60 border border-border">
+                    <div className="flex items-center gap-3 p-3 rounded-[2px] bg-muted/60 border border-border" style={{ clipPath: 'polygon(4px 0, calc(100% - 4px) 0, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0 calc(100% - 4px), 0 4px)' }}>
                       <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
                         <User className="w-5 h-5 text-emerald-400" />
                       </div>
@@ -789,7 +789,7 @@ export function CreatorCenterDialog({
                     </p>
                     <button
                       onClick={handleLogout}
-                      className="w-full flex items-center justify-center gap-2 rounded-lg border border-border hover:bg-muted text-foreground text-sm py-2 transition-colors"
+                      className="w-full flex items-center justify-center gap-2 rounded-[2px] border border-border hover:bg-muted text-foreground text-sm py-2 transition-colors"
                     >
                       <LogOut className="w-4 h-4" />
                       退出登录
@@ -797,7 +797,7 @@ export function CreatorCenterDialog({
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    <div className="flex rounded-lg border border-border overflow-hidden">
+                    <div className="flex rounded-[2px] border border-border overflow-hidden">
                       <button
                         onClick={() => { setAccountTab('login'); setAccountError('') }}
                         className={`flex-1 py-2 text-sm font-medium transition-colors ${
@@ -854,7 +854,7 @@ export function CreatorCenterDialog({
                         <button
                           onClick={handleLogin}
                           disabled={accountSubmitting}
-                          className="w-full flex items-center justify-center gap-2 rounded-lg bg-gold-400 hover:bg-amber-400 disabled:opacity-60 text-slate-900 font-medium text-sm py-2.5 transition-colors"
+                          className="w-full flex items-center justify-center gap-2 rounded-[2px] bg-gold-400 hover:bg-gold-300 disabled:opacity-60 text-slate-900 shadow-[3px_3px_0_hsl(var(--gold)/0.3)] font-semibold text-sm py-2.5 transition-colors"
                         >
                           {accountSubmitting ? (
                             <><Loader2 className="w-4 h-4 animate-spin" />登录中...</>
@@ -929,7 +929,7 @@ export function CreatorCenterDialog({
                         <button
                           onClick={handleRegister}
                           disabled={accountSubmitting}
-                          className="w-full flex items-center justify-center gap-2 rounded-lg bg-gold-400 hover:bg-amber-400 disabled:opacity-60 text-slate-900 font-medium text-sm py-2.5 transition-colors"
+                          className="w-full flex items-center justify-center gap-2 rounded-[2px] bg-gold-400 hover:bg-gold-300 disabled:opacity-60 text-slate-900 shadow-[3px_3px_0_hsl(var(--gold)/0.3)] font-semibold text-sm py-2.5 transition-colors"
                         >
                           {accountSubmitting ? (
                             <><Loader2 className="w-4 h-4 animate-spin" />注册中...</>
@@ -939,7 +939,7 @@ export function CreatorCenterDialog({
                     )}
 
                     {accountError && (
-                      <div className="flex items-center gap-2 text-sm text-red-400 bg-red-900/20 rounded-lg px-3 py-2">
+                      <div className="flex items-center gap-2 text-sm text-red-400 bg-red-900/20 rounded-[2px] px-3 py-2 border border-p5-red/30 shadow-[2px_2px_0_hsl(var(--p5-red)/0.2)]">
                         <AlertCircle className="w-4 h-4 shrink-0" />
                         <span>{accountError}</span>
                       </div>
@@ -952,7 +952,7 @@ export function CreatorCenterDialog({
             {tab === 'platforms' && (
               <div className="space-y-4">
                 {!account ? (
-                  <div className="p-4 rounded-xl border border-blue-700/50 bg-blue-900/20">
+                  <div className="p-4 rounded-[2px] border border-blue-700/50 bg-blue-900/20 shadow-[2px_2px_0_hsl(var(--blue)/0.15)]">
                     <div className="flex items-start gap-2.5">
                       <AlertCircle className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
                       <div className="space-y-1">
@@ -962,7 +962,7 @@ export function CreatorCenterDialog({
                         </p>
                         <button
                           onClick={() => setTab('account')}
-                          className="mt-2 px-3 py-1 text-xs rounded-lg bg-blue-500 hover:bg-blue-400 text-white"
+                          className="mt-2 px-3 py-1 text-xs rounded-[2px] bg-blue-500 hover:bg-blue-400 text-white"
                         >
                           前往登录
                         </button>
@@ -970,7 +970,7 @@ export function CreatorCenterDialog({
                     </div>
                   </div>
                 ) : showPlatformForm ? (
-                  <div className="space-y-3 p-4 rounded-xl border border-border bg-muted/40">
+                  <div className="space-y-3 p-4 rounded-[2px] border border-border bg-muted/40" style={{ clipPath: 'polygon(6px 0, calc(100% - 6px) 0, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0 calc(100% - 6px), 0 6px)' }}>
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium text-foreground">
                         {editingPlatform ? '编辑平台' : '添加平台'}
@@ -982,7 +982,7 @@ export function CreatorCenterDialog({
                         <X className="w-4 h-4" />
                       </button>
                     </div>
-                    <div className="flex rounded-lg border border-border overflow-hidden">
+                    <div className="flex rounded-[2px] border border-border overflow-hidden">
                       <button
                         onClick={() =>
                           setPlatformForm((prev) => ({
@@ -1053,7 +1053,7 @@ export function CreatorCenterDialog({
                         <button
                           type="button"
                           onClick={() => openTokenDialog('login')}
-                          className="px-3 py-2 text-xs rounded-lg border border-gold-400/40 bg-gold-400/10 text-gold-400 hover:bg-gold-400/20 transition-colors flex items-center gap-1.5 shrink-0"
+                          className="px-3 py-2 text-xs rounded-[2px] border border-gold-400/40 bg-gold-400/10 text-gold-400 hover:bg-gold-400/20 transition-colors flex items-center gap-1.5 shrink-0"
                         >
                           <KeyRound className="w-3.5 h-3.5" />
                           获取提交令牌
@@ -1128,14 +1128,14 @@ export function CreatorCenterDialog({
                       <button
                         onClick={() => { setShowPlatformForm(false); setEditingPlatform(null) }}
                         disabled={platformSubmitting}
-                        className="px-3 py-1.5 text-xs rounded-lg border border-border text-foreground hover:bg-muted transition-colors disabled:opacity-40"
+                        className="px-3 py-1.5 text-xs rounded-[2px] border border-border text-foreground hover:bg-muted transition-colors disabled:opacity-40"
                       >
                         取消
                       </button>
                       <button
                         onClick={handleSavePlatform}
                         disabled={platformSubmitting}
-                        className="px-3 py-1.5 text-xs rounded-lg bg-gold-400 hover:bg-amber-400 text-slate-900 font-medium transition-colors disabled:opacity-60 flex items-center gap-1.5"
+                        className="px-3 py-1.5 text-xs rounded-[2px] bg-gold-400 hover:bg-gold-300 text-slate-900 shadow-[3px_3px_0_hsl(var(--gold)/0.3)] font-semibold transition-colors disabled:opacity-60 flex items-center gap-1.5"
                       >
                         {platformSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
                         保存
@@ -1150,7 +1150,7 @@ export function CreatorCenterDialog({
                       </p>
                       <button
                         onClick={startAddPlatform}
-                        className="px-3 py-1.5 text-xs rounded-lg bg-gold-400 hover:bg-amber-400 text-slate-900 font-medium transition-colors flex items-center gap-1.5"
+                        className="px-3 py-1.5 text-xs rounded-[2px] bg-gold-400 hover:bg-gold-300 text-slate-900 shadow-[3px_3px_0_hsl(var(--gold)/0.3)] font-semibold transition-colors flex items-center gap-1.5"
                       >
                         <Plus className="w-3.5 h-3.5" />
                         添加平台
@@ -1165,10 +1165,11 @@ export function CreatorCenterDialog({
                         {platforms.map((config) => (
                           <div
                             key={config.id}
-                            className="p-3 rounded-xl border border-border bg-muted/40"
+                            className="p-3 rounded-[2px] border border-border bg-muted/40"
+                            style={{ clipPath: 'polygon(4px 0, calc(100% - 4px) 0, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0 calc(100% - 4px), 0 4px)' }}
                           >
                             <div className="flex items-center gap-3">
-                              <div className="w-9 h-9 rounded-lg bg-secondary/60 flex items-center justify-center shrink-0">
+                              <div className="w-9 h-9 rounded-[2px] bg-secondary/60 flex items-center justify-center shrink-0">
                                 {platformIcon(config)}
                               </div>
                               <div className="flex-1 min-w-0">
@@ -1208,14 +1209,14 @@ export function CreatorCenterDialog({
                             <div className="flex items-center justify-end gap-2 mt-2 pt-2 border-t border-border/60">
                               <button
                                 onClick={() => startEditPlatform(config)}
-                                className="px-2.5 py-1 text-[11px] rounded-lg border border-border text-foreground hover:bg-muted transition-colors flex items-center gap-1"
+                                className="px-2.5 py-1 text-[11px] rounded-[2px] border border-border text-foreground hover:bg-muted transition-colors flex items-center gap-1"
                               >
                                 <Pencil className="w-3 h-3" />
                                 编辑
                               </button>
                               <button
                                 onClick={() => handleRemovePlatform(config)}
-                                className="px-2.5 py-1 text-[11px] rounded-lg border border-red-900/60 text-red-300 hover:bg-red-900/30 transition-colors flex items-center gap-1"
+                                className="px-2.5 py-1 text-[11px] rounded-[2px] border border-red-900/60 text-red-300 hover:bg-red-900/30 transition-colors flex items-center gap-1"
                               >
                                 <Trash2 className="w-3 h-3" />
                                 删除
@@ -1233,7 +1234,7 @@ export function CreatorCenterDialog({
             {tab === 'publish' && (
               <div className="space-y-4">
                 {!account ? (
-                  <div className="p-4 rounded-xl border border-blue-700/50 bg-blue-900/20">
+                  <div className="p-4 rounded-[2px] border border-blue-700/50 bg-blue-900/20 shadow-[2px_2px_0_hsl(var(--blue)/0.15)]">
                     <div className="flex items-start gap-2.5">
                       <AlertCircle className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
                       <div className="space-y-1">
@@ -1243,7 +1244,7 @@ export function CreatorCenterDialog({
                         </p>
                         <button
                           onClick={() => setTab('account')}
-                          className="mt-2 px-3 py-1 text-xs rounded-lg bg-blue-500 hover:bg-blue-400 text-white"
+                          className="mt-2 px-3 py-1 text-xs rounded-[2px] bg-blue-500 hover:bg-blue-400 text-white"
                         >
                           前往登录
                         </button>
@@ -1251,7 +1252,7 @@ export function CreatorCenterDialog({
                     </div>
                   </div>
                 ) : enabledPlatforms.length === 0 ? (
-                  <div className="p-4 rounded-xl border border-amber-700/50 bg-amber-900/20">
+                  <div className="p-4 rounded-[2px] border border-amber-700/50 bg-amber-900/20 shadow-[2px_2px_0_hsl(var(--gold)/0.15)]">
                     <div className="flex items-start gap-2.5">
                       <AlertCircle className="w-5 h-5 text-gold-400 shrink-0 mt-0.5" />
                       <div className="space-y-1">
@@ -1261,7 +1262,7 @@ export function CreatorCenterDialog({
                         </p>
                         <button
                           onClick={() => setTab('platforms')}
-                          className="mt-2 px-3 py-1 text-xs rounded-lg bg-gold-400 hover:bg-amber-400 text-slate-900"
+                          className="mt-2 px-3 py-1 text-xs rounded-[2px] bg-gold-400 hover:bg-gold-300 text-slate-900 shadow-[3px_3px_0_hsl(var(--gold)/0.3)] font-semibold"
                         >
                           前往配置平台
                         </button>
@@ -1271,7 +1272,7 @@ export function CreatorCenterDialog({
                 ) : (
                   <>
                     {published && (
-                      <div className="p-4 rounded-xl border border-emerald-700/50 bg-emerald-900/20">
+                      <div className="p-4 rounded-[2px] border border-emerald-700/50 bg-emerald-900/20 shadow-[2px_2px_0_hsl(var(--emerald)/0.15)]">
                         <div className="flex items-start justify-between gap-2.5">
                           <div className="flex items-start gap-2.5">
                             <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
@@ -1297,7 +1298,7 @@ export function CreatorCenterDialog({
                               if (fileInputRef.current) fileInputRef.current.value = ''
                               if (screenshotsInputRef.current) screenshotsInputRef.current.value = ''
                             }}
-                            className="px-3 py-1.5 text-xs rounded-lg border border-emerald-600 text-emerald-300 hover:bg-emerald-900/40 transition-colors shrink-0"
+                            className="px-3 py-1.5 text-xs rounded-[2px] border border-emerald-600 text-emerald-300 hover:bg-emerald-900/40 transition-colors shrink-0"
                           >
                             再次发布
                           </button>
@@ -1421,12 +1422,12 @@ export function CreatorCenterDialog({
                               }
                             }}
                             placeholder="自定义标签，回车添加"
-                            className="flex-1 px-3 py-1.5 text-xs bg-muted border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-gold-400/60"
+                            className="flex-1 px-3 py-1.5 text-xs bg-muted border border-border rounded-[2px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-gold-400/60"
                           />
                           <button
                             type="button"
                             onClick={addCustomTag}
-                            className="px-2.5 py-1.5 text-xs rounded-lg border border-border bg-muted text-foreground hover:border-border flex items-center gap-1"
+                            className="px-2.5 py-1.5 text-xs rounded-[2px] border border-border bg-muted text-foreground hover:border-border flex items-center gap-1"
                           >
                             <Plus className="w-3 h-3" />
                             添加
@@ -1482,7 +1483,7 @@ export function CreatorCenterDialog({
                           <span className="text-[10px] text-muted-foreground font-normal">可选，最大 2MB</span>
                         </label>
                         {coverPreview ? (
-                          <div className="relative w-full max-w-[200px] rounded-lg overflow-hidden border border-border">
+                          <div className="relative w-full max-w-[200px] rounded-[2px] overflow-hidden border border-border">
                             <img src={coverPreview} alt="封面预览" className="w-full h-auto" />
                             <button
                               type="button"
@@ -1496,7 +1497,7 @@ export function CreatorCenterDialog({
                           <button
                             type="button"
                             onClick={() => fileInputRef.current?.click()}
-                            className="w-full py-6 rounded-lg border border-dashed border-border bg-muted/50 hover:border-gold-400/50 hover:bg-muted flex flex-col items-center gap-1.5 transition-colors"
+                            className="w-full py-6 rounded-[2px] border border-dashed border-border bg-muted/50 hover:border-gold-400/50 hover:bg-muted flex flex-col items-center gap-1.5 transition-colors"
                           >
                             <ImageIcon className="w-6 h-6 text-muted-foreground" />
                             <span className="text-xs text-muted-foreground">点击上传封面图</span>
@@ -1522,7 +1523,7 @@ export function CreatorCenterDialog({
                         </label>
                         <div className="grid grid-cols-3 gap-2">
                           {screenshots.map((s, index) => (
-                            <div key={index} className="relative aspect-video rounded-lg overflow-hidden border border-border">
+                            <div key={index} className="relative aspect-video rounded-[2px] overflow-hidden border border-border">
                               <img src={s.preview} alt={`截图 ${index + 1}`} className="w-full h-full object-cover" />
                               <button
                                 type="button"
@@ -1537,7 +1538,7 @@ export function CreatorCenterDialog({
                             <button
                               type="button"
                               onClick={() => screenshotsInputRef.current?.click()}
-                              className="aspect-video rounded-lg border border-dashed border-border bg-muted/50 hover:border-gold-400/50 hover:bg-muted flex flex-col items-center justify-center gap-1 transition-colors"
+                              className="aspect-video rounded-[2px] border border-dashed border-border bg-muted/50 hover:border-gold-400/50 hover:bg-muted flex flex-col items-center justify-center gap-1 transition-colors"
                             >
                               <Plus className="w-5 h-5 text-muted-foreground" />
                               <span className="text-[10px] text-muted-foreground">添加截图</span>
@@ -1559,14 +1560,14 @@ export function CreatorCenterDialog({
                       <button
                         onClick={onClose}
                         disabled={publishing}
-                        className="px-3.5 py-1.5 text-sm rounded-lg border border-border text-foreground hover:bg-muted transition-colors disabled:opacity-40"
+                        className="px-3.5 py-1.5 text-sm rounded-[2px] border border-border text-foreground hover:bg-muted transition-colors disabled:opacity-40"
                       >
                         {published ? '关闭' : '取消'}
                       </button>
                       <button
                         onClick={handlePublish}
                         disabled={publishing || published}
-                        className="px-3.5 py-1.5 text-sm rounded-lg bg-gradient-to-r from-gold-400 to-orange-500 text-white font-medium shadow-lg shadow-gold-400/20 hover:brightness-110 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                        className="px-3.5 py-1.5 text-sm rounded-[2px] bg-gold-400 hover:bg-gold-300 text-slate-900 shadow-[3px_3px_0_hsl(var(--gold)/0.3)] font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
                       >
                         {publishing ? (
                           <>
@@ -1605,7 +1606,8 @@ export function CreatorCenterDialog({
                     {records.map((record) => {
                       const meta = STATUS_META[record.status]
                       return (
-                        <div key={record.id} className="p-3 rounded-xl border border-border bg-muted/40">
+                        <div key={record.id} className="p-3 rounded-[2px] border border-border bg-muted/40"
+                            style={{ clipPath: 'polygon(4px 0, calc(100% - 4px) 0, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0 calc(100% - 4px), 0 4px)' }}>
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0 flex-1">
                               <div className="text-sm font-medium text-foreground truncate">{record.title}</div>
@@ -1620,7 +1622,7 @@ export function CreatorCenterDialog({
                             <span>{formatTime(record.publishedAt)}</span>
                           </div>
                           {record.status === 'rejected' && record.rejectReason && (
-                            <div className="mt-2 flex items-start gap-1.5 text-[11px] text-red-400 bg-red-900/20 rounded-lg px-2 py-1.5">
+                            <div className="mt-2 flex items-start gap-1.5 text-[11px] text-red-400 bg-red-900/20 rounded-[2px] px-2 py-1.5">
                               <AlertCircle className="w-3 h-3 shrink-0 mt-0.5" />
                               <span>拒绝原因：{record.rejectReason}</span>
                             </div>
@@ -1636,7 +1638,7 @@ export function CreatorCenterDialog({
             {tab === 'unlock' && (
               <div className="space-y-4">
                 {!workId ? (
-                  <div className="p-4 rounded-xl border border-blue-700/50 bg-blue-900/20">
+                  <div className="p-4 rounded-[2px] border border-blue-700/50 bg-blue-900/20 shadow-[2px_2px_0_hsl(var(--blue)/0.15)]">
                     <div className="flex items-start gap-2.5">
                       <AlertCircle className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
                       <div className="space-y-1">
@@ -1668,7 +1670,7 @@ export function CreatorCenterDialog({
           className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4"
           onClick={(e) => { if (e.target === e.currentTarget) setPlatformToDelete(null) }}
         >
-          <div className="w-full max-w-sm bg-card border border-border rounded-2xl shadow-2xl p-5 space-y-4">
+          <div className="w-full max-w-sm bg-card border border-border rounded-[2px] shadow-2xl p-5 space-y-4" style={{ clipPath: 'polygon(6px 0, calc(100% - 6px) 0, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0 calc(100% - 6px), 0 6px)' }}>
             <div className="flex items-center gap-2.5">
               <div className="w-9 h-9 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
                 <Trash2 className="w-4.5 h-4.5 text-red-400" />
@@ -1684,13 +1686,13 @@ export function CreatorCenterDialog({
             <div className="flex items-center justify-end gap-2 pt-1">
               <button
                 onClick={() => setPlatformToDelete(null)}
-                className="px-3 py-1.5 text-xs rounded-lg border border-border text-foreground hover:bg-muted transition-colors"
+                className="px-3 py-1.5 text-xs rounded-[2px] border border-border text-foreground hover:bg-muted transition-colors"
               >
                 取消
               </button>
               <button
                 onClick={confirmRemovePlatform}
-                className="px-3 py-1.5 text-xs rounded-lg bg-primary hover:bg-red-400 text-white font-medium transition-colors flex items-center gap-1.5"
+                className="px-3 py-1.5 text-xs rounded-[2px] bg-primary hover:bg-red-400 text-white font-medium transition-colors flex items-center gap-1.5"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 删除
@@ -1705,7 +1707,7 @@ export function CreatorCenterDialog({
           className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 p-4"
           onClick={(e) => { if (e.target === e.currentTarget && !tokenSubmitting) setShowTokenDialog(false) }}
         >
-          <div className="w-full max-w-sm bg-card border border-border rounded-2xl shadow-2xl p-5 space-y-4">
+          <div className="w-full max-w-sm bg-card border border-border rounded-[2px] shadow-2xl p-5 space-y-4" style={{ clipPath: 'polygon(6px 0, calc(100% - 6px) 0, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0 calc(100% - 6px), 0 6px)' }}>
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-start gap-2.5">
                 <div className="w-9 h-9 rounded-full bg-gold-400/15 flex items-center justify-center shrink-0">
@@ -1728,7 +1730,7 @@ export function CreatorCenterDialog({
               </button>
             </div>
 
-            <div className="flex rounded-lg border border-border overflow-hidden">
+            <div className="flex rounded-[2px] border border-border overflow-hidden">
               <button
                 type="button"
                 onClick={() => { setTokenTab('login'); setTokenError('') }}
@@ -1792,7 +1794,7 @@ export function CreatorCenterDialog({
                 </div>
               )}
               {tokenError && (
-                <div className="flex items-start gap-2 text-xs text-red-400 bg-red-900/20 rounded-lg px-3 py-2">
+                <div className="flex items-start gap-2 text-xs text-red-400 bg-red-900/20 rounded-[2px] px-3 py-2 border border-p5-red/30 shadow-[2px_2px_0_hsl(var(--p5-red)/0.2)]">
                   <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
                   <span>{tokenError}</span>
                 </div>
@@ -1803,14 +1805,14 @@ export function CreatorCenterDialog({
               <button
                 onClick={() => setShowTokenDialog(false)}
                 disabled={tokenSubmitting}
-                className="px-3 py-1.5 text-xs rounded-lg border border-border text-foreground hover:bg-muted transition-colors disabled:opacity-40"
+                className="px-3 py-1.5 text-xs rounded-[2px] border border-border text-foreground hover:bg-muted transition-colors disabled:opacity-40"
               >
                 取消
               </button>
               <button
                 onClick={handleGetToken}
                 disabled={tokenSubmitting}
-                className="px-3 py-1.5 text-xs rounded-lg bg-gold-400 hover:bg-amber-400 text-slate-900 font-medium transition-colors disabled:opacity-60 flex items-center gap-1.5"
+                className="px-3 py-1.5 text-xs rounded-[2px] bg-gold-400 hover:bg-gold-300 text-slate-900 shadow-[3px_3px_0_hsl(var(--gold)/0.3)] font-semibold transition-colors disabled:opacity-60 flex items-center gap-1.5"
               >
                 {tokenSubmitting ? (
                   <><Loader2 className="w-3.5 h-3.5 animate-spin" />获取中...</>

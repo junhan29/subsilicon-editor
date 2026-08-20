@@ -163,7 +163,7 @@ function WorkflowListByTask({ taskType, onEdit, onClone, onDelete }: WorkflowLis
                 </span>
               )}
               {wf.taskType === 'video' && (
-                <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 font-mono border border-purple-500/20">
+                <span className="text-[9px] px-1.5 py-0.5 rounded bg-gold-500/10 text-gold-400 font-mono border border-gold-500/20">
                   {wf.media?.ratio || '16:9'} · {wf.media?.durationSec ?? 5}s
                 </span>
               )}
@@ -653,7 +653,7 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
       <div className="p-2 rounded border border-border/60 space-y-1.5">
         <div className="flex items-center justify-between">
           <span className="text-[11px] font-medium text-foreground flex items-center gap-1.5">
-            {task === 'image' ? <Image className="w-3 h-3 text-gold-400" /> : task === 'video' ? <Wand2 className="w-3 h-3 text-purple-400" /> : <Music className="w-3 h-3 text-green-400" />}
+            {task === 'image' ? <Image className="w-3 h-3 text-gold-400" /> : task === 'video' ? <Wand2 className="w-3 h-3 text-gold-400" /> : <Music className="w-3 h-3 text-gold-600" />}
             {label}
           </span>
           <label className="flex items-center gap-1.5 text-[10px] text-muted-foreground cursor-pointer select-none">
@@ -799,7 +799,7 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
             <button
               onClick={() => setAiEnabled(!aiEnabled)}
               className={`w-10 h-5 rounded-full transition-colors ${
-                aiEnabled ? 'bg-gradient-to-r from-gold-400 to-gold-500 shadow shadow-amber-500/30' : 'bg-slate-600'
+                aiEnabled ? 'bg-gradient-to-r from-gold-400 to-gold-500 shadow shadow-gold-500/30' : 'bg-slate-600'
               }`}
             >
               <div className={`w-4 h-4 rounded-full bg-white shadow transition-transform ${
@@ -918,7 +918,7 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
                 <button
                   onClick={testConnection}
                   disabled={testing || !aiConfig.apiKey}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-gold-400 text-amber-950 hover:bg-amber-400 rounded transition-colors disabled:opacity-50"
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-gold-400 text-slate-900 hover:bg-gold-500 rounded transition-colors disabled:opacity-50"
                 >
                   {testing ? (
                     <Loader2 className="w-3 h-3 animate-spin" />
@@ -1202,10 +1202,10 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
                       className={`flex-1 px-2 py-1 rounded text-[11px] transition-colors ${
                         wfTaskType === t
                           ? t === 'text'
-                            ? 'bg-green-500/15 text-green-300 border border-green-500/30'
+                            ? 'bg-gold-500/15 text-gold-300 border border-gold-500/30'
                             : t === 'video'
-                            ? 'bg-purple-500/15 text-purple-300 border border-purple-500/30'
-                            : 'bg-primary/15 text-primary/80 border border-primary/30'
+                            ? 'bg-gold-500/15 text-gold-300 border border-gold-500/30'
+                            : 'bg-gold-500/15 text-gold-300 border border-gold-500/30'
                           : 'text-muted-foreground hover:text-foreground'
                       }`}
                     >
@@ -1242,7 +1242,7 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
                         value={wfDraft.name}
                         onChange={(e) => setWfDraft({ ...wfDraft, name: e.target.value })}
                         placeholder="工作流名（≤ 24 字）"
-                        className="flex-1 px-2 py-1.5 text-[11px] rounded bg-muted border border-border text-white placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-amber-500/50"
+                        className="flex-1 px-2 py-1.5 text-[11px] rounded bg-muted border border-border text-white placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-gold-500/50"
                       />
                       <button
                         type="button"
@@ -1276,7 +1276,7 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
                       onChange={(e) => setWfDraft({ ...wfDraft, desc: e.target.value })}
                       rows={1}
                       placeholder="简短说明（≤ 120 字，可选）：这条工作流解决什么问题"
-                      className="w-full px-2 py-1.5 text-[11px] rounded bg-muted border border-border text-white placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-amber-500/50 resize-none"
+                      className="w-full px-2 py-1.5 text-[11px] rounded bg-muted border border-border text-white placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-gold-500/50 resize-none"
                     />
 
                     {wfTaskType === 'text' && (
@@ -1344,7 +1344,7 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
                                   <button key={r} type="button" onClick={() => setWfDraft({ ...wfDraft, ratio: r })}
                                     className={`px-1.5 py-1 text-[10px] rounded border transition-colors ${
                                       wfDraft.ratio === r
-                                        ? 'bg-purple-500/15 text-purple-300 border-purple-500/30'
+                                        ? 'bg-gold-500/15 text-gold-300 border-gold-500/30'
                                         : 'text-muted-foreground border-border hover:text-foreground'
                                     }`}>{r}</button>
                                 ))}
@@ -1353,11 +1353,11 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
                             <div>
                               <div className="flex items-center justify-between">
                                 <Label className="text-[10px] text-muted-foreground">时长</Label>
-                                <span className="text-[10px] font-mono text-purple-300 tabular-nums">{wfDraft.d}s</span>
+                                <span className="text-[10px] font-mono text-gold-300 tabular-nums">{wfDraft.d}s</span>
                               </div>
                               <input type="range" min={3} max={10} step={1} value={wfDraft.d}
                                 onChange={(e) => setWfDraft({ ...wfDraft, d: parseInt(e.target.value, 10) })}
-                                className="w-full accent-purple-500 h-1.5 mt-1" />
+                                className="w-full accent-gold-500 h-1.5 mt-1" />
                             </div>
                           </div>
                         )}

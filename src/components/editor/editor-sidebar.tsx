@@ -45,65 +45,80 @@ export interface SidebarNodeType {
   description: string
 }
 
+// 节点视觉语义映射：每个侧边栏缩略图标盒对应画布节点的主色 + 装饰特征
+const NODE_STYLE_MAP: Record<string, { tint: string; border: string; label: string }> = {
+  dialogue:  { tint: 'bg-gold-400/15',    border: 'border-gold-400/40',       label: '金' },
+  narration: { tint: 'bg-gold-50/80 dark:bg-gold-900/15', border: 'border-gold-300/40 dark:border-gold-700/40', label: '条' },
+  choice:    { tint: 'bg-gold-400/20',    border: 'border-gold-400/50',       label: '叉' },
+  gather:    { tint: 'bg-cyber-cyan-400/12', border: 'border-cyber-cyan-400/35', label: '汇' },
+  condition: { tint: 'bg-cyber-cyan-400/15', border: 'border-cyber-cyan-400/45', label: '判' },
+  unlock:    { tint: 'bg-p5-red/12',      border: 'border-p5-red/45',          label: '锁' },
+  ending:    { tint: 'bg-p5-red/15',      border: 'border-p5-red/50',          label: '终' },
+  cg:        { tint: 'bg-cyber-magenta-400/12', border: 'border-cyber-magenta-400/40', label: '相' },
+  jump:      { tint: 'bg-p5-red/12',      border: 'border-p5-red/40',          label: '电' },
+  random:    { tint: 'bg-cyber-cyan-400/14', border: 'border-cyber-cyan-400/40', label: '骰' },
+  group:     { tint: 'bg-slate-200/50 dark:bg-slate-700/40', border: 'border-slate-400/40', label: '组' },
+}
+
 const NODE_TYPES: SidebarNodeType[] = [
   {
     type: 'dialogue',
     label: '对话',
-    icon: <MessageCircle className="w-5 h-5 text-primary" />,
+    icon: <MessageCircle className="w-5 h-5 text-gold-500" strokeWidth={2.1} />,
     description: '角色台词与对话',
   },
   {
     type: 'narration',
     label: '旁白',
-    icon: <AlignLeft className="w-5 h-5 text-muted-foreground" />,
+    icon: <AlignLeft className="w-5 h-5 text-gold-600 dark:text-gold-500" strokeWidth={2.1} />,
     description: '叙述与环境描写',
   },
   {
     type: 'choice',
     label: '选择',
-    icon: <GitBranch className="w-5 h-5 text-gold-400" />,
+    icon: <GitBranch className="w-5 h-5 text-gold-500" strokeWidth={2.2} />,
     description: '玩家分支选择',
   },
   {
     type: 'gather',
     label: '汇聚',
-    icon: <Merge className="w-5 h-5 text-muted-foreground" />,
+    icon: <Merge className="w-5 h-5 text-cyber-cyan-500" strokeWidth={2.2} />,
     description: '多分支汇聚到一处',
   },
   {
     type: 'condition',
     label: '条件',
-    icon: <SplitSquareVertical className="w-5 h-5 text-purple-500" />,
+    icon: <SplitSquareVertical className="w-5 h-5 text-cyber-cyan-500" strokeWidth={2.2} />,
     description: '按条件判断分支',
   },
   {
     type: 'unlock',
     label: '付费',
-    icon: <Lock className="w-5 h-5 text-orange-500" />,
+    icon: <Lock className="w-5 h-5 text-p5-red" strokeWidth={2.1} />,
     description: '付费解锁内容',
   },
   {
     type: 'ending',
     label: '结局',
-    icon: <Flag className="w-5 h-5 text-green-500" />,
+    icon: <Flag className="w-5 h-5 text-p5-red" strokeWidth={2.2} />,
     description: '故事结局节点',
   },
   {
     type: 'cg',
     label: 'CG过场',
-    icon: <Film className="w-5 h-5 text-purple-500" />,
+    icon: <Film className="w-5 h-5 text-cyber-magenta-500" strokeWidth={2} />,
     description: '图片/视频过场动画',
   },
   {
     type: 'jump',
     label: '跳转',
-    icon: <Zap className="w-5 h-5 text-violet-500" />,
+    icon: <Zap className="w-5 h-5 text-p5-red" strokeWidth={2.3} />,
     description: '跳转到指定节点',
   },
   {
     type: 'random',
     label: '随机',
-    icon: <Shuffle className="w-5 h-5 text-cyan-500" />,
+    icon: <Shuffle className="w-5 h-5 text-cyber-cyan-500" strokeWidth={2.2} />,
     description: '随机选择分支',
   },
 ]
@@ -300,9 +315,13 @@ function EditorSidebar({
   ]
 
   return (
-    <div role="region" aria-label="左侧工具栏" className="min-w-0 border-r bg-card flex flex-col shrink-0">
-      <div className="px-2 pt-2 pb-0 border-b flex items-center justify-between">
-        <div role="tablist" aria-label="工具栏标签" className="flex bg-muted rounded-md p-0.5 flex-1">
+    <div role="region" aria-label="左侧工具栏" className="min-w-0 border-r border-border bg-card flex flex-col shrink-0 relative">
+      {/* 订书钉装饰 - 顶栏 */}
+      <div className="absolute top-0 left-6 w-4 h-1.5 bg-slate-400/55 rounded-b-[1px] z-20" />
+      <div className="absolute top-0 right-10 w-4 h-1.5 bg-slate-400/55 rounded-b-[1px] z-20" />
+
+      <div className="px-2 pt-2.5 pb-2 border-b border-border flex items-center justify-between">
+        <div role="tablist" aria-label="工具栏标签" className="flex bg-muted rounded-[2px] p-0.5 flex-1 border border-border/60 shadow-[2px_2px_0_hsl(var(--gold)/0.1)]">
           {tabs.map((tab) => (
             <button
               key={tab.key}
@@ -312,10 +331,10 @@ function EditorSidebar({
               id={`tab-${tab.key}`}
               onClick={() => setActiveTab(tab.key)}
               className={`
-                flex-1 flex items-center justify-center gap-1 py-1.5 text-[10px] font-medium rounded-md transition-colors
+                flex-1 flex items-center justify-center gap-1 py-1.5 text-[10px] font-semibold rounded-[2px] transition-all tracking-wide
                 ${activeTab === tab.key
-                  ? 'bg-background text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground/80'
+                  ? 'bg-background text-foreground shadow-[2px_2px_0_hsl(var(--gold)/0.22)] border border-gold-400/30 -m-px'
+                  : 'text-muted-foreground hover:text-foreground/80 hover:bg-background/40'
                 }
               `}
             >
@@ -328,36 +347,72 @@ function EditorSidebar({
 
       {activeTab === 'nodes' && (
         <div className="flex-1 overflow-y-auto flex flex-col">
-          <div className="px-3 py-2.5 border-b">
-            <p className="text-[10px] text-muted-foreground flex items-center gap-1">
-              <GripVertical className="w-3 h-3" />
-              拖拽到画布添加节点
-            </p>
+          <div className="px-3 py-2 border-b border-border bg-gold-400/5 flex items-center gap-2">
+            <GripVertical className="w-3 h-3 text-gold-500 shrink-0" />
+            <p className="text-[10px] font-semibold text-foreground/80 tracking-wide">拖拽到画布添加节点</p>
+            <span className="ml-auto text-[9px] font-black text-gold-600 dark:text-gold-500/80 bg-gold-400/15 border border-gold-400/30 px-1.5 py-[1px] rounded-[1px] tracking-tighter">
+              10
+            </span>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-2.5 space-y-1.5">
-            {visibleNodeTypes.map((node) => (
-              <div
-                key={node.type}
-                draggable
-                onDragStart={(e) => onDragStart(e, node.type)}
-                className="flex items-center gap-2.5 p-2 rounded-lg border border-border/60 bg-background hover:bg-accent/50 hover:border-border cursor-grab active:cursor-grabbing transition-all group relative"
-                title={node.description}
-              >
-                <div className="w-7 h-7 rounded-md bg-muted flex items-center justify-center shrink-0 group-hover:bg-accent transition-colors">
-                  {node.icon}
+          <div className="flex-1 overflow-y-auto p-2.5 space-y-2">
+            {visibleNodeTypes.map((node) => {
+              const style = NODE_STYLE_MAP[node.type] ?? NODE_STYLE_MAP.dialogue
+              return (
+                <div
+                  key={node.type}
+                  draggable
+                  onDragStart={(e) => onDragStart(e, node.type)}
+                  className="flex items-center gap-2.5 p-2 rounded-[2px]
+                    clip-path-polygon-[0_0,calc(100%-8px)_0,100%_8px,100%_100%,0_100%]
+                    border border-border bg-background
+                    hover:border-dashed hover:border-gold-400/45 hover:bg-gold-400/[0.04]
+                    cursor-grab active:cursor-grabbing transition-all group relative
+                    shadow-[3px_3px_0_hsl(var(--gold)/0.1)]
+                    hover:shadow-[4px_4px_0_hsl(var(--gold)/0.16)]"
+                  title={node.description}
+                >
+                  {/* 差异化图标盒：按节点语义色 + 迷你装饰徽章 */}
+                  <div className={`w-8 h-8 rounded-[2px] flex items-center justify-center shrink-0 group-hover:scale-[1.03] transition-transform relative ${style.tint} border ${style.border} shadow-[1px_1px_0_rgba(0,0,0,0.05)]`}>
+                    {node.icon}
+                    {/* 迷你印章角标（节点识别的决定性特征，左上1~2字母） */}
+                    <span className={`absolute -top-1 -left-1 text-[8px] font-black leading-none px-[3px] py-[1px] rounded-[1px] border tracking-tighter
+                      ${node.type === 'ending' || node.type === 'unlock' || node.type === 'jump'
+                        ? 'bg-p5-red/15 border-p5-red/55 text-p5-red rotate-[-8deg]'
+                        : node.type === 'cg'
+                          ? 'bg-cyber-magenta-400/12 border-cyber-magenta-400/50 text-cyber-magenta-500 rotate-[6deg]'
+                          : node.type === 'condition' || node.type === 'gather' || node.type === 'random'
+                            ? 'bg-cyber-cyan-400/12 border-cyber-cyan-400/50 text-cyber-cyan-500 rotate-[-5deg]'
+                            : 'bg-gold-400/15 border-gold-400/50 text-gold-600 dark:text-gold-500 rotate-[7deg]'
+                      }`}>
+                      {style.label}
+                    </span>
+                    {/* 节点特色迷你装饰（画布节点对应语言的小尺寸再现） */}
+                    {node.type === 'gather' && (
+                      <div className="absolute -top-0.5 right-1 w-2.5 h-0.5 bg-slate-500/60 rounded-b-[1px]" /> // 订书钉
+                    )}
+                    {node.type === 'narration' && (
+                      <div className="absolute -right-0.5 -bottom-0.5 w-2 h-2 bg-gold-400/70 rotate-12 rounded-[1px]" /> // 纸条折角
+                    )}
+                    {node.type === 'random' && (
+                      <span className="absolute -bottom-1 -right-1 text-[8px]">⚅</span> // 骰子
+                    )}
+                    {node.type === 'cg' && (
+                      <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2 bg-white border border-slate-300/70 rounded-[1px] shadow-[1px_1px_0_rgba(0,0,0,0.1)]" /> // 拍立得白边
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-bold text-foreground truncate tracking-wide">{node.label}</p>
+                    <p className="text-[9px] text-muted-foreground truncate leading-tight mt-[1px]">{node.description}</p>
+                  </div>
+                  <GripVertical className="w-3 h-3 text-muted-foreground/25 group-hover:text-muted-foreground/60 transition-colors shrink-0" />
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-medium truncate">{node.label}</p>
-                  <p className="text-[9px] text-muted-foreground truncate">{node.description}</p>
-                </div>
-                <GripVertical className="w-3 h-3 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors shrink-0" />
-              </div>
-            ))}
+              )
+            })}
             {compactInterface && (
               <button
                 onClick={() => setShowAllNodes((v) => !v)}
-                className="w-full flex items-center justify-center gap-1 py-1.5 text-[10px] font-medium text-muted-foreground hover:text-foreground hover:bg-accent/50 rounded-lg border border-dashed border-border/70 transition-colors"
+                className="w-full flex items-center justify-center gap-1 py-1.5 text-[10px] font-semibold tracking-wide text-muted-foreground hover:text-gold-600 dark:hover:text-gold-500 hover:bg-gold-400/8 rounded-[2px] border-2 border-dashed border-border/70 hover:border-gold-400/40 transition-all"
               >
                 {showAllNodes ? '收起，仅显示常用' : '全部节点'}
               </button>

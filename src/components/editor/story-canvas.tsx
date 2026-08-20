@@ -93,6 +93,9 @@ import { matchShortcut } from '@editor/lib/shortcut-manager'
 import { type Theme, THEME_LABELS, initTheme, subscribeTheme, toggleTheme } from '@editor/lib/theme-manager'
 import { useAssistantName } from '@editor/lib/assistant-name'
 import { endSession, estimateWordCount, recordAction, startSession } from '@editor/lib/writing-stats'
+import { continueText, generateOutline, polishText, type AiOutlineResult } from '@editor/lib/ai'
+import { getAiConfig, refreshAiConfig } from '@editor/lib/ai/provider-registry'
+import type { OutlineScene } from '@editor/lib/ai/types'
 
 // 为所有节点类型包裹批注标记（random 在组件内动态包装以传入 updateNodeData）
 const baseNodeTypes = {
@@ -207,6 +210,8 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, onStartTour, wo
   const [showPreview, setShowPreview] = useState(false)
   // AI 设置弹窗
   const [showAiSettings, setShowAiSettings] = useState(false)
+  // Phase 2: TopToolbar AI 按钮忙碌状态（全局互斥：3 个 AI 动作共享同一 busy flag，避免用户双击 / 快捷键冲突）
+  const [isAiBusy, setIsAiBusy] = useState(false)
   const [historyState, setHistoryState] = useState({ canUndo: false, canRedo: false })
   const [rightPanelTab, setRightPanelTab] = useState('properties')
   const [outlineText, setOutlineText] = useState('')
@@ -1278,6 +1283,23 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, onStartTour, wo
         return
       }
 
+      // Phase 2: TopToolbar AI 动作快捷键
+      if (matchShortcut(e, 'aiOutline')) {
+        e.preventDefault()
+        void handleAiOutline()
+        return
+      }
+      if (matchShortcut(e, 'aiContinue')) {
+        e.preventDefault()
+        void handleAiContinue()
+        return
+      }
+      if (matchShortcut(e, 'aiPolish')) {
+        e.preventDefault()
+        void handleAiPolish()
+        return
+      }
+
       // 节点类：快速添加节点
       if (matchShortcut(e, 'addDialogue')) {
         e.preventDefault()
@@ -1387,27 +1409,9 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, onStartTour, wo
     addNodeAtCenter,
     zoomIn,
     zoomOut,
-    fitView,
-    handleToggleTheme,
-    setNodes,
-    throttledPushHistory,
-    activeLeftActivity,
-    activeRightActivity,
-    aiPanelMode,
-    setActiveLeftActivity,
-    setActiveRightActivity,
-    setAiPanelMode,
-    showNodeSearch,
-    showExportDialog,
-    showCreatorCenter,
-    showDiscover,
-    showShortcutsModal,
-    showPreview,
-    showAiSettings,
-    focusMode,
-    toggleFocusMode,
-    announce,
   ])
+
+  // 为所有全局快捷键（非节点类、非 AI）使用独立依赖数组，避免与上面的主 handler 合并后产生 stale closure。
 
   const updateNodeData = useCallback((nodeId: string, data: Partial<StoryNode['data']>) => {
     setNodes((nds) =>
@@ -1415,6 +1419,180 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, onStartTour, wo
     )
     throttledPushHistory('UPDATE_NODE', '修改节点属性')
   }, [setNodes, throttledPushHistory])
+
+  // ────────────────────────────────────────────────────────────────────────
+  // Phase 2: TopToolbar AI 动作接入（生成大纲 / 续写 / 润色）
+  // ────────────────────────────────────────────────────────────────────────
+
+  /** 从当前选中节点抽取可传给 AI 的纯文本（对话/旁白/选项合并）。 */
+  const extractNodeText = useCallback((node: StoryNode | undefined | null): string => {
+    if (!node) return ''
+    const d = node.data as Record<string, unknown>
+    const text = typeof d.text === 'string' ? d.text.trim() : ''
+    const narration = typeof d.narration === 'string' ? d.narration.trim() : ''
+    const content = typeof d.content === 'string' ? d.content.trim() : ''
+    const label = typeof d.label === 'string' ? d.label.trim() : ''
+    const options = Array.isArray(d.options) ? d.options.map((o: any) => (o && typeof o.label === 'string' ? o.label : '')).filter(Boolean) as string[] : []
+    return [narration, content, text, label, ...options].join(' ').trim()
+  }, [])
+
+  /** 把 AI 大纲服务返回的 scenes 转成 Markdown，方便复用现有 parseOutline → generateNodesFromOutline。 */
+  function scenesToMarkdown(result: AiOutlineResult): string {
+    const lines: string[] = [`# ${result.title}`]
+    for (const s of result.scenes) {
+      lines.push(`## ${s.title || '场景'}`)
+      if (s.description) lines.push(`- 旁白: ${s.description}`)
+      if (Array.isArray(s.characters) && s.characters.length) {
+        lines.push(`- 角色: ${s.characters.join('、')}`)
+      }
+      if (Array.isArray(s.choices) && s.choices.length) {
+        for (const c of s.choices) {
+          lines.push(`- 选项: ${c.text}`)
+        }
+      } else if (s.description) {
+        lines.push(`- 对话: ${s.description.slice(0, 120)}`)
+      }
+    }
+    return lines.join('\n')
+  }
+
+  /** 统一的 AI 配置未就绪提示，避免文案分裂。 */
+  function requireAiConfig(): boolean {
+    refreshAiConfig()
+    const ok = !!getAiConfig()
+    if (!ok) {
+      showToast('error', '请先配置 AI 服务（右上角齿轮）后再使用 AI 创作工具')
+      setShowAiSettings(true)
+    }
+    return ok
+  }
+
+  const handleAiOutline = useCallback(async () => {
+    if (isAiBusy || !requireAiConfig()) return
+    setIsAiBusy(true)
+    announce('开始 AI 生成大纲')
+    try {
+      const topic = (title && title !== '未命名故事') ? title : '原创互动故事'
+      const outline = await generateOutline(topic, '互动叙事', 5)
+      if (!outline.scenes || outline.scenes.length === 0) {
+        showToast('error', 'AI 未返回可用场景，请重试')
+        return
+      }
+      const markdown = scenesToMarkdown(outline)
+      const parsed = parseOutline(markdown)
+      if (parsed.length === 0) {
+        showToast('error', '大纲解析失败，请重试')
+        return
+      }
+      const { nodes: newNodes, edges: newEdges } = generateNodesFromOutline(parsed, {
+        startX: 400,
+        startY: 120,
+      })
+      setNodes((nds) => [...nds, ...newNodes])
+      setEdges((eds) => [...eds, ...newEdges])
+      setSelectedNodeIds(newNodes.map((n) => n.id))
+      pushHistory('BATCH', `AI 生成 ${newNodes.length} 个节点`)
+      setTitle((prev) => (prev === '未命名故事' ? outline.title || prev : prev))
+      showToast('success', `AI 已生成 ${newNodes.length} 个节点`)
+      announce(`大纲生成完成，共 ${newNodes.length} 个节点`)
+      setTimeout(() => {
+        fitView?.({ padding: 0.3, duration: 500, nodes: newNodes.map((n) => ({ id: n.id })) })
+      }, 120)
+    } catch (err: any) {
+      showToast('error', `AI 生成大纲失败：${err?.message || '未知错误'}`)
+    } finally {
+      setIsAiBusy(false)
+    }
+  }, [isAiBusy, title, pushHistory, setNodes, setEdges, announce, fitView])
+
+  const handleAiContinue = useCallback(async () => {
+    if (isAiBusy || !requireAiConfig()) return
+    const src = selectedNode
+    const srcText = extractNodeText(src)
+    if (!srcText) {
+      showToast('error', '请先选中一个有内容的节点作为续写起点')
+      return
+    }
+    setIsAiBusy(true)
+    announce('开始 AI 续写')
+    try {
+      const { result } = await continueText(srcText)
+      if (!result || !result.trim()) {
+        showToast('error', 'AI 未返回续写内容')
+        return
+      }
+      // 新增一个 dialogue 节点在源节点下方，并生成一条从源节点到新节点的边
+      const basePos = src?.position ? { x: src.position.x, y: src.position.y + 160 } : { x: 400, y: 100 }
+      const id = `dialogue-${Date.now()}-ai`
+      const newNode: StoryNode = {
+        id,
+        type: 'dialogue',
+        position: basePos,
+        data: {
+          characterId: '',
+          text: result.trim(),
+          emotion: '',
+          spritePosition: 'center',
+          textAnimation: 'typewriter',
+        },
+      }
+      setNodes((nds) => [...nds, newNode])
+      if (src) {
+        const newEdge: StoryEdge = {
+          id: `ai-edge-${Date.now()}`,
+          source: src.id,
+          target: id,
+          label: 'AI 续写',
+        }
+        setEdges((eds) => [...eds, newEdge])
+      }
+      setSelectedNodeIds([id])
+      pushHistory('BATCH', 'AI 续写节点')
+      showToast('success', 'AI 续写完成，已为你追加新节点')
+      announce('AI 续写完成')
+      setTimeout(() => {
+        fitView?.({ padding: 0.35, duration: 500, nodes: [{ id }] })
+      }, 120)
+    } catch (err: any) {
+      showToast('error', `AI 续写失败：${err?.message || '未知错误'}`)
+    } finally {
+      setIsAiBusy(false)
+    }
+  }, [isAiBusy, selectedNode, extractNodeText, setNodes, setEdges, pushHistory, announce, fitView])
+
+  const handleAiPolish = useCallback(async () => {
+    if (isAiBusy || !requireAiConfig()) return
+    const src = selectedNode
+    const srcText = extractNodeText(src)
+    if (!srcText) {
+      showToast('error', '请先选中一个有内容的节点再润色')
+      return
+    }
+    const targetNode = src!
+    setIsAiBusy(true)
+    announce('开始润色节点文案')
+    try {
+      const { result } = await polishText(srcText)
+      if (!result || !result.trim()) {
+        showToast('error', 'AI 未返回润色结果')
+        return
+      }
+      const polished = result.trim()
+      updateNodeData(targetNode.id, {
+        narration: undefined as any,
+        content: undefined as any,
+        label: undefined as any,
+        options: undefined as any,
+        text: polished,
+      })
+      showToast('success', '节点文案已润色')
+      announce('润色完成')
+    } catch (err: any) {
+      showToast('error', `润色失败：${err?.message || '未知错误'}`)
+    } finally {
+      setIsAiBusy(false)
+    }
+  }, [isAiBusy, selectedNode, extractNodeText, updateNodeData, announce])
 
   // random 节点自带编辑控件，需要受控更新回调（入历史栈 + 触发 graph 重算）
   const nodeTypes = useMemo(() => ({
@@ -2058,6 +2236,10 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, onStartTour, wo
         onExport={() => setShowExportDialog(true)}
         onToggleAiPanel={handleToggleAiPanel}
         aiPanelVisible={aiPanelMode !== 'hidden'}
+        onAiOutline={() => { void handleAiOutline() }}
+        onAiContinue={() => { void handleAiContinue() }}
+        onAiPolish={() => { void handleAiPolish() }}
+        isAiBusy={isAiBusy}
         onToggleFocusMode={() => {
           toggleFocusMode()
           announce(focusMode ? '专注模式已退出' : '专注模式已开启，已隐藏所有面板')

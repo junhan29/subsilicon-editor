@@ -88,7 +88,7 @@ export function ImageEditor({ src, onChange }: ImageEditorProps) {
 
   return (
     <div className="space-y-3">
-      <div className="relative rounded-lg overflow-hidden border border-border bg-checkerboard">
+      <div className="relative rounded-[2px] overflow-hidden border border-border bg-checkerboard clip-path-polygon-[0_0,calc(100%-6px)_0,100%_6px,100%_100%,0_100%]">
         <img
           src={src}
           alt="编辑预览"

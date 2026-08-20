@@ -369,25 +369,40 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings, on
     })
 
   return (
-    <div className="h-screen w-screen bg-card flex flex-col overflow-hidden">
-      {/* 顶栏 */}
-      <header className="flex items-center justify-between px-6 py-4 border-b border-border bg-card/80 backdrop-blur">
+    <div className="h-screen w-screen bg-card flex flex-col overflow-hidden relative">
+      {/* 半调网点装饰 - 右上 */}
+      <div className="absolute top-16 right-8 w-20 h-20 opacity-[0.06] pointer-events-none z-0"
+        style={{
+          backgroundImage: 'radial-gradient(hsl(var(--gold)) 1px, transparent 1px)',
+          backgroundSize: '8px 8px',
+        }}
+      />
+
+      {/* 顶栏 - P5剪贴风 */}
+      <header className="flex items-center justify-between px-6 py-4 border-b border-border bg-card/80 backdrop-blur relative z-10">
+        {/* 订书钉装饰 */}
+        <div className="absolute top-0 left-12 w-5 h-1.5 bg-slate-400/50 rounded-b-[1px] z-20 shadow-[0_1px_0_rgba(0,0,0,0.1)]" />
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary flex items-center justify-center">
+          <div className="w-8 h-8 rounded-[2px] clip-path-polygon-[0_0,75%_0,100%_25%,100%_100%,0_100%] bg-gradient-to-br from-p5-red via-p5-red to-gold-500 flex items-center justify-center shadow-[2px_2px_0_hsl(var(--p5-red)/0.25)] border border-gold-400/30">
             <Sparkles className="w-4 h-4 text-white" />
           </div>
-          <h1 className="text-lg font-semibold text-white">SubSilicon Editor</h1>
+          <h1 className="text-lg font-bold text-foreground tracking-wider">SubSilicon Editor</h1>
+          <div className="rotate-[8deg]">
+            <span className="text-[9px] font-black px-1.5 py-0.5 border border-p5-red/50 bg-p5-red/10 text-p5-red tracking-tighter">
+              HOME
+            </span>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={handleCheckUpdates}
             disabled={updateStatus === 'checking'}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg transition-colors ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-[2px] transition-all border ${
               updateStatus === 'available'
-                ? 'bg-gold-400/15 text-gold-400 hover:bg-gold-400/25'
+                ? 'bg-gold-400/15 text-gold-500 border-gold-400/40 shadow-[2px_2px_0_hsl(var(--gold)/0.2)] hover:bg-gold-400/25'
                 : updateStatus === 'not-available'
-                ? 'text-green-400 hover:bg-muted'
-                : 'text-muted-foreground hover:text-white hover:bg-muted'
+                ? 'bg-cyber-cyan-400/10 text-cyber-cyan-500 border-cyber-cyan-400/30 shadow-[2px_2px_0_hsl(var(--cyber-cyan)/0.15)]'
+                : 'bg-card text-muted-foreground border-border hover:text-foreground hover:bg-gold-400/8 hover:border-gold-400/30 shadow-[1px_1px_0_hsl(var(--gold)/0.1)]'
             } ${updateStatus === 'checking' ? 'opacity-50 cursor-not-allowed' : ''}`}
             title={
               updateStatus === 'available' ? `发现新版本 v${updateInfo?.version}` :
@@ -411,7 +426,7 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings, on
           </button>
           <button
             onClick={onOpenBooth}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gold-400 hover:text-gold-300 hover:bg-gold-400/10 rounded-lg transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gold-500 hover:text-gold-400 bg-gold-400/10 hover:bg-gold-400/15 rounded-[2px] border border-gold-400/30 shadow-[2px_2px_0_hsl(var(--gold)/0.18)] transition-all"
             title="摊位工作台：管理摊位资料、作品陈列、试阅与价目，一键摆摊"
           >
             <Store className="w-4 h-4" />
@@ -419,7 +434,7 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings, on
           </button>
           <button
             onClick={onOpenSettings}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground hover:text-white hover:bg-muted rounded-lg transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-gold-400/8 rounded-[2px] border border-transparent hover:border-gold-400/25 transition-all shadow-[1px_1px_0_hsl(var(--gold)/0.08)]"
           >
             <Settings className="w-4 h-4" />
             设置
@@ -429,10 +444,10 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings, on
 
       {/* 更新通知横幅：检测到新版本时引导用户到浏览器下载 DMG 手动安装 */}
       {(updateStatus === 'available' || updateStatus === 'error') && updateInfo && (
-        <div className={`mx-6 mt-3 mb-0 p-4 rounded-xl border ${
+        <div className={`mx-6 mt-3 mb-0 p-4 rounded-[2px] border shadow-[4px_4px_0_hsl(var(--gold)/0.15)] clip-path-polygon-[0_0,calc(100%-12px)_0,100%_12px,100%_100%,0_100%] ${
           updateStatus === 'error'
-            ? 'bg-primary/10 border-primary/20'
-            : 'bg-gradient-to-r from-gold-400/10 to-gold-500/5 border-gold-400/20'
+            ? 'bg-p5-red/10 border-p5-red/30'
+            : 'bg-gradient-to-r from-gold-400/10 to-gold-500/5 border-gold-400/30'
         }`}>
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3 min-w-0">
@@ -469,7 +484,7 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings, on
               {updateStatus === 'available' && (
                 <button
                   onClick={handleDownloadUpdate}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-gold-400 hover:bg-gold-500 text-white text-xs font-medium rounded-lg transition-colors"
+                  className="flex items-center gap-1.5 px-4 py-2 bg-gold-400 hover:bg-gold-500 text-white text-xs font-bold rounded-[2px] border border-gold-400 shadow-[2px_2px_0_hsl(var(--gold)/0.2)] transition-colors tracking-wide"
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
                   前往下载
@@ -478,7 +493,7 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings, on
               {updateStatus === 'error' && (
                 <button
                   onClick={handleCheckUpdates}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-primary/80 hover:bg-primary text-primary-foreground text-xs font-medium rounded-lg transition-colors"
+                  className="flex items-center gap-1.5 px-4 py-2 bg-p5-red hover:bg-p5-red/90 text-white text-xs font-bold rounded-[2px] border border-p5-red/30 shadow-[2px_2px_0_hsl(var(--p5-red)/0.2)] transition-colors"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
                   重试
@@ -486,7 +501,7 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings, on
               )}
               <button
                 onClick={() => { setUpdateStatus('idle'); setUpdateInfo(null); setUpdateError(null) }}
-                className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                className="p-2 rounded-[2px] hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -503,17 +518,17 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings, on
           </div>
         ) : works.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full gap-6">
-            <div className="w-20 h-20 rounded-2xl bg-muted border-2 border-dashed border-border flex items-center justify-center">
+            <div className="w-20 h-20 rounded-[2px] bg-muted border-2 border-dashed border-border flex items-center justify-center shadow-[4px_4px_0_hsl(var(--gold)/0.12)] clip-path-polygon-[0_0,85%_0,100%_15px,100%_100%,0_100%]">
               <FolderOpen className="w-8 h-8 text-muted-foreground" />
             </div>
             <div className="text-center">
-              <h2 className="text-lg font-medium text-white mb-1">欢迎使用 SubSilicon Editor</h2>
+              <h2 className="text-lg font-bold text-foreground mb-1 tracking-wider">欢迎使用 SubSilicon Editor</h2>
               <p className="text-sm text-muted-foreground mb-6">创建一个新项目或打开已有项目</p>
             </div>
             <div className="flex flex-col gap-3">
               <button
                 onClick={handleOpenNewProjectDialog}
-                className="flex items-center gap-2 px-6 py-3 bg-primary hover:bg-primary/90 text-white rounded-xl text-sm font-medium transition-colors shadow-lg shadow-primary/20"
+                className="flex items-center gap-2 px-6 py-3 bg-gold-400 hover:bg-gold-500 text-white rounded-[2px] text-sm font-bold transition-colors shadow-[3px_3px_0_hsl(var(--gold)/0.25)] border border-gold-400 tracking-wide"
               >
                 <Plus className="w-5 h-5" />
                 新建项目
@@ -521,7 +536,7 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings, on
               <button
                 onClick={handleImportProject}
                 disabled={importing}
-                className="flex items-center justify-center gap-2 px-6 py-3 bg-secondary hover:bg-accent text-white rounded-xl text-sm font-medium transition-colors disabled:opacity-50"
+                className="flex items-center justify-center gap-2 px-6 py-3 bg-card hover:bg-secondary text-foreground rounded-[2px] text-sm font-bold transition-colors disabled:opacity-50 border border-border shadow-[2px_2px_0_hsl(var(--gold)/0.12)] tracking-wide"
               >
                 {importing ? (
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -534,7 +549,7 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings, on
           </div>
         ) : (
           <div>
-            {/* 工具栏：搜索、排序、视图切换 */}
+            {/* 工具栏：搜索、排序、视图切换 - P5风 */}
             <div className="flex items-center gap-3 mb-4">
               <div className="relative flex-1 max-w-xs">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
@@ -543,43 +558,43 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings, on
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="搜索项目..."
-                  className="w-full h-8 pl-8 pr-3 text-xs rounded-lg border border-border bg-muted text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
+                  className="w-full h-8 pl-8 pr-3 text-xs rounded-[2px] border border-border bg-muted text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-gold-400 shadow-[1px_1px_0_hsl(var(--gold)/0.1)]"
                 />
               </div>
-              <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5 border border-border">
+              <div className="flex items-center gap-1 bg-muted rounded-[2px] p-0.5 border border-border shadow-[1px_1px_0_hsl(var(--gold)/0.08)]">
                 <button
                   onClick={() => setSortBy('lastOpened')}
-                  className={`px-2 py-1 text-[10px] rounded-md transition-colors ${sortBy === 'lastOpened' ? 'bg-secondary text-white' : 'text-muted-foreground hover:text-white'}`}
+                  className={`px-2 py-1 text-[10px] rounded-[2px] transition-colors ${sortBy === 'lastOpened' ? 'bg-gold-400/20 text-gold-500' : 'text-muted-foreground hover:text-foreground'}`}
                   title="最近打开"
                 >
                   <Clock className="w-3 h-3" />
                 </button>
                 <button
                   onClick={() => setSortBy('created')}
-                  className={`px-2 py-1 text-[10px] rounded-md transition-colors ${sortBy === 'created' ? 'bg-secondary text-white' : 'text-muted-foreground hover:text-white'}`}
+                  className={`px-2 py-1 text-[10px] rounded-[2px] transition-colors ${sortBy === 'created' ? 'bg-gold-400/20 text-gold-500' : 'text-muted-foreground hover:text-foreground'}`}
                   title="创建时间"
                 >
                   <Star className="w-3 h-3" />
                 </button>
                 <button
                   onClick={() => setSortBy('name')}
-                  className={`px-2 py-1 text-[10px] rounded-md transition-colors ${sortBy === 'name' ? 'bg-secondary text-white' : 'text-muted-foreground hover:text-white'}`}
+                  className={`px-2 py-1 text-[10px] rounded-[2px] transition-colors ${sortBy === 'name' ? 'bg-gold-400/20 text-gold-500' : 'text-muted-foreground hover:text-foreground'}`}
                   title="名称"
                 >
                   <Hash className="w-3 h-3" />
                 </button>
               </div>
-              <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5 border border-border">
+              <div className="flex items-center gap-1 bg-muted rounded-[2px] p-0.5 border border-border shadow-[1px_1px_0_hsl(var(--gold)/0.08)]">
                 <button
                   onClick={() => setViewMode('grid')}
-                  className={`p-1 rounded-md transition-colors ${viewMode === 'grid' ? 'bg-secondary text-white' : 'text-muted-foreground hover:text-white'}`}
+                  className={`p-1 rounded-[2px] transition-colors ${viewMode === 'grid' ? 'bg-gold-400/20 text-gold-500' : 'text-muted-foreground hover:text-foreground'}`}
                   title="网格视图"
                 >
                   <Grid className="w-3.5 h-3.5" />
                 </button>
                 <button
                   onClick={() => setViewMode('list')}
-                  className={`p-1 rounded-md transition-colors ${viewMode === 'list' ? 'bg-secondary text-white' : 'text-muted-foreground hover:text-white'}`}
+                  className={`p-1 rounded-[2px] transition-colors ${viewMode === 'list' ? 'bg-gold-400/20 text-gold-500' : 'text-muted-foreground hover:text-foreground'}`}
                   title="列表视图"
                 >
                   <List className="w-3.5 h-3.5" />
@@ -589,10 +604,10 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings, on
                 <button
                   onClick={handleImportProject}
                   disabled={importing}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground hover:text-white hover:bg-muted rounded-lg transition-colors disabled:opacity-50"
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-gold-400/8 rounded-[2px] transition-colors disabled:opacity-50 border border-transparent hover:border-gold-400/25 shadow-[1px_1px_0_hsl(var(--gold)/0.08)]"
                 >
                   {importing ? (
-                    <div className="w-4 h-4 border-2 border-primary border-t-primary-foreground rounded-full animate-spin" />
+                    <div className="w-4 h-4 border-2 border-gold-400 border-t-transparent rounded-full animate-spin" />
                   ) : (
                     <FolderSync className="w-4 h-4" />
                   )}
@@ -600,7 +615,7 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings, on
                 </button>
                 <button
                   onClick={handleOpenNewProjectDialog}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-primary hover:bg-primary/90 text-white rounded-lg transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-gold-400 hover:bg-gold-500 text-white rounded-[2px] transition-colors border border-gold-400 shadow-[2px_2px_0_hsl(var(--gold)/0.2)]"
                 >
                   <Plus className="w-4 h-4" />
                   新建项目
@@ -621,13 +636,13 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings, on
               )}
             </div>
 
-            {/* 网格视图 */}
+            {/* 网格视图 - P5剪贴卡 */}
             {viewMode === 'grid' ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4">
                 {filteredWorks.map((work) => (
                   <div
                     key={work.id}
-                    className="group relative bg-muted/50 rounded-xl border border-border/50 hover:border-primary/50 transition-all overflow-hidden cursor-pointer"
+                    className="group relative bg-muted/50 rounded-[2px] border border-border/50 hover:border-gold-400/50 transition-all overflow-hidden cursor-pointer clip-path-polygon-[0_0,calc(100%-8px)_0,100%_8px,100%_100%,0_100%] shadow-[3px_3px_0_hsl(var(--gold)/0.1)] hover:shadow-[4px_4px_0_hsl(var(--gold)/0.18)]"
                     onClick={() => {
                       if (renamingId !== work.id) handleOpenProject(work)
                     }}
@@ -677,31 +692,31 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings, on
                             e.stopPropagation()
                             setMenuOpenId(menuOpenId === work.id ? null : work.id)
                           }}
-                          className="p-1 rounded-lg bg-black/50 hover:bg-black/70 text-white transition-colors"
+                          className="p-1 rounded-[2px] bg-black/50 hover:bg-black/70 text-white transition-colors border border-white/10"
                         >
                           <MoreHorizontal className="w-4 h-4" />
                         </button>
                         {menuOpenId === work.id && (
                           <>
                             <div className="fixed inset-0 z-10" onClick={() => setMenuOpenId(null)} />
-                            <div className="absolute right-0 top-full mt-1 z-20 w-36 bg-muted rounded-lg border border-border shadow-xl overflow-hidden">
+                            <div className="absolute right-0 top-full mt-1 z-20 w-36 bg-muted rounded-[2px] border border-border shadow-[4px_4px_0_hsl(var(--gold)/0.15)] overflow-hidden">
                               <button
                                 onClick={(e) => { e.stopPropagation(); startRename(work) }}
-                                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-foreground hover:bg-secondary transition-colors"
+                                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-foreground hover:bg-gold-400/10 transition-colors"
                               >
                                 <Edit3 className="w-3.5 h-3.5" />
                                 重命名
                               </button>
                               <button
                                 onClick={(e) => { e.stopPropagation(); handleDuplicate(work) }}
-                                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-foreground hover:bg-secondary transition-colors"
+                                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-foreground hover:bg-gold-400/10 transition-colors"
                               >
                                 <Copy className="w-3.5 h-3.5" />
                                 复制
                               </button>
                               <button
                               onClick={(e) => { e.stopPropagation(); showDeleteConfirm(work) }}
-                              className="w-full flex items-center gap-2 px-3 py-2 text-xs text-red-400 hover:bg-secondary transition-colors"
+                              className="w-full flex items-center gap-2 px-3 py-2 text-xs text-p5-red hover:bg-p5-red/10 transition-colors"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                               删除
@@ -715,20 +730,20 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings, on
                 ))}
               </div>
             ) : (
-              /* 列表视图 */
-              <div className="space-y-1">
+              /* 列表视图 - P5风 */
+              <div className="space-y-1.5">
                 {filteredWorks.map((work) => (
                   <div
                     key={work.id}
-                    className="group flex items-center gap-3 p-3 bg-muted/50 rounded-lg border border-border/50 hover:border-primary/50 transition-all cursor-pointer"
+                    className="group flex items-center gap-3 p-3 bg-muted/50 rounded-[2px] border border-border/50 hover:border-gold-400/50 hover:bg-muted/70 transition-all cursor-pointer clip-path-polygon-[0_0,calc(100%-6px)_0,100%_6px,100%_100%,0_100%] shadow-[2px_2px_0_hsl(var(--gold)/0.08)] hover:shadow-[3px_3px_0_hsl(var(--gold)/0.15)]"
                     onClick={() => {
                       if (renamingId !== work.id) handleOpenProject(work)
                     }}
                   >
                     {/* 图标 */}
-                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-secondary to-muted flex items-center justify-center shrink-0">
+                    <div className="w-10 h-10 rounded-[2px] bg-gradient-to-br from-gold-400/20 to-muted flex items-center justify-center shrink-0 border border-gold-400/30">
                       {work.thumbnail ? (
-                        <img src={work.thumbnail} alt={work.name} className="w-full h-full object-cover rounded-lg" />
+                        <img src={work.thumbnail} alt={work.name} className="w-full h-full object-cover" />
                       ) : (
                         <BookOpen className="w-5 h-5 text-muted-foreground" />
                       )}
@@ -745,12 +760,12 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings, on
                             if (e.key === 'Enter') confirmRename()
                             if (e.key === 'Escape') setRenamingId(null)
                           }}
-                          className="w-full text-xs font-medium bg-secondary border border-primary rounded px-1.5 py-0.5 text-white outline-none"
+                          className="w-full text-xs font-medium bg-secondary border border-gold-400 rounded-[2px] px-1.5 py-0.5 text-white outline-none"
                           autoFocus
                           onClick={(e) => e.stopPropagation()}
                         />
                       ) : (
-                        <p className="text-xs font-medium text-white truncate">{work.name}</p>
+                        <p className="text-xs font-medium text-foreground truncate">{work.name}</p>
                       )}
                       <div className="flex items-center gap-3 mt-0.5 text-[10px] text-muted-foreground">
                         <span className="flex items-center gap-1">
@@ -773,31 +788,31 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings, on
                             e.stopPropagation()
                             setMenuOpenId(menuOpenId === work.id ? null : work.id)
                           }}
-                          className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground transition-colors"
+                          className="p-1.5 rounded-[2px] hover:bg-gold-400/10 text-muted-foreground hover:text-foreground transition-colors"
                         >
                           <MoreHorizontal className="w-4 h-4" />
                         </button>
                         {menuOpenId === work.id && (
                           <>
                             <div className="fixed inset-0 z-10" onClick={() => setMenuOpenId(null)} />
-                            <div className="absolute right-0 top-full mt-1 z-20 w-36 bg-muted rounded-lg border border-border shadow-xl overflow-hidden">
+                            <div className="absolute right-0 top-full mt-1 z-20 w-36 bg-muted rounded-[2px] border border-border shadow-[4px_4px_0_hsl(var(--gold)/0.15)] overflow-hidden">
                               <button
                                 onClick={(e) => { e.stopPropagation(); startRename(work) }}
-                                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-foreground hover:bg-secondary transition-colors"
+                                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-foreground hover:bg-gold-400/10 transition-colors"
                               >
                                 <Edit3 className="w-3.5 h-3.5" />
                                 重命名
                               </button>
                               <button
                                 onClick={(e) => { e.stopPropagation(); handleDuplicate(work) }}
-                                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-foreground hover:bg-secondary transition-colors"
+                                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-foreground hover:bg-gold-400/10 transition-colors"
                               >
                                 <Copy className="w-3.5 h-3.5" />
                                 复制
                               </button>
                               <button
                               onClick={(e) => { e.stopPropagation(); showDeleteConfirm(work) }}
-                              className="w-full flex items-center gap-2 px-3 py-2 text-xs text-red-400 hover:bg-secondary transition-colors"
+                              className="w-full flex items-center gap-2 px-3 py-2 text-xs text-p5-red hover:bg-p5-red/10 transition-colors"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                               删除
@@ -821,15 +836,15 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings, on
         <span className="text-[10px] text-muted-foreground">项目存储在本地数据库中</span>
       </footer>
 
-      {/* 新建项目对话框 */}
+      {/* 新建项目对话框 - P5剪贴风 */}
       {showNewProjectDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-muted rounded-xl border border-border shadow-2xl w-full max-w-md mx-4">
+          <div className="bg-muted rounded-[2px] border border-border shadow-[6px_6px_0_hsl(var(--gold)/0.2)] clip-path-polygon-[0_0,calc(100%-14px)_0,100%_14px,100%_100%,0_100%] w-full max-w-md mx-4">
             <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-              <h3 className="text-sm font-medium text-white">新建项目</h3>
+              <h3 className="text-sm font-bold text-foreground tracking-wider">新建项目</h3>
               <button
                 onClick={() => setShowNewProjectDialog(false)}
-                className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-white transition-colors"
+                className="p-1 rounded-[2px] hover:bg-gold-400/10 text-muted-foreground hover:text-foreground transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -837,7 +852,7 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings, on
 
             <div className="p-4 space-y-4">
               <div className="space-y-2">
-                <label className="text-xs text-muted-foreground">作品类型</label>
+                <label className="text-xs text-muted-foreground font-semibold tracking-wide">作品类型</label>
                 <div className="grid grid-cols-2 gap-2">
                   {[
                     { id: 'interactive-narrative' as WorkTypeId, name: '互动叙事', desc: '节点图 · 分支 · 多结局' },
@@ -849,13 +864,13 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings, on
                       key={t.id}
                       type="button"
                       onClick={() => setNewProjectType(t.id)}
-                      className={`p-2.5 rounded-lg border text-left transition-all ${
+                      className={`p-2.5 rounded-[2px] border text-left transition-all ${
                         newProjectType === t.id
-                          ? 'border-primary bg-primary/10 ring-1 ring-primary/30'
-                          : 'border-border hover:border-primary'
+                          ? 'border-gold-400 bg-gold-400/10 shadow-[2px_2px_0_hsl(var(--gold)/0.2)]'
+                          : 'border-border hover:border-gold-400/50'
                       }`}
                     >
-                      <div className="text-sm font-medium text-white">{t.name}</div>
+                      <div className="text-sm font-bold text-foreground tracking-wide">{t.name}</div>
                       <div className="text-[11px] text-muted-foreground mt-0.5">{t.desc}</div>
                     </button>
                   ))}
@@ -863,27 +878,27 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings, on
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs text-muted-foreground">项目名称 *</label>
+                <label className="text-xs text-muted-foreground font-semibold tracking-wide">项目名称 *</label>
                 <input
                   type="text"
                   value={newProjectName}
                   onChange={(e) => setNewProjectName(e.target.value)}
                   placeholder={newProjectType === 'novel' ? '输入书名...' : newProjectType === 'video' ? '输入视频标题...' : newProjectType === 'comic' ? '输入漫画标题...' : '输入项目名称...'}
-                  className="w-full h-9 text-sm rounded-lg border border-border bg-secondary px-3 text-white placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  className="w-full h-9 text-sm rounded-[2px] border border-border bg-secondary px-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-gold-400 shadow-[1px_1px_0_hsl(var(--gold)/0.1)]"
                   autoFocus
                   onKeyDown={(e) => e.key === 'Enter' && handleConfirmNewProject()}
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs text-muted-foreground">存储位置（可选）</label>
+                <label className="text-xs text-muted-foreground font-semibold tracking-wide">存储位置（可选）</label>
                 <div className="flex gap-2">
                   <input
                     type="text"
                     value={newProjectPath}
                     onChange={(e) => setNewProjectPath(e.target.value)}
                     placeholder="默认使用应用数据目录"
-                    className="flex-1 h-9 text-sm rounded-lg border border-border bg-secondary px-3 text-white placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    className="flex-1 h-9 text-sm rounded-[2px] border border-border bg-secondary px-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-gold-400 shadow-[1px_1px_0_hsl(var(--gold)/0.1)]"
                   />
                   <button
                     onClick={async () => {
@@ -895,7 +910,7 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings, on
                         setNewProjectPath(result.filePaths[0])
                       }
                     }}
-                    className="px-3 h-9 text-xs bg-secondary hover:bg-accent text-foreground rounded-lg border border-border transition-colors"
+                    className="px-3 h-9 text-xs bg-card hover:bg-secondary text-foreground rounded-[2px] border border-border hover:border-gold-400/30 shadow-[1px_1px_0_hsl(var(--gold)/0.1)] transition-colors"
                   >
                     浏览
                   </button>
@@ -907,14 +922,14 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings, on
             <div className="flex justify-end gap-2 px-4 py-3 border-t border-border">
               <button
                 onClick={() => setShowNewProjectDialog(false)}
-                className="px-4 py-2 text-xs text-muted-foreground hover:text-white transition-colors"
+                className="px-4 py-2 text-xs text-muted-foreground hover:text-foreground transition-colors rounded-[2px]"
               >
                 取消
               </button>
               <button
                 onClick={handleConfirmNewProject}
                 disabled={!newProjectName.trim() || creating}
-                className="flex items-center gap-1.5 px-4 py-2 text-xs bg-primary hover:bg-primary/90 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-1.5 px-4 py-2 text-xs bg-gold-400 hover:bg-gold-500 text-white font-bold rounded-[2px] transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-gold-400 shadow-[2px_2px_0_hsl(var(--gold)/0.2)]"
               >
                 {creating ? (
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -928,17 +943,17 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings, on
         </div>
       )}
 
-      {/* 删除确认对话框 */}
+      {/* 删除确认对话框 - P5剪贴风 */}
       {deleteConfirmId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-muted rounded-xl border border-border shadow-2xl w-full max-w-sm mx-4">
+          <div className="bg-muted rounded-[2px] border border-border shadow-[5px_5px_0_hsl(var(--p5-red)/0.22)] clip-path-polygon-[0_0,calc(100%-12px)_0,100%_12px,100%_100%,0_100%] w-full max-w-sm mx-4">
             <div className="p-4">
               <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center">
-                  <AlertTriangle className="w-5 h-5 text-red-400" />
+                <div className="w-10 h-10 rounded-[2px] bg-p5-red/15 border border-p5-red/40 flex items-center justify-center shadow-[2px_2px_0_hsl(var(--p5-red)/0.2)]">
+                  <AlertTriangle className="w-5 h-5 text-p5-red" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-medium text-white">确认删除项目？</h3>
+                  <h3 className="text-sm font-bold text-foreground tracking-wide">确认删除项目？</h3>
                   <p className="text-xs text-muted-foreground mt-0.5">「{deleteConfirmName}」将被永久删除</p>
                 </div>
               </div>
@@ -946,13 +961,13 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings, on
               <div className="flex justify-end gap-2">
                 <button
                   onClick={() => setDeleteConfirmId(null)}
-                  className="px-4 py-2 text-xs text-muted-foreground hover:text-white transition-colors"
+                  className="px-4 py-2 text-xs text-muted-foreground hover:text-foreground transition-colors rounded-[2px]"
                 >
                   取消
                 </button>
                 <button
                   onClick={() => handleDelete(deleteConfirmId)}
-                  className="flex items-center gap-1.5 px-4 py-2 text-xs bg-primary hover:bg-red-600 text-white rounded-lg transition-colors"
+                  className="flex items-center gap-1.5 px-4 py-2 text-xs bg-p5-red hover:bg-p5-red/90 text-white font-bold rounded-[2px] transition-colors border border-p5-red shadow-[2px_2px_0_hsl(var(--p5-red)/0.2)]"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   确认删除

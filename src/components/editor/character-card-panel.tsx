@@ -157,7 +157,7 @@ export function CharacterCardPanel({ characters }: CharacterCardPanelProps) {
   if (characters.length === 0) return null
 
   return (
-    <div className="rounded-lg border border-border/60 bg-background overflow-hidden">
+    <div className="rounded-[2px] border border-border/60 bg-background overflow-hidden shadow-[3px_3px_0_hsl(var(--gold)/0.1)] clip-path-polygon-[0_0,calc(100%-6px)_0,100%_6px,100%_100%,0_100%]">
       <div className="p-2.5 border-b border-border/40">
         <p className="text-sm font-medium flex items-center gap-1.5">
           <ImagePlus className="w-3.5 h-3.5 text-primary" />

@@ -1,16 +1,16 @@
 export type Theme = 'dark' | 'light' | 'sepia'
 
 export const THEME_LABELS: Record<Theme, string> = {
-  dark: '预告函 · 红黑',
+  dark: '霓虹剪贴 · 红黑金',
   light: '纸面 · 白',
-  sepia: '古纸 · 棕',
+  sepia: '羊皮纸 · 棕',
 }
 
 const STORAGE_KEY = 'subsilicon-editor-theme'
 
 const THEME_ORDER: Theme[] = ['dark', 'light', 'sepia']
 
-/** 获取当前生效的主题（默认深色 P5 预告函） */
+/** 获取当前生效的主题（默认深色霓虹剪贴） */
 export function getCurrentTheme(): Theme {
   if (typeof document === 'undefined') return 'dark'
   const root = document.documentElement
@@ -53,7 +53,7 @@ export function getStoredTheme(): Theme | null {
 
 /**
  * 初始化主题：在编辑器挂载时调用，根据 localStorage 偏好应用主题。
- * 若无偏好，默认应用深色（P5 预告函红黑）主题。
+ * 若无偏好，默认应用深色（霓虹剪贴·红黑金）主题。
  */
 export function initTheme(): Theme {
   const stored = getStoredTheme()

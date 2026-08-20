@@ -135,7 +135,7 @@ export function AnalyticsPanel() {
               placeholder="输入故事 ID（留空查看默认）"
               value={storyId}
               onChange={(e) => setStoryId(e.target.value)}
-              className="flex-1 px-3 py-1.5 bg-muted border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+              className="flex-1 px-3 py-1.5 bg-muted border border-border rounded-[2px] text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
             />
           </div>
 
@@ -232,7 +232,7 @@ export function AnalyticsPanel() {
                       {analytics.nodeVisits.slice(0, 10).map((node: NodeVisitStat) => (
                         <div
                           key={node.nodeId}
-                          className="flex items-center gap-3 p-2 rounded-lg bg-muted/30"
+                          className="flex items-center gap-3 p-2 rounded-[2px] bg-muted/30"
                         >
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-medium truncate">
@@ -285,7 +285,7 @@ export function AnalyticsPanel() {
                       {analytics.dropOffPoints.slice(0, 10).map((drop) => (
                         <div
                           key={drop.nodeId}
-                          className="flex items-center gap-3 p-2 rounded-lg bg-muted/30"
+                          className="flex items-center gap-3 p-2 rounded-[2px] bg-muted/30"
                         >
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-medium truncate">{drop.nodeId}</p>
@@ -331,7 +331,7 @@ export function AnalyticsPanel() {
                       {analytics.nodeDwellStats.slice(0, 10).map((node) => (
                         <div
                           key={node.nodeId}
-                          className="flex items-center gap-3 p-2 rounded-lg bg-muted/30"
+                          className="flex items-center gap-3 p-2 rounded-[2px] bg-muted/30"
                         >
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-medium truncate">{node.nodeId}</p>
@@ -416,7 +416,7 @@ export function AnalyticsPanel() {
                 </Card>
               )}
 
-              <div className="p-3 bg-muted/30 rounded-lg space-y-2">
+              <div className="p-3 bg-muted/30 rounded-[2px] space-y-2">
                 <p className="text-xs text-muted-foreground flex items-center gap-1.5">
                   <Download className="w-3.5 h-3.5" />
                   导出分析报告（仅本地生成，不联网）
@@ -463,7 +463,7 @@ export function AnalyticsPanel() {
             </div>
           )}
 
-          <div className="p-3 bg-gold-400/10 rounded-lg text-xs text-amber-600">
+          <div className="p-3 bg-gold-400/10 rounded-[2px] shadow-[2px_2px_0_hsl(var(--gold)/0.15)] text-xs text-amber-600">
             <p className="font-medium mb-1">去中心化模式说明</p>
             <ul className="space-y-1 list-disc list-inside">
               <li>作品导出为 .story.html 文件后，平台无法收集读者数据</li>
