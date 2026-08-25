@@ -777,7 +777,7 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
             </div>
             <div>
               <h3 className="text-sm font-semibold yasgui-gradient-text leading-tight">{assistantName}服务设置</h3>
-              <p className="text-[9px] text-muted-foreground leading-none">创作搭档 · 配置对话与媒体生成服务</p>
+              <p className="text-[9px] text-muted-foreground leading-none">创作搭档 · 配置对话与文本辅助服务</p>
             </div>
           </div>
           <button
@@ -939,146 +939,18 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
             </>
           )}
 
-          {/* 媒体生成（图片/视频）配置 —— 独立于文本 AI，可单独配置 */}
-          <div className="border-t border-border pt-3 space-y-3">
+          {/* 图片/视频生成已移至素材导入 — 推荐使用专业工具生成后导入 */}
+          <div className="border-t border-border pt-3 space-y-2">
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-md bg-gradient-to-br from-cyan-400/25 to-cyan-400/10 flex items-center justify-center">
-                <Image className="w-3.5 h-3.5 text-cyan-300" />
+              <div className="w-6 h-6 rounded-md bg-muted flex items-center justify-center">
+                <Image className="w-3.5 h-3.5 text-muted-foreground" />
               </div>
-              <span className="text-xs font-semibold text-white">图片/视频生成</span>
-              <span className="text-[9px] text-muted-foreground bg-muted border border-border px-1.5 py-0.5 rounded">可选</span>
+              <span className="text-xs font-semibold text-white">图片/视频素材</span>
             </div>
-            <p className="text-[10px] text-muted-foreground -mt-2 leading-relaxed">
-              这是<span className="text-muted-foreground">可选功能</span>。不配置也能用 AI 写故事、建节点。
-              <br />配置后 AI 才能自动生成图片/视频。密钥仅存本地，不会上传。
-              <br />首次使用建议选「通义万相」，国内注册即送免费额度。
-              <br />此配置会保存到下方「AI 任务路由」的<span className="text-muted-foreground">图片生成</span>槽（统一入口）；
-              视频/音乐可在任务路由中单独配置，未配置时视频回退旧全局配置（历史数据）。
+            <p className="text-[10px] text-muted-foreground leading-relaxed">
+              推荐使用 Midjourney、ComfyUI、Runway 等专业工具生成素材，
+              在编辑器右侧面板拖拽导入即可。不再内置 AI 图片/视频生成。
             </p>
-
-            <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground">选择服务商</label>
-              <select
-                value={mediaProvider.type}
-                onChange={(e) => updateMediaType(e.target.value)}
-                className="w-full h-8 text-xs rounded border border-border bg-secondary px-2 text-white"
-              >
-                {/* 推荐项在前 */}
-                {Object.entries(MEDIA_PROVIDER_INFO)
-                  .filter(([, info]) => !info.advanced)
-                  .map(([key, info]) => (
-                    <option key={key} value={key}>{info.name}</option>
-                  ))}
-                {showAdvancedMedia && Object.entries(MEDIA_PROVIDER_INFO)
-                  .filter(([, info]) => info.advanced)
-                  .map(([key, info]) => (
-                    <option key={key} value={key}>{info.name}</option>
-                  ))}
-              </select>
-              <p className="text-[10px] text-muted-foreground leading-relaxed">{MEDIA_PROVIDER_INFO[mediaProvider.type]?.desc}</p>
-              {MEDIA_PROVIDER_INFO[mediaProvider.type]?.website && (
-                <a
-                  href={MEDIA_PROVIDER_INFO[mediaProvider.type].website}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-[10px] text-cyan-400 hover:text-cyan-300"
-                >
-                  <ExternalLink className="w-3 h-3" />
-                  点这里去申请 API Key →
-                </a>
-              )}
-            </div>
-
-            {/* 高级模式切换 */}
-            <button
-              onClick={() => setShowAdvancedMedia(!showAdvancedMedia)}
-              className="text-[10px] text-muted-foreground hover:text-foreground underline"
-            >
-              {showAdvancedMedia ? '收起高级选项' : '显示高级选项（自定义服务 / ComfyUI）'}
-            </button>
-
-            {mediaProvider.type !== 'comfyui' && (
-              <div className="space-y-1.5">
-                <label className="text-xs text-muted-foreground">API Key</label>
-                <div className="relative">
-                  <input
-                    type={showMediaKey ? 'text' : 'password'}
-                    value={mediaProvider.apiKey}
-                    onChange={(e) => {
-                      setMediaProvider((prev) => ({ ...prev, apiKey: e.target.value }))
-                      setMediaTestResult(null)
-                    }}
-                    placeholder="粘贴你刚才申请的 API Key"
-                    className="w-full h-8 text-xs rounded border border-border bg-secondary px-2 pr-12 text-white"
-                  />
-                  <button
-                    onClick={() => setShowMediaKey(!showMediaKey)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground hover:text-foreground"
-                  >
-                    {showMediaKey ? '隐藏' : '显示'}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {mediaProvider.type !== 'openai' && mediaProvider.type !== 'stability' && mediaProvider.type !== 'comfyui' && (
-              <div className="space-y-1.5">
-                <label className="text-xs text-muted-foreground">API 地址</label>
-                <input
-                  value={mediaProvider.apiUrl}
-                  onChange={(e) => {
-                    setMediaProvider((prev) => ({ ...prev, apiUrl: e.target.value }))
-                    setMediaTestResult(null)
-                  }}
-                  placeholder="https://..."
-                  className="w-full h-8 text-xs rounded border border-border bg-secondary px-2 text-white"
-                />
-                <p className="text-[10px] text-muted-foreground">通常无需修改，切换服务商时已自动填好</p>
-              </div>
-            )}
-
-            {mediaProvider.type !== 'comfyui' && (
-              <div className="space-y-1.5">
-                <label className="text-xs text-muted-foreground">模型名</label>
-                <input
-                  value={mediaProvider.model}
-                  onChange={(e) => {
-                    setMediaProvider((prev) => ({ ...prev, model: e.target.value }))
-                    setMediaTestResult(null)
-                  }}
-                  placeholder="已自动填好，一般不用改"
-                  className="w-full h-8 text-xs rounded border border-border bg-secondary px-2 text-white"
-                />
-                <p className="text-[10px] text-muted-foreground">已自动填好推荐模型，一般不用改</p>
-              </div>
-            )}
-
-            {/* 测试连接 —— 配错能立刻发现 */}
-            {mediaProvider.type !== 'comfyui' && (
-              <div className="flex items-center gap-2 flex-wrap">
-                <button
-                  onClick={testMediaConnection}
-                  disabled={mediaTesting || !mediaProvider.apiKey}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-cyan-500 text-cyan-950 hover:bg-cyan-400 rounded transition-colors disabled:opacity-50"
-                >
-                  {mediaTesting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Image className="w-3 h-3" />}
-                  测试生成
-                </button>
-                {mediaTestResult && (
-                  <span className={`text-xs flex items-center gap-1 ${mediaTestResult.ok ? 'text-emerald-400' : 'text-red-400'}`}>
-                    {mediaTestResult.ok && <CheckCircle2 className="w-3 h-3" />}
-                    {mediaTestResult.message}
-                  </span>
-                )}
-              </div>
-            )}
-
-            {/* ComfyUI 无 API Key：指引到下方「高级设置」配置工作流 */}
-            {mediaProvider.type === 'comfyui' && (
-              <p className="text-[10px] text-muted-foreground leading-relaxed">
-                已选 ComfyUI 服务商。工作流配置收在下方「高级设置」区，展开后即可配置。
-              </p>
-            )}
           </div>
 
           {/* 高级设置（默认收起）：收纳 ComfyUI 工作流 / 任务路由 / 自定义工作流等进阶配置 */}

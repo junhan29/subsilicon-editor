@@ -66,6 +66,7 @@ import { QualityCheckPanel } from './quality-check-panel'
 import { RecoveryBanner } from './recovery-banner'
 import { NodeSearch } from './node-search'
 import { ExportDialog } from './export-dialog'
+import { AiSettingsDialog } from './ai-settings-dialog'
 import { CreatorCenterDialog } from './creator-center-dialog'
 import { DiscoverDialog } from './discover-dialog'
 import { StoryPreview } from './preview/story-preview'
@@ -2711,6 +2712,10 @@ function StoryCanvasInner({ initialGraph, onSave, onGraphChange, onStartTour, wo
       <ShortcutsModal
         open={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
+      />
+      <AiSettingsDialog
+        open={showAiSettings}
+        onClose={() => setShowAiSettings(false)}
       />
     </div>
   )

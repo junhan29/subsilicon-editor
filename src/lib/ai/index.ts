@@ -50,6 +50,7 @@ export {
 } from './services/story-assist-service'
 export type { PlotSuggestion, StoryBranchSuggestion } from './services/story-assist-service'
 
+/** @deprecated 媒体生成已从核心 UI 移除，这些导出仅供向后兼容，插件请直接 import from './services/media-generation-service' */
 export {
   generateMedia,
   generateAudio,
@@ -99,6 +100,7 @@ export {
 } from './skill-templates'
 export type { SkillTemplate } from './skill-templates'
 
+/** @deprecated ComfyUI 已从核心 UI 移除，这些导出仅供向后兼容 */
 export {
   WORKFLOW_PRESETS,
   getWorkflowPreset,

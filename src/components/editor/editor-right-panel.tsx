@@ -11,11 +11,10 @@ import { VersionPanel } from './version-panel'
 import { AnnotationPanel } from './annotation-panel'
 import { MemoizedWritingStatsPanel } from './writing-stats-panel'
 import { IncomePanel } from './income-panel'
-import { AiMediaPanel } from './ai-media-panel'
+import { EnhancedAssetImport } from './enhanced-asset-import'
 import { AnalyticsPanel } from './analytics-panel'
 import { PluginManagerPanel } from './plugin-manager-panel'
 import { generateDefaultAvatar } from '@editor/lib/avatar-utils'
-import { getAssistantName } from '@editor/lib/assistant-name'
 import type { AnnotationType, ComicAudio, ComicScene, NodeAnnotation, StoryCharacter, StoryEdge, StoryGraph, StoryNode, StoryVariable } from '@editor/types/editor'
 import type { StoryGraphSnapshot } from '@editor/lib/history-store'
 import type { VersionSnapshot } from '@editor/lib/version-store'
@@ -532,14 +531,13 @@ function EditorRightPanel({
                 <p className="text-[10px] text-muted-foreground mt-0.5">JPG / PNG / WebP，支持批量</p>
               </div>
 
-              {/* 创作助理媒体生成 */}
+              {/* 素材导入（替代 AI 媒体生成） */}
               <div className="border border-border rounded-lg p-3 bg-muted/30">
-                <AiMediaPanel
-                  characters={characters}
+                <EnhancedAssetImport
                   onImageGenerated={(url, name) => {
                     const newScene: ComicScene = {
-                      id: `scene-${Date.now()}`,
-                      name: `${getAssistantName()}生成-${name.slice(0, 20)}`,
+                      id: `scene-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+                      name,
                       backgroundImage: url,
                     }
                     onScenesChange?.([...scenes, newScene])
