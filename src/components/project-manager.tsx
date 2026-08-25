@@ -426,11 +426,11 @@ export function ProjectManager({ onOpenProject, onNewProject, onOpenSettings, on
           </button>
           <button
             onClick={onOpenBooth}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gold-500 hover:text-gold-400 bg-gold-400/10 hover:bg-gold-400/15 rounded-[2px] border border-gold-400/30 shadow-[2px_2px_0_hsl(var(--gold)/0.18)] transition-all"
-            title="摊位工作台：管理摊位资料、作品陈列、试阅与价目，一键摆摊"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gold-400 hover:text-gold-300 hover:bg-gold-400/10 rounded-lg transition-colors"
+            title="我的摊位：管理摊位资料、作品陈列、试阅与价目，一键摆摊"
           >
             <Store className="w-4 h-4" />
-            摊位工作台
+            我的摊位
           </button>
           <button
             onClick={onOpenSettings}

@@ -1,10 +1,10 @@
 /**
- * 作品墙提交提供商注册系统
+ * 自由集市提交提供商注册系统
  *
  * // @deprecated 新提交流程走 platforms + platformConfigs（创作者中心平台配置），本注册表仅作旧兼容默认值
  *
  * 提供商（SubmitProvider）抽象了"把作品提交到哪里"这一行为。
- * 默认内置 SubSilicon 官方作品墙；任何实现了下方协议的第三方展示服务
+ * 默认内置 SubSilicon 官方自由集市；任何实现了下方协议的第三方展示服务
  * 都可以通过 addToRegistry 注册，或由用户在设置面板中添加。
  *
  * 公共提交协议（任何第三方展示服务均可实现）：
@@ -56,7 +56,7 @@ const ACTIVE_KEY = 'subsilicon.submit.activeProviderId.v1'
 const DEFAULT_BUILTIN: SubmitProvider[] = [
   {
     id: 'cn.subsilicon.wall',
-    name: 'SubSilicon 作品墙',
+    name: 'SubSilicon 自由集市',
     apiUrl: 'https://subsilicon.cn/api/creator/preview/submit',
     authHeader: 'X-Submit-Token',
     authToken: typeof process !== 'undefined' ? process.env.SUBMIT_TOKEN || '' : '',

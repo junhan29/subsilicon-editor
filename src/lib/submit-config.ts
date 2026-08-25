@@ -1,7 +1,7 @@
 /**
  * 提交配置（向后兼容）
  *
- * 当前默认值取自 submit-providers 中内置的 SubSilicon 官方作品墙。
+ * 当前默认值取自 submit-providers 中内置的 SubSilicon 官方自由集市。
  * 新代码应直接使用 submit-providers 模块以支持多提供商。
  */
 import { getActiveProvider } from './submit-providers'

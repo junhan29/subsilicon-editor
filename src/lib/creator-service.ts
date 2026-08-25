@@ -13,6 +13,90 @@ import { decryptPasswordFields, encryptPasswordFields } from './password-crypto'
 
 const PASSWORD_FIELDS = ['platformPassword', 'submitToken']
 
+// ========== downloadLinks：网盘下载渠道（自由集市 submit 协议扩展） ==========
+export const DOWNLOAD_KIND_WHITELIST = [
+  'baidupan', 'aliyundrive', 'quark', 'onedrive',
+  'googledrive', 'lanzou', 'other',
+] as const;
+export type DownloadLinkKind = typeof DOWNLOAD_KIND_WHITELIST[number];
+
+export interface DownloadLink {
+  id: string;
+  kind: DownloadLinkKind;
+  label: string;       // 展示名，≤120，必填
+  link: string;        // http/https URL，≤500，必填
+  password?: string;   // 提取码，≤64，可选
+  note?: string;       // 备注，≤200，可选
+}
+
+const DOWNLOAD_LINK_KNOWN_KEYS = new Set(['id', 'kind', 'label', 'link', 'password', 'note']);
+const HTTPS_REGEX = /^https?:\/\/\S+$/i;
+const MAX_DOWNLOAD_LINKS = 10;
+
+export function validateDownloadLinks(
+  raw: unknown,
+  opts: { allowEmpty?: boolean } = { allowEmpty: true }
+): { ok: boolean; error?: string; value?: DownloadLink[] } {
+  if (raw === undefined || raw === null || raw === '') {
+    return opts.allowEmpty ? { ok: true, value: [] } : { ok: false, error: '请至少配置一条下载渠道' };
+  }
+  let arr: any[];
+  if (typeof raw === 'string') {
+    try { arr = JSON.parse(raw); } catch { return { ok: false, error: 'downloadLinks 不是合法 JSON 字符串' }; }
+  } else if (Array.isArray(raw)) {
+    arr = raw;
+  } else {
+    return { ok: false, error: 'downloadLinks 必须是数组或 JSON 字符串' };
+  }
+  if (!Array.isArray(arr)) return { ok: false, error: 'downloadLinks 必须是数组' };
+  if (arr.length > MAX_DOWNLOAD_LINKS) {
+    return { ok: false, error: '下载渠道最多 ' + MAX_DOWNLOAD_LINKS + ' 条，当前 ' + arr.length + ' 条' };
+  }
+  if (arr.length === 0 && !opts.allowEmpty) {
+    return { ok: false, error: '请至少配置一条下载渠道' };
+  }
+  const value: DownloadLink[] = [];
+  for (let i = 0; i < arr.length; i++) {
+    const idx = i + 1;
+    const item = arr[i];
+    if (item == null || typeof item !== 'object') {
+      return { ok: false, error: '第 ' + idx + ' 条下载渠道格式非法' };
+    }
+    const keys = Object.keys(item);
+    const unknown = keys.filter((k) => !DOWNLOAD_LINK_KNOWN_KEYS.has(k));
+    if (unknown.length > 0) {
+      return { ok: false, error: '第 ' + idx + ' 条下载渠道存在未知字段: ' + unknown.join(',') };
+    }
+    const id = typeof item.id === 'string' && item.id.trim() ? item.id : 'dl_' + Date.now() + '_' + i;
+    if (!DOWNLOAD_KIND_WHITELIST.includes(item.kind as any)) {
+      return { ok: false, error: '第 ' + idx + ' 条下载渠道 kind 非法：' + String(item.kind) };
+    }
+    const kind = item.kind as DownloadLinkKind;
+    const label = typeof item.label === 'string' ? item.label.trim() : '';
+    if (!label) return { ok: false, error: '第 ' + idx + ' 条下载渠道 label 不能为空' };
+    if ([...label].length > 120) {
+      return { ok: false, error: '第 ' + idx + ' 条下载渠道 label 超过 120 字' };
+    }
+    const link = typeof item.link === 'string' ? item.link.trim() : '';
+    if (!link) return { ok: false, error: '第 ' + idx + ' 条下载渠道 link 不能为空' };
+    if (link.length > 500) return { ok: false, error: '第 ' + idx + ' 条下载渠道 link 超过 500 字符' };
+    if (!HTTPS_REGEX.test(link)) return { ok: false, error: '第 ' + idx + ' 条下载渠道 link 仅允许 http/https URL' };
+    let password: string | undefined;
+    if (item.password !== undefined && item.password !== null && item.password !== '') {
+      password = String(item.password);
+      if (password.length > 64) return { ok: false, error: '第 ' + idx + ' 条下载渠道 password 超过 64 字符' };
+    }
+    let note: string | undefined;
+    if (item.note !== undefined && item.note !== null && item.note !== '') {
+      note = String(item.note);
+      if ([...note].length > 200) return { ok: false, error: '第 ' + idx + ' 条下载渠道 note 超过 200 字' };
+    }
+    value.push({ id, kind, label, link, password, note });
+  }
+  return { ok: true, value };
+}
+
+
 function generateId(): string {
   return 'id_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8)
 }
@@ -136,7 +220,17 @@ export async function publishToPlatform(
     if (extraFields) {
       for (const [key, value] of Object.entries(extraFields)) {
         if (value !== undefined && value !== null) {
-          formData.append(key, value)
+          // C2b. downloadLinks 主进程级二次校验：拒绝非法数据写入 FormData
+          if (key === 'downloadLinks') {
+            const v = validateDownloadLinks(value, { allowEmpty: true });
+            if (!v.ok || !v.value) {
+              throw new Error('[publish security] downloadLinks 校验失败：' + (v.error || 'unknown'));
+            }
+            // 规范化后再 append（保证字段白名单一致）
+            formData.append(key, JSON.stringify(v.value));
+          } else {
+            formData.append(key, value);
+          }
         }
       }
     }

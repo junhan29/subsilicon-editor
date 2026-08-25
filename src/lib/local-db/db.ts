@@ -50,7 +50,7 @@ export function openDB(): Promise<IDBDatabase> {
           const accStore = db.createObjectStore('accounts', { keyPath: 'email' })
           accStore.createIndex('email', 'email', { unique: true })
         }
-        // v4：摊位容器（摊位工作台一级容器，单摊位模型）
+        // v4：摊位容器（我的摊位一级容器，单摊位模型）
         if (!db.objectStoreNames.contains('booths')) {
           db.createObjectStore('booths', { keyPath: 'id' })
         }

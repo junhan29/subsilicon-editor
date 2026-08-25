@@ -13,7 +13,7 @@ import type { BoothExportItem } from './pack'
 import { buildBoothDdp } from './pack'
 import type { LocalAccount } from '@editor/lib/local-account-store'
 import { getAccount } from '@editor/lib/local-account-store'
-import { publishToPlatform } from '@editor/lib/creator-service'
+import { publishToPlatform, validateDownloadLinks, type DownloadLink } from '@editor/lib/creator-service'
 import { getWorkType } from '@editor/lib/work-registry'
 import { getGraphFromWork } from '@editor/lib/local-db/work-store'
 import { saveBooth } from './store'
@@ -39,7 +39,13 @@ export async function publishBooth(
   booth: Booth,
   items: BoothExportItem[],
   platformConfigId: string,
-  account?: Omit<LocalAccount, 'passwordHash'>
+  account?: Omit<LocalAccount, 'passwordHash'>,
+  options?: {
+    /** 摊位级 downloadLinks：应用到所有作品（除非 perWorkDownloadLinks 覆盖） */
+    downloadLinks?: DownloadLink[];
+    /** 每作品级 downloadLinks：workId -> 下载渠道数组 */
+    perWorkDownloadLinks?: Record<string, DownloadLink[]>;
+  }
 ): Promise<BoothPublishOutcome> {
   const acc = account || getAccount()
   if (!acc) {
@@ -72,7 +78,27 @@ export async function publishBooth(
 
     // DDP 1.1：摊位层元数据随每次提交附带（按 creatorEmail 聚合，站点侧 upsert）
     const ddp = buildBoothDdp(booth, items)
-    const extraFields = { booth: JSON.stringify(ddp) }
+    const extraFields: Record<string, string> = { booth: JSON.stringify(ddp) }
+    // C3. downloadLinks 合并逻辑：作品级优先，其次摊位级，最后无则不发送空数组（省流量）
+    const workLinks = options?.perWorkDownloadLinks?.[item.work.id]
+    const boothLinks = options?.downloadLinks
+    const rawLinksForWork: DownloadLink[] | undefined =
+      Array.isArray(workLinks) && workLinks.length > 0 ? workLinks :
+      Array.isArray(boothLinks) && boothLinks.length > 0 ? boothLinks :
+      undefined
+    if (rawLinksForWork) {
+      const v = validateDownloadLinks(rawLinksForWork, { allowEmpty: false })
+      if (!v.ok || !v.value) {
+        results.push({
+          workId: item.work.id,
+          title,
+          success: false,
+          error: '下载渠道校验失败：' + (v.error || 'unknown'),
+        })
+        continue
+      }
+      extraFields.downloadLinks = JSON.stringify(v.value)
+    }
 
     const res = await publishToPlatform(
       item.work.id,

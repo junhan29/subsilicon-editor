@@ -1,6 +1,6 @@
 {
   "name": "subsilicon-editor",
-  "version": "1.16.0",
+  "version": "1.17.1",
   "license": "MIT",
   "description": "零代码可视化互动叙事编辑器 | Zero-code visual interactive narrative editor",
   "keywords": [
@@ -25,12 +25,13 @@
     "verify": "npm run lint && npm run typecheck && npm run test && npm run build",
     "typecheck": "tsc --noEmit",
     "electron:dev": "node desktop/build.cjs && concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
-    "electron:build": "vite build && node desktop/build.cjs && electron-builder && node scripts/fix-update-yml.mjs",
-    "electron:build:win": "vite build && node desktop/build.cjs && electron-builder --win && node scripts/fix-update-yml.mjs",
-    "electron:build:mac": "vite build && node desktop/build.cjs && electron-builder --mac && node scripts/fix-update-yml.mjs",
-    "electron:build:linux": "vite build && node desktop/build.cjs && electron-builder --linux && node scripts/fix-update-yml.mjs",
-    "electron:build:all": "vite build && node desktop/build.cjs && electron-builder -mw && node scripts/fix-update-yml.mjs",
-    "electron:pack": "vite build && node desktop/build.cjs && electron-builder --dir"
+    "electron:build": "vite build && node desktop/build.cjs && electron-builder",
+    "electron:build:win": "vite build && node desktop/build.cjs && electron-builder --win",
+    "electron:build:mac": "vite build && node desktop/build.cjs && electron-builder --mac",
+    "electron:build:linux": "vite build && node desktop/build.cjs && electron-builder --linux",
+    "electron:build:all": "vite build && node desktop/build.cjs dist --mac --win",
+    "electron:pack": "vite build && node desktop/build.cjs && electron-builder --dir",
+    "dist": "vite build && node desktop/build.cjs dist"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "1.1.17",
@@ -152,13 +153,15 @@
         {
           "target": "dmg",
           "arch": [
-            "arm64"
+            "arm64",
+            "x64"
           ]
         },
         {
           "target": "zip",
           "arch": [
-            "arm64"
+            "arm64",
+            "x64"
           ]
         }
       ],

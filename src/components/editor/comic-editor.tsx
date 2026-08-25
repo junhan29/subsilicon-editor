@@ -515,7 +515,7 @@ export function ComicEditor({ work, onBack }: ComicEditorProps) {
           <button
             onClick={() => setShowCreatorCenter(true)}
             className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
-            title="把作品提交到网站作品墙"
+            title="把作品提交到自由集市"
           >
             <Send className="w-3.5 h-3.5" />
             发布作品

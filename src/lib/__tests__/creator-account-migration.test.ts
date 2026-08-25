@@ -262,7 +262,7 @@ function platformConfig(id: string, email?: string): Record<string, unknown> {
   return {
     id,
     platformId: 'subsilicon',
-    name: 'SubSilicon 作品墙',
+    name: 'SubSilicon 自由集市',
     config: {
       apiUrl: 'https://subsilicon.cn/api/creator/preview/submit',
       // 模拟 password-crypto 加密格式（不要求真实可解密）

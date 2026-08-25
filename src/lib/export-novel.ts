@@ -5,7 +5,7 @@
  * - EPUB：标准电子书（章节、封面、目录）
  * - HTML：单文件在线阅读页面（支持付费章节展示「试读」提示）
  * - TXT：纯文本全文（不含付费章节内容）
- * - 预览 HTML：发布到作品墙的静态图文预览
+ * - 预览 HTML：发布到自由集市的静态图文预览
  */
 
 import JSZip from 'jszip'
@@ -266,10 +266,10 @@ ${chaptersHtml}
 </html>`
 }
 
-/** 生成发布到作品墙的静态预览 HTML（前 N 个免费章节 + 简介） */
+/** 生成发布到自由集市的静态预览 HTML（前 N 个免费章节 + 简介） */
 export function exportNovelPreviewHTML(data: NovelData, title: string, author?: string): string {
   const sorted = [...data.chapters].sort((a, b) => a.order - b.order)
-  // 预览只取免费章节：付费章节正文此前被明文输出到作品墙预览，与
+  // 预览只取免费章节：付费章节正文此前被明文输出到自由集市预览，与
   // EPUB/HTML 导出的付费占位策略不一致，读者无需解锁即可读到付费内容。
   // 免费判定与导出一致（整本付费时试读 N 章之后的章节同样视为锁定）
   const freeChapters = sorted.filter((ch) => !isLockedChapter(ch, data))

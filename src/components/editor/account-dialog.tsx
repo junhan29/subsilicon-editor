@@ -136,7 +136,7 @@ export function AccountDialog({ open, onClose, onSuccess }: AccountDialogProps) 
                 <p className="text-xs text-muted-foreground">{currentAccount.bio}</p>
               )}
               <p className="text-xs text-muted-foreground">
-                每账号限上传 2 个作品到 SubSilicon 作品墙展示
+                每账号限上传 2 个作品到 SubSilicon 自由集市展示
               </p>
               <button
                 onClick={() => {

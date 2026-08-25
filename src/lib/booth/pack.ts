@@ -269,7 +269,7 @@ export function boothFileName(name: string): string {
 }
 
 /** 保存摊位 zip（Electron 保存对话框；浏览器环境降级为下载） */
-export async function saveBoothZip(booth: Booth, items: BoothExportItem[]): Promise<{ success: boolean; error?: string }> {
+export async function saveBoothZip(booth: Booth, items: BoothExportItem[]): Promise<{ success: boolean; error?: string; path?: string; size?: number }> {
   const blob = await buildBoothZip(booth, items)
   const api = window.__electronAPI
   if (api?.saveFileDialog && api?.writeFile) {
@@ -283,7 +283,7 @@ export async function saveBoothZip(booth: Booth, items: BoothExportItem[]): Prom
     }
     const bytes = Array.from(new Uint8Array(await blob.arrayBuffer()))
     const write = await api.writeFile(result.path, bytes)
-    return write.success ? { success: true } : { success: false, error: write.error }
+    return write.success ? { success: true, path: result.path, size: bytes.length } : { success: false, error: write.error }
   }
   // 浏览器降级：直接下载
   const url = URL.createObjectURL(blob)
@@ -292,7 +292,7 @@ export async function saveBoothZip(booth: Booth, items: BoothExportItem[]): Prom
   a.download = `${boothFileName(booth.name)}.zip`
   a.click()
   setTimeout(() => URL.revokeObjectURL(url), 1000)
-  return { success: true }
+  return { success: true, path: a.download, size: blob.size }
 }
 
 /** 汇总陈列作品为导出条目（按摊位陈列顺序） */

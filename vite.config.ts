@@ -1,16 +1,26 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { resolve } from 'path'
-import { readFileSync } from 'fs'
+import { readFileSync, existsSync } from 'fs'
+// @ts-ignore - CommonJS require 在 Vite/Node ESM interop 下可用
+import buildVersion from './desktop/build-version.cjs'
 
 const pkg = JSON.parse(readFileSync(resolve(__dirname, './package.json'), 'utf-8'))
+// 单源 appName / version：永远以 desktop/build-version.cjs 为真
+const APP_VERSION = String(buildVersion.VERSION || pkg.version)
+const APP_NAME = String(
+  (pkg.build && (pkg.build as any).productName) ||
+  pkg.productName ||
+  pkg.displayName ||
+  pkg.name
+)
 
 export default defineConfig({
   base: './',
   plugins: [react()],
   define: {
-    __APP_VERSION__: JSON.stringify(pkg.version),
-    __APP_NAME__: JSON.stringify(pkg.productName || pkg.name),
+    __APP_VERSION__: JSON.stringify(APP_VERSION),
+    __APP_NAME__: JSON.stringify(APP_NAME),
   },
   resolve: {
     alias: {
