@@ -2,7 +2,6 @@
 import React from 'react'
 import { ExternalLink, FileCode } from 'lucide-react'
 
-// @ts-ignore - 构建时由 build.cjs:preflightPatch 生成，避免读 package.json 漂移
 import buildInfo from '../../../build-info.json'
 
 export function AboutTab() {
