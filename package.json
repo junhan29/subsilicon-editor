@@ -14,7 +14,7 @@
   "main": "desktop/main.cjs",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "node desktop/build.cjs && vite build",
     "preview": "vite preview",
     "lint": "ESLINT_USE_FLAT_CONFIG=false eslint src --ext .ts,.tsx",
     "lint:fix": "ESLINT_USE_FLAT_CONFIG=false eslint src --ext .ts,.tsx --fix",
@@ -25,13 +25,13 @@
     "verify": "npm run lint && npm run typecheck && npm run test && npm run build",
     "typecheck": "tsc --noEmit",
     "electron:dev": "node desktop/build.cjs && concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
-    "electron:build": "vite build && node desktop/build.cjs && electron-builder",
-    "electron:build:win": "vite build && node desktop/build.cjs && electron-builder --win",
-    "electron:build:mac": "vite build && node desktop/build.cjs && electron-builder --mac",
-    "electron:build:linux": "vite build && node desktop/build.cjs && electron-builder --linux",
-    "electron:build:all": "vite build && node desktop/build.cjs dist --mac --win",
-    "electron:pack": "vite build && node desktop/build.cjs && electron-builder --dir",
-    "dist": "vite build && node desktop/build.cjs dist"
+    "electron:build": "node desktop/build.cjs && vite build && electron-builder",
+    "electron:build:win": "node desktop/build.cjs && vite build && electron-builder --win",
+    "electron:build:mac": "node desktop/build.cjs && vite build && electron-builder --mac",
+    "electron:build:linux": "node desktop/build.cjs && vite build && electron-builder --linux",
+    "electron:build:all": "node desktop/build.cjs && vite build && electron-builder -mw",
+    "electron:pack": "node desktop/build.cjs && vite build && electron-builder --dir",
+    "dist": "node desktop/build.cjs && vite build && node desktop/build.cjs dist"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "1.1.17",
