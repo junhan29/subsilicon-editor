@@ -34,7 +34,7 @@ export interface DownloadLinksEditorProps {
 }
 
 const inputCls =
-  'w-full h-8 text-xs rounded-md border border-border bg-secondary px-2.5 text-white placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50'
+  'w-full h-8 text-xs rounded-md border border-border bg-secondary px-2.5 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50'
 const labelCls = 'block text-[11px] text-muted-foreground mb-1'
 
 function newId(): string {

@@ -186,8 +186,6 @@ export function BoothWorkbench({ onBack }: BoothWorkbenchProps) {
     )
   }
 
-  const displayCount = booth.display.order.length
-
   return (
     <div className="flex flex-col w-full h-full min-h-0 bg-background text-foreground">
       <BoothTopBar
@@ -236,8 +234,6 @@ export function BoothWorkbench({ onBack }: BoothWorkbenchProps) {
           )}
         </main>
       </div>
-      {/* 顶部 display count: 避免 TS 未使用告警的静默引用 */}
-      <div className="hidden">{String(displayCount)}<span data-ref-account={JSON.stringify(!!account)} /></div>
     </div>
   )
 }

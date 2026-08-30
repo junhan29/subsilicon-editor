@@ -26,7 +26,7 @@ type SubTab = 'local' | 'params'
 type PackStatus = 'idle' | 'running' | 'success' | 'error'
 
 const inputCls =
-  'w-full h-9 text-sm rounded-lg border border-border bg-secondary px-3 text-white placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50'
+  'w-full h-9 text-sm rounded-lg border border-border bg-secondary px-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50'
 const labelCls = 'block text-xs text-muted-foreground mb-1'
 const CARD = 'rounded-xl border border-border bg-muted/20 p-4'
 
@@ -193,8 +193,8 @@ export function PackTab({ booth, items }: PackTabProps) {
             className={
               'px-4 py-1.5 text-xs rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40 ' +
               (sub === k
-                ? 'bg-card text-white shadow-sm'
-                : 'text-muted-foreground hover:text-white')
+                ? 'bg-card text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground')
             }
           >
             {l}
@@ -208,7 +208,7 @@ export function PackTab({ booth, items }: PackTabProps) {
             <div className={CARD}>
               <div className="flex items-center gap-2 mb-3">
                 <Folder className="w-4 h-4 text-sky-400" />
-                <h4 className="text-sm font-medium text-white">壳目录</h4>
+                <h4 className="text-sm font-medium text-foreground">壳目录</h4>
               </div>
               <div className="space-y-2">
                 <span className={labelCls}>Standalone 壳模板</span>
@@ -260,7 +260,7 @@ export function PackTab({ booth, items }: PackTabProps) {
                             'px-2.5 py-1 text-[11px] rounded-md border transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40 ' +
                             (on
                               ? 'bg-primary/15 text-primary border-primary/40'
-                              : 'bg-muted/40 text-muted-foreground border-border hover:text-white')
+                              : 'bg-muted/40 text-muted-foreground border-border hover:text-foreground')
                           }
                         >
                           {p}

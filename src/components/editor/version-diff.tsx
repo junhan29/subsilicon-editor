@@ -222,7 +222,7 @@ export function VersionDiffView({ diff, v1Name, v2Name, onClose }: VersionDiffVi
             <span className="text-gold-400">~{summary.modifiedCount}</span>
             <button
               onClick={onClose}
-              className="ml-1 p-1 text-muted-foreground hover:text-white hover:bg-secondary rounded transition-colors"
+              className="ml-1 p-1 text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-colors"
               title="关闭 (Esc)"
               aria-label="关闭版本对比对话框"
             >

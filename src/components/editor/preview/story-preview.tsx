@@ -1017,7 +1017,7 @@ export function StoryPreview({ graph, open, onClose, workId }: StoryPreviewProps
                 {data.subtitle && <p className="text-white/60 text-sm">{data.subtitle}</p>}
               </div>
             )}
-            <div className="px-4 pb-3 bg-card flex items-center justify-between text-xs text-white/40">
+            <div className="px-4 pb-3 bg-card flex items-center justify-between text-xs text-foreground/40">
               <span>{isVideo ? '视频 CG' : '图片 CG'}</span>
               <span>{data.canSkip === false ? '不可跳过' : '可跳过'}</span>
             </div>

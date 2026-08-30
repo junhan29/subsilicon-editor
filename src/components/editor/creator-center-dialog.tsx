@@ -802,7 +802,7 @@ export function CreatorCenterDialog({
                         onClick={() => { setAccountTab('login'); setAccountError('') }}
                         className={`flex-1 py-2 text-sm font-medium transition-colors ${
                           accountTab === 'login'
-                            ? 'bg-muted text-white'
+                            ? 'bg-muted text-foreground'
                             : 'bg-transparent text-muted-foreground hover:text-foreground'
                         }`}
                       >
@@ -812,7 +812,7 @@ export function CreatorCenterDialog({
                         onClick={() => { setAccountTab('register'); setAccountError('') }}
                         className={`flex-1 py-2 text-sm font-medium transition-colors ${
                           accountTab === 'register'
-                            ? 'bg-muted text-white'
+                            ? 'bg-muted text-foreground'
                             : 'bg-transparent text-muted-foreground hover:text-foreground'
                         }`}
                       >
@@ -994,7 +994,7 @@ export function CreatorCenterDialog({
                           }))
                         }
                         className={`flex-1 py-2 text-xs font-medium transition-colors ${
-                          platformForm.isBuiltin ? 'bg-muted text-white' : 'bg-transparent text-muted-foreground hover:text-foreground'
+                          platformForm.isBuiltin ? 'bg-muted text-foreground' : 'bg-transparent text-muted-foreground hover:text-foreground'
                         }`}
                       >
                         SubSilicon 自由集市
@@ -1004,7 +1004,7 @@ export function CreatorCenterDialog({
                           setPlatformForm((prev) => ({ ...prev, isBuiltin: false, name: '', apiUrl: '', description: '' }))
                         }
                         className={`flex-1 py-2 text-xs font-medium transition-colors ${
-                          !platformForm.isBuiltin ? 'bg-muted text-white' : 'bg-transparent text-muted-foreground hover:text-foreground'
+                          !platformForm.isBuiltin ? 'bg-muted text-foreground' : 'bg-transparent text-muted-foreground hover:text-foreground'
                         }`}
                       >
                         自定义平台
@@ -1735,7 +1735,7 @@ export function CreatorCenterDialog({
                 type="button"
                 onClick={() => { setTokenTab('login'); setTokenError('') }}
                 className={`flex-1 py-2 text-xs font-medium transition-colors ${
-                  tokenTab === 'login' ? 'bg-muted text-white' : 'bg-transparent text-muted-foreground hover:text-foreground'
+                  tokenTab === 'login' ? 'bg-muted text-foreground' : 'bg-transparent text-muted-foreground hover:text-foreground'
                 }`}
               >
                 已有账号登录
@@ -1744,7 +1744,7 @@ export function CreatorCenterDialog({
                 type="button"
                 onClick={() => { setTokenTab('register'); setTokenError('') }}
                 className={`flex-1 py-2 text-xs font-medium transition-colors ${
-                  tokenTab === 'register' ? 'bg-muted text-white' : 'bg-transparent text-muted-foreground hover:text-foreground'
+                  tokenTab === 'register' ? 'bg-muted text-foreground' : 'bg-transparent text-muted-foreground hover:text-foreground'
                 }`}
               >
                 注册新账号

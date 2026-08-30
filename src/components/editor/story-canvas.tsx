@@ -75,7 +75,7 @@ import type { AlignmentGuide } from '@editor/lib/alignment-guides'
 import type { AnnotationType, CharacterSprite, ComicAudio, ComicScene, NodeAnnotation, NodeGroup, NodeTemplate, StoryCharacter, StoryEdge, StoryGraph, StoryNode } from '@editor/types/editor'
 import type { WorkTypeId } from '@editor/types/work'
 import type { MonetizationConfig } from '@editor/lib/work-monetization'
-import { GROUP_COLORS } from '@editor/types/editor'
+import { ANNOTATION_TYPE_META, GROUP_COLORS } from '@editor/types/editor'
 import { generateNodesFromOutline, generateOutlineFromNodes, parseOutline } from '@editor/lib/outline-parser'
 import type { LibraryAsset } from '@editor/lib/asset-library'
 import {
@@ -2804,15 +2804,15 @@ const NodeContextMenu = memo(function NodeContextMenu({
         onClick={onAddAnnotation}
         className="w-full flex items-center gap-2 px-3 py-2 hover:bg-muted/50 text-foreground transition-colors"
       >
-        <MessageSquare className="w-3.5 h-3.5 text-blue-500" />
+        <MessageSquare className="w-3.5 h-3.5 text-gold-500" />
         添加批注
       </button>
       <button
         onClick={onViewAnnotations}
-        className="w-full flex items-center gap-2 px-3 py-2 hover:bg-muted/50 text-foreground transition-colors"
+        className="w-full flex items-center gap-2 px-3 py-2 hover:bg-muted/50 text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
         disabled={annotationCount === 0}
       >
-        <MessageSquare className="w-3.5 h-3.5 text-purple-500" />
+        <MessageSquare className="w-3.5 h-3.5 text-silicon-blue" />
         查看批注
         {annotationCount > 0 && (
           <span className="ml-auto text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">
@@ -2867,7 +2867,7 @@ const AnnotationDialog = memo(function AnnotationDialog({
       <div className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-md p-4 space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-            <MessageSquare className="w-4 h-4 text-blue-500" />
+            <MessageSquare className="w-4 h-4 text-gold-500" />
             添加批注
           </h3>
           <button
@@ -2886,25 +2886,21 @@ const AnnotationDialog = memo(function AnnotationDialog({
         <div className="space-y-1.5">
           <label className="text-xs font-medium text-foreground">批注类型</label>
           <div className="grid grid-cols-4 gap-1.5">
-            {([
-              { type: 'comment' as const, label: '评论', color: '#3b82f6' },
-              { type: 'todo' as const, label: 'TODO', color: '#eab308' },
-              { type: 'warning' as const, label: '警告', color: '#ef4444' },
-              { type: 'idea' as const, label: '想法', color: '#a855f7' },
-            ]).map((opt) => {
-              const active = type === opt.type
+            {(['comment', 'todo', 'warning', 'idea'] as AnnotationType[]).map((t) => {
+              const meta = ANNOTATION_TYPE_META[t]
+              const active = type === t
               return (
                 <button
-                  key={opt.type}
-                  onClick={() => setType(opt.type)}
+                  key={t}
+                  onClick={() => setType(t)}
                   className="flex flex-col items-center gap-1 px-2 py-1.5 rounded border transition-colors"
                   style={{
-                    borderColor: active ? opt.color : 'rgba(100, 116, 139, 0.3)',
-                    backgroundColor: active ? `${opt.color}20` : 'transparent',
-                    color: active ? opt.color : 'rgb(148, 163, 184)',
+                    borderColor: active ? meta.color : 'rgba(100, 116, 139, 0.3)',
+                    backgroundColor: active ? meta.bg : 'transparent',
+                    color: active ? meta.color : 'rgb(148, 163, 184)',
                   }}
                 >
-                  <span className="text-xs font-medium">{opt.label}</span>
+                  <span className="text-xs font-medium">{meta.label}</span>
                 </button>
               )
             })}

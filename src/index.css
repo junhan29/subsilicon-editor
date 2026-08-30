@@ -399,6 +399,19 @@
     --sienna: var(--p5-red);
     --terracotta: var(--p5-red);
 
+    /* Sepia silver */
+    --silver-50: 25 12% 95%;
+    --silver-100: 25 12% 90%;
+    --silver-200: 25 12% 82%;
+    --silver-300: 25 12% 70%;
+    --silver-400: 25 10% 58%;
+    --silver-500: 25 10% 48%;
+    --silver-600: 25 10% 40%;
+    --silver-700: 25 10% 32%;
+    --silver-800: 25 12% 24%;
+    --silver-900: 25 12% 16%;
+    --silver-950: 25 12% 8%;
+
     --silicon-blue: 25 10% 40%;
     --silicon-cyan: 25 8% 50%;
     --silicon-slate: 25 8% 45%;

@@ -70,6 +70,7 @@ export function TopToolbar({
           <button
             onClick={onBack}
             className="relative z-10 flex items-center gap-1 rounded-md border border-border/50 bg-muted/40 px-2 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary hover:border-border transition-all"
+            aria-label="返回项目管理器"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
             <span className="hidden sm:inline font-medium">项目</span>
@@ -81,13 +82,13 @@ export function TopToolbar({
       {/* Title — 金色斜切标签 */}
       <div className="relative z-10 flex items-center gap-2 min-w-0">
         <div
-          className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-gradient-to-r from-gold-400 to-primary text-white text-[11px] font-bold tracking-wide"
+          className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-gradient-to-r from-gold-400 to-primary text-black text-[11px] font-bold tracking-wide"
           style={{
             clipPath:
               'polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%)',
           }}
         >
-          <span className="w-1.5 h-1.5 rounded-full bg-white/90 shadow-sm" />
+          <span className="w-1.5 h-1.5 rounded-full bg-black/70 shadow-sm" />
           <span className="truncate max-w-[180px]">{title}</span>
         </div>
       </div>
@@ -102,6 +103,7 @@ export function TopToolbar({
           disabled={!canUndo}
           className="rounded-sm p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-colors"
           title="撤销 (Ctrl+Z)"
+          aria-label="撤销"
         >
           <Undo2 className="h-3.5 w-3.5" />
         </button>
@@ -110,6 +112,7 @@ export function TopToolbar({
           disabled={!canRedo}
           className="rounded-sm p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-colors"
           title="重做 (Ctrl+Y)"
+          aria-label="重做"
         >
           <Redo2 className="h-3.5 w-3.5" />
         </button>
@@ -200,6 +203,7 @@ export function TopToolbar({
           )}
           title={focusMode ? '退出专注模式 (Ctrl+Shift+L)' : '专注模式：隐藏所有面板 (Ctrl+Shift+L)'}
           aria-pressed={focusMode}
+          aria-label="切换专注模式"
         >
           <Focus className="h-3.5 w-3.5" />
         </button>
@@ -210,6 +214,7 @@ export function TopToolbar({
         onClick={onSave}
         className="relative z-10 p-1.5 rounded-md text-muted-foreground hover:text-gold-400 hover:bg-gold-400/10 border border-transparent hover:border-gold-400/30 transition-all"
         title="保存作品 (Ctrl+S)"
+        aria-label="保存作品"
       >
         <Save className="h-3.5 w-3.5" />
       </button>
@@ -222,6 +227,7 @@ export function TopToolbar({
           onClick={onPreview}
           className="rounded-sm p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
           title="预览 (Ctrl+P)"
+          aria-label="预览作品"
         >
           <Play className="h-3.5 w-3.5" />
         </button>
@@ -229,6 +235,7 @@ export function TopToolbar({
           onClick={onExport}
           className="rounded-sm p-1.5 text-muted-foreground hover:text-cyber-magenta-500 hover:bg-cyber-magenta-500/10 transition-colors"
           title="导出"
+          aria-label="导出作品"
         >
           <Download className="h-3.5 w-3.5" />
         </button>

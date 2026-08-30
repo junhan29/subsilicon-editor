@@ -459,27 +459,40 @@ function EditorSidebar({
           <div className="flex-1 overflow-y-auto p-2.5 space-y-3">
             <div>
               <div className="flex items-center gap-1 mb-1.5 px-0.5">
-                <Sparkles className="w-3 h-3 text-blue-500" />
-                <span className="text-[9px] font-medium text-blue-600">官方模板</span>
+                <Sparkles className="w-3 h-3 text-gold-500" />
+                <span className="text-[9px] font-medium text-gold-600">官方模板</span>
               </div>
               <div className="space-y-1.5">
+                {officialTemplates.length === 0 && (
+                  <div className="text-center py-4 text-muted-foreground bg-background/50 rounded-lg border border-dashed border-border">
+                    <p className="text-[10px]">暂无官方模板</p>
+                  </div>
+                )}
                 {officialTemplates.map((tpl) => (
                   <div
                     key={tpl.id}
+                    role="button"
+                    tabIndex={0}
                     draggable
                     onDragStart={(e) => onTemplateDragStart(e, tpl)}
                     onClick={() => handleTemplateDoubleClick(tpl)}
-                    className="flex items-center gap-2 p-2 rounded-lg border border-blue-200/50 bg-blue-50/30 hover:bg-blue-100/50 hover:border-blue-300/70 cursor-pointer group transition-all"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        handleTemplateDoubleClick(tpl)
+                      }
+                    }}
+                    className="flex items-center gap-2 p-2 rounded-lg border border-gold-200/50 bg-gold-50/30 hover:bg-gold-100/50 hover:border-gold-300/70 cursor-pointer group transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-400/60"
                     title={`${tpl.description}（点击插入）`}
                   >
-                    <div className="w-7 h-7 rounded-md bg-blue-100 flex items-center justify-center shrink-0 group-hover:bg-blue-200 transition-colors">
-                      <Layers className="w-3.5 h-3.5 text-blue-600" />
+                    <div className="w-7 h-7 rounded-md bg-gold-100 flex items-center justify-center shrink-0 group-hover:bg-gold-200 transition-colors">
+                      <Layers className="w-3.5 h-3.5 text-gold-600" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-medium truncate text-foreground">{tpl.name}</p>
                       <p className="text-[9px] text-muted-foreground truncate">{tpl.nodes.length} 个节点</p>
                     </div>
-                    <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-600 shrink-0">
+                    <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-gold-500/10 text-gold-600 shrink-0">
                       官方
                     </span>
                   </div>
@@ -504,10 +517,18 @@ function EditorSidebar({
                 {customTemplates.map((tpl) => (
                   <div
                     key={tpl.id}
+                    role="button"
+                    tabIndex={0}
                     draggable={editingId !== tpl.id}
                     onDragStart={(e) => onTemplateDragStart(e, tpl)}
                     onClick={() => handleTemplateDoubleClick(tpl)}
-                    className="flex items-center gap-2 p-2 rounded-lg border border-border/60 bg-background hover:bg-accent/50 hover:border-border cursor-pointer group transition-all relative"
+                    onKeyDown={(e) => {
+                      if (editingId !== tpl.id && (e.key === 'Enter' || e.key === ' ')) {
+                        e.preventDefault()
+                        handleTemplateDoubleClick(tpl)
+                      }
+                    }}
+                    className="flex items-center gap-2 p-2 rounded-lg border border-border/60 bg-background hover:bg-accent/50 hover:border-border cursor-pointer group transition-all relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-400/60"
                     title={`${tpl.description}（点击插入）`}
                   >
                     <div className="w-7 h-7 rounded-md bg-muted flex items-center justify-center shrink-0 group-hover:bg-accent transition-colors">
@@ -640,6 +661,9 @@ function EditorSidebar({
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowSaveDialog(false)}>
           <div
             className="bg-card border rounded-lg shadow-xl w-72 p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-label="保存为模板"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-3">
@@ -647,6 +671,7 @@ function EditorSidebar({
               <button
                 className="w-5 h-5 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted"
                 onClick={() => setShowSaveDialog(false)}
+                aria-label="关闭"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -704,6 +729,9 @@ function EditorSidebar({
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowGenerateConfirm(false)}>
           <div
             className="bg-card border rounded-lg shadow-xl w-72 p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-label="生成节点骨架"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-3">
@@ -711,6 +739,7 @@ function EditorSidebar({
               <button
                 className="w-5 h-5 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted"
                 onClick={() => setShowGenerateConfirm(false)}
+                aria-label="关闭"
               >
                 <X className="w-3.5 h-3.5" />
               </button>

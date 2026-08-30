@@ -32,7 +32,7 @@ export function LayerPanel({
   return (
     <div className="w-56 flex flex-col h-full bg-card border-l border-border">
       <div className="p-3 border-b border-border flex items-center justify-between">
-        <h3 className="text-xs font-semibold text-white">图层管理</h3>
+        <h3 className="text-xs font-semibold text-foreground">图层管理</h3>
         <button
           onClick={onAddTextLayer}
           className="text-[10px] px-2 py-1 bg-primary/20 text-primary rounded-md hover:bg-primary/30 transition-colors"
@@ -73,7 +73,7 @@ export function LayerPanel({
                   e.stopPropagation()
                   onUpdateLayer(layer.id, { visible: !layer.visible })
                 }}
-                className="text-muted-foreground hover:text-white transition-colors shrink-0"
+                className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
               >
                 {layer.visible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
               </button>
@@ -87,7 +87,7 @@ export function LayerPanel({
               </div>
 
               <div className="flex-1 min-w-0">
-                <p className="text-[11px] text-white truncate">{layer.name}</p>
+                <p className="text-[11px] text-foreground truncate">{layer.name}</p>
                 <p className="text-[9px] text-muted-foreground">
                   {layer.type === 'background' ? '背景' : layer.type === 'image' ? '图片' : layer.type === 'character' ? '角色' : layer.type === 'text' ? '文字' : '特效'}
                 </p>
@@ -99,7 +99,7 @@ export function LayerPanel({
                     e.stopPropagation()
                     onMoveLayer(layer.id, 'up')
                   }}
-                  className="p-0.5 text-muted-foreground hover:text-white transition-colors"
+                  className="p-0.5 text-muted-foreground hover:text-foreground transition-colors"
                   title="上移"
                 >
                   <ChevronUp className="w-3 h-3" />
@@ -109,7 +109,7 @@ export function LayerPanel({
                     e.stopPropagation()
                     onMoveLayer(layer.id, 'down')
                   }}
-                  className="p-0.5 text-muted-foreground hover:text-white transition-colors"
+                  className="p-0.5 text-muted-foreground hover:text-foreground transition-colors"
                   title="下移"
                 >
                   <ChevronDown className="w-3 h-3" />
@@ -140,7 +140,7 @@ export function LayerPanel({
               type="text"
               value={selectedLayer.name}
               onChange={(e) => onUpdateLayer(selectedLayer.id, { name: e.target.value })}
-              className="w-full px-2 py-1 text-xs bg-muted border border-border rounded text-white focus:outline-none focus:border-primary"
+              className="w-full px-2 py-1 text-xs bg-muted border border-border rounded text-foreground focus:outline-none focus:border-primary"
             />
           </div>
 
@@ -157,7 +157,7 @@ export function LayerPanel({
                     url: sprite?.url || sprite?.image || selectedLayer.url,
                   })
                 }}
-                className="w-full px-2 py-1 text-xs bg-muted border border-border rounded text-white focus:outline-none focus:border-primary"
+                className="w-full px-2 py-1 text-xs bg-muted border border-border rounded text-foreground focus:outline-none focus:border-primary"
               >
                 <option value="normal">普通</option>
                 <option value="happy">开心</option>
@@ -179,7 +179,7 @@ export function LayerPanel({
                   value={selectedLayer.textContent || ''}
                   onChange={(e) => onUpdateLayer(selectedLayer.id, { textContent: e.target.value })}
                   rows={3}
-                  className="w-full px-2 py-1 text-xs bg-muted border border-border rounded text-white focus:outline-none focus:border-primary resize-none"
+                  className="w-full px-2 py-1 text-xs bg-muted border border-border rounded text-foreground focus:outline-none focus:border-primary resize-none"
                 />
               </div>
               <div className="space-y-1">
@@ -188,7 +188,7 @@ export function LayerPanel({
                   type="number"
                   value={selectedLayer.fontSize || 16}
                   onChange={(e) => onUpdateLayer(selectedLayer.id, { fontSize: Number(e.target.value) })}
-                  className="w-full px-2 py-1 text-xs bg-muted border border-border rounded text-white focus:outline-none focus:border-primary"
+                  className="w-full px-2 py-1 text-xs bg-muted border border-border rounded text-foreground focus:outline-none focus:border-primary"
                 />
               </div>
               <div className="space-y-1">
@@ -204,7 +204,7 @@ export function LayerPanel({
                     type="text"
                     value={selectedLayer.fontColor || '#ffffff'}
                     onChange={(e) => onUpdateLayer(selectedLayer.id, { fontColor: e.target.value })}
-                    className="flex-1 px-2 py-1 text-xs bg-muted border border-border rounded text-white focus:outline-none focus:border-primary"
+                    className="flex-1 px-2 py-1 text-xs bg-muted border border-border rounded text-foreground focus:outline-none focus:border-primary"
                   />
                 </div>
               </div>
@@ -296,7 +296,7 @@ export function LayerPanel({
                   delay: selectedLayer.animation?.delay || 0,
                 },
               })}
-              className="w-full px-2 py-1 text-xs bg-muted border border-border rounded text-white focus:outline-none focus:border-primary"
+              className="w-full px-2 py-1 text-xs bg-muted border border-border rounded text-foreground focus:outline-none focus:border-primary"
             >
               <option value="none">无</option>
               <option value="fade-in">淡入</option>
@@ -337,7 +337,7 @@ export function LayerPanel({
                       value={selectedLayer.choiceOptionText || ''}
                       onChange={(e) => onUpdateLayer(selectedLayer.id, { choiceOptionText: e.target.value })}
                       placeholder="例如：打开箱子"
-                      className="w-full px-2 py-1 text-xs bg-muted border border-border rounded text-white focus:outline-none focus:border-primary"
+                      className="w-full px-2 py-1 text-xs bg-muted border border-border rounded text-foreground focus:outline-none focus:border-primary"
                     />
                   </div>
 
@@ -348,7 +348,7 @@ export function LayerPanel({
                       onChange={(e) => onUpdateLayer(selectedLayer.id, {
                         hoverEffect: e.target.value as 'highlight' | 'scale' | 'glow' | 'none',
                       })}
-                      className="w-full px-2 py-1 text-xs bg-muted border border-border rounded text-white focus:outline-none focus:border-primary"
+                      className="w-full px-2 py-1 text-xs bg-muted border border-border rounded text-foreground focus:outline-none focus:border-primary"
                     >
                       <option value="highlight">高亮</option>
                       <option value="scale">放大</option>

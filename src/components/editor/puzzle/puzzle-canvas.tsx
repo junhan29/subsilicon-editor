@@ -112,20 +112,20 @@ export function PuzzleCanvas({
         <div className="flex items-center gap-1">
           <button
             onClick={() => setZoom((z) => Math.max(25, z - 25))}
-            className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-white transition-colors"
+            className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
           >
             <ZoomOut className="w-4 h-4" />
           </button>
           <span className="text-xs text-muted-foreground min-w-[50px] text-center">{zoom}%</span>
           <button
             onClick={() => setZoom((z) => Math.min(200, z + 25))}
-            className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-white transition-colors"
+            className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
           >
             <ZoomIn className="w-4 h-4" />
           </button>
           <button
             onClick={() => setZoom(100)}
-            className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-white transition-colors ml-1"
+            className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors ml-1"
             title="1:1"
           >
             <Maximize2 className="w-3.5 h-3.5" />
@@ -256,7 +256,7 @@ export function PuzzleCanvas({
           <div className="flex items-center gap-1">
             <button
               onClick={() => onUpdateLayer(selectedLayer.id, { rotation: (selectedLayer.rotation + 90) % 360 })}
-              className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-white transition-colors"
+              className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
               title="旋转90°"
             >
               <RotateCw className="w-3.5 h-3.5" />

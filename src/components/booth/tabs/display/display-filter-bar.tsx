@@ -44,7 +44,7 @@ export function DisplayFilterBar({
                 'inline-flex items-center gap-1 px-2.5 py-1 text-[11px] rounded-full border transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40 ' +
                 (active
                   ? 'bg-primary/15 text-primary border-primary/40'
-                  : 'bg-muted/40 text-muted-foreground border-border hover:text-white hover:border-muted-foreground/40')
+                  : 'bg-muted/40 text-muted-foreground border-border hover:text-foreground hover:border-muted-foreground/40')
               }
             >
               {o.label}
@@ -68,7 +68,7 @@ export function DisplayFilterBar({
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder="按标题 / 作者 / tag 搜索"
-          className="w-full h-8 pl-8 pr-3 text-xs rounded-lg border border-border bg-secondary text-white placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+          className="w-full h-8 pl-8 pr-3 text-xs rounded-lg border border-border bg-secondary text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
         />
       </div>
 

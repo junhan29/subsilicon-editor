@@ -67,7 +67,7 @@ function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: () => void }) 
     success: {
       icon: <CheckCircle className="w-4 h-4 text-emerald-500" />,
       bg: 'bg-card border-border',
-      text: 'text-white',
+      text: 'text-foreground',
     },
     error: {
       icon: <AlertTriangle className="w-4 h-4 text-red-400" />,
@@ -77,7 +77,7 @@ function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: () => void }) 
     info: {
       icon: <Info className="w-4 h-4 text-blue-400" />,
       bg: 'bg-card border-border',
-      text: 'text-white',
+      text: 'text-foreground',
     },
   }
 
@@ -89,7 +89,7 @@ function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: () => void }) 
     >
       {config.icon}
       <span className={`text-sm ${config.text}`}>{toast.message}</span>
-      <button onClick={onRemove} className="ml-1 text-muted-foreground hover:text-white transition-colors">
+      <button onClick={onRemove} className="ml-1 text-muted-foreground hover:text-primary transition-colors">
         <X className="w-3.5 h-3.5" />
       </button>
     </div>

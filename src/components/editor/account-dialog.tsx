@@ -105,7 +105,7 @@ export function AccountDialog({ open, onClose, onSuccess }: AccountDialogProps) 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="w-full max-w-md rounded-[2px] bg-card text-white shadow-[6px_6px_0_hsl(var(--gold)/0.2)] [clip-path:polygon(0_0,calc(100%-12px)_0,100%_12px,100%_100%,0_100%)] border border-gold-400/40 overflow-hidden">
+      <div className="w-full max-w-md rounded-[2px] bg-card text-foreground shadow-[6px_6px_0_hsl(var(--gold)/0.2)] [clip-path:polygon(0_0,calc(100%-12px)_0,100%_12px,100%_100%,0_100%)] border border-gold-400/40 overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <h2 className="font-semibold text-sm">账号</h2>
           <button
@@ -155,7 +155,7 @@ export function AccountDialog({ open, onClose, onSuccess }: AccountDialogProps) 
                   onClick={() => { setTab('login'); setError('') }}
                   className={`flex-1 py-2 text-sm font-medium transition-colors ${
                     tab === 'login'
-                      ? 'bg-muted text-white'
+                      ? 'bg-muted text-foreground'
                       : 'bg-transparent text-muted-foreground hover:text-foreground'
                   }`}
                 >
@@ -165,7 +165,7 @@ export function AccountDialog({ open, onClose, onSuccess }: AccountDialogProps) 
                   onClick={() => { setTab('register'); setError('') }}
                   className={`flex-1 py-2 text-sm font-medium transition-colors ${
                     tab === 'register'
-                      ? 'bg-muted text-white'
+                      ? 'bg-muted text-foreground'
                       : 'bg-transparent text-muted-foreground hover:text-foreground'
                   }`}
                 >

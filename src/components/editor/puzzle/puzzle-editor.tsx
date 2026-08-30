@@ -201,7 +201,7 @@ export function PuzzleEditor({ scene, characters, onClose, onSave }: PuzzleEdito
           <div className="flex items-center gap-3">
             <button
               onClick={onClose}
-              className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-white transition-colors"
+              className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
             </button>
@@ -209,14 +209,14 @@ export function PuzzleEditor({ scene, characters, onClose, onSave }: PuzzleEdito
               type="text"
               value={sceneName}
               onChange={(e) => setSceneName(e.target.value)}
-              className="bg-transparent text-sm font-semibold text-white border border-transparent hover:border-border focus:border-primary focus:outline-none px-2 py-1 rounded transition-colors"
+              className="bg-transparent text-sm font-semibold text-foreground border border-transparent hover:border-border focus:border-primary focus:outline-none px-2 py-1 rounded transition-colors"
             />
             <span className="text-[10px] text-muted-foreground">{puzzle.layers.length} 个图层</span>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={onClose}
-              className="px-3 py-1.5 text-xs text-muted-foreground hover:text-white hover:bg-muted rounded-md transition-colors"
+              className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
             >
               取消
             </button>
@@ -229,7 +229,7 @@ export function PuzzleEditor({ scene, characters, onClose, onSave }: PuzzleEdito
             </button>
             <button
               onClick={onClose}
-              className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-white transition-colors"
+              className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
             >
               <X className="w-4 h-4" />
             </button>

@@ -58,6 +58,7 @@ export function ActivityBar({
             title={item.label}
             role="tab"
             aria-selected={activeItem === item.id}
+            aria-label={item.label}
           >
             {activeItem === item.id && (
               <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r-full bg-primary" />
@@ -83,6 +84,7 @@ export function ActivityBar({
                 title={item.label}
                 role="tab"
                 aria-selected={activeItem === item.id}
+                aria-label={item.label}
               >
                 {activeItem === item.id && (
                   <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r-full bg-primary" />

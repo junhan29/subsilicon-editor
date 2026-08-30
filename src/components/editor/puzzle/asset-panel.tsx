@@ -214,7 +214,7 @@ export function AssetPanel({ characters, onAddLayer }: AssetPanelProps) {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="搜索素材..."
-            className="w-full pl-7 pr-2 py-1.5 text-xs bg-muted border border-border rounded-md text-white placeholder-slate-500 focus:outline-none focus:border-primary"
+            className="w-full pl-7 pr-2 py-1.5 text-xs bg-muted border border-border rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary"
           />
         </div>
       </div>
@@ -229,7 +229,7 @@ export function AssetPanel({ characters, onAddLayer }: AssetPanelProps) {
               className={`flex-1 min-w-0 py-2 flex flex-col items-center gap-0.5 text-[10px] transition-colors ${
                 activeCategory === cat.id
                   ? 'bg-muted text-primary border-b-2 border-primary'
-                  : 'text-muted-foreground hover:text-white hover:bg-muted/50'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
               }`}
             >
               <Icon className="w-4 h-4" />

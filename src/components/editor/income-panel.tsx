@@ -127,7 +127,7 @@ export function IncomePanel({ graph, workId }: IncomePanelProps) {
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="0.00"
-              className="flex-1 h-7 text-xs rounded border border-border bg-secondary px-2 text-white"
+              className="flex-1 h-7 text-xs rounded border border-border bg-secondary px-2 text-foreground"
             />
             <span className="text-xs text-muted-foreground">元</span>
           </div>
@@ -136,7 +136,7 @@ export function IncomePanel({ graph, workId }: IncomePanelProps) {
             <select
               value={channel}
               onChange={(e) => setChannel(e.target.value)}
-              className="flex-1 h-7 text-xs rounded border border-border bg-secondary px-1.5 text-white"
+              className="flex-1 h-7 text-xs rounded border border-border bg-secondary px-1.5 text-foreground"
             >
               <option value="wechat">微信</option>
               <option value="alipay">支付宝</option>
@@ -151,7 +151,7 @@ export function IncomePanel({ graph, workId }: IncomePanelProps) {
               value={note}
               onChange={(e) => setNote(e.target.value)}
               placeholder="作品名称或来源"
-              className="flex-1 h-7 text-xs rounded border border-border bg-secondary px-2 text-white"
+              className="flex-1 h-7 text-xs rounded border border-border bg-secondary px-2 text-foreground"
             />
           </div>
           <div className="flex justify-end gap-2 pt-1">
@@ -256,7 +256,7 @@ export function IncomePanel({ graph, workId }: IncomePanelProps) {
             value={noteQuery}
             onChange={(e) => setNoteQuery(e.target.value)}
             placeholder="按备注筛选记录"
-            className="flex-1 h-7 text-xs rounded border border-border bg-secondary px-2 text-white placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500/50"
+            className="flex-1 h-7 text-xs rounded border border-border bg-secondary px-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500/50"
           />
           {noteQuery && (
             <button

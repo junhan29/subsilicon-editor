@@ -55,12 +55,12 @@ export function ComfyuiWorkflowDialog({
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <div className="flex items-center gap-2">
             <Settings2 className="w-4 h-4 text-gold-400" />
-            <h3 className="text-sm font-semibold text-white">ComfyUI 工作流</h3>
+            <h3 className="text-sm font-semibold text-foreground">ComfyUI 工作流</h3>
             <span className="text-[9px] text-muted-foreground bg-secondary px-1.5 py-0.5 rounded">高级</span>
           </div>
           <button
             onClick={onClose}
-            className="w-6 h-6 rounded-full hover:bg-secondary flex items-center justify-center text-muted-foreground hover:text-white transition-colors"
+            className="w-6 h-6 rounded-full hover:bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -79,7 +79,7 @@ export function ComfyuiWorkflowDialog({
               value={apiUrl}
               onChange={(e) => setApiUrl(e.target.value)}
               placeholder="http://localhost:8188"
-              className="w-full h-8 text-xs rounded border border-border bg-secondary px-2 text-white placeholder:text-muted-foreground"
+              className="w-full h-8 text-xs rounded border border-border bg-secondary px-2 text-foreground placeholder:text-muted-foreground"
             />
           </div>
 
@@ -95,7 +95,7 @@ export function ComfyuiWorkflowDialog({
                   setValidation(null)
                 }
               }}
-              className="w-full h-8 text-xs rounded border border-border bg-secondary px-2 text-white"
+              className="w-full h-8 text-xs rounded border border-border bg-secondary px-2 text-foreground"
             >
               <option value="">选择预设工作流…</option>
               {WORKFLOW_PRESETS.map((p) => (
@@ -123,7 +123,7 @@ export function ComfyuiWorkflowDialog({
               }}
               placeholder="从 ComfyUI Save (API Format) 粘贴工作流 JSON，或选上方预设"
               rows={8}
-              className="w-full text-[10px] font-mono rounded border border-border bg-secondary px-2 py-1.5 text-white placeholder:text-muted-foreground resize-y"
+              className="w-full text-[10px] font-mono rounded border border-border bg-secondary px-2 py-1.5 text-foreground placeholder:text-muted-foreground resize-y"
             />
           </div>
 

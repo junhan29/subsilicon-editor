@@ -94,14 +94,14 @@ function TabButton({ icon: Icon, label, tab, activeTab, onSelect, badge, classNa
       title={label || tab}
       className={`flex items-center gap-1.5 px-3 py-2 text-[11px] font-medium whitespace-nowrap transition-colors shrink-0 ${
         isActive
-          ? 'bg-muted text-white border-b-2 border-gold-400'
+          ? 'bg-muted text-foreground border-b-2 border-gold-400'
           : 'text-muted-foreground hover:text-foreground hover:bg-muted/40 border-b-2 border-transparent'
       } ${className}`}
     >
       <Icon className="w-3.5 h-3.5" />
       {label}
       {badge !== undefined && (
-        <span className="inline-flex items-center justify-center min-w-[14px] h-3.5 px-1 text-[9px] font-semibold rounded-full bg-blue-500/80 text-white">
+        <span className="inline-flex items-center justify-center min-w-[14px] h-3.5 px-1 text-[9px] font-semibold rounded-full bg-gold-500 text-black">
           {badge}
         </span>
       )}
@@ -288,7 +288,7 @@ function EditorRightPanel({
   )
 
   return (
-    <div role="region" aria-label="右侧属性面板" className="w-[300px] flex flex-col bg-muted border-l border-border h-full">
+    <div role="region" aria-label="右侧属性面板" className="w-72 flex flex-col bg-muted border-l border-border h-full">
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* VS Code 风格标签栏：单行紧凑标签，图标+文字 */}
         {compactInterface ? (
@@ -367,7 +367,7 @@ function EditorRightPanel({
           {activeTab === 'characters' && <div className="flex-1 overflow-y-auto p-0 m-0">
             <div className="p-4 space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-white">角色管理</h3>
+                <h3 className="text-sm font-semibold text-foreground">角色管理</h3>
                 <button
                   onClick={() => {
                     const color = '#ec4899'
@@ -448,15 +448,24 @@ function EditorRightPanel({
                 {characters.map((char) => (
                   <div
                     key={char.id}
+                    role="button"
+                    tabIndex={0}
                     onClick={() => {
                       setEditCharId(char.id)
                       setActiveTab('properties')
                     }}
-                    className="flex items-center gap-3 p-3 bg-secondary/30 rounded-lg border border-border/50 hover:border-primary/50 cursor-pointer transition-colors"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        setEditCharId(char.id)
+                        setActiveTab('properties')
+                      }
+                    }}
+                    className="flex items-center gap-3 p-3 bg-secondary/30 rounded-lg border border-border/50 hover:border-primary/50 cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
                   >
                     <img src={char.avatar} alt={char.name} className="w-10 h-10 rounded-full object-cover border-2" style={{ borderColor: char.color }} />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-white truncate">{char.name}</p>
+                      <p className="text-sm font-medium text-foreground truncate">{char.name}</p>
                       <p className="text-xs text-muted-foreground">{char.occupation || '未设定'} · {char.gender === 'male' ? '男' : char.gender === 'female' ? '女' : '其他'}</p>
                     </div>
                     <span className="text-xs text-muted-foreground">{char.personality?.slice?.(0, 2).join('、') || '无标签'}</span>
@@ -474,7 +483,7 @@ function EditorRightPanel({
           {activeTab === 'scenes' && <div className="flex-1 overflow-y-auto p-0 m-0">
             <div className="p-4 space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-white">场景库</h3>
+                <h3 className="text-sm font-semibold text-foreground">场景库</h3>
                 <button
                   onClick={() => {
                     const name = `场景 ${scenes.length + 1}`
@@ -576,7 +585,7 @@ function EditorRightPanel({
                       </button>
                     </div>
                     <div className="p-2 bg-muted/50">
-                      <p className="text-xs font-medium text-white truncate">{scene.name}</p>
+                      <p className="text-xs font-medium text-foreground truncate">{scene.name}</p>
                       {scene.puzzleData && (
                         <p className="text-[10px] text-muted-foreground">{scene.puzzleData.layers?.length ?? 0} 个图层</p>
                       )}
@@ -594,7 +603,7 @@ function EditorRightPanel({
 
           {activeTab === 'audio' && <div className="flex-1 overflow-y-auto p-0 m-0">
             <div className="p-4 space-y-4">
-              <h3 className="text-sm font-semibold text-white">音频库</h3>
+              <h3 className="text-sm font-semibold text-foreground">音频库</h3>
 
               <div className="border-2 border-dashed border-border rounded-lg p-4 text-center hover:border-primary/50 transition-colors cursor-pointer relative">
                 <input
@@ -668,11 +677,11 @@ function EditorRightPanel({
                 )}
                 {audios.filter((a) => a.type === audioType).map((audio) => (
                   <div key={audio.id} className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg border border-border group">
-                    <div className="w-8 h-8 rounded-md bg-purple-500/20 flex items-center justify-center shrink-0">
-                      <Music className="w-3.5 h-3.5 text-purple-400" />
+                    <div className="w-8 h-8 rounded-md bg-gold-400/15 flex items-center justify-center shrink-0">
+                      <Music className="w-3.5 h-3.5 text-gold-500" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-white truncate">{audio.name}</p>
+                      <p className="text-xs font-medium text-foreground truncate">{audio.name}</p>
                       <p className="text-[10px] text-muted-foreground truncate">{audio.url?.startsWith('data:') ? '本地文件' : '在线'}</p>
                     </div>
                     <button

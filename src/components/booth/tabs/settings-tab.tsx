@@ -9,7 +9,7 @@ export interface SettingsTabProps {
 }
 
 const inputCls =
-  'w-full h-9 text-sm rounded-lg border border-border bg-secondary px-3 text-white placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50'
+  'w-full h-9 text-sm rounded-lg border border-border bg-secondary px-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50'
 const labelCls = 'block text-xs text-muted-foreground mb-1'
 
 export function SettingsTab({ booth, updateCreator }: SettingsTabProps) {

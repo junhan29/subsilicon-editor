@@ -1151,7 +1151,7 @@ export function AiChatPanel(props: AiChatPanelProps) {
               className={`max-w-[85%] px-3.5 py-2.5 text-[13px] leading-relaxed ${
                 msg.role === 'user'
                   // 用户气泡：右上角斜切 + 金红渐变 + 硬阴影（P5 剪贴风）
-                  ? 'bg-gradient-to-br from-gold-400 to-primary text-white rounded-xl rounded-tr-[2px] shadow-[3px_3px_0_hsl(var(--primary)/0.25)] border border-primary/30 relative overflow-hidden'
+                  ? 'bg-gradient-to-br from-gold-400 to-primary text-black rounded-xl rounded-tr-[2px] shadow-[3px_3px_0_hsl(var(--primary)/0.25)] border border-primary/30 relative overflow-hidden'
                   : msg.role === 'system'
                     // System 欢迎消息：双切角纸板 + 半调网点背景
                     ? 'yasgui-ai-bubble text-foreground rounded-xl relative overflow-hidden border-2 border-gold-400/40 shadow-[3px_3px_0_hsl(var(--gold)/0.2)] bg-card'
@@ -1241,7 +1241,7 @@ export function AiChatPanel(props: AiChatPanelProps) {
                         {(req.characterId || req.emotion || req.sceneTag || req.usageType || req.nodeId) && (
                           <div className="flex flex-wrap gap-1 mb-2">
                             {req.characterId && (
-                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-300">
+                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-gold-500/15 text-gold-300">
                                 角色:{characters.find((c) => c.id === req.characterId)?.name || req.characterId}
                               </span>
                             )}
@@ -1250,14 +1250,14 @@ export function AiChatPanel(props: AiChatPanelProps) {
                                 {EMOTION_LABELS[req.emotion] || req.emotion}
                               </span>
                             )}
-                            {req.sceneTag && <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300">{req.sceneTag}</span>}
+                            {req.sceneTag && <span className="text-[9px] px-1.5 py-0.5 rounded bg-silver-400/15 text-silver-300">{req.sceneTag}</span>}
                             {req.usageType && (
-                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-500/20 text-foreground">
+                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-silver-500/15 text-foreground">
                                 {USAGE_LABELS[req.usageType] || req.usageType}
                               </span>
                             )}
                             {req.nodeId && (
-                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-gold-500/15 text-gold-300">
+                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-sienna/15 text-sienna">
                                 → {String(nodes.find((n) => n.id === req.nodeId)?.data?.title || '节点')}
                               </span>
                             )}
@@ -1286,8 +1286,8 @@ export function AiChatPanel(props: AiChatPanelProps) {
               )}
             </div>
             {msg.role === 'user' && (
-              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-amber-600/40 to-orange-500/30 border border-gold-400/30 flex items-center justify-center shrink-0 mt-0.5">
-                <User className="w-3.5 h-3.5 text-amber-200" />
+              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gold-500/40 to-sienna/30 border border-gold-400/30 flex items-center justify-center shrink-0 mt-0.5">
+                <User className="w-3.5 h-3.5 text-gold-300" />
               </div>
             )}
           </div>
@@ -1296,12 +1296,12 @@ export function AiChatPanel(props: AiChatPanelProps) {
         {/* 流式响应 */}
         {streamingContent && (
           <div className="flex gap-2.5 justify-start">
-            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gold-400/30 to-cyan-400/30 border border-border/50 flex items-center justify-center shrink-0 mt-0.5">
-              <Bot className="w-3.5 h-3.5 text-cyan-300" />
+            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gold-400/30 to-silver-400/30 border border-border/50 flex items-center justify-center shrink-0 mt-0.5">
+              <Bot className="w-3.5 h-3.5 text-gold-400" />
             </div>
             <div className="max-w-[85%] px-3.5 py-2.5 rounded-2xl text-[13px] leading-relaxed yasgui-ai-bubble text-foreground">
               {renderContent(streamingContent)}
-              <span className="inline-block w-1.5 h-4 bg-gradient-to-b from-amber-400 to-cyan-400 ml-0.5 animate-pulse" />
+              <span className="inline-block w-1.5 h-4 bg-gradient-to-b from-gold-400 to-gold-600 ml-0.5 animate-pulse" />
             </div>
           </div>
         )}
@@ -1309,7 +1309,7 @@ export function AiChatPanel(props: AiChatPanelProps) {
         {/* 创作助理未配置提示 */}
         {!aiEnabled && !isStreaming && messages.length <= 1 && (
           <div className="flex flex-col items-center justify-center py-10 text-center px-4">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-gold-400/20 to-cyan-400/20 border border-border/40 flex items-center justify-center mb-3">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-gold-400/20 to-silver-400/20 border border-border/40 flex items-center justify-center mb-3">
               <AlertCircle className="w-6 h-6 text-muted-foreground" />
             </div>
             <p className="text-sm text-foreground mb-1.5">{assistantName}服务未配置</p>
@@ -1318,7 +1318,7 @@ export function AiChatPanel(props: AiChatPanelProps) {
             </p>
             <button
               onClick={() => setShowSettings(true)}
-              className="px-5 py-2.5 text-sm bg-gradient-to-r from-gold-400/20 to-cyan-400/20 text-amber-200 border border-gold-400/30 rounded-xl hover:from-gold-400/30 hover:to-cyan-400/30 transition-all"
+              className="px-5 py-2.5 text-sm bg-gradient-to-r from-gold-400/20 to-silver-400/20 text-gold-600 dark:text-gold-400 border border-gold-400/30 rounded-xl hover:from-gold-400/30 hover:to-silver-400/30 transition-all"
             >
               ⚙️ 点这里配置（约 1 分钟）
             </button>
@@ -1335,7 +1335,7 @@ export function AiChatPanel(props: AiChatPanelProps) {
                 onClick={() => handleExampleClick(prompt)}
                 className="text-left text-xs text-foreground bg-muted/50 hover:bg-secondary/60 border border-border/30 hover:border-gold-400/40 rounded-xl px-3 py-2.5 transition-colors group"
               >
-                <span className="inline-flex w-5 h-5 items-center justify-center rounded-md bg-gradient-to-br from-gold-400/20 to-cyan-400/20 text-gold-400 mr-2 text-[10px] group-hover:scale-110 transition-transform">
+                <span className="inline-flex w-5 h-5 items-center justify-center rounded-md bg-gradient-to-br from-gold-400/20 to-silver-400/20 text-gold-400 mr-2 text-[10px] group-hover:scale-110 transition-transform">
                   {i + 1}
                 </span>
                 {prompt}
@@ -1349,17 +1349,17 @@ export function AiChatPanel(props: AiChatPanelProps) {
         {/* 命令预览确认卡片 */}
         {pendingPreview && (
           <div className="flex gap-2 justify-start">
-            <div className="w-6 h-6 rounded-full bg-cyan-500/20 flex items-center justify-center shrink-0 mt-0.5">
-              <ListChecks className="w-3 h-3 text-cyan-400" />
+            <div className="w-6 h-6 rounded-full bg-gold-400/20 flex items-center justify-center shrink-0 mt-0.5">
+              <ListChecks className="w-3 h-3 text-gold-400" />
             </div>
-            <div className="max-w-[85%] px-3 py-2 rounded-lg text-xs leading-relaxed bg-cyan-500/10 text-cyan-100 border border-cyan-500/30">
-              <p className="font-medium text-cyan-300 mb-1.5">
+            <div className="max-w-[85%] px-3 py-2 rounded-lg text-xs leading-relaxed bg-gold-400/10 text-foreground border border-gold-400/30">
+              <p className="font-medium text-gold-400 mb-1.5">
                 {pendingPreview.source === 'automation' ? '🤖 预设规则命中' : '✨ AI 请求执行操作'}（预览模式）
               </p>
               <ul className="space-y-1 mb-2">
                 {pendingPreview.previews.map((pv, i) => (
                   <li key={i} className="flex items-start gap-1.5">
-                    <span className="text-cyan-500/60 mt-px">•</span>
+                    <span className="text-gold-500/60 mt-px">•</span>
                     <span className="text-foreground">{pv.description}</span>
                   </li>
                 ))}
@@ -1367,7 +1367,7 @@ export function AiChatPanel(props: AiChatPanelProps) {
               <div className="flex gap-1.5">
                 <button
                   onClick={handleApprovePreview}
-                  className="flex items-center gap-1 px-2 py-1 text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded hover:bg-emerald-500/30 transition-colors"
+                  className="flex items-center gap-1 px-2 py-1 text-[10px] bg-gold-400/20 text-gold-400 border border-gold-400/30 rounded hover:bg-gold-400/30 transition-colors"
                 >
                   <Check className="w-3 h-3" />
                   批准执行
@@ -1438,7 +1438,7 @@ export function AiChatPanel(props: AiChatPanelProps) {
               )}
               <button
                 onClick={() => setShowDebugPanel(false)}
-                className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-white transition-colors"
+                className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
                 title="关闭调试面板"
               >
                 <X className="w-3 h-3" />
@@ -1541,8 +1541,8 @@ export function AiChatPanel(props: AiChatPanelProps) {
                     onClick={() => toggleRule(rule)}
                     className={`text-[10px] px-2 py-0.5 rounded shrink-0 transition-colors ${
                       rule.enabled
-                        ? 'bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25'
-                        : 'bg-slate-600/40 text-muted-foreground hover:bg-accent/60'
+                        ? 'bg-gold-400/15 text-gold-600 dark:text-gold-400 hover:bg-gold-400/25'
+                        : 'bg-muted/60 text-muted-foreground hover:bg-accent/60'
                     }`}
                     title={rule.enabled ? '点击禁用' : '点击启用'}
                   >
@@ -1568,7 +1568,7 @@ export function AiChatPanel(props: AiChatPanelProps) {
                     value={ruleName}
                     onChange={(e) => setRuleName(e.target.value)}
                     placeholder="规则名称（如：开始写作）"
-                    className="w-full text-[10px] rounded border border-border bg-secondary/50 px-2 py-1 text-white placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500/50"
+                    className="w-full text-[10px] rounded border border-border bg-secondary/50 px-2 py-1 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500/50"
                   />
                   <div className="flex gap-1">
                     {(['keyword', 'regex', 'state'] as const).map((t) => (
@@ -1591,7 +1591,7 @@ export function AiChatPanel(props: AiChatPanelProps) {
                         min={0}
                         value={ruleStateValue}
                         onChange={(e) => setRuleStateValue(Number(e.target.value) || 0)}
-                        className="w-16 text-[10px] rounded border border-border bg-secondary/50 px-2 py-1 text-white focus:outline-none focus:ring-1 focus:ring-cyan-500/50"
+                        className="w-16 text-[10px] rounded border border-border bg-secondary/50 px-2 py-1 text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500/50"
                       />
                     </label>
                   ) : (
@@ -1599,13 +1599,13 @@ export function AiChatPanel(props: AiChatPanelProps) {
                       value={rulePattern}
                       onChange={(e) => setRulePattern(e.target.value)}
                       placeholder={ruleTrigger === 'keyword' ? '触发关键词，多个用逗号分隔' : '正则表达式，如 ^开始'}
-                      className="w-full text-[10px] rounded border border-border bg-secondary/50 px-2 py-1 text-white placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500/50"
+                      className="w-full text-[10px] rounded border border-border bg-secondary/50 px-2 py-1 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500/50"
                     />
                   )}
                   <select
                     value={ruleAction}
                     onChange={(e) => setRuleAction(e.target.value as typeof ruleAction)}
-                    className="w-full text-[10px] rounded border border-border bg-secondary/50 px-2 py-1 text-white focus:outline-none focus:ring-1 focus:ring-cyan-500/50"
+                    className="w-full text-[10px] rounded border border-border bg-secondary/50 px-2 py-1 text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500/50"
                   >
                     <option value="saveWork">保存作品</option>
                     <option value="undo">撤销上一步</option>
@@ -1670,8 +1670,9 @@ export function AiChatPanel(props: AiChatPanelProps) {
                 <button
                   onClick={handleSend}
                   disabled={!input.trim() || !aiEnabled}
-                  className="px-3.5 py-2.5 bg-gradient-to-br from-gold-400 to-primary text-white rounded-xl hover:opacity-90 active:scale-95 transition-all disabled:opacity-30 disabled:active:scale-100 shrink-0 shadow-md shadow-primary/20"
+                  className="px-3.5 py-2.5 bg-gradient-to-br from-gold-400 to-primary text-black rounded-xl hover:opacity-90 active:scale-95 transition-all disabled:opacity-30 disabled:active:scale-100 shrink-0 shadow-md shadow-primary/20"
                   title="发送"
+                  aria-label="发送消息"
                 >
                   <Send className="w-4 h-4" />
                 </button>
@@ -1744,7 +1745,7 @@ function DebugBlock({ label, value, mono }: { label: string; value: string; mono
   return (
     <div className="text-[10px]">
       <p className="text-muted-foreground mb-0.5">{label}</p>
-      <pre className={`bg-slate-950/70 border border-border/40 rounded p-1.5 text-muted-foreground whitespace-pre-wrap break-all max-h-40 overflow-y-auto ${mono ? 'font-mono' : ''}`}>
+      <pre className={`bg-card/80 border border-border/40 rounded p-1.5 text-muted-foreground whitespace-pre-wrap break-all max-h-40 overflow-y-auto ${mono ? 'font-mono' : ''}`}>
         {value}
       </pre>
     </div>

@@ -488,7 +488,7 @@ export function NodeSearch({ nodes, characters, open, onClose, onReplaceNode }: 
             onChange={e => setQuery(e.target.value)}
             onKeyDown={handleSearchKeyDown}
             placeholder="搜索节点文本..."
-            className="flex-1 bg-transparent border-none text-sm text-white placeholder:text-muted-foreground focus:outline-none"
+            className="flex-1 bg-transparent border-none text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
           />
           {query && matches.length > 0 && (
             <span className="text-xs text-muted-foreground font-mono">
@@ -499,7 +499,7 @@ export function NodeSearch({ nodes, characters, open, onClose, onReplaceNode }: 
             <button
               onClick={() => setCaseSensitive(!caseSensitive)}
               className={`p-1 rounded text-xs font-mono transition-colors ${
-                caseSensitive ? 'bg-secondary text-white' : 'text-muted-foreground hover:text-foreground'
+                caseSensitive ? 'bg-secondary text-foreground' : 'text-muted-foreground hover:text-foreground'
               }`}
               title="区分大小写"
             >
@@ -508,7 +508,7 @@ export function NodeSearch({ nodes, characters, open, onClose, onReplaceNode }: 
             <button
               onClick={goToPrev}
               disabled={matches.length === 0}
-              className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
               title="上一个 (Shift+Enter)"
             >
               <ArrowUp className="w-3.5 h-3.5" />
@@ -516,7 +516,7 @@ export function NodeSearch({ nodes, characters, open, onClose, onReplaceNode }: 
             <button
               onClick={goToNext}
               disabled={matches.length === 0}
-              className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
               title="下一个 (Enter)"
             >
               <ArrowDown className="w-3.5 h-3.5" />
@@ -524,7 +524,7 @@ export function NodeSearch({ nodes, characters, open, onClose, onReplaceNode }: 
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-white"
+            className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
           >
             <X className="w-4 h-4" />
           </button>
@@ -551,21 +551,21 @@ export function NodeSearch({ nodes, characters, open, onClose, onReplaceNode }: 
                   onChange={e => setReplaceText(e.target.value)}
                   onKeyDown={handleReplaceKeyDown}
                   placeholder="替换文本..."
-                  className="flex-1 bg-muted border border-border rounded px-2 py-1.5 text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:border-slate-500"
+                  className="flex-1 bg-muted border border-border rounded px-2 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-slate-500"
                 />
               </div>
               <div className="flex items-center gap-2">
                 <button
                   onClick={replaceCurrent}
                   disabled={!currentMatch || !onReplaceNode}
-                  className="flex-1 px-3 py-1.5 text-xs bg-secondary hover:bg-accent text-white rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 px-3 py-1.5 text-xs bg-secondary hover:bg-accent text-foreground rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   替换
                 </button>
                 <button
                   onClick={replaceAll}
                   disabled={matches.length === 0 || !onReplaceNode}
-                  className="flex-1 px-3 py-1.5 text-xs bg-secondary hover:bg-accent text-white rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 px-3 py-1.5 text-xs bg-secondary hover:bg-accent text-foreground rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   全部替换 ({matches.length})
                 </button>
@@ -613,7 +613,7 @@ export function NodeSearch({ nodes, characters, open, onClose, onReplaceNode }: 
                   <span className="text-xs text-muted-foreground shrink-0">
                     {match.fieldLabel}
                   </span>
-                  <span className="text-sm text-white truncate flex-1">
+                  <span className="text-sm text-foreground truncate flex-1">
                     {match.nodeTitle}
                   </span>
                   {match.characterName && (

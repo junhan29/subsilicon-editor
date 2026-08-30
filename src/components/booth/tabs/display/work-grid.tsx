@@ -108,7 +108,7 @@ export function WorkGrid({
                 </div>
               )}
               {it.isFeatured && (
-                <span className="absolute top-2 left-2 inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-gold-400 text-white shadow-sm">
+                <span className="absolute top-2 left-2 inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-gold-400 text-black shadow-sm">
                   <Star className="w-3 h-3" fill="currentColor" />
                   主推
                 </span>
@@ -178,7 +178,7 @@ export function WorkGrid({
                       key={k}
                       title={tip}
                       onClick={() => onAction(k, it.work.id)}
-                      className="p-1 rounded-md text-muted-foreground hover:text-white hover:bg-muted transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40"
+                      className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40"
                     >
                       <span title={tip}><Icon className="w-3.5 h-3.5" /></span>
                     </button>

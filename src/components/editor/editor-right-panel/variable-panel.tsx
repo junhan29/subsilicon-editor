@@ -133,7 +133,7 @@ export function VariablePanel({ variables = [], onUpdateVariables }: VariablePan
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <BarChart3 className="w-4 h-4 text-cyan-400" />
-          <h3 className="text-sm font-semibold text-white">变量管理</h3>
+          <h3 className="text-sm font-semibold text-foreground">变量管理</h3>
           <span className="text-xs text-muted-foreground">({variables.length})</span>
         </div>
         <button
@@ -149,7 +149,7 @@ export function VariablePanel({ variables = [], onUpdateVariables }: VariablePan
       {showAddForm && (
         <div className="p-3 bg-muted/50 rounded-lg border border-border space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-white">添加新变量</span>
+            <span className="text-xs font-medium text-foreground">添加新变量</span>
             <button onClick={() => setShowAddForm(false)} className="text-muted-foreground hover:text-foreground">
               <X className="w-3.5 h-3.5" />
             </button>
@@ -163,7 +163,7 @@ export function VariablePanel({ variables = [], onUpdateVariables }: VariablePan
                 value={newVarName}
                 onChange={(e) => setNewVarName(e.target.value)}
                 placeholder="例如：好感度、金币数量"
-                className="w-full px-2 py-1.5 text-xs bg-card border border-border rounded-md text-white placeholder:text-muted-foreground focus:outline-none focus:border-cyan-500"
+                className="w-full px-2 py-1.5 text-xs bg-card border border-border rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-cyan-500"
               />
             </div>
 
@@ -173,7 +173,7 @@ export function VariablePanel({ variables = [], onUpdateVariables }: VariablePan
                 <select
                   value={newVarType}
                   onChange={(e) => setNewVarType(e.target.value as VariableType)}
-                  className="w-full px-2 py-1.5 text-xs bg-card border border-border rounded-md text-white focus:outline-none focus:border-cyan-500"
+                  className="w-full px-2 py-1.5 text-xs bg-card border border-border rounded-md text-foreground focus:outline-none focus:border-cyan-500"
                 >
                   <option value="string">字符串</option>
                   <option value="number">数字</option>
@@ -185,7 +185,7 @@ export function VariablePanel({ variables = [], onUpdateVariables }: VariablePan
                 <select
                   value={newVarCategory}
                   onChange={(e) => setNewVarCategory(e.target.value)}
-                  className="w-full px-2 py-1.5 text-xs bg-card border border-border rounded-md text-white focus:outline-none focus:border-cyan-500"
+                  className="w-full px-2 py-1.5 text-xs bg-card border border-border rounded-md text-foreground focus:outline-none focus:border-cyan-500"
                 >
                   <option value="角色属性">角色属性</option>
                   <option value="剧情进度">剧情进度</option>
@@ -205,7 +205,7 @@ export function VariablePanel({ variables = [], onUpdateVariables }: VariablePan
                 value={newVarInitial}
                 onChange={(e) => setNewVarInitial(e.target.value)}
                 placeholder={newVarType === 'boolean' ? 'true 或 false' : newVarType === 'number' ? '0' : '初始值'}
-                className="w-full px-2 py-1.5 text-xs bg-card border border-border rounded-md text-white placeholder:text-muted-foreground focus:outline-none focus:border-cyan-500"
+                className="w-full px-2 py-1.5 text-xs bg-card border border-border rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-cyan-500"
               />
             </div>
 
@@ -256,7 +256,7 @@ export function VariablePanel({ variables = [], onUpdateVariables }: VariablePan
             {/* 分类标题 */}
             <button
               onClick={() => toggleCategory(category)}
-              className="flex items-center gap-1.5 w-full py-1.5 text-xs text-muted-foreground hover:text-white transition-colors"
+              className="flex items-center gap-1.5 w-full py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
               {expandedCategories[category] ? (
                 <ChevronDown className="w-3 h-3" />
@@ -281,7 +281,7 @@ export function VariablePanel({ variables = [], onUpdateVariables }: VariablePan
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-medium text-white truncate">{v.name}</span>
+                        <span className="text-xs font-medium text-foreground truncate">{v.name}</span>
                         <span className="text-[10px] text-muted-foreground">
                           {v.type === 'string' ? '字' : v.type === 'number' ? '数' : '布尔'}
                         </span>

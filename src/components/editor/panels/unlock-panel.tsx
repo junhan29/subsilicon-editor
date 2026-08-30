@@ -65,7 +65,7 @@ export function UnlockPanel({ node, onUpdateNode }: BasePanelProps) {
                 key={method.id}
                 onClick={() => onUpdateNode(id, { ...data, paymentMethod: isActive ? '' : method.id })}
                 className={`py-2 px-2 rounded-lg text-xs font-medium transition-all ${
-                  isActive ? 'bg-gold-400 text-white' : 'bg-muted hover:bg-muted/80'
+                  isActive ? 'bg-gold-400 text-black' : 'bg-muted hover:bg-muted/80'
                 }`}
               >
                 {method.label}

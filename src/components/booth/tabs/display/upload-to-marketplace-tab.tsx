@@ -10,9 +10,9 @@ import { DownloadLinksEditor } from '../../shared/download-links-editor'
 import { showToast } from '@editor/components/editor/toast'
 
 const inputCls =
-  'w-full h-9 text-sm rounded-lg border border-border bg-secondary px-3 text-white placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50'
+  'w-full h-9 text-sm rounded-lg border border-border bg-secondary px-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50'
 const taCls =
-  'w-full text-sm rounded-lg border border-border bg-secondary px-3 py-2 text-white placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-y min-h-[80px]'
+  'w-full text-sm rounded-lg border border-border bg-secondary px-3 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-y min-h-[80px]'
 const labelCls = 'block text-xs text-muted-foreground mb-1'
 
 export interface UploadToMarketplaceTabProps {

@@ -190,8 +190,10 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
                     <p className="text-[10px] text-muted-foreground mt-0.5">界面显示语言</p>
                   </div>
                   <select
-                    className="h-8 text-xs rounded-[2px] border border-border bg-input px-2 text-foreground focus:outline-none focus:border-gold-400 shadow-[1px_1px_0_hsl(var(--gold)/0.1)]"
+                    className="h-8 text-xs rounded-[2px] border border-border bg-input px-2 text-foreground focus:outline-none focus:border-gold-400 shadow-[1px_1px_0_hsl(var(--gold)/0.1)] disabled:opacity-60"
                     defaultValue="zh-CN"
+                    disabled
+                    title="当前仅支持简体中文"
                   >
                     <option value="zh-CN">简体中文</option>
                     <option value="en" disabled>English (即将支持)</option>
@@ -364,7 +366,7 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
                       <p className="text-[10px] text-muted-foreground mt-0.5">编辑时自动保存项目</p>
                     </div>
                   </div>
-                  <Toggle checked={true} onChange={() => {}} />
+                  <span className="text-[10px] px-2 py-0.5 bg-gold-400/12 border border-gold-400/25 text-gold-500 rounded-[2px] font-semibold">已开启</span>
                 </div>
               </div>
             </div>

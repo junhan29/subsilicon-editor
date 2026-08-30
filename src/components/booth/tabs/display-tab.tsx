@@ -168,8 +168,8 @@ export function DisplayTab({
               className={
                 'px-4 py-1.5 text-xs rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40 ' +
                 (sub === k
-                  ? 'bg-card text-white shadow-sm'
-                  : 'text-muted-foreground hover:text-white')
+                  ? 'bg-card text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground')
               }
             >
               {l}

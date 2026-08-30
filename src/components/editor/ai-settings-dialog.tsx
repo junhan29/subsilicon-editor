@@ -591,7 +591,7 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
             <select
               value={slot.providerId || ''}
               onChange={(e) => updateTextSlot(task, { providerId: e.target.value || undefined })}
-              className="w-full h-8 text-xs rounded border border-border bg-secondary px-2 text-white"
+              className="w-full h-8 text-xs rounded border border-border bg-secondary px-2 text-foreground"
             >
               <option value="">智能默认（第一个启用服务商）</option>
               {routingProviders.map((p) => (
@@ -608,7 +608,7 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
                 onChange={(e) => updateTextSlot(task, { skillPrompt: e.target.value })}
                 placeholder="给该任务注入的额外系统提示词（可选），或点上方「技能模板」一键套用"
                 rows={2}
-                className="w-full text-[10px] rounded border border-border bg-secondary px-2 py-1.5 text-white placeholder:text-muted-foreground resize-y"
+                className="w-full text-[10px] rounded border border-border bg-secondary px-2 py-1.5 text-foreground placeholder:text-muted-foreground resize-y"
               />
             </div>
             <div className="flex gap-2">
@@ -622,7 +622,7 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
                   value={slot.temperature ?? ''}
                   onChange={(e) => updateTextSlot(task, { temperature: e.target.value === '' ? undefined : Number(e.target.value) })}
                   placeholder="默认"
-                  className="w-full h-7 text-xs rounded border border-border bg-secondary px-2 text-white placeholder:text-muted-foreground"
+                  className="w-full h-7 text-xs rounded border border-border bg-secondary px-2 text-foreground placeholder:text-muted-foreground"
                 />
               </label>
               <label className="flex-1 flex items-center gap-1.5 text-[10px] text-muted-foreground">
@@ -634,7 +634,7 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
                   value={slot.maxTokens ?? ''}
                   onChange={(e) => updateTextSlot(task, { maxTokens: e.target.value === '' ? undefined : Number(e.target.value) })}
                   placeholder="默认"
-                  className="w-full h-7 text-xs rounded border border-border bg-secondary px-2 text-white placeholder:text-muted-foreground"
+                  className="w-full h-7 text-xs rounded border border-border bg-secondary px-2 text-foreground placeholder:text-muted-foreground"
                 />
               </label>
             </div>
@@ -686,7 +686,7 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
                   updateSlotMedia(task, { type: newType, workflowJson: undefined })
                 }
               }}
-              className="w-full h-8 text-xs rounded border border-border bg-secondary px-2 text-white"
+              className="w-full h-8 text-xs rounded border border-border bg-secondary px-2 text-foreground"
             >
               <option value="wan">通义万相（国内直连）</option>
               <option value="openai">OpenAI（需翻墙）</option>
@@ -718,7 +718,7 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
                     value={media.apiKey || ''}
                     onChange={(e) => updateSlotMedia(task, { apiKey: e.target.value })}
                     placeholder="API Key"
-                    className="w-full h-8 text-xs rounded border border-border bg-secondary px-2 pr-12 text-white placeholder:text-muted-foreground"
+                    className="w-full h-8 text-xs rounded border border-border bg-secondary px-2 pr-12 text-foreground placeholder:text-muted-foreground"
                   />
                   <button
                     onClick={() => setRoutingMediaKeys((prev) => ({ ...prev, [task]: !prev[task] }))}
@@ -732,14 +732,14 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
                     value={media.apiUrl || ''}
                     onChange={(e) => updateSlotMedia(task, { apiUrl: e.target.value })}
                     placeholder="API 地址，如 https://dashscope.aliyuncs.com/compatible-mode/v1"
-                    className="w-full h-8 text-xs rounded border border-border bg-secondary px-2 text-white placeholder:text-muted-foreground"
+                    className="w-full h-8 text-xs rounded border border-border bg-secondary px-2 text-foreground placeholder:text-muted-foreground"
                   />
                 )}
                 <input
                   value={media.model || ''}
                   onChange={(e) => updateSlotMedia(task, { model: e.target.value })}
                   placeholder="模型名，如 wanx2.1-t2i-turbo"
-                  className="w-full h-8 text-xs rounded border border-border bg-secondary px-2 text-white placeholder:text-muted-foreground"
+                  className="w-full h-8 text-xs rounded border border-border bg-secondary px-2 text-foreground placeholder:text-muted-foreground"
                 />
               </>
             )}
@@ -755,7 +755,7 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
                 onChange={(e) => updateMediaSlot(task, { skillPrompt: e.target.value })}
                 placeholder={isComfyui ? "附加风格指令（可选），如 'anime style, masterpiece'" : "如「统一 3D 卡通风格」（可选）"}
                 rows={2}
-                className="w-full text-[10px] rounded border border-border bg-secondary px-2 py-1.5 text-white placeholder:text-muted-foreground resize-y"
+                className="w-full text-[10px] rounded border border-border bg-secondary px-2 py-1.5 text-foreground placeholder:text-muted-foreground resize-y"
               />
             </div>
           </>
@@ -782,7 +782,7 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
           </div>
           <button
             onClick={onClose}
-            className="w-6 h-6 rounded-full hover:bg-secondary flex items-center justify-center text-muted-foreground hover:text-white transition-colors"
+            className="w-6 h-6 rounded-full hover:bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -793,7 +793,7 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
           {/* Enable Toggle */}
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-white">启用{assistantName}</p>
+              <p className="text-xs font-medium text-foreground">启用{assistantName}</p>
               <p className="text-[10px] text-muted-foreground">开启后将使用{assistantName}辅助创作</p>
             </div>
             <button
@@ -826,7 +826,7 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
                 <select
                   value={aiConfig.provider}
                   onChange={(e) => updateProvider(e.target.value)}
-                  className="w-full h-8 text-xs rounded border border-border bg-secondary px-2 text-white"
+                  className="w-full h-8 text-xs rounded border border-border bg-secondary px-2 text-foreground"
                 >
                   {/* 推荐项排在前面 */}
                   {Object.entries(PROVIDER_INFO)
@@ -864,7 +864,7 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
                         setTestResult(null)
                       }}
                       placeholder="粘贴你刚才复制的 API Key"
-                      className="w-full h-8 text-xs rounded border border-border bg-secondary px-2 pr-16 text-white"
+                      className="w-full h-8 text-xs rounded border border-border bg-secondary px-2 pr-16 text-foreground"
                     />
                     <button
                       onClick={() => setShowApiKey(!showApiKey)}
@@ -890,7 +890,7 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
                       setAiConfig((prev) => ({ ...prev, apiUrl: e.target.value }))
                       setTestResult(null)
                     }}
-                    className="flex-1 h-8 text-xs rounded border border-border bg-secondary px-2 text-white"
+                    className="flex-1 h-8 text-xs rounded border border-border bg-secondary px-2 text-foreground"
                   />
                 </div>
                 <p className="text-[10px] text-muted-foreground">通常无需修改，切换服务商时已自动填好</p>
@@ -902,7 +902,7 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
                 <select
                   value={aiConfig.model}
                   onChange={(e) => setAiConfig((prev) => ({ ...prev, model: e.target.value }))}
-                  className="w-full h-8 text-xs rounded border border-border bg-secondary px-2 text-white"
+                  className="w-full h-8 text-xs rounded border border-border bg-secondary px-2 text-foreground"
                 >
                   {getModelsForProvider(aiConfig.provider).map((m) => (
                     <option key={m.id} value={m.id}>{m.name}</option>
@@ -945,7 +945,7 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
               <div className="w-6 h-6 rounded-md bg-muted flex items-center justify-center">
                 <Image className="w-3.5 h-3.5 text-muted-foreground" />
               </div>
-              <span className="text-xs font-semibold text-white">图片/视频素材</span>
+              <span className="text-xs font-semibold text-foreground">图片/视频素材</span>
             </div>
             <p className="text-[10px] text-muted-foreground leading-relaxed">
               推荐使用 Midjourney、ComfyUI、Runway 等专业工具生成素材，
@@ -962,7 +962,7 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
               <div className="w-6 h-6 rounded-md bg-gradient-to-br from-cyan-400/25 to-cyan-400/10 flex items-center justify-center shrink-0">
                 <Settings2 className="w-3.5 h-3.5 text-cyan-300" />
               </div>
-              <span className="text-xs font-semibold text-white">高级设置</span>
+              <span className="text-xs font-semibold text-foreground">高级设置</span>
               <span className="text-[9px] text-muted-foreground bg-muted border border-border px-1.5 py-0.5 rounded">高级</span>
               <span className={`ml-auto text-muted-foreground transition-transform ${showAdvanced ? 'rotate-180' : ''}`}>▾</span>
             </button>
@@ -1045,7 +1045,7 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
                     <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-semibold text-white">自定义工作流（Skill）</span>
+                    <span className="text-xs font-semibold text-foreground">自定义工作流（Skill）</span>
                     <span className="text-[9px] text-muted-foreground bg-muted border border-border px-1.5 py-0.5 rounded">v1.16</span>
                   </div>
                 </button>
@@ -1114,7 +1114,7 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
                         value={wfDraft.name}
                         onChange={(e) => setWfDraft({ ...wfDraft, name: e.target.value })}
                         placeholder="工作流名（≤ 24 字）"
-                        className="flex-1 px-2 py-1.5 text-[11px] rounded bg-muted border border-border text-white placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-gold-500/50"
+                        className="flex-1 px-2 py-1.5 text-[11px] rounded bg-muted border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-gold-500/50"
                       />
                       <button
                         type="button"
@@ -1148,7 +1148,7 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
                       onChange={(e) => setWfDraft({ ...wfDraft, desc: e.target.value })}
                       rows={1}
                       placeholder="简短说明（≤ 120 字，可选）：这条工作流解决什么问题"
-                      className="w-full px-2 py-1.5 text-[11px] rounded bg-muted border border-border text-white placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-gold-500/50 resize-none"
+                      className="w-full px-2 py-1.5 text-[11px] rounded bg-muted border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-gold-500/50 resize-none"
                     />
 
                     {wfTaskType === 'text' && (
@@ -1166,19 +1166,19 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
                           <Label className="text-[10px] text-muted-foreground">maxTokens</Label>
                           <input type="number" value={wfDraft.maxT}
                             onChange={(e) => setWfDraft({ ...wfDraft, maxT: Math.max(128, Math.min(16384, parseInt(e.target.value || '0', 10))) })}
-                            className="w-full px-2 py-1 mt-1 text-[11px] rounded bg-muted border border-border text-white font-mono" />
+                            className="w-full px-2 py-1 mt-1 text-[11px] rounded bg-muted border border-border text-foreground font-mono" />
                         </div>
                         <div className="md:col-span-2">
                           <Label className="text-[10px] text-muted-foreground">文风关键词（逗号分隔）</Label>
                           <input value={wfDraft.kw} onChange={(e) => setWfDraft({ ...wfDraft, kw: e.target.value })}
                             placeholder="例：克制,细腻,白描,短句分段,少心理"
-                            className="w-full px-2 py-1 mt-1 text-[11px] rounded bg-muted border border-border text-white placeholder:text-muted-foreground" />
+                            className="w-full px-2 py-1 mt-1 text-[11px] rounded bg-muted border border-border text-foreground placeholder:text-muted-foreground" />
                         </div>
                         <div className="md:col-span-2">
                           <Label className="text-[10px] text-muted-foreground">系统提示词（技能指令）：决定 AI 会怎么回答</Label>
                           <textarea value={wfDraft.sys} onChange={(e) => setWfDraft({ ...wfDraft, sys: e.target.value })}
                             rows={4} placeholder="1) 段落规则；2) 信息量节奏；3) 钩子设置；4) 禁止出现的内容..."
-                            className="w-full px-2 py-1 mt-1 text-[11px] rounded bg-muted border border-border text-white placeholder:text-muted-foreground resize-y leading-relaxed" />
+                            className="w-full px-2 py-1 mt-1 text-[11px] rounded bg-muted border border-border text-foreground placeholder:text-muted-foreground resize-y leading-relaxed" />
                         </div>
                       </div>
                     )}
@@ -1189,7 +1189,7 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
                           <div>
                             <Label className="text-[10px] text-muted-foreground">画面风格</Label>
                             <select value={wfDraft.style} onChange={(e) => setWfDraft({ ...wfDraft, style: e.target.value })}
-                              className="w-full px-2 py-1 mt-1 text-[11px] rounded bg-muted border border-border text-white">
+                              className="w-full px-2 py-1 mt-1 text-[11px] rounded bg-muted border border-border text-foreground">
                               {[
                                 { v: 'anime', l: '动漫' },
                                 { v: 'realistic', l: '写实' },
@@ -1204,7 +1204,7 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
                             <input type="text" value={wfDraft.seed}
                               onChange={(e) => setWfDraft({ ...wfDraft, seed: e.target.value.replace(/[^\d-]/g, '') })}
                               placeholder="例：123456"
-                              className="w-full px-2 py-1 mt-1 text-[11px] rounded bg-muted border border-border text-white placeholder:text-muted-foreground font-mono" />
+                              className="w-full px-2 py-1 mt-1 text-[11px] rounded bg-muted border border-border text-foreground placeholder:text-muted-foreground font-mono" />
                           </div>
                         </div>
                         {wfTaskType === 'video' && (
@@ -1240,7 +1240,7 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
                             placeholder={wfTaskType === 'image'
                               ? '例：人物必须严格保持参考图脸型和发型；不要出现逆光剪影遮挡五官；画面统一使用冷色调。'
                               : '例：电影感构图，轻微推镜，镜头不晃；情绪随场景进展推进；结尾留出呼吸帧。'}
-                            className="w-full px-2 py-1 mt-1 text-[11px] rounded bg-muted border border-border text-white placeholder:text-muted-foreground resize-y leading-relaxed" />
+                            className="w-full px-2 py-1 mt-1 text-[11px] rounded bg-muted border border-border text-foreground placeholder:text-muted-foreground resize-y leading-relaxed" />
                         </div>
                       </div>
                     )}
@@ -1313,7 +1313,7 @@ export function AiSettingsDialog({ open, onClose }: AiSettingsDialogProps) {
           </button>
           <button
             onClick={handleSave}
-            className="px-4 py-1.5 text-xs font-medium bg-gradient-to-br from-gold-400 to-gold-500 hover:brightness-110 text-white rounded shadow-lg shadow-gold-400/20 transition-all"
+            className="px-4 py-1.5 text-xs font-medium bg-gradient-to-br from-gold-400 to-gold-500 hover:brightness-110 text-black rounded shadow-lg shadow-gold-400/20 transition-all"
           >
             保存设置
           </button>

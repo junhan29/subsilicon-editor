@@ -50,21 +50,21 @@ export function BoothTopBar({ onBack, saved, updatedAt, onRequestLogin }: BoothT
     switch (saveState) {
       case 'saved':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[11px] text-emerald-400">
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gold-400/10 border border-gold-400/30 text-[11px] text-gold-400">
             <Check className="w-3 h-3" />
             已自动保存
           </span>
         )
       case 'saving':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gold-400/10 border border-gold-400/30 text-[11px] text-gold-400">
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-silver-400/10 border border-silver-400/30 text-[11px] text-silver-500">
             <Loader2 className="w-3 h-3 animate-spin" />
             保存中…
           </span>
         )
       case 'dirty':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/30 text-[11px] text-red-300">
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-destructive/10 border border-destructive/30 text-[11px] text-destructive">
             <AlertTriangle className="w-3 h-3" />
             未保存
           </span>
@@ -73,21 +73,21 @@ export function BoothTopBar({ onBack, saved, updatedAt, onRequestLogin }: BoothT
   }
 
   return (
-    <header className="flex items-center gap-3 px-4 py-2.5 border-b border-border bg-card/90 backdrop-blur shrink-0 h-12">
+    <header className="flex items-center gap-3 px-4 py-2.5 border-b border-border bg-card/90 backdrop-blur shrink-0 h-11">
       {/* 左：返回 + 品牌名 + 一级导航 */}
       <div className="flex items-center gap-2 min-w-0">
         <button
           onClick={onBack}
           aria-label="返回编辑器"
-          className="flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-white hover:bg-muted rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40"
+          className="flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40"
         >
           <ArrowLeft className="w-4 h-4" />
         </button>
         <div className="flex items-center gap-2 pl-1">
-          <div className="w-6 h-6 rounded-md bg-gradient-to-br from-gold-400 to-orange-600 flex items-center justify-center shadow-[0_0_0_1px_rgba(255,255,255,0.05)]">
-            <span className="text-[10px] font-bold text-white">S</span>
+          <div className="w-6 h-6 rounded-md bg-gradient-to-br from-gold-400 to-gold-600 flex items-center justify-center shadow-[0_0_0_1px_rgba(255,255,255,0.05)]">
+            <span className="text-[10px] font-bold text-black">S</span>
           </div>
-          <span className="text-sm font-semibold text-white whitespace-nowrap">SubSilicon</span>
+          <span className="text-sm font-semibold text-foreground whitespace-nowrap">SubSilicon</span>
           <span className="text-[11px] text-muted-foreground whitespace-nowrap">/ 我的摊位</span>
         </div>
       </div>
@@ -101,11 +101,11 @@ export function BoothTopBar({ onBack, saved, updatedAt, onRequestLogin }: BoothT
       <div className="flex items-center gap-2 min-w-0">
         {account ? (
           <div className="flex items-center gap-2 pl-2 pr-1 py-1 rounded-lg bg-muted/60 border border-border hover:border-primary/40 transition-colors">
-            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary to-purple-500 flex items-center justify-center shrink-0">
-              <User className="w-3.5 h-3.5 text-white" />
+            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gold-400 to-sienna flex items-center justify-center shrink-0">
+              <User className="w-3.5 h-3.5 text-black" />
             </div>
             <div className="leading-tight max-w-[160px] hidden sm:block">
-              <div className="text-xs font-medium text-white truncate">
+              <div className="text-xs font-medium text-foreground truncate">
                 {account.displayName || account.email.split('@')[0]}
               </div>
               <div className="text-[10px] text-muted-foreground truncate">{account.email}</div>
@@ -113,7 +113,7 @@ export function BoothTopBar({ onBack, saved, updatedAt, onRequestLogin }: BoothT
             <button
               onClick={handleLogout}
               title="退出创作身份"
-              className="p-1.5 text-muted-foreground hover:text-red-400 hover:bg-primary/10 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40"
+              className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-primary/10 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40"
             >
               <LogOut className="w-3.5 h-3.5" />
             </button>

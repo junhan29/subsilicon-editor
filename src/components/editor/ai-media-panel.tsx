@@ -200,11 +200,11 @@ export function AiMediaPanel({ characters, onImageGenerated }: AiMediaPanelProps
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           {mediaType === 'image' ? <Image className="w-4 h-4 text-primary" /> : <Video className="w-4 h-4 text-purple-400" />}
-          <h3 className="text-sm font-medium text-white">{assistantName}媒体生成</h3>
+          <h3 className="text-sm font-medium text-foreground">{assistantName}媒体生成</h3>
         </div>
         <button
           onClick={() => setShowSettings(!showSettings)}
-          className="p-1.5 rounded-[2px] hover:bg-secondary text-muted-foreground hover:text-white transition-colors"
+          className="p-1.5 rounded-[2px] hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
           title="配置服务商"
         >
           <Settings className="w-3.5 h-3.5" />
@@ -373,7 +373,7 @@ export function AiMediaPanel({ characters, onImageGenerated }: AiMediaPanelProps
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           placeholder="描述你想要生成的场景画面..."
-          className="w-full h-20 text-xs rounded-[2px] border border-border bg-secondary px-3 py-2 text-white placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-gold-400/50 focus:border-gold-400/60 resize-none [clip-path:polygon(4px_0,100%_0,100%_calc(100%-4px),calc(100%-4px)_100%,0_100%,0_4px)]"
+          className="w-full h-20 text-xs rounded-[2px] border border-border bg-secondary px-3 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-gold-400/50 focus:border-gold-400/60 resize-none [clip-path:polygon(4px_0,100%_0,100%_calc(100%-4px),calc(100%-4px)_100%,0_100%,0_4px)]"
         />
       </div>
 
@@ -558,7 +558,7 @@ function ProviderSettingsPanel({
           value={apiKey}
           onChange={(e) => setApiKey(e.target.value)}
           placeholder="输入 API Key"
-          className="w-full h-8 text-xs rounded-[2px] border border-border bg-secondary px-3 text-white placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-gold-400/50 focus:border-gold-400/60 [clip-path:polygon(4px_0,100%_0,100%_calc(100%-4px),calc(100%-4px)_100%,0_100%,0_4px)]"
+          className="w-full h-8 text-xs rounded-[2px] border border-border bg-secondary px-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-gold-400/50 focus:border-gold-400/60 [clip-path:polygon(4px_0,100%_0,100%_calc(100%-4px),calc(100%-4px)_100%,0_100%,0_4px)]"
         />
       </div>
 
@@ -570,7 +570,7 @@ function ProviderSettingsPanel({
             value={apiUrl}
             onChange={(e) => setApiUrl(e.target.value)}
             placeholder="http://localhost:8188"
-            className="w-full h-8 text-xs rounded-[2px] border border-border bg-secondary px-3 text-white placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-gold-400/50 focus:border-gold-400/60 [clip-path:polygon(4px_0,100%_0,100%_calc(100%-4px),calc(100%-4px)_100%,0_100%,0_4px)]"
+            className="w-full h-8 text-xs rounded-[2px] border border-border bg-secondary px-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-gold-400/50 focus:border-gold-400/60 [clip-path:polygon(4px_0,100%_0,100%_calc(100%-4px),calc(100%-4px)_100%,0_100%,0_4px)]"
           />
         </div>
       )}
@@ -578,7 +578,7 @@ function ProviderSettingsPanel({
       <div className="flex gap-2">
         <button
           onClick={onCancel}
-          className="flex-1 py-1.5 text-[11px] text-muted-foreground hover:text-white transition-colors"
+          className="flex-1 py-1.5 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
         >
           取消
         </button>

@@ -23,7 +23,7 @@ export function RecoveryBanner({ time, onRestore, onDiscard }: RecoveryBannerPro
       <div className="flex items-center gap-1.5 shrink-0">
         <button
           onClick={onRestore}
-          className="rounded px-2 py-0.5 text-xs font-medium bg-gold-400 text-white hover:bg-gold-500 transition-colors"
+          className="rounded px-2 py-0.5 text-xs font-medium bg-gold-400 text-black hover:bg-gold-500 transition-colors"
         >
           恢复
         </button>

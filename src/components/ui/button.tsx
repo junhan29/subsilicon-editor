@@ -32,7 +32,7 @@ const buttonVariants = cva(
           'bg-gradient-to-r from-silver-600 to-silver-500 text-foreground shadow-md hover:shadow-lg hover:brightness-110 border border-silver-400/30',
         /* 艺术家手绘风 */
         artist:
-          'bg-gradient-to-br from-gold-500 to-gold-400 text-white shadow-md hover:shadow-lg hover:brightness-105 border border-gold-400/30',
+          'bg-gradient-to-br from-gold-500 to-gold-400 text-black shadow-md hover:shadow-lg hover:brightness-105 border border-gold-400/30',
         /* P5 纸板剪贴风：右上角斜切 + 硬阴影 + 红边框 */
         'p5-clipped':
           'relative bg-card text-foreground border-2 border-primary shadow-[4px_4px_0_hsl(var(--primary)/0.3)] hover:shadow-[6px_6px_0_hsl(var(--primary)/0.35)] hover:-translate-x-0.5 hover:-translate-y-0.5 active:shadow-[2px_2px_0_hsl(var(--primary)/0.3)] active:translate-x-0 active:translate-y-0',

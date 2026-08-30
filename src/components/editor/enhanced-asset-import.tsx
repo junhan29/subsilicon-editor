@@ -94,7 +94,7 @@ export function EnhancedAssetImport({ onImageGenerated }: EnhancedAssetImportPro
     >
       <div className="flex items-center gap-2">
         <Image className="w-4 h-4 text-primary" />
-        <h3 className="text-sm font-medium text-white">素材导入</h3>
+        <h3 className="text-sm font-medium text-foreground">素材导入</h3>
       </div>
 
       <div
@@ -137,7 +137,7 @@ export function EnhancedAssetImport({ onImageGenerated }: EnhancedAssetImportPro
             onChange={(e) => setUrlInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') handleUrlImport() }}
             placeholder="粘贴图片或视频 URL..."
-            className="flex-1 h-8 text-xs rounded-[2px] border border-border bg-secondary px-3 text-white placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-gold-400/50 focus:border-gold-400/60"
+            className="flex-1 h-8 text-xs rounded-[2px] border border-border bg-secondary px-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-gold-400/50 focus:border-gold-400/60"
           />
           <button
             onClick={handleUrlImport}
