@@ -12,7 +12,7 @@
 #     SRC_DIR  = 本地资产目录（默认 release/，文件名须为空格格式 "SubSilicon Editor-x.y.z-*"）
 #
 # 环境变量（由 workflow 注入）：
-#   SERVER_HOST / SERVER_USER / SSH_PRIVATE_KEY / SSH_PORT(默认 22022)
+#   SERVER_HOST / SERVER_USER / SERVER_SSH_KEY / SSH_PORT(默认 22022)
 #
 # 行为：
 #   1) 清理并重建服务器 releases/v<VER>/ 目录
@@ -25,8 +25,8 @@ set -euo pipefail
 
 VERSION="${1:?usage: sync-release-to-server.sh <VERSION> [SRC_DIR]}"
 SRC_DIR="${2:-release}"
-SERVER_HOST="${DEPLOY_HOST:?DEPLOY_HOST required}"
-SERVER_USER="${DEPLOY_USER:?DEPLOY_USER required}"
+SERVER_HOST="${SERVER_HOST:?SERVER_HOST required}"
+SERVER_USER="${SERVER_USER:?SERVER_USER required}"
 SSH_PORT="${SSH_PORT:-22022}"
 REMOTE_RELEASE_DIR="/var/www/subsilicon/public/releases"
 VERSION_DIR="${REMOTE_RELEASE_DIR}/v${VERSION}"
@@ -35,7 +35,7 @@ echo "=== [sync] version=${VERSION} src=${SRC_DIR} server=${SERVER_HOST}:${SSH_P
 
 # ---------- 1. SSH 准备 ----------
 mkdir -p ~/.ssh
-[ -n "${SSH_PRIVATE_KEY:-}" ] && echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
+[ -n "${SERVER_SSH_KEY:-}" ] && echo "$SERVER_SSH_KEY" > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
 ssh-keyscan -p "$SSH_PORT" -H "$SERVER_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
 
 # ssh 与 scp 共用选项（端口用 -o Port=，ssh 与 scp 均兼容）
