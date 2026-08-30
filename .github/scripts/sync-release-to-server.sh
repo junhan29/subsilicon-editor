@@ -75,8 +75,21 @@ if [ "${#SCP_ARGS[@]}" -eq 0 ]; then
   echo "❌ 没有可上传的资产（$SRC_DIR 为空或文件名非空格格式）"
   exit 1
 fi
-scp $SSH_OPTS "${SCP_ARGS[@]}" "$SERVER_USER@$SERVER_HOST:$VERSION_DIR/"
-echo "=== [sync] uploaded ${#SCP_ARGS[@]} assets ==="
+# 逐个 scp（避免单个大文件/连接挂起卡住整批；ConnectTimeout 防止连接建立无限等待，
+# ServerAlive 兜底传输静默超时）。上传失败仅警告，由服务器端验证兜底。
+SCP_FAILED=0
+UPLOADED=0
+for a in "${SCP_ARGS[@]}"; do
+  echo "  → 上传 ${a##*/}"
+  if scp $SSH_OPTS -o ConnectTimeout=30 "$a" "$SERVER_USER@$SERVER_HOST:$VERSION_DIR/"; then
+    UPLOADED=$((UPLOADED + 1))
+  else
+    echo "  WARN: ${a##*/} 上传失败（继续下一个）"
+    SCP_FAILED=$((SCP_FAILED + 1))
+  fi
+done
+echo "=== [sync] uploaded ${UPLOADED} / ${#SCP_ARGS[@]} assets (failed: ${SCP_FAILED}) ==="
+[ "$SCP_FAILED" -eq 0 ] || echo "⚠️ ${SCP_FAILED} 个资产上传失败，服务器端验证将兜底"
 
 # ---------- 4. 服务器端：验证 + 生成 yml（v<VER>/ 前缀 + base64 sha512）+ 软链 ----------
 ssh $SSH_OPTS "$SERVER_USER@$SERVER_HOST" "VERSION=$VERSION VERSION_DIR=$VERSION_DIR RELEASE_DIR=$REMOTE_RELEASE_DIR bash -s" << 'REMOTE'
