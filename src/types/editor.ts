@@ -80,7 +80,7 @@ export interface CharacterSprite {
   image?: string             // 立绘URL（兼容旧字段）
   url?: string               // 立绘URL（新字段，优先使用）
   name?: string
-  position?: 'left' | 'center' | 'right'
+  position?: 'left' | 'center' | 'right' | 'cross'
   scale?: number
   opacity?: number
 }
@@ -123,7 +123,7 @@ export interface DialogueVisualStyle {
 export interface DialogueData {
   characterId: string
   spriteEmotion?: string
-  spritePosition?: 'left' | 'center' | 'right'
+  spritePosition?: 'left' | 'center' | 'right' | 'cross'
   text: string
   fontSize?: number
   fontColor?: string
@@ -238,6 +238,7 @@ export interface ChoiceData {
 export type TransitionType =
   | 'none'
   | 'fade'
+  | 'cut'
   | 'slide-left'
   | 'slide-right'
   | 'slide-up'

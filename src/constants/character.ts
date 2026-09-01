@@ -26,6 +26,7 @@ export const SPRITE_POSITION_TYPES = [
   { value: 'left', label: '左侧' },
   { value: 'center', label: '居中' },
   { value: 'right', label: '右侧' },
+  { value: 'cross', label: '跨立' },
 ] as const
 
 export type SpritePosition = typeof SPRITE_POSITION_TYPES[number]['value']

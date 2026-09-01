@@ -117,6 +117,7 @@ export function StoryPreview({ graph, open, onClose, workId }: StoryPreviewProps
 
   const audioManager = useRef<AudioManager | null>(null)
   const transitionManager = useRef<TransitionManager | null>(null)
+  const tmInitialized = useRef(false)
   const autoSaveTimer = useRef<number | null>(null)
   const contentRef = useRef<HTMLDivElement>(null)
 
@@ -333,17 +334,47 @@ export function StoryPreview({ graph, open, onClose, workId }: StoryPreviewProps
       const choiceIndex = options.findIndex((o: any) => o.id === optionId)
       onAnalyticsChoice(state.currentNodeId!, choiceIndex, option.text)
 
-      setState((s) => ({
-        ...s,
-        currentNodeId: edge.target,
-        history: [...s.history, { nodeId: edge.target, variables: newVariables }],
-        variables: newVariables,
-        visitCounts: {
-          ...s.visitCounts,
-          [edge.target]: (s.visitCounts[edge.target] || 0) + 1,
-        },
-      }))
-      onNodeEnter(edge.target, graph.nodes.find(n => n.id === edge.target)?.type)
+      const switchChoice = () => {
+        setState((s) => ({
+          ...s,
+          currentNodeId: edge.target,
+          history: [...s.history, { nodeId: edge.target, variables: newVariables }],
+          variables: newVariables,
+          visitCounts: {
+            ...s.visitCounts,
+            [edge.target]: (s.visitCounts[edge.target] || 0) + 1,
+          },
+        }))
+        onNodeEnter(edge.target, graph.nodes.find(n => n.id === edge.target)?.type)
+      }
+
+      // 选择分支也走转场
+      const rawTr = edge.transition || graph.settings?.defaultTransition || 'none'
+      const tmMap: Record<string, { type: 'fade' | 'slide' | 'dissolve' | 'zoom'; direction?: 'left' | 'right' | 'up' | 'down' }> = {
+        'fade': { type: 'fade' },
+        'cross-dissolve': { type: 'dissolve' },
+        'cut': { type: 'fade' },
+        'slide-left': { type: 'slide', direction: 'left' },
+        'slide-right': { type: 'slide', direction: 'right' },
+        'slide-up': { type: 'slide', direction: 'up' },
+        'slide-down': { type: 'slide', direction: 'down' },
+        'zoom-in': { type: 'zoom' },
+        'zoom-out': { type: 'zoom' },
+      }
+      const tmConfig = tmMap[rawTr]
+      if (tmConfig && transitionManager.current && contentRef.current) {
+        if (!tmInitialized.current) {
+          transitionManager.current.initialize(contentRef.current)
+          tmInitialized.current = true
+        }
+        transitionManager.current.transition(() => {}, switchChoice, {
+          type: tmConfig.type,
+          duration: rawTr === 'cut' ? 150 : 400,
+          direction: tmConfig.direction,
+        })
+      } else {
+        switchChoice()
+      }
     }
   }, [currentNode, graph.edges, graph.nodes, state.currentNodeId, state.variables, playAudio, onAnalyticsChoice, onNodeEnter])
 
@@ -431,16 +462,51 @@ export function StoryPreview({ graph, open, onClose, workId }: StoryPreviewProps
 
     if (nextNodeId) {
       const target = nextNodeId
-      setState((s) => ({
-        ...s,
-        currentNodeId: target,
-        history: [...s.history, { nodeId: target, variables: s.variables }],
-        visitCounts: {
-          ...s.visitCounts,
-          [target]: (s.visitCounts[target] || 0) + 1,
-        },
-      }))
-      onNodeEnter(target, graph.nodes.find(n => n.id === target)?.type)
+      const switchNode = () => {
+        setState((s) => ({
+          ...s,
+          currentNodeId: target,
+          history: [...s.history, { nodeId: target, variables: s.variables }],
+          visitCounts: {
+            ...s.visitCounts,
+            [target]: (s.visitCounts[target] || 0) + 1,
+          },
+        }))
+        onNodeEnter(target, graph.nodes.find(n => n.id === target)?.type)
+      }
+
+      // 转场动画：查找出边的 transition 或使用默认转场
+      const outEdge = graph.edges.find((e) => e.source === node.id && e.target === target)
+      const rawTransition = outEdge?.transition || graph.settings?.defaultTransition || 'none'
+
+      // 映射 editor TransitionType → transition-manager TransitionType
+      const tmMap: Record<string, { type: 'fade' | 'slide' | 'dissolve' | 'zoom'; direction?: 'left' | 'right' | 'up' | 'down' }> = {
+        'fade': { type: 'fade' },
+        'cross-dissolve': { type: 'dissolve' },
+        'cut': { type: 'fade' },  // cut 用极短 fade 模拟
+        'slide-left': { type: 'slide', direction: 'left' },
+        'slide-right': { type: 'slide', direction: 'right' },
+        'slide-up': { type: 'slide', direction: 'up' },
+        'slide-down': { type: 'slide', direction: 'down' },
+        'zoom-in': { type: 'zoom' },
+        'zoom-out': { type: 'zoom' },
+      }
+      const tmConfig = tmMap[rawTransition]
+      const duration = rawTransition === 'cut' ? 150 : 400
+
+      if (tmConfig && transitionManager.current && contentRef.current) {
+        if (!tmInitialized.current) {
+          transitionManager.current.initialize(contentRef.current)
+          tmInitialized.current = true
+        }
+        transitionManager.current.transition(() => {}, switchNode, {
+          type: tmConfig.type,
+          duration,
+          direction: tmConfig.direction,
+        })
+      } else {
+        switchNode()
+      }
     }
   }, [graph.edges, graph.nodes, state.currentNodeId, state.variables, onNodeEnter])
 
@@ -621,25 +687,51 @@ export function StoryPreview({ graph, open, onClose, workId }: StoryPreviewProps
     switch (currentNode.type) {
       case 'dialogue': {
         const character = getCharacter(data.characterId)
+        const spritePos = data.spritePosition || 'center'
+        // 查找角色立绘：优先匹配当前表情
+        const sprite = character?.sprites?.find(
+          (s: any) => (s.emotion === (data.spriteEmotion || data.emotion) || s.emotion === 'normal')
+        ) || character?.sprites?.[0]
+        const spriteUrl = sprite?.url || sprite?.image
+        // 立绘位置样式
+        const positionClass = {
+          left: 'left-4 lg:left-12',
+          center: 'left-1/2 -translate-x-1/2',
+          right: 'right-4 lg:right-12',
+          cross: 'left-1/2 -translate-x-1/2 scale-x-[-1]',
+        }[spritePos] || 'left-1/2 -translate-x-1/2'
+
         return (
-          <div className={`space-y-4 ${bgImage ? 'bg-card/95 backdrop-blur-sm rounded-2xl p-6 shadow-xl' : ''}`}>
-            {character && (
-              <div className="flex items-center gap-3">
-                <div
-                  className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg"
-                  style={{ backgroundColor: character.color }}
-                >
-                  {character.name.charAt(0)}
-                </div>
-                <div>
-                  <p className="font-medium">{character.name}</p>
-                  {data.emotion && (
-                    <p className="text-xs text-muted-foreground">{data.emotion}</p>
+          <div className="relative w-full h-full flex flex-col justify-end">
+            {/* 角色立绘 */}
+            {spriteUrl && (
+              <img
+                src={spriteUrl}
+                alt={character?.name || '角色'}
+                className={`absolute bottom-0 max-h-[75%] max-w-[40%] object-contain object-bottom ${positionClass}`}
+                style={{ opacity: sprite?.opacity ?? 1 }}
+              />
+            )}
+            {/* 对话框 */}
+            <div className={`relative z-10 ${bgImage ? 'bg-card/95 backdrop-blur-sm rounded-2xl p-6 shadow-xl' : 'bg-card/90 rounded-xl p-5 shadow-lg'}`}>
+              {character && (
+                <div className="flex items-center gap-2 mb-2">
+                  {!spriteUrl && (
+                    <div
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0"
+                      style={{ backgroundColor: character.color }}
+                    >
+                      {character.name.charAt(0)}
+                    </div>
+                  )}
+                  <span className="font-medium text-sm" style={{ color: character.color }}>{character.name}</span>
+                  {(data.spriteEmotion || data.emotion) && (
+                    <span className="text-xs text-muted-foreground">[{data.spriteEmotion || data.emotion}]</span>
                   )}
                 </div>
-              </div>
-            )}
-            <p className="text-lg leading-relaxed">{data.text}</p>
+              )}
+              <p className="text-lg leading-relaxed">{data.text}</p>
+            </div>
           </div>
         )
       }
@@ -1262,7 +1354,7 @@ export function StoryPreview({ graph, open, onClose, workId }: StoryPreviewProps
         } : {}}
       >
         {bgImage && <div className="absolute inset-0 bg-black/40" />}
-        <div className="w-full max-w-xl relative z-10">
+        <div className={`w-full relative z-10 ${currentNode?.type === 'dialogue' ? 'h-full max-w-3xl' : 'max-w-xl'}`}>
           {!state.currentNodeId ? (
             <div className="text-center space-y-6">
               <div className="w-20 h-20 mx-auto rounded-3xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
