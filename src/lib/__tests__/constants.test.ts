@@ -101,8 +101,9 @@ describe('constants - character', () => {
   })
 
   describe('SPRITE_POSITION_TYPES', () => {
-    it('有三个位置选项', () => {
-      expect(SPRITE_POSITION_TYPES).toHaveLength(3)
+    it('有四个位置选项（含跨立）', () => {
+      expect(SPRITE_POSITION_TYPES).toHaveLength(4)
+      expect(SPRITE_POSITION_TYPES.map((p) => p.value)).toEqual(['left', 'center', 'right', 'cross'])
     })
   })
 

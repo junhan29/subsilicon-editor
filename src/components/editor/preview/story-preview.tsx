@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { CheckCircle2, ChevronRight, Clock, Coins, FolderOpen, GitBranch, Keyboard, Lock, Merge, Music, Play, RotateCcw, Save, Settings, SkipForward, Star, Trash2, Volume2, VolumeX, X } from 'lucide-react'
+import { CheckCircle2, ChevronRight, Clock, Coins, FolderOpen, GitBranch, History, Keyboard, Layers, Lock, Merge, Music, Play, RotateCcw, Save, Settings, SkipForward, Star, Trash2, Volume2, VolumeX, X } from 'lucide-react'
 import { Button } from '@editor/components/ui/button'
 import { RuntimeSceneRenderer } from '../puzzle/runtime-scene-renderer'
 import type { StoryCharacter, StoryEdge, StoryGraph, StoryNode } from '@editor/types/editor'
@@ -113,13 +113,18 @@ export function StoryPreview({ graph, open, onClose, workId }: StoryPreviewProps
   const [saveMode, setSaveMode] = useState<'save' | 'load'>('save')
   const [showShortcuts, setShowShortcuts] = useState(false)
   const [showAudioPanel, setShowAudioPanel] = useState(false)
+  const [showBacklog, setShowBacklog] = useState(false)
   const [autoSaveIndicator, setAutoSaveIndicator] = useState(false)
+  // Auto 模式：自动推进剧情；Skip：跳过当前节点
+  const [autoMode, setAutoMode] = useState(false)
+  const autoTimerRef = useRef<number | null>(null)
 
   const audioManager = useRef<AudioManager | null>(null)
   const transitionManager = useRef<TransitionManager | null>(null)
   const tmInitialized = useRef(false)
   const autoSaveTimer = useRef<number | null>(null)
   const contentRef = useRef<HTMLDivElement>(null)
+  const backlogRef = useRef<HTMLDivElement>(null)
 
   // 存档/分析以 workId 为 key：标题会变且可能重名，用标题存档会导致
   // 改标题后旧存档变孤儿数据、同名作品互相串档
@@ -268,6 +273,8 @@ export function StoryPreview({ graph, open, onClose, workId }: StoryPreviewProps
       visitCounts: initialVisitCounts,
     })
     setIsEnded(false)
+    // 从作品设置恢复 Auto 模式初始状态
+    setAutoMode(!!(graph.settings as any)?.defaultAutoPlay)
 
     if (startNode) {
       onNodeEnter(startNode.id, startNode.type)
@@ -276,7 +283,7 @@ export function StoryPreview({ graph, open, onClose, workId }: StoryPreviewProps
     ;(['bgm', 'bgs', 'se', 'voice'] as const).forEach(channel => {
       stopAudio(channel)
     })
-  }, [findStartNode, graph.variables, stopAudio, onNodeEnter])
+  }, [findStartNode, graph.variables, graph.settings, stopAudio, onNodeEnter])
 
   const handleChoice = useCallback((optionId: string) => {
     const data = currentNode?.data as any
@@ -523,6 +530,27 @@ export function StoryPreview({ graph, open, onClose, workId }: StoryPreviewProps
     }
   }, [currentNode, continueStory])
 
+  // Auto 模式：自动推进剧情，跳过选择/结局/随机/跳转节点
+  useEffect(() => {
+    if (!autoMode || !open || !state.currentNodeId) return
+    if (!currentNode) return
+    // 选择节点需用户操作、结局节点为终点、random/jump 已有自己的自动推进
+    if (isChoiceNode || currentNode.type === 'ending' || currentNode.type === 'random' || currentNode.type === 'jump') return
+    if (!hasOutgoingEdges) return
+
+    const interval = (graph.settings as any)?.autoPlayInterval || 2500
+    autoTimerRef.current = window.setTimeout(() => {
+      continueStory()
+    }, interval)
+
+    return () => {
+      if (autoTimerRef.current) {
+        clearTimeout(autoTimerRef.current)
+        autoTimerRef.current = null
+      }
+    }
+  }, [autoMode, open, state.currentNodeId, currentNode, isChoiceNode, hasOutgoingEdges, continueStory, graph.settings])
+
   useEffect(() => {
     if (!currentNode || !open) return
 
@@ -556,6 +584,8 @@ export function StoryPreview({ graph, open, onClose, workId }: StoryPreviewProps
   useEffect(() => {
     if (!open) {
       onStoryEnd()
+      setAutoMode(false)
+      setShowBacklog(false)
       ;(['bgm', 'bgs', 'se', 'voice'] as const).forEach(channel => {
         stopAudio(channel)
       })
@@ -568,6 +598,13 @@ export function StoryPreview({ graph, open, onClose, workId }: StoryPreviewProps
     handleAutoSave()
   }, [state.currentNodeId, state.history.length, open, handleAutoSave])
 
+  // Backlog 打开时自动滚动到底部
+  useEffect(() => {
+    if (showBacklog && backlogRef.current) {
+      backlogRef.current.scrollTop = backlogRef.current.scrollHeight
+    }
+  }, [showBacklog])
+
   // 快捷键系统
   useEffect(() => {
     if (!open) return
@@ -579,13 +616,14 @@ export function StoryPreview({ graph, open, onClose, workId }: StoryPreviewProps
         case ' ':
         case 'Enter':
           e.preventDefault()
-          if (!showSaveMenu && !isChoiceNode && hasOutgoingEdges) {
+          if (!showSaveMenu && !showBacklog && !isChoiceNode && hasOutgoingEdges) {
             continueStory()
           }
           break
         case 'Escape':
           e.preventDefault()
           if (showSaveMenu) setShowSaveMenu(false)
+          else if (showBacklog) setShowBacklog(false)
           else if (showShortcuts) setShowShortcuts(false)
           else if (showAudioPanel) setShowAudioPanel(false)
           else onClose()
@@ -615,6 +653,14 @@ export function StoryPreview({ graph, open, onClose, workId }: StoryPreviewProps
           e.preventDefault()
           setShowAudioPanel(v => !v)
           break
+        case 'a':
+          e.preventDefault()
+          setAutoMode(v => !v)
+          break
+        case 'b':
+          e.preventDefault()
+          setShowBacklog(v => !v)
+          break
         case '?':
           e.preventDefault()
           setShowShortcuts(v => !v)
@@ -630,7 +676,7 @@ export function StoryPreview({ graph, open, onClose, workId }: StoryPreviewProps
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [open, showSaveMenu, showShortcuts, showAudioPanel, isChoiceNode, hasOutgoingEdges, state.currentNodeId, saveSlots.length, continueStory, handleSave, startStory, onClose])
+  }, [open, showSaveMenu, showBacklog, showShortcuts, showAudioPanel, isChoiceNode, hasOutgoingEdges, state.currentNodeId, saveSlots.length, continueStory, handleSave, startStory, onClose])
 
   const getCharacter = (characterId: string) => {
     return graph.characters.find((c) => c.id === characterId)
@@ -682,6 +728,19 @@ export function StoryPreview({ graph, open, onClose, workId }: StoryPreviewProps
   const renderNodeContent = () => {
     if (!currentNode) return null
 
+    // 分组节点为画布容器，不参与剧情阅读：轻量占位，下一节点自动跳过
+    if ((currentNode as any).type === 'group') {
+      return (
+        <div className={`text-center py-8 ${bgImage ? 'bg-card/90 backdrop-blur-sm rounded-2xl shadow-xl' : ''}`}>
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
+            <Layers className="w-8 h-8 text-muted-foreground" />
+          </div>
+          <p className="text-lg font-medium">分组节点</p>
+          <p className="text-sm text-muted-foreground mt-1">画布容器，不参与剧情阅读</p>
+        </div>
+      )
+    }
+
     const data = currentNode.data as any
 
     switch (currentNode.type) {
@@ -694,12 +753,12 @@ export function StoryPreview({ graph, open, onClose, workId }: StoryPreviewProps
         ) || character?.sprites?.[0]
         const spriteUrl = sprite?.url || sprite?.image
         // 立绘位置样式
-        const positionClass = {
+        const positionClass = ({
           left: 'left-4 lg:left-12',
           center: 'left-1/2 -translate-x-1/2',
           right: 'right-4 lg:right-12',
           cross: 'left-1/2 -translate-x-1/2 scale-x-[-1]',
-        }[spritePos] || 'left-1/2 -translate-x-1/2'
+        } as Record<string, string>)[spritePos] || 'left-1/2 -translate-x-1/2'
 
         return (
           <div className="relative w-full h-full flex flex-col justify-end">
@@ -1224,6 +1283,30 @@ export function StoryPreview({ graph, open, onClose, workId }: StoryPreviewProps
 
   const anyAudioPlaying = isChannelPlaying('bgm') || isChannelPlaying('bgs') || isChannelPlaying('se')
 
+  // Backlog：从历史记录提取可阅读的文本条目
+  const backlogEntries = state.history
+    .map((entry, idx) => {
+      const node = graph.nodes.find((n) => n.id === entry.nodeId)
+      if (!node) return null
+      const d = node.data as any
+      switch (node.type) {
+        case 'dialogue': {
+          const char = graph.characters.find((c) => c.id === d?.characterId)
+          return { idx, type: 'dialogue', speaker: char?.name || '???', text: d?.text || '' }
+        }
+        case 'narration':
+          return { idx, type: 'narration', speaker: '', text: d?.text || '' }
+        case 'ending':
+          return { idx, type: 'ending', speaker: d?.title || '结局', text: d?.text || d?.subtitle || '' }
+        case 'cg':
+          if (!d?.subtitle && !d?.title) return null
+          return { idx, type: 'cg', speaker: d?.title || 'CG', text: d?.subtitle || '' }
+        default:
+          return null
+      }
+    })
+    .filter((e): e is NonNullable<typeof e> => e !== null && !!e.text)
+
   if (!open) return null
 
   return (
@@ -1248,6 +1331,26 @@ export function StoryPreview({ graph, open, onClose, workId }: StoryPreviewProps
               </div>
               <Button variant="ghost" size="sm" onClick={() => { setSaveMode('load'); setShowSaveMenu(true) }} className="gap-1.5" title="读取 (Ctrl+L)">
                 <FolderOpen className="w-4 h-4 text-muted-foreground" />
+              </Button>
+              {/* Auto 模式开关 */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setAutoMode(v => !v)}
+                className={`gap-1 px-2 text-[11px] font-bold tracking-wide ${autoMode ? 'text-primary bg-primary/10' : 'text-muted-foreground'}`}
+                title="自动模式 (A)"
+              >
+                AUTO
+              </Button>
+              {/* Skip：跳过当前节点 */}
+              {!isChoiceNode && !isEndingNode && hasOutgoingEdges && (
+                <Button variant="ghost" size="sm" onClick={continueStory} className="gap-1.5" title="跳过 (Space)">
+                  <SkipForward className="w-4 h-4 text-muted-foreground" />
+                </Button>
+              )}
+              {/* Backlog：阅读历史 */}
+              <Button variant="ghost" size="sm" onClick={() => setShowBacklog(!showBacklog)} className="gap-1.5" title="回看历史 (B)">
+                <History className={`w-4 h-4 ${showBacklog ? 'text-primary' : 'text-muted-foreground'}`} />
               </Button>
             </>
           )}
@@ -1309,6 +1412,14 @@ export function StoryPreview({ graph, open, onClose, workId }: StoryPreviewProps
               <div className="flex items-center justify-between p-2 bg-muted/50 rounded">
                 <span>继续 / 确认</span>
                 <kbd className="px-1.5 py-0.5 bg-muted border rounded text-[10px]">Space / Enter</kbd>
+              </div>
+              <div className="flex items-center justify-between p-2 bg-muted/50 rounded">
+                <span>自动模式</span>
+                <kbd className="px-1.5 py-0.5 bg-muted border rounded text-[10px]">A</kbd>
+              </div>
+              <div className="flex items-center justify-between p-2 bg-muted/50 rounded">
+                <span>回看历史</span>
+                <kbd className="px-1.5 py-0.5 bg-muted border rounded text-[10px]">B</kbd>
               </div>
               <div className="flex items-center justify-between p-2 bg-muted/50 rounded">
                 <span>关闭菜单</span>
@@ -1446,10 +1557,15 @@ export function StoryPreview({ graph, open, onClose, workId }: StoryPreviewProps
               </div>
 
               {!isEndingNode && !isChoiceNode && hasOutgoingEdges && (
-                <div className="flex justify-center">
+                <div className="flex justify-center items-center gap-3">
                   <Button onClick={continueStory} className="gap-2">
                     继续 <ChevronRight className="w-4 h-4" />
                   </Button>
+                  {autoMode && (
+                    <span className="text-[11px] font-bold tracking-wide text-primary animate-pulse">
+                      AUTO ▸
+                    </span>
+                  )}
                 </div>
               )}
 
@@ -1464,11 +1580,78 @@ export function StoryPreview({ graph, open, onClose, workId }: StoryPreviewProps
       </div>
 
       {/* 底部提示 */}
-      <div className="h-10 border-t bg-muted/30 flex items-center justify-center">
+      <div className="h-10 border-t bg-muted/30 flex items-center justify-center gap-2">
+        {autoMode && (
+          <span className="text-[10px] font-bold tracking-wide text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+            AUTO ON
+          </span>
+        )}
         <p className="text-xs text-muted-foreground">
-          预览模式 · 按 <kbd className="px-1 py-0.5 bg-muted border rounded text-[10px] mx-1">?</kbd> 查看快捷键
+          预览模式 · <kbd className="px-1 py-0.5 bg-muted border rounded text-[10px] mx-1">?</kbd> 快捷键 · <kbd className="px-1 py-0.5 bg-muted border rounded text-[10px] mx-1">A</kbd> 自动 · <kbd className="px-1 py-0.5 bg-muted border rounded text-[10px] mx-1">B</kbd> 回看
         </p>
       </div>
+
+      {/* Backlog 阅读历史 */}
+      {showBacklog && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[300] p-4" onClick={() => setShowBacklog(false)}>
+          <div className="bg-card rounded-2xl border shadow-2xl max-w-lg w-full max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="p-4 border-b flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <History className="w-5 h-5 text-primary" />
+                <div>
+                  <h3 className="font-bold text-lg">回看历史</h3>
+                  <p className="text-xs text-muted-foreground">已阅读的对话与旁白记录</p>
+                </div>
+              </div>
+              <Button variant="ghost" size="icon" onClick={() => setShowBacklog(false)}>
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
+
+            <div ref={backlogRef} className="flex-1 overflow-y-auto p-4 space-y-3">
+              {backlogEntries.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <History className="w-10 h-10 mx-auto mb-3 opacity-30" />
+                  <p className="text-sm">暂无阅读记录</p>
+                </div>
+              ) : (
+                backlogEntries.map((entry) => (
+                  <div
+                    key={entry.idx}
+                    className={`rounded-lg border p-3 ${
+                      entry.type === 'narration'
+                        ? 'bg-muted/30 border-border/50 italic'
+                        : entry.type === 'ending'
+                        ? 'bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-900/50'
+                        : entry.type === 'cg'
+                        ? 'bg-purple-50 dark:bg-purple-950/20 border-purple-200 dark:border-purple-900/50'
+                        : 'bg-background border-border'
+                    }`}
+                  >
+                    {entry.speaker && (
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <span className="text-xs font-bold tracking-wide" style={{ color: entry.type === 'dialogue' ? 'hsl(var(--primary))' : undefined }}>
+                          {entry.speaker}
+                        </span>
+                        {entry.type === 'ending' && <Star className="w-3 h-3 text-yellow-500" />}
+                      </div>
+                    )}
+                    <p className={`text-sm leading-relaxed ${entry.type === 'narration' ? 'italic' : ''}`}>
+                      {entry.text}
+                    </p>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="p-3 border-t text-center">
+              <p className="text-[10px] text-muted-foreground">
+                共 {backlogEntries.length} 条记录 · 按 <kbd className="px-1 py-0.5 bg-muted border rounded text-[10px] mx-0.5">Esc</kbd> 或 <kbd className="px-1 py-0.5 bg-muted border rounded text-[10px] mx-0.5">B</kbd> 关闭
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 存档/读档菜单 */}
       {showSaveMenu && (

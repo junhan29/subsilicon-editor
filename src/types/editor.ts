@@ -572,6 +572,7 @@ export interface StoryEdge {
   targetHandle?: string
   label?: string
   condition?: string
+  transition?: TransitionType
   data?: {
     label?: string
     condition?: string

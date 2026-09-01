@@ -23,6 +23,7 @@ import {
   SPEECH_TONES,
   SPEECH_VOCABULARY,
   STORY_TAGS,
+  TRANSITION_TYPES,
 } from '@editor/constants'
 
 // 创作助理辅助增强组件（带 loading 状态）
@@ -298,6 +299,28 @@ function PropertyPanel({
               onChange={(e) => onUpdateEdge(edge.id, { condition: e.target.value, data: { ...(edge.data || {}), condition: e.target.value } } as any)}
               placeholder="如：好感度 >= 50" className="min-h-[60px] resize-none text-sm rounded-[2px] focus:border-cyber-cyan-400" />
             <p className="text-[10px] text-muted-foreground leading-tight">仅当表达式为 true 时，读者才会走这条分支</p>
+          </div>
+
+          {/* 转场动画选择器 */}
+          <div className="p-3 rounded-[2px] border border-border bg-card
+            clip-path-polygon-[0_0,calc(100%-10px)_0,100%_10px,100%_100%,0_100%]
+            shadow-[3px_3px_0_hsl(var(--gold)/0.12)] space-y-2">
+            <Label className="text-xs font-semibold tracking-wide flex items-center gap-1.5">
+              <Film className="w-3 h-3 text-gold-500" strokeWidth={2.2} />
+              转场动画
+            </Label>
+            <select
+              value={edge.transition || 'none'}
+              onChange={(e) => onUpdateEdge(edge.id, { transition: e.target.value } as any)}
+              className="w-full h-9 text-sm rounded-[2px] border border-border bg-muted px-2.5 text-foreground focus:outline-none focus:border-gold-400 shadow-[1px_1px_0_hsl(var(--gold)/0.08)]"
+            >
+              {TRANSITION_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>{t.label}</option>
+              ))}
+            </select>
+            <p className="text-[10px] text-muted-foreground leading-tight">
+              读者从当前节点切换到下一节点时播放的转场效果；选「无转场」则使用作品默认设置
+            </p>
           </div>
         </div>
 

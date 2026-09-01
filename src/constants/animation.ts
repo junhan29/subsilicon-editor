@@ -1,12 +1,14 @@
 export const TRANSITION_TYPES = [
   { value: 'none', label: '无转场' },
   { value: 'fade', label: '淡入淡出' },
+  { value: 'cut', label: '硬切' },
   { value: 'slide-left', label: '左滑' },
   { value: 'slide-right', label: '右滑' },
   { value: 'slide-up', label: '上滑' },
   { value: 'slide-down', label: '下滑' },
   { value: 'zoom-in', label: '放大' },
   { value: 'zoom-out', label: '缩小' },
+  { value: 'wipe', label: '擦除' },
   { value: 'cross-dissolve', label: '溶解' },
 ] as const
 

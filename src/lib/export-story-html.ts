@@ -820,6 +820,24 @@ function buildStoryHTML(encryptedData: string, ivBase64: string, config: StoryEx
           }
         }
         showPaywall();
+        // 重开作品后恢复上次未完成的发码申请轮询（创作者确认后自动解锁）
+        resumeApplyPolling();
+      }
+
+      // 恢复发码申请轮询：读取持久化的申请状态，24h 内继续查询结果
+      function resumeApplyPolling() {
+        if (!C.apiUrl || !C.creatorEmail) return;
+        var saved = null;
+        try { saved = JSON.parse(localStorage.getItem(C.storageKey + '_apply_request') || 'null'); } catch(e) { saved = null; }
+        if (!saved || !saved.requestId || !saved.fingerprint) return;
+        // 超过 24h 的申请视为失效，清理后不再恢复
+        if (!saved.time || (Date.now() - saved.time) > 24 * 60 * 60 * 1000) {
+          try { localStorage.removeItem(C.storageKey + '_apply_request'); } catch(e) {}
+          return;
+        }
+        var msgResume = document.getElementById('apply-msg');
+        if (msgResume) { msgResume.className = 'pw-msg info'; msgResume.textContent = '检测到未完成的解锁申请，正在自动查询结果…'; }
+        pollRequestStatus(saved.requestId, saved.fingerprint);
       }
 
       function attrEsc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -1292,6 +1310,10 @@ function buildStoryHTML(encryptedData: string, ivBase64: string, config: StoryEx
             return;
           }
           applyRequestId = r.requestId;
+          // 持久化申请状态：页面关闭/刷新后重开可自动恢复轮询（解锁成功后清理）
+          try {
+            localStorage.setItem(C.storageKey + '_apply_request', JSON.stringify({ requestId: applyRequestId, fingerprint: fingerprint, time: Date.now() }));
+          } catch(e) {}
           if (msg) { msg.className = 'pw-msg info'; msg.textContent = '已提交申请，等待创作者确认发码（自动刷新）'; }
           pollRequestStatus(applyRequestId, fingerprint);
         } catch(e) {
@@ -1311,6 +1333,7 @@ function buildStoryHTML(encryptedData: string, ivBase64: string, config: StoryEx
             var msgTimeout = document.getElementById('apply-msg');
             if (msgTimeout) { msgTimeout.className = 'pw-msg info'; msgTimeout.textContent = '创作者确认后请刷新页面重新打开作品解锁'; }
             window.__stopApplyPolling();
+            try { localStorage.removeItem(C.storageKey + '_apply_request'); } catch(e) {}
             return;
           }
           applyPollCount++;
@@ -1320,6 +1343,7 @@ function buildStoryHTML(encryptedData: string, ivBase64: string, config: StoryEx
             var r = await resp.json();
             if (r && r.status === 'APPROVED' && r.keyBase64 && r.ivBase64) {
               window.__stopApplyPolling();
+              try { localStorage.removeItem(C.storageKey + '_apply_request'); } catch(e) {}
               var msgOk = document.getElementById('apply-msg');
               if (msgOk) { msgOk.className = 'pw-msg success'; msgOk.textContent = '解锁成功！即将开始阅读…'; }
               await applyKey(r.keyBase64, r.ivBase64);
@@ -1328,6 +1352,7 @@ function buildStoryHTML(encryptedData: string, ivBase64: string, config: StoryEx
             }
             if (r && r.status === 'REJECTED') {
               window.__stopApplyPolling();
+              try { localStorage.removeItem(C.storageKey + '_apply_request'); } catch(e) {}
               var msgRej = document.getElementById('apply-msg');
               if (msgRej) { msgRej.className = 'pw-msg error'; msgRej.textContent = '申请被拒绝，请联系创作者'; }
               var btnRej = document.getElementById('apply-btn');

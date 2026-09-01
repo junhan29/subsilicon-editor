@@ -215,3 +215,55 @@ describe('导出物 XSS 防护（</script> 注入转义）', () => {
     }
   })
 })
+
+describe('发码申请状态持久化与恢复（重开自动轮询）', () => {
+  it('申请成功后持久化 _apply_request 到 localStorage', async () => {
+    const result = await exportToStoryHTML(makeGraph(), {
+      unlockMode: 'manual',
+      price: 9.9,
+      freePreview: 0,
+      workId: 'work_validate',
+      customApiUrl: 'https://creator.example.com/unlock',
+      offlineCodes: [],
+      keyBase64: undefined,
+    })
+    // 提交成功后写入 localStorage（键名含 _apply_request，内容含 requestId/fingerprint/time）
+    expect(result.html).toContain("C.storageKey + '_apply_request'")
+    expect(result.html).toContain("JSON.stringify({ requestId: applyRequestId, fingerprint: fingerprint, time: Date.now() })")
+  })
+
+  it('重开页面后自动恢复未完成申请（resumeApplyPolling + 24h 有效期）', async () => {
+    const result = await exportToStoryHTML(makeGraph(), {
+      unlockMode: 'manual',
+      price: 9.9,
+      freePreview: 0,
+      workId: 'work_validate',
+      customApiUrl: 'https://creator.example.com/unlock',
+      offlineCodes: [],
+      keyBase64: undefined,
+    })
+    const html = result.html
+    // init() 中 showPaywall 后调用 resumeApplyPolling
+    expect(html).toContain('resumeApplyPolling()')
+    // 恢复逻辑：读取持久化状态、24h 有效期、重新启动 pollRequestStatus
+    expect(html).toContain("localStorage.getItem(C.storageKey + '_apply_request')")
+    expect(html).toContain('24 * 60 * 60 * 1000')
+    expect(html).toContain('pollRequestStatus(saved.requestId, saved.fingerprint)')
+  })
+
+  it('解锁成功 / 被拒 / 轮询超时后清理 _apply_request', async () => {
+    const result = await exportToStoryHTML(makeGraph(), {
+      unlockMode: 'manual',
+      price: 9.9,
+      freePreview: 0,
+      workId: 'work_validate',
+      customApiUrl: 'https://creator.example.com/unlock',
+      offlineCodes: [],
+      keyBase64: undefined,
+    })
+    const html = result.html
+    // APPROVED / REJECTED / 超时三条清理路径
+    const removalCount = (html.match(/removeItem\(C\.storageKey \+ '_apply_request'\)/g) || []).length
+    expect(removalCount).toBeGreaterThanOrEqual(3)
+  })
+})

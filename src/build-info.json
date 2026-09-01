@@ -1,9 +1,9 @@
 {
-  "version": "1.18.3",
-  "semver": "1.18.3",
+  "version": "1.19.0",
+  "semver": "1.19.0",
   "buildNumber": "local",
   "commit": "dev",
-  "buildTime": "2026-08-30T06:28:38.708Z",
+  "buildTime": "2026-09-01T10:27:58.021Z",
   "channel": "stable",
   "appName": "SubSilicon Editor"
 }
