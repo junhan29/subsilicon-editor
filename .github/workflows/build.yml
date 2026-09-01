@@ -92,16 +92,19 @@ jobs:
           " \
             release/*.dmg release/*.exe release/*.AppImage release/*.zip release/*.deb release/*.tar.gz release/*.blockmap
 
-      - name: Sync release to Tencent Server (runner upload + scp)
-        env:
-          SERVER_HOST: ${{ secrets.DEPLOY_HOST }}
-          SERVER_USER: ${{ secrets.DEPLOY_USER }}
-          SERVER_SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          SSH_PORT: '22022'
-        run: |
-          # runner 端 scp 上传 + 服务器端生成 yml（规避服务器→GitHub 网络差导致的同步超时）
-          VERSION="${GITHUB_REF_NAME#v}"
-          bash .github/scripts/sync-release-to-server.sh "$VERSION" release
+      # 服务器同步不在 CI 内执行：GitHub runner（境外）→ 腾讯云（中国）跨国际 scp 实测仅
+      # ~12-20KB/s，1.1GB 资产无法在 GitHub 6h job 超时内完成（v1.19.0 实测被取消）。
+      # 发布同步改走本地脚本：scripts/local-sync-release.sh（国内镜像下载 + 本地 scp 直传，~5-10MB/s）。
+      # - name: Sync release to Tencent Server (runner upload + scp)
+      #   env:
+      #     SERVER_HOST: ${{ secrets.DEPLOY_HOST }}
+      #     SERVER_USER: ${{ secrets.DEPLOY_USER }}
+      #     SERVER_SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+      #     SSH_PORT: '22022'
+      #   run: |
+      #     # runner 端 scp 上传 + 服务器端生成 yml（规避服务器→GitHub 网络差导致的同步超时）
+      #     VERSION="${GITHUB_REF_NAME#v}"
+      #     bash .github/scripts/sync-release-to-server.sh "$VERSION" release
 
       - uses: geekyeggo/delete-artifact@v5
         with:
