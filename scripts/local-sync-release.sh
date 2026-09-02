@@ -112,5 +112,52 @@ EOF
 chown subsilicon:subsilicon /var/www/subsilicon/public/releases/latest.json" \
   && echo "=== [local-sync] 服务器 latest.json 已更新 → v$VERSION ==="
 
-echo "=== [local-sync] 完成：服务器 /releases/v$VERSION/ 已就绪 ==="
+# ---------- 6. 上传网站 manifest + 生成/部署 data/updates ----------
+# 6a. 如果网站本地有 manifest，上传到服务器版本目录
+WEBSITE_ROOT="$(cd "$DIR/../../.." && pwd)"
+MANIFEST="$WEBSITE_ROOT/public/releases/v$VERSION/releases-manifest.json"
+if [ -f "$MANIFEST" ]; then
+  scp -o ConnectTimeout=15 "$MANIFEST" "$SSH_HOST:/var/www/subsilicon/public/releases/v$VERSION/releases-manifest.json" \
+    && ssh -o ConnectTimeout=15 "$SSH_HOST" "chown subsilicon:subsilicon /var/www/subsilicon/public/releases/v$VERSION/releases-manifest.json" \
+    && echo "=== [local-sync] releases-manifest.json 已上传 ==="
+fi
+
+# 6b. 从服务器 yml 读取 base64 sha512 → 转 hex → 生成 data/updates JSON
+update_hex() { echo "$1" | base64 -d 2>/dev/null | xxd -p | tr -d '\n'; }
+MAC_SHA="$(ssh -o ConnectTimeout=15 "$SSH_HOST" "cat /var/www/subsilicon/public/releases/latest-mac.yml" | grep 'sha512:' | head -1 | awk '{print $2}')"
+WIN_SHA="$(ssh -o ConnectTimeout=15 "$SSH_HOST" "cat /var/www/subsilicon/public/releases/latest.yml" | grep 'sha512:' | head -1 | awk '{print $2}')"
+MAC_HEX="$(update_hex "$MAC_SHA")"
+WIN_HEX="$(update_hex "$WIN_SHA")"
+MAC_SIZE="$(ssh -o ConnectTimeout=15 "$SSH_HOST" "cat /var/www/subsilicon/public/releases/latest-mac.yml" | grep 'size:' | head -1 | awk '{print $2}')"
+WIN_SIZE="$(ssh -o ConnectTimeout=15 "$SSH_HOST" "cat /var/www/subsilicon/public/releases/latest.yml" | grep 'size:' | head -1 | awk '{print $2}')"
+NOW="$(date -u +%Y-%m-%dT%H:%M:%S.000Z)"
+
+for pair in "mac:arm64:$MAC_HEX:$MAC_SIZE:macos-arm64" "win:x64:$WIN_HEX:$WIN_SIZE:windows-x64"; do
+  IFS=':' read -r plat arch hex size fname <<< "$pair"
+  ssh -o ConnectTimeout=15 "$SSH_HOST" "mkdir -p /var/www/subsilicon/standalone/data/updates/$plat && cat > /var/www/subsilicon/standalone/data/updates/$plat/$arch.json << ENDJSON
+{
+  \"version\": \"$VERSION\",
+  \"releaseDate\": \"$NOW\",
+  \"releaseNotes\": \"SubSilicon Editor v$VERSION\",
+  \"files\": [
+    {
+      \"url\": \"https://subsilicon.cn/releases/v$VERSION/SubSilicon%20Editor-$VERSION-$fname.zip\",
+      \"sha512\": \"$hex\",
+      \"size\": $size
+    }
+  ],
+  \"$plat\": {
+    \"zip\": {
+      \"url\": \"https://subsilicon.cn/releases/v$VERSION/SubSilicon%20Editor-$VERSION-$fname.zip\",
+      \"sha512\": \"$hex\",
+      \"size\": $size
+    }
+  }
+}
+ENDJSON
+chown -R subsilicon:subsilicon /var/www/subsilicon/standalone/data/updates/$plat"
+done
+echo "=== [local-sync] data/updates 已生成并部署到 standalone ==="
+
+echo "=== [local-sync] 完成：服务器 /releases/v$VERSION/ + data/updates 已就绪 ==="
 echo "提示：网站本地 public/releases/latest.json + v$VERSION/releases-manifest.json 需同步并运行 node scripts/gen-download-config.cjs"
